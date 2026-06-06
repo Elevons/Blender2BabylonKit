@@ -1,0 +1,20 @@
+schema_version = "1.0.0"
+
+# Unique identifier. Becomes the module name (bl_ext.<repo>.<id>) when installed.
+id = "babylon_level_kit"
+version = "0.10.0"
+name = "Babylon Level Kit"
+tagline = "Component system and Babylon.js level exporter"
+maintainer = "You"
+type = "add-on"
+
+# Extensions were introduced in Blender 4.2; this also covers Blender 5.x.
+blender_version_min = "4.2.0"
+
+license = [
+  "SPDX:GPL-2.0-or-later",
+]
+
+# The exporter writes .glb and .scene.json to disk, so it needs file access.
+[permissions]
+files = "Export .glb meshes and .scene.json level manifests"

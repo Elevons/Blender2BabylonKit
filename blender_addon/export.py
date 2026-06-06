@@ -1,0 +1,240 @@
+"""Exporter: writes a .glb (geometry, lights, cameras) plus a sidecar
+`<name>.scene.json` manifest carrying the ECS component data.
+
+The runtime loads the glb, then matches each manifest entity to a glTF node
+by name and attaches the components. Geometry/transform/parenting all ride
+along inside the glb, so the manifest only stores what glTF can't express.
+"""
+
+import json
+import os
+import bpy
+
+from .properties import ID_KEY, ensure_object_id, LIST_ELEM_SLOT, _ENUM_SEP
+
+
+SCHEMA_VERSION = 2
+
+
+def _serialize_list(v):
+    slot = LIST_ELEM_SLOT.get(v.elem_type, "f_val")
+    out = []
+    for item in v.list_items:
+        val = getattr(item, slot)
+        if slot in ("v_val", "c_val"):
+            out.append(list(val))
+        elif slot == "f_val":
+            out.append(float(val))
+        elif slot == "b_val":
+            out.append(bool(val))
+        else:  # s_val
+            out.append(val)
+    return out
+
+
+def _serialize_vars(comp):
+    out = {}
+    for v in comp.exposed_vars:
+        if v.vtype == 'FLOAT':
+            out[v.name] = v.f_val
+        elif v.vtype == 'BOOL':
+            out[v.name] = bool(v.b_val)
+        elif v.vtype == 'STRING':
+            out[v.name] = v.s_val
+        elif v.vtype == 'ENUM':
+            # s_val holds the selected choice; clamp to a valid option if needed.
+            choices = [o for o in v.enum_options.split(_ENUM_SEP) if o != ""]
+            out[v.name] = v.s_val if (v.s_val in choices or not choices) else choices[0]
+        elif v.vtype == 'VECTOR3':
+            out[v.name] = list(v.v_val)
+        elif v.vtype == 'COLOR':
+            out[v.name] = list(v.c_val)
+        elif v.vtype == 'LIST':
+            out[v.name] = _serialize_list(v)
+        elif v.vtype == 'ENTITY':
+            out[v.name] = ensure_object_id(v.obj_val) if v.obj_val else None
+    return out
+
+
+def _referenced_ids(context):
+    """GUIDs of objects referenced by any ENTITY exposed var."""
+    ids = set()
+    for obj in context.scene.objects:
+        for comp in obj.bjs_components:
+            for v in comp.exposed_vars:
+                if v.vtype == 'ENTITY' and v.obj_val is not None:
+                    rid = v.obj_val.get(ID_KEY)
+                    if rid:
+                        ids.add(rid)
+    return ids
+
+
+def _serialize_components(obj):
+    comps = []
+    for c in obj.bjs_components:
+        if not c.enabled:
+            continue
+        d = {"type": c.comp_type}
+
+        if c.comp_type == 'TAG':
+            d["tag"] = c.tag
+
+        elif c.comp_type == 'COLLIDER':
+            d.update({
+                "shape": c.collider_shape,
+                "isTrigger": bool(c.is_trigger),
+                "autoFit": bool(c.auto_fit),
+                "size": list(c.collider_size),
+                "radius": c.collider_radius,
+                "height": c.collider_height,
+                "center": list(c.collider_center),
+            })
+
+        elif c.comp_type == 'RIGIDBODY':
+            d.update({
+                "bodyType": c.body_type,
+                "mass": c.mass,
+                "friction": c.friction,
+                "restitution": c.restitution,
+                "linearDamping": c.linear_damping,
+                "angularDamping": c.angular_damping,
+            })
+
+        elif c.comp_type == 'SCRIPT':
+            d["script"] = c.script_name
+            d["path"] = c.script_path
+            d["vars"] = _serialize_vars(c)
+
+        comps.append(d)
+    return comps
+
+
+def _serialize_light(obj):
+    """Read the native Blender light datablock so Babylon can mirror it.
+    No component is added; any object of type LIGHT is picked up automatically."""
+    lamp = obj.data
+    info = {
+        "type": lamp.type,                       # POINT / SUN / SPOT / AREA
+        "color": list(lamp.color),               # linear RGB
+        "energy": lamp.energy,                    # W (point/spot/area) or W/m^2 (sun)
+        "castShadows": bool(getattr(lamp, "use_shadow", False)),
+    }
+    if lamp.type == 'SPOT':
+        info["spotSize"] = lamp.spot_size        # full cone angle, radians
+        info["spotBlend"] = lamp.spot_blend
+    if lamp.type in {'POINT', 'SPOT'} and getattr(lamp, "use_custom_distance", False):
+        info["range"] = lamp.cutoff_distance
+    if info["castShadows"]:
+        sh = obj.bjs_shadow
+        info["shadow"] = {
+            "mapSize": sh.map_size,      # 0 = use loader default
+            "bias": sh.bias,
+            "normalBias": sh.normal_bias,
+            "darkness": sh.darkness,
+            "minZ": sh.min_z,            # 0 = auto
+            "maxZ": sh.max_z,            # 0 = auto
+            "filter": sh.filter,         # PCF / PCSS / POISSON / BLUR_ESM / NONE
+        }
+    return info
+
+
+def _serialize_camera(obj, is_active):
+    """Read the native Blender camera datablock so Babylon can mirror it.
+    Like lights, any object of type CAMERA is picked up automatically."""
+    cam = obj.data
+    info = {
+        "type": cam.type,                # PERSP / ORTHO / PANO
+        "clipStart": cam.clip_start,
+        "clipEnd": cam.clip_end,
+        "active": bool(is_active),       # is this the scene's active camera?
+    }
+    if cam.type == 'ORTHO':
+        info["orthoScale"] = cam.ortho_scale
+    else:
+        info["fov"] = cam.angle_y        # vertical FOV in radians
+    return info
+
+
+def _ensure_entity_ids(context):
+    """Assign GUIDs to every object that will become an entity BEFORE the glb is
+    written, so the id lands in the glTF node extras. Lights never go through
+    'Add Component', and referenced objects may have no components at all, so
+    this is where they get their id."""
+    for obj in context.scene.objects:
+        if len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}:
+            ensure_object_id(obj)
+        for comp in obj.bjs_components:
+            for v in comp.exposed_vars:
+                if v.vtype == 'ENTITY' and v.obj_val is not None:
+                    ensure_object_id(v.obj_val)
+
+
+def _build_manifest(context, glb_filename):
+    referenced = _referenced_ids(context)
+    entities = []
+    for obj in context.scene.objects:
+        comps = _serialize_components(obj)
+        light = _serialize_light(obj) if obj.type == 'LIGHT' else None
+        camera = _serialize_camera(obj, obj == context.scene.camera) if obj.type == 'CAMERA' else None
+        is_referenced = obj.get(ID_KEY) in referenced
+        has_id = bool(obj.get(ID_KEY))
+        # A GUID is an explicit "make this addressable" marker (e.g. Assign GUID
+        # on a bare empty), so include it even with nothing else on it.
+        if not comps and not light and not camera and not is_referenced and not has_id:
+            continue  # pure geometry needs no manifest entry; it lives in the glb
+        obj_id = ensure_object_id(obj)  # guarantee a GUID exists
+        parent = obj.parent
+        parent_id = parent.get(ID_KEY) if parent else None
+        entity = {
+            "id": obj_id,
+            "name": obj.name,            # kept for debugging / name-match fallback
+            "parent": parent_id,         # parent GUID if the parent has one, else null
+            "components": comps,
+        }
+        if light:
+            entity["light"] = light      # auto-derived from the Blender lamp, not a component
+        if camera:
+            entity["camera"] = camera    # auto-derived from the Blender camera
+        entities.append(entity)
+    return {
+        "version": SCHEMA_VERSION,
+        "glb": glb_filename,
+        "entities": entities,
+    }
+
+
+def _export_glb(glb_path):
+    """Call Blender's built-in glTF exporter, tolerating version differences
+    in the available keyword arguments."""
+    base_kwargs = dict(
+        filepath=glb_path,
+        export_format='GLB',
+        use_selection=False,
+        export_apply=True,    # apply modifiers
+        export_yup=True,      # Babylon is Y-up
+        export_extras=True,   # REQUIRED: writes obj["bjs_id"] into node extras
+    )
+    # Optional kwargs that exist on most but not all Blender versions.
+    optional = dict(export_cameras=True, export_lights=True)
+    try:
+        bpy.ops.export_scene.gltf(**base_kwargs, **optional)
+    except TypeError:
+        bpy.ops.export_scene.gltf(**base_kwargs)
+
+
+def export_level(context, filepath):
+    if not filepath.lower().endswith(".glb"):
+        filepath += ".glb"
+
+    glb_path = bpy.path.abspath(filepath)
+    glb_filename = os.path.basename(glb_path)
+    json_path = os.path.splitext(glb_path)[0] + ".scene.json"
+
+    _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
+    _export_glb(glb_path)
+
+    manifest = _build_manifest(context, glb_filename)
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
+
+    return glb_path, json_path, len(manifest["entities"])
