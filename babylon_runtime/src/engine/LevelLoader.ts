@@ -175,7 +175,13 @@ export class LevelLoader {
       if (!target) {
         console.warn(`[bjs] object reference "${ref.field}" -> ${ref.guid} not found`);
       }
-      (ref.instance as Record<string, unknown>)[ref.field] = target;
+      const inst = ref.instance as Record<string, unknown>;
+      if (ref.index === undefined) {
+        inst[ref.field] = target;
+      } else {
+        const arr = inst[ref.field];
+        if (Array.isArray(arr)) arr[ref.index] = target;
+      }
     }
 
     // Shadows: now that all meshes and lights exist, wire up generators for any

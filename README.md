@@ -78,6 +78,27 @@ registers the example behaviors, and loads `/levels/level.scene.json`.
 > ships a `.wasm` that must be served — the included `vite.config.ts` handles
 > this by excluding it from dep pre-bundling.
 
+## Creating a new project
+
+`babylon_runtime/` doubles as a template. To spin up a fresh runtime under a new
+name, from inside `babylon_runtime/`:
+
+```bash
+npm run create -- --name "My Game"
+```
+
+This copies the engine, behaviors, and config into a sibling folder
+(`../my-game` by default), rewrites the package name and browser-tab title, and
+skips generated files (`node_modules`, `dist`, exported levels, the scaffolder
+itself). Useful flags: `--dir <path>` (target location), `--title <text>`,
+`--level <name>` (point `main.ts` at `/levels/<name>.scene.json`), `--install`
+(run `npm install` for you), `--force` (allow a non-empty target). Then `cd` in,
+`npm install`, and `npm run dev`.
+
+Note: this is a *template copy*, so each project gets its own frozen copy of
+`src/engine/` — engine fixes don't propagate automatically. Packaging the engine
+as a shared dependency is the planned next step.
+
 ### Behaviors (scripts)
 
 Put one behavior class per file in `src/behaviors/`, named after the class and
@@ -113,9 +134,11 @@ For a **dropdown**, use `@exposed({ type: "enum", options: ["idle", "walk",
 just that string at runtime. For a **variable-length array**, use
 `@exposed({ type: "list", of: "float" }) speeds = [1, 2, 3]` — Blender shows an
 add/remove item list, and `of` may be `float`, `int`, `string`, `bool`,
-`vector3`, or `color` (`vector3`/`color` elements arrive as `Vector3`/`Color3`).
-Entities aren't supported as list elements. See `Waypoints.ts` for both. List
-defaults must be a single-line literal.
+`vector3`, `color`, or `entity`. `vector3`/`color` elements arrive as
+`Vector3`/`Color3`; an `entity` list shows an object picker per item and resolves
+to an array of `Entity` objects at runtime (nulls for empty slots). See
+`Waypoints.ts` and `PatrolTargets.ts`. List defaults must be a single-line literal
+(entity lists start empty — you pick the objects in Blender).
 
 `min`/`max`/`label` hints are read from the decorator. The Blender side is a
 conservative source parser — anything it can't read is simply not shown, and the

@@ -16,7 +16,14 @@ import { Color3, Vector3 } from "@babylonjs/core";
  * tsconfig (esbuild/Vite support these). The decorator only records the field
  * name + UI hints; it never changes how the field itself behaves.
  */
-export type ListElem = "float" | "int" | "string" | "bool" | "vector3" | "color";
+export type ListElem =
+  | "float"
+  | "int"
+  | "string"
+  | "bool"
+  | "vector3"
+  | "color"
+  | "entity";
 
 export interface ExposeOptions {
   min?: number;
@@ -46,6 +53,7 @@ export interface PendingRef {
   instance: object;
   field: string;
   guid: string;
+  index?: number; // when set, assign into instance[field][index] (entity lists)
 }
 
 const REGISTRY = new WeakMap<Function, ExposedField[]>();
@@ -109,7 +117,18 @@ export function applyExposedVars(
         inst[field.name] = null;
       }
     } else if (field.type === "list" && Array.isArray(value)) {
-      inst[field.name] = value.map((el) => coerceElem(field.of, el));
+      if (field.of === "entity") {
+        // Pre-size with nulls; each non-empty guid resolves into its slot later.
+        const arr: (unknown | null)[] = new Array(value.length).fill(null);
+        inst[field.name] = arr;
+        value.forEach((g, i) => {
+          if (typeof g === "string" && g) {
+            pending.push({ instance, field: field.name, guid: g, index: i });
+          }
+        });
+      } else {
+        inst[field.name] = value.map((el) => coerceElem(field.of, el));
+      }
     } else {
       inst[field.name] = coerce(inst[field.name], value);
     }

@@ -21,7 +21,9 @@ def _serialize_list(v):
     out = []
     for item in v.list_items:
         val = getattr(item, slot)
-        if slot in ("v_val", "c_val"):
+        if slot == "obj_val":
+            out.append(ensure_object_id(val) if val else None)
+        elif slot in ("v_val", "c_val"):
             out.append(list(val))
         elif slot == "f_val":
             out.append(float(val))
@@ -56,16 +58,27 @@ def _serialize_vars(comp):
     return out
 
 
+def _iter_referenced_objects(comp):
+    """Yield Blender objects referenced by a component's exposed vars — both
+    scalar entity refs and entity-list items."""
+    for v in comp.exposed_vars:
+        if v.vtype == 'ENTITY' and v.obj_val is not None:
+            yield v.obj_val
+        elif v.vtype == 'LIST' and v.elem_type == 'ENTITY':
+            for item in v.list_items:
+                if item.obj_val is not None:
+                    yield item.obj_val
+
+
 def _referenced_ids(context):
-    """GUIDs of objects referenced by any ENTITY exposed var."""
+    """GUIDs of objects referenced by any ENTITY exposed var (scalar or list)."""
     ids = set()
     for obj in context.scene.objects:
         for comp in obj.bjs_components:
-            for v in comp.exposed_vars:
-                if v.vtype == 'ENTITY' and v.obj_val is not None:
-                    rid = v.obj_val.get(ID_KEY)
-                    if rid:
-                        ids.add(rid)
+            for ref in _iter_referenced_objects(comp):
+                rid = ref.get(ID_KEY)
+                if rid:
+                    ids.add(rid)
     return ids
 
 
@@ -164,9 +177,8 @@ def _ensure_entity_ids(context):
         if len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}:
             ensure_object_id(obj)
         for comp in obj.bjs_components:
-            for v in comp.exposed_vars:
-                if v.vtype == 'ENTITY' and v.obj_val is not None:
-                    ensure_object_id(v.obj_val)
+            for ref in _iter_referenced_objects(comp):
+                ensure_object_id(ref)
 
 
 def _build_manifest(context, glb_filename):

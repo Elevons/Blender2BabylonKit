@@ -87,10 +87,11 @@ VAR_TYPES = [
     ('LIST',    "List",    "A variable-length array of values"),
 ]
 
-# Element types a LIST can hold (entity is intentionally excluded).
+# Element types a LIST can hold.
 LIST_ELEM_SLOT = {
     'FLOAT': "f_val", 'INT': "f_val", 'BOOL': "b_val",
     'STRING': "s_val", 'VECTOR3': "v_val", 'COLOR': "c_val",
+    'ENTITY': "obj_val",
 }
 
 # Keeps dynamically-generated enum item tuples alive (Blender will crash if the
@@ -141,6 +142,7 @@ class BJSListItem(PropertyGroup):
     v_val: FloatVectorProperty(name="Value", size=3, subtype='XYZ')
     c_val: FloatVectorProperty(name="Value", size=3, subtype='COLOR',
                                min=0.0, max=1.0, default=(1.0, 1.0, 1.0))
+    obj_val: PointerProperty(name="Object", type=Object, update=_on_obj_ref_update)
 
 
 class BJSExposedVar(PropertyGroup):
@@ -210,8 +212,8 @@ def add_list_item(v, el=None):
     """Append an item to a LIST var, optionally initialised to `el`."""
     item = v.list_items.add()
     slot = LIST_ELEM_SLOT.get(v.elem_type, "f_val")
-    if el is None:
-        return item
+    if el is None or slot == "obj_val":
+        return item  # entity items start empty; you pick the object in Blender
     if slot == "f_val":
         item.f_val = float(el)
     elif slot == "b_val":

@@ -17,7 +17,8 @@ Supported forms (one field per match):
     @exposed({ type: "list", of: "vector3" }) points = [[0,0,0],[1,1,1]];
 
 Defaults must be a single-line literal. List element types: float, int,
-string, bool, vector3, color (entity is not supported in lists).
+string, bool, vector3, color, entity (entity lists start empty — objects are
+picked in Blender).
 """
 
 import os
@@ -105,6 +106,8 @@ def _parse_string_literal(lit):
 
 def _parse_list_default(literal, elem_type):
     """Parse a one-line array literal into a Python list, per element type."""
+    if elem_type == "entity":
+        return []  # entity references are picked in Blender, never from a literal
     lit = literal.strip()
     if not lit.startswith("["):
         return []

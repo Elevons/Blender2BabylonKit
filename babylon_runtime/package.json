@@ -1,12 +1,13 @@
 {
   "name": "bjs-level-runtime",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "create": "node scripts/create-project.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.0.0",
