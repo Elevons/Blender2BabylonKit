@@ -44,6 +44,28 @@ COMPONENT_TYPES = [
     ('COLLIDER',  "Collider",   "Physics collision shape"),
     ('RIGIDBODY', "Rigid Body", "Physics body (mass, dynamics)"),
     ('SCRIPT',    "Script",     "Attach a named behavior script with parameters"),
+    ('CAMERA',    "Camera",     "Override the camera type (ArcRotate / Follow / ...)"),
+]
+
+CAMERA_TYPES = [
+    ('FREE',      "Free",       "FreeCamera (the faithful default, configurable)"),
+    ('UNIVERSAL', "Universal",  "UniversalCamera (free + touch/gamepad)"),
+    ('ARC',       "ArcRotate",  "Orbit camera around a target"),
+    ('FOLLOW',    "Follow",     "Follow a target object"),
+]
+
+CAMERA_KEY_SCHEMES = [
+    ('ARROWS', "Arrow Keys", "Up/Down/Left/Right arrows"),
+    ('WASD',   "WASD",       "W/A/S/D"),
+    ('BOTH',   "Arrows + WASD", "Both arrow keys and WASD"),
+    ('CUSTOM', "Custom",     "Assign your own keys below"),
+]
+
+FOLLOW_MODES = [
+    ('OFFSET', "Fixed Offset", "Keep a constant world offset from the target "
+                               "(camera placed where it sits in Blender)"),
+    ('ORBIT',  "Orbit",        "Babylon FollowCamera — offset rotates with the "
+                               "target's facing"),
 ]
 
 COLLIDER_SHAPES = [
@@ -103,6 +125,12 @@ def _on_obj_ref_update(self, context):
     """Picking an object auto-assigns it a GUID so it can be referenced."""
     if self.obj_val is not None:
         ensure_object_id(self.obj_val)
+
+
+def _on_cam_target_update(self, context):
+    """Follow-camera target: assign it a GUID so the runtime can resolve it."""
+    if self.cam_target is not None:
+        ensure_object_id(self.cam_target)
 
 
 _ENUM_SEP = "\x1f"  # unit separator — safe inside option strings
@@ -289,6 +317,33 @@ class BJSComponent(PropertyGroup):
     script_name: StringProperty(name="Script", default="")
     exposed_vars: CollectionProperty(type=BJSExposedVar)
 
+    # --- CAMERA (opt-in type override; default cameras stay faithful FreeCameras) ---
+    cam_type:           EnumProperty(name="Camera Type", items=CAMERA_TYPES, default='ARC')
+    cam_attach_control: BoolProperty(name="Attach Controls", default=True)
+    cam_key_scheme:     EnumProperty(name="Keys", items=CAMERA_KEY_SCHEMES, default='ARROWS')
+    cam_key_up:         StringProperty(name="Up", default="W", maxlen=1)
+    cam_key_down:       StringProperty(name="Down", default="S", maxlen=1)
+    cam_key_left:       StringProperty(name="Left", default="A", maxlen=1)
+    cam_key_right:      StringProperty(name="Right", default="D", maxlen=1)
+    cam_use_blender_transform: BoolProperty(
+        name="Use Blender Position", default=True,
+        description="Start the follow camera where it sits in Blender, relative "
+                    "to the target (derives distance/height/angle)")
+    cam_follow_mode:    EnumProperty(name="Follow Mode", items=FOLLOW_MODES, default='OFFSET')
+    cam_speed:          FloatProperty(name="Speed", default=1.0, min=0.0)
+    cam_inertia:        FloatProperty(name="Inertia", default=0.9, min=0.0, max=1.0)
+    cam_radius:         FloatProperty(name="Orbit Distance", default=10.0, min=0.1)
+    cam_lower_radius:   FloatProperty(name="Min Zoom", default=0.0, min=0.0,
+                                      description="0 = no limit")
+    cam_upper_radius:   FloatProperty(name="Max Zoom", default=0.0, min=0.0,
+                                      description="0 = no limit")
+    cam_target:         PointerProperty(name="Target", type=Object,
+                                        update=_on_cam_target_update)
+    cam_distance:       FloatProperty(name="Follow Distance", default=10.0, min=0.0)
+    cam_height:         FloatProperty(name="Height Offset", default=4.0)
+    cam_rotation_offset: FloatProperty(name="Rotation Offset", default=0.0,
+                                       description="Degrees behind the target")
+
 
 SHADOW_FILTERS = [
     ('PCF',      "PCF",            "Percentage-closer filtering (soft edges, default)"),
@@ -324,11 +379,23 @@ class BJSLightShadow(PropertyGroup):
     filter: EnumProperty(name="Filter", items=SHADOW_FILTERS, default='PCF')
 
 
+class BJSAnimationSettings(PropertyGroup):
+    """Per-object NLA playback settings. Clip data itself rides in the glb as
+    Babylon AnimationGroups; this only controls autoplay."""
+    auto_play: BoolProperty(name="Auto Play", default=False)
+    default_clip: StringProperty(
+        name="Clip", default="",
+        description="NLA strip to auto-play (blank = first one found)")
+    loop: BoolProperty(name="Loop", default=True)
+    speed: FloatProperty(name="Speed", default=1.0, min=0.0, soft_max=10.0)
+
+
 classes = (
     BJSListItem,
     BJSExposedVar,
     BJSComponent,
     BJSLightShadow,
+    BJSAnimationSettings,
 )
 
 
@@ -341,9 +408,12 @@ def register():
     Object.bjs_components_index = IntProperty(default=0)
     # Per-light Babylon shadow settings (only used/drawn for LIGHT objects).
     Object.bjs_shadow = PointerProperty(type=BJSLightShadow)
+    # Per-object NLA animation settings (drawn when the object has NLA strips).
+    Object.bjs_animation = PointerProperty(type=BJSAnimationSettings)
 
 
 def unregister():
+    del Object.bjs_animation
     del Object.bjs_shadow
     del Object.bjs_components_index
     del Object.bjs_components

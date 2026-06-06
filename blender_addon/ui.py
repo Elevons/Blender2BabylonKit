@@ -52,6 +52,8 @@ def _draw_component(layout, obj, index, comp):
         label = f"Tag: {comp.tag}"
     elif comp.comp_type == 'SCRIPT' and comp.script_name:
         label = f"Script: {comp.script_name}"
+    elif comp.comp_type == 'CAMERA':
+        label = f"Camera: {comp.cam_type.title()}"
     header.label(text=label)
     rm = header.operator("bjs.remove_component", text="", icon='X')
     rm.index = index
@@ -111,6 +113,44 @@ def _draw_component(layout, obj, index, comp):
             for vi, v in enumerate(comp.exposed_vars):
                 _draw_var(vbox, index, vi, v)
 
+    elif comp.comp_type == 'CAMERA':
+        if obj.type != 'CAMERA':
+            body.label(text="Only affects Camera objects", icon='INFO')
+        body.prop(comp, "cam_type")
+        body.prop(comp, "cam_attach_control")
+        t = comp.cam_type
+        if t in {'FREE', 'UNIVERSAL'}:
+            body.prop(comp, "cam_speed")
+            body.prop(comp, "cam_inertia")
+        elif t == 'ARC':
+            body.prop(comp, "cam_target", text="Orbit Target")
+            body.prop(comp, "cam_radius")
+            body.prop(comp, "cam_lower_radius")
+            body.prop(comp, "cam_upper_radius")
+        elif t == 'FOLLOW':
+            body.prop(comp, "cam_target")
+            body.prop(comp, "cam_follow_mode")
+            if comp.cam_follow_mode == 'OFFSET':
+                body.label(text="Follows at the camera's offset from the target",
+                           icon='INFO')
+            else:
+                body.prop(comp, "cam_use_blender_transform")
+                if not comp.cam_use_blender_transform:
+                    body.prop(comp, "cam_distance")
+                    body.prop(comp, "cam_height")
+                    body.prop(comp, "cam_rotation_offset")
+        # Key bindings: only for keyboard-driven types, when controls are attached.
+        if comp.cam_attach_control and t in {'FREE', 'UNIVERSAL', 'ARC'}:
+            kbox = body.box()
+            kbox.prop(comp, "cam_key_scheme")
+            if comp.cam_key_scheme == 'CUSTOM':
+                r1 = kbox.row(align=True)
+                r1.prop(comp, "cam_key_up")
+                r1.prop(comp, "cam_key_down")
+                r2 = kbox.row(align=True)
+                r2.prop(comp, "cam_key_left")
+                r2.prop(comp, "cam_key_right")
+
 
 def _draw_light_info(layout, obj):
     lamp = obj.data
@@ -148,6 +188,32 @@ def _draw_light_info(layout, obj):
         sc.prop(sh, "min_z")
         sc.prop(sh, "max_z")
     box.label(text="Exported automatically — no component needed", icon='INFO')
+
+
+def _draw_animation(layout, obj):
+    ad = obj.animation_data
+    strips = []
+    if ad and ad.nla_tracks:
+        for track in ad.nla_tracks:
+            for strip in track.strips:
+                strips.append(strip)
+    if not strips:
+        return
+
+    a = obj.bjs_animation
+    box = layout.box()
+    box.label(text="Animation", icon='ANIM')
+    col = box.column()
+    col.use_property_split = True
+    col.prop(a, "auto_play")
+    if a.auto_play:
+        col.prop(a, "default_clip")
+        col.prop(a, "loop")
+        col.prop(a, "speed")
+    box.label(text="NLA clips (exported):")
+    for s in strips:
+        box.label(text=f"   {s.name}   [{int(s.frame_start)}-{int(s.frame_end)}]",
+                  icon='ACTION')
 
 
 def _draw_camera_info(layout, obj, context):
@@ -198,6 +264,8 @@ class BJS_PT_components(Panel):
             _draw_light_info(layout, obj)
         elif obj.type == 'CAMERA':
             _draw_camera_info(layout, obj, context)
+
+        _draw_animation(layout, obj)
 
         if len(obj.bjs_components) == 0:
             layout.label(text="No components", icon='DOT')

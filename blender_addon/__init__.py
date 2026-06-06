@@ -9,12 +9,16 @@ Preferences > Get Extensions > Install from Disk. A "Babylon" tab appears in the
 # Re-import submodules cleanly on addon reload.
 if "properties" in locals():
     import importlib
-    for _m in (script_parse, properties, operators, ui, export):  # noqa: F821
+    for _m in (script_parse, properties, scene_properties, scene_export,  # noqa: F821
+               anim_export, operators, ui, scene_ui, export):  # noqa: F821
         importlib.reload(_m)
 else:
-    from . import script_parse, properties, operators, ui, export
+    from . import (script_parse, properties, scene_properties, scene_export,
+                   anim_export, operators, ui, scene_ui, export)
 
-_modules = (properties, operators, ui)
+# Modules with register()/unregister(). scene_export is pure functions (no UI),
+# so it isn't registered. Order: properties before the panels that read them.
+_modules = (properties, scene_properties, operators, ui, scene_ui)
 
 
 def register():

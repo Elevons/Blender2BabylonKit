@@ -52,6 +52,10 @@ babylon_runtime/
       lights.ts           #   Blender lamp props  -> Babylon light     (subsystem)
       cameras.ts          #   Blender camera props -> Babylon camera   (subsystem)
       shadows.ts          #   shadow-casting lights -> ShadowGenerators (subsystem)
+      environment.ts      #   World env texture -> IBL + skybox         (subsystem)
+      fog.ts              #   scene fog                                 (subsystem)
+      postprocess.ts      #   DefaultRenderingPipeline + SSAO           (subsystem)
+      animation.ts        #   NLA clips -> AnimationGroups + autoplay   (subsystem)
       LevelLoader.ts      #   orchestrates the whole load + the Level object
 blender_addon/            # the Blender plugin (Python) — the editor half
 ```
@@ -297,6 +301,8 @@ fallback `ArcRotateCamera` when the scene shipped no camera at all. Orthographic
 bounds come from the glb's `xmag`/`ymag`, so the engine sets the mode but doesn't
 recompute the rectangle from Blender's `ortho_scale`.
 
+A **CAMERA component** (opt-in) overrides the type: FREE/UNIVERSAL/ARC/FOLLOW. `buildTypedCamera` (cameras.ts) builds it from the faithful camera's world transform and disposes the original. ARC and FOLLOW can reference a target object (the `target` GUID): FOLLOW sets it as `lockedTarget`, ARC re-pivots its orbit onto it — both resolved in the second pass like entity references. When controls are attached, FREE/UNIVERSAL/ARC apply a key scheme (`applyCameraKeys`). FOLLOW has two modes: `ORBIT` (Babylon FollowCamera; with `useBlenderTransform` it derives radius/height/rotationOffset from the exported position via `deriveFollowFromPosition`, and its pointer-input multi-axis warning is silenced) and `OFFSET` (a UniversalCamera the loader drives each frame via `Level.addUpdater` to hold a constant world offset from the target — the offset is the exported camera position minus the target). ARC likewise starts from the exported position: `setPosition(eye)` after `setTarget` makes the camera's offset from the pivot define alpha/beta/radius.
+
 ---
 
 ## 10. Subsystem: shadows (`shadows.ts`)
@@ -367,6 +373,14 @@ which fields a script exposes, hit the **Sync** button in Blender to re-read the
 {
   "version": 2,
   "glb": "level.glb",
+  "scene": {
+    "clearColor": [0,0,0,1], "ambientColor": [0,0,0],
+    "environment": { "file": "env/sky.env", "intensity": 1, "rotationY": 0, "createSkybox": true },
+    "fog": { "mode": "EXP2", "color": [0.5,0.6,0.7], "density": 0.01, "start": 10, "end": 100 },
+    "postProcessing": { "defaultPipeline": true, "fxaa": true,
+      "bloom": { "enabled": false, "threshold": 0.9, "intensity": 0.5 },
+      "ssao": false, "toneMapping": true, "exposure": 1, "contrast": 1 }
+  },
   "entities": [
     {
       "id": "guid-hex",
@@ -379,13 +393,19 @@ which fields a script exposes, hit the **Sync** button in Blender to re-read the
         { "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1, "friction": 0.5,
           "restitution": 0.2, "linearDamping": 0, "angularDamping": 0 },
         { "type": "SCRIPT", "script": "Spinner", "path": "...",
-          "vars": { "speed": 120, "axis": [0,1,0] } }
+          "vars": { "speed": 120, "axis": [0,1,0] } },
+        { "type": "CAMERA", "cameraType": "ARC", "attachControl": true,
+          "keys": { "scheme": "ARROWS", "up": "W", "down": "S", "left": "A", "right": "D" },
+          "useBlenderTransform": true, "followMode": "OFFSET", "radius": 10, "lowerRadius": 0, "upperRadius": 0,
+          "target": null, "distance": 10, "height": 4, "rotationOffset": 0 }
       ],
       "light":  { "type": "SUN", "color": [1,1,1], "energy": 1, "castShadows": true,
                   "shadow": { "filter": "PCF", "mapSize": 0, "bias": 0.00005,
                               "normalBias": 0, "darkness": 0, "minZ": 0, "maxZ": 0 } },
       "camera": { "type": "PERSP", "clipStart": 0.1, "clipEnd": 1000,
-                  "fov": 0.69, "active": true }
+                  "fov": 0.69, "active": true },
+      "animation": { "autoPlay": true, "clip": "Walk", "loop": true,
+                     "speed": 1, "clips": ["Walk", "Idle"] }
     }
   ]
 }

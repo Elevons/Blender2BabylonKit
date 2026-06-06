@@ -1,0 +1,1 @@
+Arc Rotate and Follow cameras don't work great

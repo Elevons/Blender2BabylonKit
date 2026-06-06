@@ -200,6 +200,56 @@ as `scene.activeCamera` — so you see exactly what Blender frames. It's exposed
 if you want to fly it around for inspection, `level.activeCamera?.attachControl(
 canvas, true)`.
 
+To use a different camera type, add a **Camera component** to the camera object —
+this is opt-in and leaves the faithful FreeCamera as the default for every other
+camera. Pick a type: **Free**/**Universal** (configures the camera with
+speed/inertia/controls), **ArcRotate** (orbits — around a target object you pick,
+or, if none, a point ahead of where Blender framed the camera; with optional zoom
+limits), or **Follow** (tracks a target object you pick). All build from the
+faithful camera's world transform, so they begin where Blender framed them: Arc
+starts at the exported position (its offset from the orbit target defines the
+starting angle/distance). Follow has two modes: **Fixed Offset** (default) keeps
+the camera at a constant world-space offset from the target — exactly where it
+sits in Blender — translating with the target and always looking at it; **Orbit**
+uses Babylon's FollowCamera, whose offset rotates with the target's facing (with
+**Use Blender Position** to derive distance/height/angle from the exported camera,
+or set them by hand). When controls are attached, the keyboard-driven types
+(Free/Universal/Arc) take a **key scheme** — Arrow keys, WASD, both, or a custom
+up/down/left/right assignment.
+
+## Scene settings (environment, fog, post-processing)
+
+The **Properties → Scene → Babylon Scene** panel holds scene-wide render
+settings, serialized into a top-level `scene` block in the manifest and applied
+at load:
+
+- **Clear / ambient color** — `scene.clearColor` / `ambientColor`.
+- **Environment** — if the World has an environment-texture node, it's copied
+  next to the export (into `env/`) and used for image-based lighting, with an
+  optional skybox. `.env` (Babylon's prefiltered cube) is recommended; `.hdr`
+  works; `.exr` can't load in-browser, so export `.env`. Intensity and Y-rotation
+  are read from the World's Background/Mapping nodes.
+- **Fog** — linear/exp/exp² with color and range/density.
+- **Post-processing** — Babylon's `DefaultRenderingPipeline` (FXAA, bloom, tone
+  mapping/exposure/contrast). SSAO is wired as a *separate* `SSAO2RenderingPipeline`
+  (it isn't part of the default pipeline). These attach to the active camera, so
+  the scene needs one. Handles are exposed on `level.post`.
+
+## Animation (NLA clips)
+
+Animations ride in the glb: each Blender **NLA strip** is exported as a named
+glTF animation, which Babylon imports as an `AnimationGroup`. The manifest adds
+a small per-object block (from the **Animation** box in the Babylon panel, shown
+whenever the object has NLA strips): auto-play on/off, which clip to auto-play,
+loop, and speed.
+
+At load the runtime matches each AnimationGroup to its entity by node membership
+(so global name collisions don't matter), exposes them as `entity.animations`,
+and — because the glTF loader otherwise auto-starts the first clip — **stops all
+groups and only plays what you marked auto-play**. So nothing animates unless you
+ask it to. Scripts can drive playback directly: `this.entity.getAnimation("Walk")
+?.start(true)`, or iterate `this.entity.animations` (see `ClipSwitcher.ts`).
+
 ## Entity identity (GUIDs)
 
 Each entity is matched between the manifest and the loaded glb by a **GUID**, not

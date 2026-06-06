@@ -11,9 +11,11 @@ import os
 import bpy
 
 from .properties import ID_KEY, ensure_object_id, LIST_ELEM_SLOT, _ENUM_SEP
+from .scene_export import serialize_scene
+from .anim_export import serialize_animation, nla_clip_names
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def _serialize_list(v):
@@ -60,7 +62,9 @@ def _serialize_vars(comp):
 
 def _iter_referenced_objects(comp):
     """Yield Blender objects referenced by a component's exposed vars — both
-    scalar entity refs and entity-list items."""
+    scalar entity refs and entity-list items — plus a follow-camera target."""
+    if comp.comp_type == 'CAMERA' and comp.cam_target is not None:
+        yield comp.cam_target
     for v in comp.exposed_vars:
         if v.vtype == 'ENTITY' and v.obj_val is not None:
             yield v.obj_val
@@ -118,6 +122,28 @@ def _serialize_components(obj):
             d["path"] = c.script_path
             d["vars"] = _serialize_vars(c)
 
+        elif c.comp_type == 'CAMERA':
+            d.update({
+                "cameraType": c.cam_type,
+                "attachControl": bool(c.cam_attach_control),
+                "keys": {
+                    "scheme": c.cam_key_scheme,
+                    "up": c.cam_key_up, "down": c.cam_key_down,
+                    "left": c.cam_key_left, "right": c.cam_key_right,
+                },
+                "useBlenderTransform": bool(c.cam_use_blender_transform),
+                "followMode": c.cam_follow_mode,
+                "speed": c.cam_speed,
+                "inertia": c.cam_inertia,
+                "radius": c.cam_radius,
+                "lowerRadius": c.cam_lower_radius,
+                "upperRadius": c.cam_upper_radius,
+                "target": ensure_object_id(c.cam_target) if c.cam_target else None,
+                "distance": c.cam_distance,
+                "height": c.cam_height,
+                "rotationOffset": c.cam_rotation_offset,
+            })
+
         comps.append(d)
     return comps
 
@@ -174,25 +200,28 @@ def _ensure_entity_ids(context):
     'Add Component', and referenced objects may have no components at all, so
     this is where they get their id."""
     for obj in context.scene.objects:
-        if len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}:
+        if (len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}
+                or nla_clip_names(obj)):
             ensure_object_id(obj)
         for comp in obj.bjs_components:
             for ref in _iter_referenced_objects(comp):
                 ensure_object_id(ref)
 
 
-def _build_manifest(context, glb_filename):
+def _build_manifest(context, glb_filename, output_dir):
     referenced = _referenced_ids(context)
     entities = []
     for obj in context.scene.objects:
         comps = _serialize_components(obj)
         light = _serialize_light(obj) if obj.type == 'LIGHT' else None
         camera = _serialize_camera(obj, obj == context.scene.camera) if obj.type == 'CAMERA' else None
+        animation = serialize_animation(obj)
         is_referenced = obj.get(ID_KEY) in referenced
         has_id = bool(obj.get(ID_KEY))
         # A GUID is an explicit "make this addressable" marker (e.g. Assign GUID
         # on a bare empty), so include it even with nothing else on it.
-        if not comps and not light and not camera and not is_referenced and not has_id:
+        if (not comps and not light and not camera and not animation
+                and not is_referenced and not has_id):
             continue  # pure geometry needs no manifest entry; it lives in the glb
         obj_id = ensure_object_id(obj)  # guarantee a GUID exists
         parent = obj.parent
@@ -207,10 +236,13 @@ def _build_manifest(context, glb_filename):
             entity["light"] = light      # auto-derived from the Blender lamp, not a component
         if camera:
             entity["camera"] = camera    # auto-derived from the Blender camera
+        if animation:
+            entity["animation"] = animation  # NLA clips + autoplay
         entities.append(entity)
     return {
         "version": SCHEMA_VERSION,
         "glb": glb_filename,
+        "scene": serialize_scene(context, output_dir),
         "entities": entities,
     }
 
@@ -227,7 +259,8 @@ def _export_glb(glb_path):
         export_extras=True,   # REQUIRED: writes obj["bjs_id"] into node extras
     )
     # Optional kwargs that exist on most but not all Blender versions.
-    optional = dict(export_cameras=True, export_lights=True)
+    optional = dict(export_cameras=True, export_lights=True,
+                    export_animations=True, export_nla_strips=True)
     try:
         bpy.ops.export_scene.gltf(**base_kwargs, **optional)
     except TypeError:
@@ -245,7 +278,7 @@ def export_level(context, filepath):
     _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
     _export_glb(glb_path)
 
-    manifest = _build_manifest(context, glb_filename)
+    manifest = _build_manifest(context, glb_filename, os.path.dirname(glb_path))
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 

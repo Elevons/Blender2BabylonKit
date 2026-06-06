@@ -6,4 +6,8 @@ export * from "./physics";
 export * from "./lights";
 export * from "./cameras";
 export * from "./shadows";
+export * from "./environment";
+export * from "./fog";
+export * from "./postprocess";
+export * from "./animation";
 export * from "./LevelLoader";
