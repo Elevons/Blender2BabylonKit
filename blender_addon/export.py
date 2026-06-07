@@ -9,6 +9,7 @@ along inside the glb, so the manifest only stores what glTF can't express.
 import json
 import os
 import bpy
+import mathutils
 
 from .properties import ID_KEY, ensure_object_id, LIST_ELEM_SLOT, _ENUM_SEP
 from .scene_export import serialize_scene
@@ -97,14 +98,20 @@ def _serialize_components(obj):
             d["tag"] = c.tag
 
         elif c.comp_type == 'COLLIDER':
+            # Authored in Blender axes (Z-up); convert offset + size + rotation to
+            # Babylon Y-up so the runtime body matches the viewport preview.
+            cx, cy, cz = c.collider_center
+            sx, sy, sz = c.collider_size
+            q = mathutils.Euler(c.collider_rotation, 'XYZ').to_quaternion()
             d.update({
                 "shape": c.collider_shape,
                 "isTrigger": bool(c.is_trigger),
                 "autoFit": bool(c.auto_fit),
-                "size": list(c.collider_size),
+                "size": [sx, sz, sy],        # extents: y<->z axes swap
                 "radius": c.collider_radius,
                 "height": c.collider_height,
-                "center": list(c.collider_center),
+                "center": [cx, cz, -cy],     # offset: (x, y, z) -> (x, z, -y)
+                "rotation": [q.x, q.z, -q.y, q.w],  # quaternion xyzw, axis Z-up -> Y-up
             })
 
         elif c.comp_type == 'RIGIDBODY':
@@ -194,24 +201,52 @@ def _serialize_camera(obj, is_active):
     return info
 
 
+def _is_renderable(obj):
+    """Objects disabled in renders (the camera icon / `hide_render`) are excluded
+    from the level entirely — no glb geometry and no manifest entry."""
+    return not obj.hide_render
+
+
+def _dedupe_entity_ids(context):
+    """Blender object duplication copies custom properties — including our GUID —
+    so a duplicated object shares the original's id. Give each later duplicate a
+    fresh id so it becomes a distinct entity. Runs before ids/refs are resolved."""
+    seen = {}
+    for obj in context.scene.objects:
+        oid = obj.get(ID_KEY)
+        if not oid:
+            continue
+        owner = seen.get(oid)
+        if owner is not None and owner is not obj:
+            del obj[ID_KEY]
+            ensure_object_id(obj)      # assign a fresh, unique id
+        else:
+            seen[oid] = obj
+
+
 def _ensure_entity_ids(context):
     """Assign GUIDs to every object that will become an entity BEFORE the glb is
     written, so the id lands in the glTF node extras. Lights never go through
     'Add Component', and referenced objects may have no components at all, so
     this is where they get their id."""
     for obj in context.scene.objects:
+        if not _is_renderable(obj):
+            continue
         if (len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}
                 or nla_clip_names(obj)):
             ensure_object_id(obj)
         for comp in obj.bjs_components:
             for ref in _iter_referenced_objects(comp):
-                ensure_object_id(ref)
+                if _is_renderable(ref):
+                    ensure_object_id(ref)
 
 
 def _build_manifest(context, glb_filename, output_dir):
     referenced = _referenced_ids(context)
     entities = []
     for obj in context.scene.objects:
+        if not _is_renderable(obj):
+            continue  # disabled in renders → not part of the level
         comps = _serialize_components(obj)
         light = _serialize_light(obj) if obj.type == 'LIGHT' else None
         camera = _serialize_camera(obj, obj == context.scene.camera) if obj.type == 'CAMERA' else None
@@ -254,6 +289,7 @@ def _export_glb(glb_path):
         filepath=glb_path,
         export_format='GLB',
         use_selection=False,
+        use_renderable=True,  # skip objects disabled in renders (matches manifest)
         export_apply=True,    # apply modifiers
         export_yup=True,      # Babylon is Y-up
         export_extras=True,   # REQUIRED: writes obj["bjs_id"] into node extras
@@ -275,6 +311,7 @@ def export_level(context, filepath):
     glb_filename = os.path.basename(glb_path)
     json_path = os.path.splitext(glb_path)[0] + ".scene.json"
 
+    _dedupe_entity_ids(context)   # duplicated objects get fresh GUIDs
     _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
     _export_glb(glb_path)
 

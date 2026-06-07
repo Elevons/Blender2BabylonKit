@@ -43,10 +43,21 @@ APIs.
 ## Authoring a level
 
 - Select an object → **Babylon** tab → **Add Component**.
+- Each component is a collapsible panel (like a modifier). Its header has an
+  enable toggle and a **▾ menu** with *Duplicate*, *Copy/Cut/Paste*, *Move
+  Up/Down* (reorder), and *Delete*. To move a component to another object: **Cut**
+  it, select the other object, then **Paste** (Copy+Paste duplicates it across
+  objects instead). The clipboard is session-scoped and works across objects.
 - **Tag** – an entity tag/layer you can query at runtime (`level.byTag("Enemy")`).
 - **Collider** – box/sphere/capsule/cylinder/convex/mesh. *Auto-Fit* derives
   size from the mesh bounding box at runtime (recommended). Toggle *Is Trigger*
-  for overlap-only volumes.
+  for overlap-only volumes. When the object is selected, *Show Preview* draws the
+  collider as a cyan wireframe in the viewport. Manual *Size* / *Center Offset* / *Rotation*
+  are authored in Blender axes (what the preview shows) and converted to Babylon
+  Y-up on export; capsule/cylinder run along Blender's up (Z) axis. Convex/mesh
+  use the mesh itself, so they have no separate wireframe. *Fit to Bounds*
+  snapshots the mesh bounding box into the manual fields so you can start from an
+  accurate shape and tweak it with the preview.
 - **Rigid Body** – Dynamic / Static / Kinematic, plus mass, friction, bounce,
   damping. Combine with a Collider on the same object; the collider supplies the
   shape and the rigid body supplies the dynamics.
@@ -60,6 +71,11 @@ APIs.
 Empties work great as logic entities / spawn markers (they export as transform
 nodes). Then **Export → Export Level**, choosing a `.glb` path; you get
 `yourlevel.glb` + `yourlevel.scene.json` side by side.
+
+Objects **disabled in renders** (the camera icon in the outliner) are skipped
+entirely — no geometry in the glb and no manifest entry. Use it for blockout,
+reference, or editor-only objects you don't want in the level. (Viewport-only
+hiding does *not* exclude an object; only the render toggle does.)
 
 ## Run the Babylon runtime
 
@@ -77,6 +93,11 @@ registers the example behaviors, and loads `/levels/level.scene.json`.
 > Physics uses Babylon's **V2 / Havok** API. The `@babylonjs/havok` package
 > ships a `.wasm` that must be served — the included `vite.config.ts` handles
 > this by excluding it from dep pre-bundling.
+
+To **see the colliders** in the running scene, press **C** (toggles Babylon's
+physics debug wireframes), or call `level.showColliders(true)` yourself. You can
+also have them on from the start: `loader.load(url)` with the loader constructed
+as `new LevelLoader(scene, registry, { debugColliders: true })`.
 
 ## Creating a new project
 

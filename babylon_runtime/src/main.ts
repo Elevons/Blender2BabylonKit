@@ -43,6 +43,11 @@ async function main() {
   // Example: query by tag set in Blender.
   console.log("Players:", level.byTag("Player").map((e) => e.name));
 
+  // Press C to toggle collider/physics debug wireframes.
+  window.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "c") level.showColliders();
+  });
+
   engine.runRenderLoop(() => scene.render());
   window.addEventListener("resize", () => engine.resize());
 }

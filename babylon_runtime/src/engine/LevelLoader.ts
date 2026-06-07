@@ -6,6 +6,7 @@ import {
   Vector3,
   Color3,
   Color4,
+  PhysicsViewer,
   type Camera,
   type ShadowGenerator,
 } from "@babylonjs/core";
@@ -65,8 +66,30 @@ export class Level {
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
   private updaters: ((dt: number) => void)[] = [];
+  private physicsViewer?: PhysicsViewer;
 
   constructor(private scene: Scene) {}
+
+  /**
+   * Toggle wireframe debug rendering of every collider/body in the level
+   * (Babylon's PhysicsViewer). Call with no argument to flip, or pass an
+   * explicit boolean. The viewer keeps the wireframes in sync each frame.
+   */
+  showColliders(show?: boolean): void {
+    const on = show ?? !this.physicsViewer;
+    if (on) {
+      if (!this.physicsViewer) this.physicsViewer = new PhysicsViewer(this.scene);
+      for (const e of this.entities.values()) {
+        if (e.body) this.physicsViewer.showBody(e.body);
+      }
+    } else if (this.physicsViewer) {
+      for (const e of this.entities.values()) {
+        if (e.body) this.physicsViewer.hideBody(e.body);
+      }
+      this.physicsViewer.dispose();
+      this.physicsViewer = undefined;
+    }
+  }
 
   /** Register a per-frame callback (used e.g. by offset-follow cameras). */
   addUpdater(fn: (dt: number) => void): void {
@@ -105,6 +128,10 @@ export class Level {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    if (this.physicsViewer) {
+      this.physicsViewer.dispose();
+      this.physicsViewer = undefined;
+    }
     if (this.observer) this.scene.onBeforeRenderObservable.remove(this.observer);
     for (const e of this.entities.values()) {
       for (const b of e.behaviors) {
@@ -119,6 +146,8 @@ export interface LevelLoaderOptions {
   shadows?: boolean;
   /** Shadow map resolution per light. Default 1024. */
   shadowMapSize?: number;
+  /** Show collider wireframes on load (Babylon PhysicsViewer). Default false. */
+  debugColliders?: boolean;
 }
 
 export class LevelLoader {
@@ -149,7 +178,28 @@ export class LevelLoader {
 
     // 1) Load geometry / lights / cameras / transforms from the glb.
     //    Babylon 9: appendSceneAsync takes one URL (rootUrl + filename combined).
+    //
+    //    Import the glTF right-handed instead of flipping it into Babylon's
+    //    left-handed space. In the default (left-handed) path the loader parents
+    //    everything under a "__root__" node carrying a 180-deg-Y rotation plus a
+    //    (1,1,-1) scale -- a net reflection across X (negative determinant).
+    //    Havok places bodies by decomposing a node's world matrix, and a
+    //    reflection is indistinguishable from a 180-deg rotation once decomposed,
+    //    so every collider was mis-oriented and a DYNAMIC body (which drives its
+    //    node) visibly mirrored the rendered mesh. Setting useRightHandedSystem
+    //    BEFORE the append makes the loader skip that mirror entirely: __root__
+    //    stays identity, world matrices stay decomposable, and both the mesh and
+    //    the colliders match. This is Babylon's documented way to append glTF.
+    //    NOTE: handedness is scene-wide, so ideally set this at scene creation in
+    //    main.ts; setting it here, before any glb content loads, is equivalent
+    //    for the level itself.
+    this.scene.useRightHandedSystem = true;
     await appendSceneAsync(base + manifest.glb, this.scene);
+
+    // 1b) Guard: with right-handed import there is no mirror to neutralize, but
+    //     warn loudly if a mirrored __root__ ever reappears (e.g. the flag above
+    //     gets removed), since that silently breaks physics orientation again.
+    this.neutralizeGltfRoot();
 
     // 2) Index nodes by their Blender GUID (read from glTF extras), then build
     //    entities. GUID match is authoritative and survives renames; we fall
@@ -298,6 +348,7 @@ export class LevelLoader {
     }
 
     level._begin();
+    if (this.options.debugColliders) level.showColliders(true);
     return level;
   }
 
@@ -317,6 +368,24 @@ export class LevelLoader {
   }
 
   /** Map every loaded node's GUID (node.metadata.gltf.extras.bjs_id) to the node. */
+  /** With right-handed import the glTF "__root__" is identity (no handedness
+   *  mirror), so Havok can decompose node world matrices cleanly and there is
+   *  nothing to neutralize. This stays as a guard: if a mirrored root ever
+   *  reappears (negative determinant), physics orientation is broken again and
+   *  we want a loud, specific warning rather than silently wrong colliders. */
+  private neutralizeGltfRoot(): void {
+    const root = this.scene.getNodeByName("__root__") as TransformNode | null;
+    if (!root) return;
+    root.computeWorldMatrix(true);
+    if (root.getWorldMatrix().determinant() < 0) {
+      console.warn(
+        '[bjs] "__root__" has a negative-determinant (mirrored) transform; ' +
+        "collider/body orientation will be wrong. Ensure scene.useRightHandedSystem " +
+        "is set to true BEFORE the glb is appended."
+      );
+    }
+  }
+
   private buildIdIndex(): Map<string, TransformNode> {
     const map = new Map<string, TransformNode>();
     const consider = (n: TransformNode) => {

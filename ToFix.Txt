@@ -1,1 +1,3 @@
 Arc Rotate and Follow cameras don't work great
+
+On the collection point: worth a quick clarification, because it doesn't fully resolve itself. Making a collection non-renderable does hide its objects from rendering, but it does not flip each object's own hide_render flag — so my manifest filter (which checks obj.hide_render) won't catch them, while the glb's use_renderable will drop them. The only real consequence is a component-bearing object inside a render-disabled collection: it'd get an orphan manifest entry the runtime warns about and skips. Plain geometry is unaffected (it gets no manifest entry anyway). So mostly moot — but if you lean on collection-level disabling for logic objects, say so and I'll make the manifest check walk the collection hierarchy.

@@ -6,7 +6,7 @@ from bpy.props import EnumProperty, IntProperty, StringProperty, BoolProperty
 from bpy.types import Operator
 from bpy_extras.io_utils import ExportHelper
 
-from .properties import COMPONENT_TYPES, ensure_object_id, sync_exposed_vars, add_list_item
+from .properties import COMPONENT_TYPES, ensure_object_id, sync_exposed_vars, add_list_item, copy_component
 from . import export as bjs_export
 from . import script_parse
 
@@ -118,6 +118,145 @@ class BJS_OT_sync_vars(Operator):
         return {'FINISHED'}
 
 
+class BJS_OT_duplicate_component(Operator):
+    bl_idname = "bjs.duplicate_component"
+    bl_label = "Duplicate Component"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    index: IntProperty()
+
+    def execute(self, context):
+        obj = context.object
+        if not (obj and 0 <= self.index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+        new = obj.bjs_components.add()                 # appended at the end
+        copy_component(obj.bjs_components[self.index], new)
+        obj.bjs_components.move(len(obj.bjs_components) - 1, self.index + 1)
+        obj.bjs_components_index = self.index + 1
+        return {'FINISHED'}
+
+
+class BJS_OT_move_component(Operator):
+    bl_idname = "bjs.move_component"
+    bl_label = "Move Component"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    index: IntProperty()
+    direction: EnumProperty(items=[('UP', "Up", ""), ('DOWN', "Down", "")])
+
+    def execute(self, context):
+        obj = context.object
+        if not obj:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        j = self.index - 1 if self.direction == 'UP' else self.index + 1
+        if 0 <= self.index < len(comps) and 0 <= j < len(comps):
+            comps.move(self.index, j)
+            obj.bjs_components_index = j
+        return {'FINISHED'}
+
+
+class BJS_OT_copy_component(Operator):
+    """Copy this component to the clipboard (paste onto any object)."""
+    bl_idname = "bjs.copy_component"
+    bl_label = "Copy Component"
+
+    index: IntProperty()
+
+    def execute(self, context):
+        obj = context.object
+        if not (obj and 0 <= self.index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+        clip = context.window_manager.bjs_clipboard
+        clip.clear()
+        copy_component(obj.bjs_components[self.index], clip.add())
+        return {'FINISHED'}
+
+
+class BJS_OT_cut_component(Operator):
+    """Move this component to the clipboard (copy, then remove)."""
+    bl_idname = "bjs.cut_component"
+    bl_label = "Cut Component"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    index: IntProperty()
+
+    def execute(self, context):
+        obj = context.object
+        if not (obj and 0 <= self.index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+        clip = context.window_manager.bjs_clipboard
+        clip.clear()
+        copy_component(obj.bjs_components[self.index], clip.add())
+        obj.bjs_components.remove(self.index)
+        obj.bjs_components_index = min(self.index, len(obj.bjs_components) - 1)
+        return {'FINISHED'}
+
+
+class BJS_OT_paste_component(Operator):
+    """Paste the clipboard component onto the active object."""
+    bl_idname = "bjs.paste_component"
+    bl_label = "Paste Component"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.object is not None
+                and len(context.window_manager.bjs_clipboard) > 0)
+
+    def execute(self, context):
+        obj = context.object
+        clip = context.window_manager.bjs_clipboard
+        if not (obj and len(clip) > 0):
+            return {'CANCELLED'}
+        ensure_object_id(obj)  # it's now an entity
+        copy_component(clip[0], obj.bjs_components.add())
+        obj.bjs_components_index = len(obj.bjs_components) - 1
+        return {'FINISHED'}
+
+
+class BJS_OT_fit_collider(Operator):
+    """Snapshot the mesh bounding box into the collider's manual size/center,
+    then switch off Auto-Fit so it can be hand-tweaked with live preview."""
+    bl_idname = "bjs.fit_collider"
+    bl_label = "Fit Collider to Bounds"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    index: IntProperty()
+
+    def execute(self, context):
+        obj = context.object
+        if not (obj and 0 <= self.index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+        comp = obj.bjs_components[self.index]
+        bb = [tuple(c) for c in obj.bound_box]          # 8 local-space corners
+        mn = (min(c[0] for c in bb), min(c[1] for c in bb), min(c[2] for c in bb))
+        mx = (max(c[0] for c in bb), max(c[1] for c in bb), max(c[2] for c in bb))
+        center = tuple((mn[i] + mx[i]) / 2 for i in range(3))
+        size = tuple(mx[i] - mn[i] for i in range(3))
+        comp.collider_center = center
+        comp.collider_size = size
+        comp.collider_radius = max(size) / 2            # sphere
+        comp.collider_height = size[2]                  # capsule/cylinder run along Z
+        comp.collider_rotation = (0.0, 0.0, 0.0)        # bounds are axis-aligned
+        comp.auto_fit = False
+        return {'FINISHED'}
+
+
+class BJS_OT_component_menu(Operator):
+    """Open the per-component actions menu (duplicate / move / delete)."""
+    bl_idname = "bjs.component_menu"
+    bl_label = "Component Actions"
+
+    index: IntProperty()
+
+    def execute(self, context):
+        if context.object:
+            context.object.bjs_components_index = self.index
+        bpy.ops.wm.call_menu(name="BJS_MT_component_menu")
+        return {'FINISHED'}
+
+
 class BJS_OT_remove_component(Operator):
     bl_idname = "bjs.remove_component"
     bl_label = "Remove Component"
@@ -204,6 +343,13 @@ classes = (
     BJS_OT_sync_vars,
     BJS_OT_list_add,
     BJS_OT_list_remove,
+    BJS_OT_duplicate_component,
+    BJS_OT_move_component,
+    BJS_OT_fit_collider,
+    BJS_OT_copy_component,
+    BJS_OT_cut_component,
+    BJS_OT_paste_component,
+    BJS_OT_component_menu,
     BJS_OT_remove_component,
     BJS_OT_export,
 )

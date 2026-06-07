@@ -5,7 +5,7 @@ component stack for the active object plus the export button.
 """
 
 import bpy
-from bpy.types import Panel
+from bpy.types import Panel, Menu
 
 from .properties import LIST_ELEM_SLOT
 
@@ -44,9 +44,8 @@ def _draw_var(layout, comp_index, var_index, v):
 
 
 def _draw_component(layout, obj, index, comp):
-    box = layout.box()
-    header = box.row(align=True)
-    header.prop(comp, "enabled", text="")
+    hdr, panel = layout.panel_prop(comp, "show_expanded")
+    hdr.prop(comp, "enabled", text="")
     label = comp.comp_type.replace('_', ' ').title()
     if comp.comp_type == 'TAG' and comp.tag:
         label = f"Tag: {comp.tag}"
@@ -54,14 +53,26 @@ def _draw_component(layout, obj, index, comp):
         label = f"Script: {comp.script_name}"
     elif comp.comp_type == 'CAMERA':
         label = f"Camera: {comp.cam_type.title()}"
-    header.label(text=label)
-    rm = header.operator("bjs.remove_component", text="", icon='X')
-    rm.index = index
+    hdr.label(text=label)
+    n = len(obj.bjs_components)
+    up = hdr.row(align=True)
+    up.enabled = index > 0
+    op = up.operator("bjs.move_component", text="", icon='TRIA_UP', emboss=False)
+    op.index = index
+    op.direction = 'UP'
+    down = hdr.row(align=True)
+    down.enabled = index < n - 1
+    op = down.operator("bjs.move_component", text="", icon='TRIA_DOWN', emboss=False)
+    op.index = index
+    op.direction = 'DOWN'
+    menu = hdr.operator("bjs.component_menu", text="", icon='DOWNARROW_HLT', emboss=False)
+    menu.index = index
 
-    if not comp.enabled:
+    if panel is None:
         return
 
-    body = box.column()
+    body = panel.column()
+    body.active = comp.enabled
     body.use_property_split = True
     body.use_property_decorate = False
 
@@ -71,7 +82,10 @@ def _draw_component(layout, obj, index, comp):
     elif comp.comp_type == 'COLLIDER':
         body.prop(comp, "collider_shape")
         body.prop(comp, "is_trigger")
+        body.prop(comp, "collider_show")
         body.prop(comp, "auto_fit")
+        fit = body.operator("bjs.fit_collider", text="Fit to Bounds", icon='SHADING_BBOX')
+        fit.index = index
         if not comp.auto_fit:
             shape = comp.collider_shape
             if shape in {'BOX', 'CONVEX', 'MESH'}:
@@ -81,6 +95,7 @@ def _draw_component(layout, obj, index, comp):
             if shape in {'CAPSULE', 'CYLINDER'}:
                 body.prop(comp, "collider_height")
             body.prop(comp, "collider_center")
+            body.prop(comp, "collider_rotation")
 
     elif comp.comp_type == 'RIGIDBODY':
         body.prop(comp, "body_type")
@@ -103,10 +118,10 @@ def _draw_component(layout, obj, index, comp):
             pick_row.label(text="no file selected")
 
         if comp.script_path:
-            vbox = box.box()
-            hdr = vbox.row(align=True)
-            hdr.label(text="Variables", icon='PRESET')
-            sync = hdr.operator("bjs.sync_vars", text="", icon='FILE_REFRESH')
+            vbox = body.box()
+            vhdr = vbox.row(align=True)
+            vhdr.label(text="Variables", icon='PRESET')
+            sync = vhdr.operator("bjs.sync_vars", text="", icon='FILE_REFRESH')
             sync.comp_index = index
             if len(comp.exposed_vars) == 0:
                 vbox.label(text="No @exposed variables found")
@@ -233,6 +248,43 @@ def _draw_camera_info(layout, obj, context):
     box.label(text="Exported automatically — no component needed", icon='INFO')
 
 
+class BJS_MT_component_menu(Menu):
+    """Per-component actions (opened from the header dropdown)."""
+    bl_idname = "BJS_MT_component_menu"
+    bl_label = "Component"
+
+    def draw(self, context):
+        layout = self.layout
+        obj = context.object
+        idx = obj.bjs_components_index if obj else 0
+        n = len(obj.bjs_components) if obj else 0
+
+        dup = layout.operator("bjs.duplicate_component", text="Duplicate", icon='DUPLICATE')
+        dup.index = idx
+
+        layout.separator()
+        layout.operator("bjs.copy_component", text="Copy", icon='COPYDOWN').index = idx
+        layout.operator("bjs.cut_component", text="Cut", icon='X').index = idx
+        layout.operator("bjs.paste_component", text="Paste", icon='PASTEDOWN')
+
+        layout.separator()
+        row = layout.row()
+        row.enabled = idx > 0
+        up = row.operator("bjs.move_component", text="Move Up", icon='TRIA_UP')
+        up.index = idx
+        up.direction = 'UP'
+
+        row = layout.row()
+        row.enabled = idx < n - 1
+        down = row.operator("bjs.move_component", text="Move Down", icon='TRIA_DOWN')
+        down.index = idx
+        down.direction = 'DOWN'
+
+        layout.separator()
+        rm = layout.operator("bjs.remove_component", text="Delete", icon='TRASH')
+        rm.index = idx
+
+
 class BJS_PT_components(Panel):
     bl_label = "Components"
     bl_idname = "BJS_PT_components"
@@ -288,6 +340,7 @@ class BJS_PT_export(Panel):
 
 
 classes = (
+    BJS_MT_component_menu,
     BJS_PT_components,
     BJS_PT_export,
 )

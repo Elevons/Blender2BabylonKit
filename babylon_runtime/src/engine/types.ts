@@ -23,6 +23,7 @@ export interface ColliderComponent {
   radius: number;
   height: number;
   center: [number, number, number];
+  rotation?: [number, number, number, number]; // quaternion xyzw (manual shapes)
 }
 
 export interface RigidBodyComponent {

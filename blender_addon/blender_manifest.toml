@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 # Unique identifier. Becomes the module name (bl_ext.<repo>.<id>) when installed.
 id = "babylon_level_kit"
-version = "0.16.0"
+version = "0.22.3"
 name = "Babylon Level Kit"
 tagline = "Component system and Babylon.js level exporter"
 maintainer = "You"

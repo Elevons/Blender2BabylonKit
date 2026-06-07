@@ -20,7 +20,7 @@ from bpy.props import (
     StringProperty, EnumProperty, FloatProperty, BoolProperty,
     FloatVectorProperty, IntProperty, CollectionProperty, PointerProperty,
 )
-from bpy.types import PropertyGroup, Object
+from bpy.types import PropertyGroup, Object, WindowManager
 
 
 # Custom-property key under which each object's stable GUID is stored. It is a
@@ -255,6 +255,52 @@ def add_list_item(v, el=None):
     return item
 
 
+# Properties whose value is fully derived from other stored properties (virtual
+# proxies), so copying them directly is wrong — copy their backing fields instead.
+_VIRTUAL_PROPS = {"e_val"}  # EnumProperty proxy over s_val + enum_options
+
+
+def _copy_props(src, dst):
+    """Recursively copy every stored property from one PropertyGroup to another.
+    Object/datablock pointers are copied by reference; nested groups recurse;
+    collections are rebuilt item by item; virtual proxy props are skipped."""
+    for prop in src.bl_rna.properties:
+        pid = prop.identifier
+        if pid == "rna_type" or pid in _VIRTUAL_PROPS:
+            continue
+        if prop.type == 'COLLECTION':
+            # Collections report is_readonly (can't be reassigned) but are still
+            # mutable via clear()/add() — so handle them BEFORE the readonly skip.
+            dst_coll = getattr(dst, pid)
+            dst_coll.clear()
+            for s_item in getattr(src, pid):
+                _copy_props(s_item, dst_coll.add())
+        elif prop.is_readonly:
+            continue
+        elif prop.type == 'POINTER':
+            sub = getattr(src, pid)
+            if sub is None or isinstance(sub, bpy.types.ID):
+                try:
+                    setattr(dst, pid, sub)  # datablock ref (e.g. Object) by reference
+                except (AttributeError, TypeError):
+                    pass
+            else:
+                _copy_props(sub, getattr(dst, pid))  # nested PropertyGroup
+        else:
+            val = getattr(src, pid)
+            if getattr(prop, "is_array", False):
+                val = val[:]
+            try:
+                setattr(dst, pid, val)
+            except (AttributeError, TypeError, ValueError):
+                pass
+
+
+def copy_component(src, dst):
+    """Deep-copy a BJSComponent (including exposed vars and their list items)."""
+    _copy_props(src, dst)
+
+
 def _init_var_value(v, f):
     default = f["default"]
     t = v.vtype
@@ -279,6 +325,7 @@ def _init_var_value(v, f):
 class BJSComponent(PropertyGroup):
     comp_type: EnumProperty(name="Type", items=COMPONENT_TYPES, default='TAG')
     enabled:   BoolProperty(name="Enabled", default=True)
+    show_expanded: BoolProperty(name="Expanded", default=True)
 
     # --- TAG ---
     tag: StringProperty(name="Tag", default="Untagged")
@@ -291,13 +338,18 @@ class BJSComponent(PropertyGroup):
     auto_fit:       BoolProperty(name="Auto-Fit to Bounds",
                                  description="Compute size from the mesh bounding box at runtime",
                                  default=True)
+    collider_show:  BoolProperty(name="Show Preview", default=True,
+                                 description="Draw this collider in the viewport (when selected)")
     collider_size:   FloatVectorProperty(name="Size", size=3, default=(1.0, 1.0, 1.0),
                                           min=0.0, subtype='XYZ',
-                                          description="Babylon-space (Y-up) full size")
+                                          description="Full size, in Blender axes")
     collider_radius: FloatProperty(name="Radius", default=0.5, min=0.0)
     collider_height: FloatProperty(name="Height", default=2.0, min=0.0)
     collider_center: FloatVectorProperty(name="Center Offset", size=3, default=(0.0, 0.0, 0.0),
-                                         subtype='XYZ', description="Babylon-space offset")
+                                         subtype='XYZ', description="Offset, in Blender axes")
+    collider_rotation: FloatVectorProperty(name="Rotation", size=3, default=(0.0, 0.0, 0.0),
+                                           subtype='EULER',
+                                           description="Local rotation of the collider, in Blender axes")
 
     # --- RIGIDBODY ---
     body_type:       EnumProperty(name="Body Type", items=BODY_TYPES, default='DYNAMIC')
@@ -410,9 +462,12 @@ def register():
     Object.bjs_shadow = PointerProperty(type=BJSLightShadow)
     # Per-object NLA animation settings (drawn when the object has NLA strips).
     Object.bjs_animation = PointerProperty(type=BJSAnimationSettings)
+    # Session clipboard for cut/copy/paste of components (holds 0 or 1).
+    WindowManager.bjs_clipboard = CollectionProperty(type=BJSComponent)
 
 
 def unregister():
+    del WindowManager.bjs_clipboard
     del Object.bjs_animation
     del Object.bjs_shadow
     del Object.bjs_components_index
