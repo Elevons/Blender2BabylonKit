@@ -1,16 +1,24 @@
 import { Behavior, exposed } from "../engine";
 
 /** Logs when a trigger collider is overlapped (needs a trigger COLLIDER). */
-export default class TriggerLogger extends Behavior {
+export default class TriggerLogger extends Behavior
+{
   @exposed({ label: "Message" })
   message = "";
 
-  onStart() {
+  /** Subscribe to the body's collision observable and log overlaps. */
+  OnStart(): void
+  {
     const body = this.entity.body;
-    if (!body) return;
+    if (body === undefined)
+    {
+      return;
+    }
+
     body.setCollisionCallbackEnabled(true);
-    body.getCollisionObservable().add((ev) => {
-      console.log(`[trigger] ${this.message || this.entity.name}`, ev.type);
+    body.getCollisionObservable().add((collisionEvent) =>
+    {
+      console.log(`[trigger] ${this.message.length > 0 ? this.message : this.entity.name}`, collisionEvent.type);
     });
   }
 }

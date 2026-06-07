@@ -7,29 +7,37 @@ import type { Entity } from "../engine";
  * -> PatrolTargets.ts -> Sync. You get a "Targets" list where each row is an
  * object picker; add a few and point them at empties or meshes in your scene.
  */
-export default class PatrolTargets extends Behavior {
+export default class PatrolTargets extends Behavior
+{
   @exposed({ type: "list", of: "entity", label: "Targets" })
   targets: (Entity | null)[] = [];
 
   @exposed({ min: 0.1, label: "Speed (u/s)" })
   speed = 3;
 
-  private i = 0;
+  private currentIndex = 0;
 
-  onUpdate(dt: number) {
-    const live = this.targets.filter((t): t is Entity => !!t);
-    if (live.length === 0) return;
-
-    const target = live[this.i % live.length];
-    const here = this.node.position;
-    const toTarget = target.node.position.subtract(here);
-    const dist = toTarget.length();
-
-    if (dist < 0.05) {
-      this.i = (this.i + 1) % live.length; // arrived: head to the next one
+  /** Step toward the current target, advancing to the next on arrival. */
+  OnUpdate(deltaSeconds: number): void
+  {
+    const liveTargets = this.targets.filter((target): target is Entity => target !== null);
+    if (liveTargets.length === 0)
+    {
       return;
     }
-    const stepFrac = Math.min(1, (this.speed * dt) / dist);
-    this.node.position = here.add(toTarget.scale(stepFrac));
+
+    const target = liveTargets[this.currentIndex % liveTargets.length];
+    const currentPosition = this.node.position;
+    const toTarget = target.node.position.subtract(currentPosition);
+    const distance = toTarget.length();
+
+    if (distance < 0.05)
+    {
+      this.currentIndex = (this.currentIndex + 1) % liveTargets.length; // arrived
+      return;
+    }
+
+    const stepFraction = Math.min(1, (this.speed * deltaSeconds) / distance);
+    this.node.position = currentPosition.add(toTarget.scale(stepFraction));
   }
 }

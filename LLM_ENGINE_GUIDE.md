@@ -26,8 +26,8 @@ The division is deliberate and is the key to understanding the whole engine:
 > for it. If it can't, it goes in the manifest and a small engine module applies
 > it.**
 
-This is why there is a `physics.ts`, `lights.ts`, `cameras.ts`, and `shadows.ts`
-but no `meshes.ts` or `transforms.ts`: meshes and transforms ride entirely inside
+This is why there is a `subsystems/physics.ts`, `lights.ts`, `cameras.ts`, and
+`shadows.ts` but no `meshes.ts` or `transforms.ts`: meshes and transforms ride entirely inside
 the glb, so there is nothing for the engine to do. The manifest never duplicates
 what the glb holds — it only adds. Entities in the two files are matched back
 together by a **GUID** (see §6).
@@ -44,26 +44,36 @@ babylon_runtime/
     behaviors/            # YOUR scripts — one Behavior subclass per file
     engine/               # the library
       index.ts            #   public barrel — always import from "../engine"
-      types.ts            #   manifest schema + Entity class + ID_KEY
-      Behavior.ts         #   base class for scripts
-      exposed.ts          #   @exposed decorator + value application
-      ComponentRegistry.ts#   maps SCRIPT names -> Behavior classes
-      physics.ts          #   COLLIDER/RIGIDBODY -> Havok V2 body      (subsystem)
-      lights.ts           #   Blender lamp props  -> Babylon light     (subsystem)
-      cameras.ts          #   Blender camera props -> Babylon camera   (subsystem)
-      shadows.ts          #   shadow-casting lights -> ShadowGenerators (subsystem)
-      environment.ts      #   World env texture -> IBL + skybox         (subsystem)
-      fog.ts              #   scene fog                                 (subsystem)
-      postprocess.ts      #   DefaultRenderingPipeline + SSAO           (subsystem)
-      animation.ts        #   NLA clips -> AnimationGroups + autoplay   (subsystem)
-      LevelLoader.ts      #   orchestrates the whole load + the Level object
+      core/               #   schema + runtime container + load pipeline
+        types.ts          #     manifest schema + Entity class + ID_KEY
+        Level.ts          #     runtime container: entities, update loop, debug view
+        LevelLoader.ts    #     orchestrates the whole load pipeline
+      scripting/          #   the gameplay-script system
+        Behavior.ts       #     base class for scripts
+        exposed.ts        #     @exposed decorator + value application
+        BehaviorRegistry.ts #  maps SCRIPT-component names -> Behavior classes
+      subsystems/         #   one module per manifest concern the glb can't express
+        physics.ts        #     COLLIDER/RIGIDBODY -> Havok V2 body
+        lights.ts         #     Blender lamp props  -> Babylon light
+        cameras.ts        #     Blender camera props -> Babylon camera
+        shadows.ts        #     shadow-casting lights -> ShadowGenerators
+        environment.ts    #     World env texture -> IBL + skybox
+        fog.ts            #     scene fog
+        postprocess.ts    #     DefaultRenderingPipeline + SSAO
+        animation.ts      #     NLA clips -> AnimationGroups + autoplay
 blender_addon/            # the Blender plugin (Python) — the editor half
 ```
 
-### When does a concern get its own engine module?
+Folders, not flat: **core/** is the schema, the runtime `Level`, and the loader
+that ties everything together; **scripting/** is the generic behavior system; and
+**subsystems/** holds the "manifest applier" modules. Imports never reach across
+folders by hand outside the engine — everything external imports the barrel
+(`import { … } from "../engine"`), so the internal layout can change freely.
 
-A new file in `engine/` is justified only when a Babylon **subsystem** needs
-real translation work from Blender data. The current four all do:
+### When does a concern get its own subsystem module?
+
+A new file in `engine/subsystems/` is justified only when a Babylon **subsystem**
+needs real translation work from Blender data. The current set all do:
 
 - **physics.ts** — colliders and rigid bodies have no glTF representation, so they
   are rebuilt entirely from the manifest.
@@ -84,8 +94,8 @@ only make sense if we started overriding Blender materials at runtime.
 
 ## 3. The load pipeline
 
-`LevelLoader.load(manifestUrl)` is the heart of the engine. It runs these steps
-in order:
+`LevelLoader.Load(manifestUrl)` is the heart of the engine. It runs these steps
+in order (each step below is an extracted private method of `LevelLoader`):
 
 1. **Fetch + validate the manifest.** Clear errors if the file 404s or the dev
    server returned `index.html` (HTML instead of JSON) — the two most common
@@ -94,80 +104,94 @@ in order:
    path is resolved relative to the manifest. This creates all meshes, transform
    nodes, materials, lights, and cameras in the scene. (Babylon 9 note: the old
    `SceneLoader.AppendAsync` statics are deprecated — use `appendSceneAsync`.)
-3. **Build the GUID index** (`buildIdIndex`): walk every transform node and mesh,
+   **The scene is switched to `useRightHandedSystem = true` immediately before this**
+   so the glb imports without the handedness-flipping `__root__` mirror — see §7.
+3. **Build the GUID index** (`BuildIdIndex`): walk every transform node and mesh,
    read `node.metadata.gltf.extras.bjs_id`, and map GUID -> node. This requires
    the `ExtrasAsMetadata` glTF loader extension, which is imported at the top of
-   `LevelLoader.ts`; without it `node.metadata` stays empty and GUID matching
+   `core/LevelLoader.ts`; without it `node.metadata` stays empty and GUID matching
    silently fails.
-4. **Iterate the manifest entities.** For each one:
+4. **Iterate the manifest entities** (`ProcessEntity` per entity). For each one:
    - Resolve its glb node: **GUID first**, then a name-match fallback.
    - Create an `Entity(id, name, node)` and register it in `level.entities`.
    - Stash a back-reference: `node.metadata.bjsEntity = entity`.
-   - **Apply components** (`applyComponents`, see §5) — this may return deferred
+   - **Apply components** (`ApplyComponents`, see §5) — this may return deferred
      object references (`PendingRef[]`).
-   - If the entity has `light`, call `applyBlenderLight`; if it casts shadows,
-     remember it for step 6.
-   - If the entity has `camera`, call `applyBlenderCamera`; if it's the active
-     one, set `scene.activeCamera` and `level.activeCamera`.
-5. **Resolve object references (second pass).** Entity-typed `@exposed` fields
-   were stored as GUIDs because the target may not have existed yet during step
-   4. Now that every entity exists, each `PendingRef` is resolved to its `Entity`
-   (scalar fields assigned directly; entity-list fields assigned into their array
-   slot by `index`).
-6. **Set up shadows** (`setupShadows`) for the collected shadow-casting lights —
+   - If the entity has `light`, call `ApplyBlenderLight` (`ProcessLightForEntity`);
+     if it casts shadows, remember it for step 6.
+   - If the entity has `camera`, call `ApplyBlenderCamera` (`ProcessCameraForEntity`);
+     if it's the active one, set `scene.activeCamera` and `level.activeCamera`.
+5. **Resolve object references (second pass)** via `ResolveObjectReferences`.
+   Entity-typed `@exposed` fields were stored as GUIDs because the target may not
+   have existed yet during step 4. Now that every entity exists, each `PendingRef`
+   is resolved to its `Entity` (scalar fields assigned directly; entity-list fields
+   assigned into their array slot by `index`). Camera targets (FOLLOW/ARC/offset)
+   are resolved in this same post-pass via `ResolveCameraTargets` (in `subsystems/cameras.ts`).
+6. **Set up shadows** (`SetupShadows`) for the collected shadow-casting lights —
    unless disabled via loader options.
-7. **`level._begin()`**: call `onStart()` on every behavior, then subscribe a
+7. **`level.Begin()`**: call `OnStart()` on every behavior, then subscribe a
    single `onBeforeRenderObservable` callback that drives every behavior's
-   `onUpdate(dt)` each frame (`dt` in seconds).
+   `OnUpdate(deltaSeconds)` each frame.
 
-`enableHavokPhysics(scene)` **must be called before `load`** (the example
+`EnableHavokPhysics(scene)` **must be called before `Load`** (the example
 `main.ts` does this), because colliders/bodies are built during step 4.
 
 ---
 
 ## 4. Runtime API
 
-### Entity (`types.ts`)
+### Entity (`core/types.ts`)
 
 ```ts
-class Entity {
+class Entity
+{
   readonly id: string;          // Blender GUID
   readonly name: string;        // Blender object name
   readonly node: TransformNode; // the Babylon node from the glb
   tag = "Untagged";             // from a TAG component
   behaviors: Behavior[];
   body?: PhysicsBody;           // present if it has a Collider/RigidBody
-  getBehavior<T extends Behavior>(ctor: new () => T): T | undefined;
+  GetBehavior<T extends Behavior>(behaviorConstructor: new () => T): T | undefined;
+  GetAnimation(clipName: string): AnimationGroup | undefined;
 }
 ```
 
-### Level (`LevelLoader.ts`)
+### Level (`core/Level.ts`)
 
 ```ts
-class Level {
+class Level
+{
   entities: Map<string, Entity>;     // keyed by GUID (or name for un-GUID'd v1 data)
   activeCamera?: Camera;             // the Blender scene's active camera, if exported
   shadowGenerators: ShadowGenerator[];
-  byId(id: string): Entity | undefined;
-  byTag(tag: string): Entity[];
-  dispose(): void;                   // stops the update loop, calls onDestroy()
+  post?: PostProcessingHandles;      // pipelines, if the manifest enabled them
+  ById(id: string): Entity | undefined;
+  ByTag(tag: string): Entity[];
+  ShowColliders(show?: boolean): void; // toggle Havok PhysicsViewer wireframes
+  AddUpdater(updater: (deltaSeconds: number) => void): void; // per-frame callback
+  Begin(): void;                     // loader-internal: starts the update loop
+  Dispose(): void;                   // stops the update loop, calls OnDestroy()
 }
 ```
 
-Three ways to reach another object from a behavior: an `@exposed({type:"entity"})`
-reference (cleanest), `node.metadata.bjsEntity` if you have a node, or `level.byId`
-/ `level.byTag` if you hold the `Level`.
+> Note: fields/properties (`entities`, `activeCamera`, …) stay **camelCase** —
+> they're treated as variables. Only methods are PascalCase. See STYLE_GUIDE.md.
 
-### Behavior (`Behavior.ts`)
+Three ways to reach another object from a behavior: an `@exposed({type:"entity"})`
+reference (cleanest), `node.metadata.bjsEntity` if you have a node, or `level.ById`
+/ `level.ByTag` if you hold the `Level`.
+
+### Behavior (`scripting/Behavior.ts`)
 
 ```ts
-abstract class Behavior {
-  entity!: Entity;              // injected before onStart
+abstract class Behavior
+{
+  entity!: Entity;                      // injected before OnStart
   scene!: Scene;
-  get node(): TransformNode;    // === entity.node
-  onStart(): void;              // once, after the whole level + refs are ready
-  onUpdate(dt: number): void;   // every frame; dt is SECONDS
-  onDestroy(): void;            // on level dispose
+  get node(): TransformNode;            // === entity.node (property, stays camelCase)
+  OnStart(): void;                      // once, after the whole level + refs are ready
+  OnUpdate(deltaSeconds: number): void; // every frame; deltaSeconds is SECONDS
+  OnDestroy(): void;                    // on level dispose
 }
 ```
 
@@ -176,21 +200,21 @@ abstract class Behavior {
 ## 5. Components & behaviors
 
 Components are authored by a human in Blender's "Babylon" N-panel and serialized
-into each entity's `components` array. The loader's `applyComponents` interprets
+into each entity's `components` array. The loader's `ApplyComponents` interprets
 them:
 
-- **TAG** -> sets `entity.tag`. Query with `level.byTag("Enemy")`.
+- **TAG** -> sets `entity.tag`. Query with `level.ByTag("Enemy")`.
 - **COLLIDER** and/or **RIGIDBODY** -> combined into one Havok body on the node by
-  `buildPhysics` (see §7) and stored as `entity.body`.
-- **SCRIPT** -> looked up in the `ComponentRegistry` by name, instantiated, has its
+  `BuildPhysics` (see §7) and stored as `entity.body`.
+- **SCRIPT** -> looked up in the `BehaviorRegistry` by name, instantiated, has its
   `entity`/`scene` injected and its `@exposed` values applied, then is pushed to
   `entity.behaviors`.
 
 ### The registry and auto-registration
 
-`ComponentRegistry` maps a SCRIPT name (the string stored in Blender) to a
+`BehaviorRegistry` maps a SCRIPT name (the string stored in Blender) to a
 `Behavior` subclass. Rather than register by hand, `main.ts` uses Vite's
-`import.meta.glob` + `autoRegisterBehaviors` to register every file in
+`import.meta.glob` + `AutoRegisterBehaviors` to register every file in
 `behaviors/` **by filename stem**. So `behaviors/Spinner.ts` becomes the key
 `"Spinner"`, which is exactly what the Blender "Open Script…" picker stores. This
 is the contract that ties the two halves together:
@@ -205,20 +229,23 @@ is the contract that ties the two halves together:
 import { Behavior, exposed } from "../engine";   // always the barrel
 import { Vector3, Space } from "@babylonjs/core";
 
-export default class Spinner extends Behavior {
+export default class Spinner extends Behavior
+{
   @exposed({ min: 0, max: 720, label: "Speed (deg/s)" }) speed = 90;
   @exposed() axis: [number, number, number] = [0, 1, 0];
 
-  private rad = 0;
-  private _axis = new Vector3(0, 1, 0);
+  private radiansPerSecond = 0;
+  private rotationAxis = new Vector3(0, 1, 0);
 
-  onStart() {
-    this.rad = (this.speed * Math.PI) / 180;   // exposed values already applied
-    this._axis = Vector3.FromArray(this.axis);
+  OnStart(): void
+  {
+    this.radiansPerSecond = (this.speed * Math.PI) / 180; // exposed values already applied
+    this.rotationAxis = Vector3.FromArray(this.axis);
   }
 
-  onUpdate(dt: number) {
-    this.node.rotate(this._axis, this.rad * dt, Space.WORLD);
+  OnUpdate(deltaSeconds: number): void
+  {
+    this.node.rotate(this.rotationAxis, this.radiansPerSecond * deltaSeconds, Space.WORLD);
   }
 }
 ```
@@ -241,37 +268,65 @@ GUIDs are assigned **before** the glb is written, for any object that needs to b
 findable: anything with components, any light, any camera, any object referenced
 by an `entity` field, and any object you explicitly mark with the "Assign GUID"
 button. A GUID is what makes an object an "entity" — i.e. present in the manifest
-and reachable via `level.byId` / `level.byTag`. Pure geometry with no GUID just
+and reachable via `level.ById` / `level.ByTag`. Pure geometry with no GUID just
 lives in the glb and isn't an entity.
 
 ---
 
-## 7. Subsystem: physics (`physics.ts`)
+## 7. Subsystem: physics (`subsystems/physics.ts`)
 
-`buildPhysics(node, collider?, body?, scene)` merges a COLLIDER and/or RIGIDBODY
+`EnableHavokPhysics(scene)` lives here and **must be called before `Load`** (the
+example `main.ts` does), because bodies are built during the entity loop.
+
+`BuildPhysics(node, collider?, body?, scene)` merges a COLLIDER and/or RIGIDBODY
 into one Havok V2 `PhysicsBody`:
 
 - **collider only** -> static (or trigger) body
 - **rigidbody only** -> dynamic body with an auto-fit box collider
 - **both** -> shape from the collider, dynamics from the rigidbody
 
-Shape sizing has two paths. With **auto-fit** (the default), a `PhysicsAggregate`
-sizes the shape from the mesh bounding box. With an **explicit** shape, a
-`PhysicsShapeBox/Sphere/Capsule` is built from hand-authored, Babylon-space
-(Y-up) dimensions. Mass applies only to DYNAMIC bodies; KINEMATIC maps to Havok's
-`ANIMATED` motion type. Constraints: physics must be enabled first, and the node
-must be an `AbstractMesh` (mesh colliders additionally can't be dynamic). Reach it
-at `entity.body` — e.g. `entity.body?.applyImpulse(...)`.
+**Single, node-attached path.** The body is created directly on the entity node.
+This is sound because the level is imported **right-handed** (see below), so the
+node's world matrix has no handedness mirror and Havok decomposes it cleanly for
+both position and orientation. Mass applies only to DYNAMIC bodies; KINEMATIC maps
+to Havok's `ANIMATED` motion type. Reach it at `entity.body` — e.g.
+`entity.body?.applyImpulse(...)`.
+
+Shape construction by case:
+
+- **Auto-fit primitive** (the default). If the node is a real mesh, a
+  `PhysicsAggregate` sizes the shape from the mesh bounds. If the node is a
+  multi-material **TransformNode wrapper** (one child mesh per material — see the
+  note below), `PhysicsAggregate` can't size a primitive from a non-mesh node, so
+  `FitColliderShape` fits a box/sphere/capsule/cylinder to the hierarchy bounding
+  box in node-local space and attaches a `PhysicsBody`.
+- **CONVEX / MESH** (always geometry-derived; manual size/center ignored).
+  `BuildHullOrMeshShape` builds a real `PhysicsShapeConvexHull` / `PhysicsShapeMesh`:
+  a single mesh feeds its own geometry; a wrapper has its per-material children
+  cloned, baked into the node frame, and merged into one temporary mesh. Falls back
+  to a fitted box if the hull/mesh can't be built. (MESH shapes can't be DYNAMIC —
+  a Havok limitation; use CONVEX for moving bodies.)
+- **Explicit/manual primitive.** A `PhysicsShapeBox/Sphere/Capsule/Cylinder` from
+  hand-authored, Babylon-space (Y-up) `center`/`size`/`radius`/`height`/`rotation`.
+
+**Why right-handed import.** In Babylon's default left-handed path the glTF loader
+parents everything under a `__root__` node carrying a reflection (negative-
+determinant) transform to flip handedness. Havok places bodies by decomposing a
+node's world matrix, and a reflection is indistinguishable from a 180-deg rotation
+once decomposed, so colliders came out mis-oriented (and dynamic bodies visibly
+mirrored). `LevelLoader` sets `scene.useRightHandedSystem = true` *before* the
+append so the loader skips that mirror entirely. `NeutralizeGltfRoot()` is now just
+a guard that warns if a negative-determinant `__root__` ever reappears.
 
 ---
 
-## 8. Subsystem: lights (`lights.ts`)
+## 8. Subsystem: lights (`subsystems/lights.ts`)
 
 Lights are **automatic** — no component. The glb creates and places the light;
-`applyBlenderLight` copies the Blender lamp's properties onto it. Because Blender
+`ApplyBlenderLight` copies the Blender lamp's properties onto it. Because Blender
 inserts an orientation-correction node between the object node and the light when
 exporting to +Y-up, the GUID'd node is an *ancestor* (often grandparent) of the
-light, so `findLightForNode` walks the entire parent chain rather than assuming a
+light, so `FindLightForNode` walks the entire parent chain rather than assuming a
 fixed depth.
 
 Mapping: POINT->Point, SUN->Directional, SPOT->Spot (AREA is unsupported by glTF).
@@ -284,12 +339,12 @@ fallback light: a dark scene means add a light in Blender.
 
 ---
 
-## 9. Subsystem: cameras (`cameras.ts`)
+## 9. Subsystem: cameras (`subsystems/cameras.ts`)
 
 Cameras are automatic too, and mirror the lights design. The glb creates a
 `FreeCamera`, placing it correctly (its transform lives on the parent node chain,
-which is why `findCameraForNode` walks parents like the light finder).
-`applyBlenderCamera` then copies clip range (`minZ`/`maxZ`), and either the
+which is why `FindCameraForNode` walks parents like the light finder).
+`ApplyBlenderCamera` then copies clip range (`minZ`/`maxZ`), and either the
 vertical FOV (perspective) or orthographic mode. The exporter flags which camera
 is the Blender scene's active one; the loader sets that as `scene.activeCamera`
 and exposes it as `level.activeCamera`.
@@ -301,14 +356,14 @@ fallback `ArcRotateCamera` when the scene shipped no camera at all. Orthographic
 bounds come from the glb's `xmag`/`ymag`, so the engine sets the mode but doesn't
 recompute the rectangle from Blender's `ortho_scale`.
 
-A **CAMERA component** (opt-in) overrides the type: FREE/UNIVERSAL/ARC/FOLLOW. `buildTypedCamera` (cameras.ts) builds it from the faithful camera's world transform and disposes the original. ARC and FOLLOW can reference a target object (the `target` GUID): FOLLOW sets it as `lockedTarget`, ARC re-pivots its orbit onto it — both resolved in the second pass like entity references. When controls are attached, FREE/UNIVERSAL/ARC apply a key scheme (`applyCameraKeys`). FOLLOW has two modes: `ORBIT` (Babylon FollowCamera; with `useBlenderTransform` it derives radius/height/rotationOffset from the exported position via `deriveFollowFromPosition`, and its pointer-input multi-axis warning is silenced) and `OFFSET` (a UniversalCamera the loader drives each frame via `Level.addUpdater` to hold a constant world offset from the target — the offset is the exported camera position minus the target). ARC likewise starts from the exported position: `setPosition(eye)` after `setTarget` makes the camera's offset from the pivot define alpha/beta/radius.
+A **CAMERA component** (opt-in) overrides the type: FREE/UNIVERSAL/ARC/FOLLOW. `BuildTypedCamera` (subsystems/cameras.ts) builds it from the faithful camera's world transform and disposes the original. ARC and FOLLOW can reference a target object (the `target` GUID): FOLLOW sets it as `lockedTarget`, ARC re-pivots its orbit onto it — both resolved in the second pass like entity references. When controls are attached, FREE/UNIVERSAL/ARC apply a key scheme (`ApplyCameraKeys`). FOLLOW has two modes: `ORBIT` (Babylon FollowCamera; with `useBlenderTransform` it derives radius/height/rotationOffset from the exported position via `DeriveFollowFromPosition`, and its pointer-input multi-axis warning is silenced) and `OFFSET` (a UniversalCamera the loader drives each frame via `Level.AddUpdater` to hold a constant world offset from the target — the offset is the exported camera position minus the target). ARC likewise starts from the exported position: `setPosition(eye)` after `setTarget` makes the camera's offset from the pivot define alpha/beta/radius.
 
 ---
 
-## 10. Subsystem: shadows (`shadows.ts`)
+## 10. Subsystem: shadows (`subsystems/shadows.ts`)
 
 Driven by each lamp's **Cast Shadows** toggle (`use_shadow`). When on, the light
-carries a `shadow` settings object in the manifest, and `setupShadows` builds one
+carries a `shadow` settings object in the manifest, and `SetupShadows` builds one
 `ShadowGenerator` per shadow-casting light, then registers **all** scene geometry
 as both caster and receiver (a global "shadows on" default). Per-light settings
 applied: `filter` (PCF / PCSS contact-hardening / Poisson / Blur ESM / hard),
@@ -321,13 +376,13 @@ set the global on/off and default resolution. Generators are exposed as
 
 ---
 
-## 11. Exposed variables (`exposed.ts`)
+## 11. Exposed variables (`scripting/exposed.ts`)
 
 `@exposed` marks a behavior field as editable per-object in Blender. The decorator
 only records the field's name + UI hints in a registry (a `WeakMap` keyed by the
 class); it never changes how the field behaves in code. At load,
-`applyExposedVars` writes the human's stored value onto the instance **before
-`onStart`**, falling back to the code default when the manifest has no value.
+`ApplyExposedVars` writes the human's stored value onto the instance **before
+`OnStart`**, falling back to the code default when the manifest has no value.
 
 ```ts
 @exposed() speed = 90;                                   // number  -> float
@@ -371,7 +426,7 @@ which fields a script exposes, hit the **Sync** button in Blender to re-read the
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "glb": "level.glb",
   "scene": {
     "clearColor": [0,0,0,1], "ambientColor": [0,0,0],
@@ -389,7 +444,8 @@ which fields a script exposes, hit the **Sync** button in Blender to re-read the
       "components": [
         { "type": "TAG", "tag": "Player" },
         { "type": "COLLIDER", "shape": "BOX", "isTrigger": false, "autoFit": true,
-          "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0] },
+          "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0],
+          "rotation": [0,0,0,1] },
         { "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1, "friction": 0.5,
           "restitution": 0.2, "linearDamping": 0, "angularDamping": 0 },
         { "type": "SCRIPT", "script": "Spinner", "path": "...",
@@ -418,11 +474,11 @@ which fields a script exposes, hit the **Sync** button in Blender to re-read the
 
 ## 13. Gotchas
 
-- **`dt` is seconds.** Scale all motion by it for frame-rate independence.
+- **`deltaSeconds` is seconds.** Scale all motion by it for frame-rate independence.
 - **Keyboard/pointer input needs canvas focus** — the user must click the viewport
   once. Prefer `scene.onKeyboardObservable` / `onPointerObservable` over global
-  listeners, and remove them in `onDestroy`.
-- **References resolve before `onStart`**, but cross-entity `onStart` order is
+  listeners, and remove them in `OnDestroy`.
+- **References resolve before `OnStart`**, but cross-entity `OnStart` order is
   unspecified — don't assume another entity is fully initialised; guard `null`
   references.
 - **Physics is V2/Havok and must be enabled before load.** Mesh colliders can't be
@@ -431,7 +487,7 @@ which fields a script exposes, hit the **Sync** button in Blender to re-read the
   `ArcRotateCamera` uses arrow keys, leaving WASD free for behaviors; a manually
   attached `FreeCamera` would fight WASD.
 - **Light intensity is approximate**; tune `SUN_SCALE`/`PUNCTUAL_SCALE` in
-  `lights.ts`. Color is exact.
+  `subsystems/lights.ts`. Color is exact.
 - **Keep glb + manifest filenames matching** what `main.ts` fetches; they must sit
   together under `public/levels/`.
 
@@ -450,10 +506,20 @@ npm run dev
 `/levels/<name>.scene.json`, sets up the camera (Blender's or a fallback), and
 starts the render loop.
 
-**Collider authoring space.** Manual collider `center`/`size` are authored in Blender axes and converted to Babylon Y-up in `export._serialize_components` (`center (x,y,z)->(x,z,-y)`, `size` swaps y/z, `rotation` is a quaternion with vector part (x,z,-y) and w kept). Rotation applies to manual box/capsule/cylinder shapes (sphere is symmetric). The runtime (`physics.ts`) still receives Y-up values unchanged. `blender_addon/collider_preview.py` draws the wireframe in Blender space via a `SpaceView3D` POST_VIEW GPU handler, so the viewport preview matches the exported body.
+**Collider authoring space.** Manual collider `center`/`size` are authored in Blender axes and converted to Babylon Y-up in `export._serialize_components` (`center (x,y,z)->(x,z,-y)`, `size` swaps y/z, `rotation` is a quaternion with vector part (x,z,-y) and w kept). Rotation applies to manual box/capsule/cylinder shapes (sphere is symmetric). The runtime (`subsystems/physics.ts`) still receives Y-up values unchanged. `blender_addon/collider_preview.py` draws the wireframe in Blender space via a `SpaceView3D` POST_VIEW GPU handler, so the viewport preview matches the exported body.
 
-**Multi-material meshes & physics.** A Blender mesh with multiple materials exports as a glTF mesh with one primitive per material; Babylon's loader imports that as a `TransformNode` with one child `Mesh` per material — so the entity's GUID node is a `TransformNode`, not a mesh. `physics.ts` handles this: if the node is a real mesh it uses `PhysicsAggregate`; if it's a wrapper TransformNode, `fitColliderShape` builds a box/sphere/capsule from the hierarchy bounding box (in node-local space) and attaches a `PhysicsBody` to the node. (PhysicsAggregate can't size a primitive from a non-mesh node — it calls `getTotalVertices` on it — so the node is never passed to it directly.)
+**Multi-material meshes.** A Blender mesh with multiple materials exports as a glTF mesh with one primitive per material; Babylon's loader imports that as a `TransformNode` with one child `Mesh` per material — so the entity's GUID node is a `TransformNode`, not a mesh. This is why §7 special-cases wrapper nodes (and why `PhysicsAggregate`, which calls `getTotalVertices` on the node, can't size a primitive from one).
 
-**Collider debug view.** `Level.showColliders(show?)` toggles Babylon's `PhysicsViewer` over every entity body (no arg = flip). `LevelLoaderOptions.debugColliders` shows them on load; the runtime template binds **C** to the toggle. The viewer is disposed with the level.
+**Collider debug view.** `Level.ShowColliders(show?)` toggles Babylon's `PhysicsViewer` over every entity body (no arg = flip). `LevelLoaderOptions.debugColliders` shows them on load; the runtime template binds **C** to the toggle. The viewer is disposed with the level.
 
-**glTF __root__ physics fix.** The glTF loader parents imported content under a `__root__` node whose mirrored (negative) scale encodes the right->left handedness flip. Havok places shapes by decomposing a node's world matrix, and a mirror is indistinguishable from a 180-deg rotation when decomposed, so colliders land offset (typically below the mesh). STATIC colliders are now built **in world space and attached to a fresh identity anchor node** (`buildStaticWorldBody`), so Havok never decomposes the mirror at all - position and orientation both match the rendered mesh. Auto-fit uses the world AABB; manual shapes transform the authored center through the node world matrix (box/sphere/capsule/cylinder are symmetric so the mirror-ambiguous rotation is harmless); convex/mesh bake child geometry into world space. DYNAMIC/KINEMATIC bodies still attach to the node (they must drive it) and rely on `LevelLoader.neutralizeGltfRoot()` wrapping `__root__` in an identity parent (the fix from Babylon's physics docs) - dynamic bodies on mirrored imported nodes may still have residual flips and are best authored with clean transforms. **Convex/Mesh shapes** are always geometry-derived (manual size/center ignored): a single mesh feeds PhysicsShapeConvexHull/Mesh directly; a multi-material wrapper has its per-material children cloned, baked into the node's local frame, and merged into one temp mesh for the shape. Falls back to a fitted box if the hull/mesh can't be built.
+---
+
+## 15. Code conventions
+
+The engine and behaviors follow a C#-inspired TypeScript style — PascalCase
+methods/functions, Allman braces, descriptive names, explicit null handling, and a
+few project-specific exceptions (the `@exposed` decorator stays lowercase; Babylon
+`Nullable<T>` values use truthiness checks).
+
+The full rules live in **`STYLE_GUIDE.md`** at the repo root. Read it before
+editing engine code or writing a behavior.

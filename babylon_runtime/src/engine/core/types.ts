@@ -1,5 +1,8 @@
 import type { TransformNode } from "@babylonjs/core";
 import type { PhysicsBody, AnimationGroup } from "@babylonjs/core";
+// Type-only import: Entity references Behavior, Behavior references Entity.
+// `import type` erases at compile time, so the cycle is harmless at runtime.
+import type { Behavior } from "../scripting/Behavior";
 
 /**
  * Custom-property / glTF-extras key holding each entity's GUID. Must match the
@@ -166,7 +169,8 @@ export interface LevelManifest {
 
 // ---- Runtime entity ----
 
-export class Entity {
+export class Entity
+{
   readonly id: string;
   readonly name: string;
   readonly node: TransformNode;
@@ -176,22 +180,30 @@ export class Entity {
   /** AnimationGroups from the glb that target this entity's node (or children). */
   animations: AnimationGroup[] = [];
 
-  constructor(id: string, name: string, node: TransformNode) {
+  constructor(id: string, name: string, node: TransformNode)
+  {
     this.id = id;
     this.name = name;
     this.node = node;
   }
 
-  getBehavior<T extends Behavior>(ctor: new () => T): T | undefined {
-    return this.behaviors.find((b) => b instanceof ctor) as T | undefined;
+  /** Return the first attached behavior of the given class, if present. */
+  GetBehavior<T extends Behavior>(behaviorConstructor: new () => T): T | undefined
+  {
+    return this.behaviors.find((behavior) => behavior instanceof behaviorConstructor) as T | undefined;
   }
 
-  /** Find one of this entity's animation clips by name (exact, then contains). */
-  getAnimation(name: string): AnimationGroup | undefined {
-    const want = name.toLowerCase();
-    return (
-      this.animations.find((g) => g.name.toLowerCase() === want) ??
-      this.animations.find((g) => g.name.toLowerCase().includes(want))
-    );
+  /** Find one of this entity's animation clips by name (exact match, then contains). */
+  GetAnimation(clipName: string): AnimationGroup | undefined
+  {
+    const wanted = clipName.toLowerCase();
+
+    const exactMatch = this.animations.find((group) => group.name.toLowerCase() === wanted);
+    if (exactMatch !== undefined)
+    {
+      return exactMatch;
+    }
+
+    return this.animations.find((group) => group.name.toLowerCase().includes(wanted));
   }
 }

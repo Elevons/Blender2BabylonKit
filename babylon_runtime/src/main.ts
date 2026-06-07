@@ -6,50 +6,56 @@ import {
 } from "@babylonjs/core";
 
 import {
-  ComponentRegistry,
+  BehaviorRegistry,
   LevelLoader,
-  enableHavokPhysics,
-  autoRegisterBehaviors,
+  EnableHavokPhysics,
+  AutoRegisterBehaviors,
 } from "./engine";
 
-async function main() {
+/** Boot the engine, enable physics, load a level, and start the render loop. */
+async function Main(): Promise<void>
+{
   const canvas = document.getElementById("app") as HTMLCanvasElement;
   const engine = new Engine(canvas, true);
   const scene = new Scene(engine);
 
   // Physics must be enabled before loading anything with colliders/bodies.
-  await enableHavokPhysics(scene);
+  await EnableHavokPhysics(scene);
 
   // Auto-register every behavior in ./behaviors, keyed by filename stem. This
-  // matches the Blender "Open Script…" picker: selecting Rotator.ts stores the
+  // matches the Blender "Open Script..." picker: selecting Rotator.ts stores the
   // key "Rotator", which maps to behaviors/Rotator.ts here.
-  const registry = new ComponentRegistry();
+  const registry = new BehaviorRegistry();
   const behaviorModules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
-  autoRegisterBehaviors(registry, behaviorModules);
-  // (You can still register manually too: registry.registerScript("Foo", Foo);)
+  AutoRegisterBehaviors(registry, behaviorModules);
 
   const loader = new LevelLoader(scene, registry);
-  const level = await loader.load("/levels/Untitled.scene.json");
+  const level = await loader.Load("/levels/Untitled.scene.json");
 
   // The Blender scene is authoritative for the camera too: if it exported its
   // active camera, it's already set. Only add a fallback if none came through.
-  if (!scene.activeCamera) {
-    const cam = new ArcRotateCamera("fallback", -Math.PI / 2, 1.1, 18, Vector3.Zero(), scene);
-    cam.attachControl(canvas, true);
+  // NOTE: scene.activeCamera is a Babylon "Nullable" that can be undefined at
+  // runtime (not just null), so test truthiness rather than `=== null`.
+  if (!scene.activeCamera)
+  {
+    const fallbackCamera = new ArcRotateCamera("fallback", -Math.PI / 2, 1.1, 18, Vector3.Zero(), scene);
+    fallbackCamera.attachControl(canvas, true);
   }
-  // To fly the Blender camera around for inspection, attach controls to it:
-  //   level.activeCamera?.attachControl(canvas, true);
 
   // Example: query by tag set in Blender.
-  console.log("Players:", level.byTag("Player").map((e) => e.name));
+  console.log("Players:", level.ByTag("Player").map((entity) => entity.name));
 
   // Press C to toggle collider/physics debug wireframes.
-  window.addEventListener("keydown", (e) => {
-    if (e.key.toLowerCase() === "c") level.showColliders();
+  window.addEventListener("keydown", (keyboardEvent) =>
+  {
+    if (keyboardEvent.key.toLowerCase() === "c")
+    {
+      level.ShowColliders();
+    }
   });
 
   engine.runRenderLoop(() => scene.render());
   window.addEventListener("resize", () => engine.resize());
 }
 
-main().catch(console.error);
+Main().catch(console.error);

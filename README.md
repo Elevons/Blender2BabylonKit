@@ -48,7 +48,7 @@ APIs.
   Up/Down* (reorder), and *Delete*. To move a component to another object: **Cut**
   it, select the other object, then **Paste** (Copy+Paste duplicates it across
   objects instead). The clipboard is session-scoped and works across objects.
-- **Tag** – an entity tag/layer you can query at runtime (`level.byTag("Enemy")`).
+- **Tag** – an entity tag/layer you can query at runtime (`level.ByTag("Enemy")`).
 - **Collider** – box/sphere/capsule/cylinder/convex/mesh. *Auto-Fit* derives
   size from the mesh bounding box at runtime (recommended). Toggle *Is Trigger*
   for overlap-only volumes. When the object is selected, *Show Preview* draws the
@@ -95,7 +95,7 @@ registers the example behaviors, and loads `/levels/level.scene.json`.
 > this by excluding it from dep pre-bundling.
 
 To **see the colliders** in the running scene, press **C** (toggles Babylon's
-physics debug wireframes), or call `level.showColliders(true)` yourself. You can
+physics debug wireframes), or call `level.ShowColliders(true)` yourself. You can
 also have them on from the start: `loader.load(url)` with the loader constructed
 as `new LevelLoader(scene, registry, { debugColliders: true })`.
 
@@ -129,11 +129,12 @@ default-exported. Mark editable fields with `@exposed`:
 // src/behaviors/Rotator.ts
 import { Behavior, exposed } from "../engine";
 
-export default class Rotator extends Behavior {
+export default class Rotator extends Behavior
+{
   @exposed({ min: 0, max: 720, label: "Speed (deg/s)" }) speed = 45;
   @exposed() axis: [number, number, number] = [0, 1, 0];
 
-  onUpdate(dt: number) { /* uses this.speed, this.axis */ }
+  OnUpdate(deltaSeconds: number): void { /* uses this.speed, this.axis */ }
 }
 ```
 
@@ -141,7 +142,7 @@ When you pick this file with **Open Script…** in Blender, the add-on parses th
 `@exposed` fields and shows typed widgets (float/bool/string/vector/color) right
 in the component. Edit the values per-object; on export they're written to the
 manifest as typed JSON, and the runtime applies them onto the instance before
-`onStart()`. Hit the **Sync** (refresh) button after changing which fields a
+`OnStart()`. Hit the **Sync** (refresh) button after changing which fields a
 script exposes.
 
 Supported defaults: numbers, `true`/`false`, strings, and 3-number arrays
@@ -193,7 +194,7 @@ Babylon follows.
 Mapping: `POINT → PointLight`, `SUN → DirectionalLight`, `SPOT → SpotLight`.
 Area lights aren't part of glTF and don't transfer (the panel warns you).
 Intensity is approximate by nature — `SUN_SCALE` and `PUNCTUAL_SCALE` in
-`src/engine/lights.ts` are the two knobs to tune if a scene reads too bright or dim.
+`src/engine/subsystems/lights.ts` are the two knobs to tune if a scene reads too bright or dim.
 Color transfers exactly.
 
 **Shadows** follow the lamp's **Cast Shadows** toggle (Blender's `use_shadow`).
@@ -283,7 +284,7 @@ makes Babylon copy those extras to `node.metadata.gltf.extras`, and the loader
 indexes nodes by GUID. This means **renaming an object in Blender no longer
 breaks the link**, and duplicate names don't collide. If an entity has no GUID
 (e.g. an older v1 export), the loader falls back to name matching, so existing
-levels keep working. Query at runtime with `level.byId("...")` or `level.byTag(...)`.
+levels keep working. Query at runtime with `level.ById("...")` or `level.ByTag(...)`.
 
 Any object that has a GUID is exported as an entity — including a bare empty you
 just clicked **Assign GUID** on (no component required). A GUID is the "make this
@@ -319,7 +320,7 @@ babylon_runtime/    # the Babylon.js side (TypeScript + Vite)
       types.ts          # manifest schema + Entity
       Behavior.ts       # scriptable behavior base class
       exposed.ts        # @exposed decorator + value application
-      ComponentRegistry.ts
+      BehaviorRegistry.ts
       physics.ts        # Collider+RigidBody -> Havok V2
       lights.ts         # copies Blender lamp props onto glb lights
       LevelLoader.ts    # loads glb + manifest, builds the ECS, runs the loop

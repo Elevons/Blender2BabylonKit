@@ -9,7 +9,8 @@ import { Color3 } from "@babylonjs/core";
  *
  * Open the browser console after loading the level to see the output.
  */
-export default class ExposedProbe extends Behavior {
+export default class ExposedProbe extends Behavior
+{
   @exposed({ type: "enum", options: ["debug", "info", "silent"] })
   level = "info";
 
@@ -22,16 +23,23 @@ export default class ExposedProbe extends Behavior {
   @exposed({ type: "list", of: "color", label: "Palette" })
   palette: Color3[] = []; // add entries in Blender; they arrive as Color3
 
-  onStart() {
-    if (this.level === "silent") return;
-    const tag = `[ExposedProbe:${this.entity.name}]`;
-    console.log(`${tag} level =`, this.level);
-    console.log(`${tag} messages =`, this.messages);
-    console.log(`${tag} flags =`, this.flags);
+  /** Log the received exposed values once, after load. */
+  OnStart(): void
+  {
+    if (this.level === "silent")
+    {
+      return;
+    }
+
+    const logPrefix = `[ExposedProbe:${this.entity.name}]`;
+    console.log(`${logPrefix} level =`, this.level);
+    console.log(`${logPrefix} messages =`, this.messages);
+    console.log(`${logPrefix} flags =`, this.flags);
+
     // Each palette entry should be a real Color3 (note the .toHexString()).
     console.log(
-      `${tag} palette =`,
-      this.palette.map((c) => (c instanceof Color3 ? c.toHexString() : `RAW:${c}`))
+      `${logPrefix} palette =`,
+      this.palette.map((color) => (color instanceof Color3 ? color.toHexString() : `RAW:${color}`))
     );
   }
 }
