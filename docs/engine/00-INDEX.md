@@ -41,3 +41,5 @@ Related, outside this folder: [README](../../README.md) (overview + authoring),
 [LLM_SCRIPTING_CONTEXT](../LLM_SCRIPTING_CONTEXT.md) (behavior codegen
 contract), [TEST_PLAN](../TEST_PLAN.md), [DEVELOPMENT_PLAN](../DEVELOPMENT_PLAN.md),
 [PREFAB_SPEC](../PREFAB_SPEC.md) (deferred design).
+
+For the editor side, see the **[Blender add-on documentation](../blender/00-INDEX.md)** (parallel diagram + trace packet).

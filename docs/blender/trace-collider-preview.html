@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BJS Level Kit — Scripting</title>
+<title>Blender — Collider preview: the viewport gizmo</title>
 <style>
 /* ─────────────────────────────────────────────
    RESET & BASE
@@ -247,7 +247,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Scripting</span><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Collider preview</span></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -301,7 +301,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title": "Babylon Level Kit \u2014 Scripting", "nodes": [{"id": 1, "x": 40, "y": 60, "w": 150, "h": 40, "label": "behaviors/ folder", "sub": "one class per file", "desc": "THE contract: file named after the class, export default. The filename stem is the registry key Blender stores.", "meta": [["Where", "apps/<app>/src/behaviors"]]}, {"id": 2, "x": 40, "y": 180, "w": 150, "h": 40, "label": "AutoRegisterBehaviors", "sub": "main.ts wiring", "desc": "import.meta.glob('./behaviors/*') eagerly loads every file; each registers by stem in the BehaviorRegistry.", "meta": [["File", "scripting/BehaviorRegistry.ts"]]}, {"id": 3, "x": 40, "y": 300, "w": 150, "h": 40, "label": "BehaviorRegistry", "sub": "name \u2192 class", "desc": "Maps a SCRIPT component's name to a Behavior class. Registers BEHAVIORS, not components \u2014 TAG/COLLIDER/etc. are applied directly by the loader.", "meta": [["Create", "warns on unknown name"]]}, {"id": 4, "x": 280, "y": 120, "w": 150, "h": 40, "label": "Behavior", "sub": "scripting/Behavior.ts", "desc": "Lifecycle: OnStart (after refs resolve) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase \u2014 a lowercase onStart silently never runs.", "meta": [["Order", "cross-entity OnStart unspecified"]]}, {"id": 5, "x": 280, "y": 240, "w": 150, "h": 40, "label": "@exposed", "sub": "scripting/exposed.ts", "desc": "Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (script_parse.py) \u2192 single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.", "meta": [["Types", "float int bool string vector3 color entity enum list"]]}, {"id": 6, "x": 280, "y": 360, "w": 150, "h": 40, "label": "ApplyExposedVars", "sub": "before OnStart", "desc": "Writes the manifest's stored values onto the instance. vector3/color arrays coerced; entity refs deferred as PendingRefs; entity lists pre-sized with nulls.", "meta": [["Second pass", "ResolveObjectReferences"]]}, {"id": 7, "x": 520, "y": 180, "w": 150, "h": 40, "label": "Entity", "sub": "core/Entity.ts", "desc": "id/name/node/tag, behaviors, body?, animations, sounds. GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage \u2192 every behavior's OnMessage.", "meta": [["Back-ref", "node.metadata.bjsEntity"]]}, {"id": 8, "x": 520, "y": 320, "w": 150, "h": 40, "label": "Input", "sub": "scripting/Input.ts", "desc": "Named actions/axes: IsDown / WasPressed (one-frame edge) / Axis (\u22121..1, keys or stick + deadzone). Level attaches/updates/detaches automatically; rebind via BindAction/BindAxis.", "meta": [["Defaults", "Jump Interact Sprint Crouch \u00b7 MoveX/Y LookX/Y"]]}, {"id": 9, "x": 760, "y": 250, "w": 150, "h": 40, "label": "Level", "sub": "runs them", "desc": "Begin \u2192 OnStart for all; RunFrame \u2192 OnUpdate for all, then updaters, then Input.Update; Dispose \u2192 OnDestroy + teardown.", "meta": [["File", "core/Level.ts"]]}], "edges": [{"id": 100, "src": 1, "tgt": 2, "label": "glob"}, {"id": 101, "src": 2, "tgt": 3, "label": "by stem"}, {"id": 102, "src": 3, "tgt": 4, "label": "Create()"}, {"id": 103, "src": 4, "tgt": 5, "label": "fields"}, {"id": 104, "src": 5, "tgt": 6, "label": "values"}, {"id": 105, "src": 6, "tgt": 7, "label": "refs resolve to"}, {"id": 106, "src": 4, "tgt": 7, "label": "this.entity"}, {"id": 107, "src": 4, "tgt": 8, "label": "reads"}, {"id": 108, "src": 9, "tgt": 4, "label": "lifecycle"}, {"id": 109, "src": 9, "tgt": 8, "label": "attach/update"}]};
+const DIAGRAM_DATA = {"title":"Trace — Collider preview: the viewport gizmo","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _draw","sub":"collider_preview.py","desc":"The POST_VIEW draw handler: for each object with a manual collider, build its wireframe in Blender space and batch it to the GPU.","meta":[["File","blender_addon/collider_preview.py"],["Line","145"]],"code":"def _draw():\n    ctx = bpy.context\n    selected = getattr(ctx, \"selected_objects\", None)\n    if not selected:\n        return\n\n    points = []\n    for obj in selected:\n        for comp in obj.bjs_components:\n            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:\n                continue\n            local = _local_geometry(obj, comp)\n            if not local:\n                continue\n            mw = obj.matrix_world\n            points.extend(mw @ p for p in local)\n\n    if not points:\n        return\n\n    shader = gpu.shader.from_builtin('UNIFORM_COLOR')\n    gpu.state.blend_set('ALPHA')\n    gpu.state.line_width_set(1.5)\n    gpu.state.depth_test_set('LESS_EQUAL')\n    batch = batch_for_shader(shader, 'LINES', {\"pos\": [(p.x, p.y, p.z) for p in points]})\n    shader.bind()\n    shader.uniform_float(\"color\", _COLOR)\n    batch.draw(shader)\n    gpu.state.depth_test_set('NONE')\n    gpu.state.line_width_set(1.0)\n    gpu.state.blend_set('NONE')","file":"blender_addon/collider_preview.py","line":145},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _local_geometry","sub":"collider_preview.py","desc":"Produces the shape's edge geometry (box/sphere/capsule/cylinder) in the object's local space — the same center/size/rotation export will convert, so preview == runtime.","meta":[["File","blender_addon/collider_preview.py"],["Line","110"]],"code":"def _local_geometry(obj, comp):\n    \"\"\"Local-space line segments for a collider, or None if the mesh is the shape.\"\"\"\n    shape = comp.collider_shape\n    if shape in {'CONVEX', 'MESH'}:\n        return None  # the mesh itself is the collider; no separate wireframe\n\n    if comp.auto_fit:\n        bb = [Vector(c) for c in obj.bound_box]\n        mn = Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb)))\n        mx = Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))\n        center, size = (mn + mx) / 2, (mx - mn)\n        if shape == 'SPHERE':\n            return _sphere(center, max(size) / 2)\n        if shape == 'CYLINDER':\n            return _cylinder(center, max(size.x, size.y) / 2, size.z)\n        if shape == 'CAPSULE':\n            return _capsule(center, max(size.x, size.y) / 2, size.z)\n        return _box_edges(center, size)\n\n    # Manual: build around the origin, then rotate and offset (matches the runtime\n    # shape, which is centered at `center` with the collider's rotation).\n    origin = Vector((0.0, 0.0, 0.0))\n    if shape == 'SPHERE':\n        pts = _sphere(origin, comp.collider_radius)\n    elif shape == 'CYLINDER':\n        pts = _cylinder(origin, comp.collider_radius, comp.collider_height)\n    elif shape == 'CAPSULE':\n        pts = _capsule(origin, comp.collider_radius, comp.collider_height)\n    else:\n        pts = _box_edges(origin, comp.collider_size)\n    rot = Euler(comp.collider_rotation, 'XYZ').to_matrix()\n    center = Vector(comp.collider_center)\n    return [(rot @ p) + center for p in pts]","file":"blender_addon/collider_preview.py","line":110}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1118,5 +1118,46 @@ function exportSelf() {
   setMode('select');
 })();
 </script>
-</body>
+
+<style>
+  #panel { position: relative; }
+  #panel.open { width: var(--trace-panel-w, min(560px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
+    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+  .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
+  #trace-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #trace-resizer:hover, #trace-resizer.dragging { background: #e08a3c33; }
+</style>
+<script>
+  const __openNodePanel = openNodePanel;
+  openNodePanel = function(n)
+  {
+    __openNodePanel(n);
+    if (!n.code) { return; }
+    const panel = document.getElementById('pi');
+    const loc = document.createElement('div');
+    loc.className = 'trace-loc';
+    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data';
+    const pre = document.createElement('pre');
+    pre.className = 'trace-code';
+    pre.textContent = n.code;
+    panel.appendChild(loc);
+    panel.appendChild(pre);
+  };
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'trace-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) return; const w = Math.min(Math.max(window.innerWidth - e.clientX, 260), window.innerWidth * 0.92); document.documentElement.style.setProperty('--trace-panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) return; dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script></body>
 </html>

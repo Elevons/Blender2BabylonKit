@@ -300,6 +300,33 @@ const AREA_NAV = [
 ];
 const TRACE_NAV = TRACES.map((trace) => [`trace-${trace.id}.html`, trace.title.split(":")[0]]);
 
+/**
+ * Remove a previously injected nav (the fixed bottom bar) by walking div depth
+ * from its opening tag to the matching close — regex can't handle the nesting.
+ */
+function RemoveNav(html)
+{
+  const marker = '<div style="position:fixed;bottom:10px;';
+  const start = html.indexOf(marker);
+  if (start === -1) { return html; }
+
+  let depth = 0;
+  let index = start;
+  while (index < html.length)
+  {
+    if (html.startsWith("<div", index)) { depth++; index += 4; continue; }
+    if (html.startsWith("</div>", index))
+    {
+      depth--;
+      index += 6;
+      if (depth === 0) { return html.slice(0, start) + html.slice(index); }
+      continue;
+    }
+    index++;
+  }
+  return html; // unbalanced — leave untouched rather than corrupt
+}
+
 function BuildNav(currentFile)
 {
   const link = ([file, label]) => file === currentFile
@@ -308,7 +335,8 @@ function BuildNav(currentFile)
   return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
     + 'background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;'
     + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;">' + AREA_NAV.map(link).join("") + '</div>'
+    + '<div style="display:flex;gap:2px;justify-content:center;">' + AREA_NAV.map(link).join("")
+    + '<a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a>' + '</div>'
     + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;">'
     + '<span style="color:#6c7396;padding:2px 6px;">Traces:</span>' + TRACE_NAV.map(link).join("") + '</div></div>';
 }
@@ -317,13 +345,22 @@ function BuildNav(currentFile)
 // read-only code block under the description textarea.
 const CODE_PANEL_PATCH = `
 <style>
-  #panel.open { width: 560px !important; }
+  /* Trace pages: the panel is the reading surface — let it breathe. */
+  #panel { position: relative; }
+  #panel.open { width: var(--trace-panel-w, min(560px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  /* Sections are individually resizable (drag the bottom-right grip). */
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 12px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:2; color:#dde2f1; max-height:55vh; }
-  .trace-loc { color:#8b93b8; font:11px system-ui; margin:8px 14px 0; }
+    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:2; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+  .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
+  /* Drag the panel's left edge to resize the whole sidebar. */
+  #trace-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #trace-resizer:hover, #trace-resizer.dragging { background: #4f6df533; }
 </style>
 <script>
+  // Render the step's source under the description (read-only, scrollable).
   const __openNodePanel = openNodePanel;
   openNodePanel = function(n)
   {
@@ -339,6 +376,38 @@ const CODE_PANEL_PATCH = `
     panel.appendChild(loc);
     panel.appendChild(pre);
   };
+
+  // Left-edge drag handle: resize the whole sidebar (width persists per page load).
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'trace-resizer';
+    panel.appendChild(handle);
+
+    let dragging = false;
+    handle.addEventListener('mousedown', (mouseEvent) =>
+    {
+      dragging = true;
+      handle.classList.add('dragging');
+      panel.style.transition = 'none'; // no easing fight while dragging
+      mouseEvent.preventDefault();
+    });
+    window.addEventListener('mousemove', (mouseEvent) =>
+    {
+      if (!dragging) { return; }
+      const width = Math.min(Math.max(window.innerWidth - mouseEvent.clientX, 260), window.innerWidth * 0.92);
+      document.documentElement.style.setProperty('--trace-panel-w', width + 'px');
+    });
+    window.addEventListener('mouseup', () =>
+    {
+      if (!dragging) { return; }
+      dragging = false;
+      handle.classList.remove('dragging');
+      panel.style.transition = '';
+    });
+  })();
 </script>`;
 
 /** Serpentine layout: left→right, drop a row, right→left — reads like a script. */
@@ -380,7 +449,7 @@ function BuildTracePage(trace)
     + "const DIAGRAM_DATA = " + JSON.stringify(data) + ";"
     + SHELL.slice(match.index + match[0].length);
   page = page.replace(/<title>.*?<\/title>/, `<title>Trace — ${trace.title}</title>`);
-  page = page.replace(/<div style="position:fixed;bottom:10px;[\s\S]*?<\/div><\/div>|<div style="position:fixed;bottom:10px;[\s\S]*?Text docs<\/a><\/div>/, "");
+  page = RemoveNav(page);
   page = page.replace("<body>", "<body>" + BuildNav(`trace-${trace.id}.html`));
   page = page.replace("</body>", CODE_PANEL_PATCH + "</body>");
 
@@ -397,7 +466,7 @@ for (const [file] of AREA_NAV)
 {
   const target = path.join(ROOT, "docs", "engine", file);
   let page = fs.readFileSync(target, "utf8");
-  page = page.replace(/<body><div style="position:fixed;bottom:10px;[\s\S]*?<\/div>/, "<body>");
+  page = RemoveNav(page);
   page = page.replace("<body>", "<body>" + BuildNav(file));
   fs.writeFileSync(target, page);
 }
