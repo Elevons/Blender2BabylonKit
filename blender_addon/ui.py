@@ -49,6 +49,12 @@ def _draw_component(layout, obj, index, comp):
     label = comp.comp_type.replace('_', ' ').title()
     if comp.comp_type == 'TAG' and comp.tag:
         label = f"Tag: {comp.tag}"
+    elif comp.comp_type == 'CONSTRAINT':
+        target_name = comp.con_target.name if comp.con_target else "?"
+        label = f"Constraint: {comp.con_type.title()} -> {target_name}"
+    elif comp.comp_type == 'AUDIO' and comp.audio_file:
+        import os as _os
+        label = f"Audio: {_os.path.basename(comp.audio_file)}"
     elif comp.comp_type == 'SCRIPT' and comp.script_name:
         label = f"Script: {comp.script_name}"
     elif comp.comp_type == 'CAMERA':
@@ -97,6 +103,23 @@ def _draw_component(layout, obj, index, comp):
             body.prop(comp, "collider_center")
             body.prop(comp, "collider_rotation")
 
+        if comp.is_trigger:
+            box = body.box()
+            header = box.row()
+            header.label(text="On Enter Events", icon='OUTLINER_OB_FORCE_FIELD')
+            add = header.operator("bjs.trigger_event_add", text="", icon='ADD')
+            add.comp_index = index
+            for ev_i, ev in enumerate(comp.trigger_events):
+                row = box.row(align=True)
+                row.prop(ev, "target", text="")
+                row.prop(ev, "message", text="")
+                row.prop(ev, "filter_tag", text="", icon='COLOR')
+                rem = row.operator("bjs.trigger_event_remove", text="", icon='X')
+                rem.comp_index = index
+                rem.event_index = ev_i
+            if len(comp.trigger_events) == 0:
+                box.label(text="On enter: send Message to Target", icon='INFO')
+
     elif comp.comp_type == 'RIGIDBODY':
         body.prop(comp, "body_type")
         col = body.column()
@@ -106,6 +129,43 @@ def _draw_component(layout, obj, index, comp):
         body.prop(comp, "restitution")
         body.prop(comp, "linear_damping")
         body.prop(comp, "angular_damping")
+
+    elif comp.comp_type == 'AUDIO':
+        body.prop(comp, "audio_file")
+        body.prop(comp, "audio_volume", slider=True)
+        row = body.row(align=True)
+        row.prop(comp, "audio_loop")
+        row.prop(comp, "audio_autoplay")
+        body.prop(comp, "audio_spatial")
+        if comp.audio_spatial:
+            body.prop(comp, "audio_max_distance")
+        body.prop(comp, "audio_rate")
+
+    elif comp.comp_type == 'CONSTRAINT':
+        body.prop(comp, "con_type")
+        body.prop(comp, "con_target")
+        body.prop(comp, "con_pivot")
+        if comp.con_type in {'HINGE', 'SLIDER', 'SPRING'}:
+            body.prop(comp, "con_axis")
+        body.prop(comp, "con_collision")
+
+        if comp.con_type in {'HINGE', 'SLIDER'}:
+            body.prop(comp, "con_use_limits")
+            if comp.con_use_limits:
+                row = body.row(align=True)
+                row.prop(comp, "con_min")
+                row.prop(comp, "con_max")
+            body.prop(comp, "con_motor")
+            if comp.con_motor:
+                body.prop(comp, "con_motor_speed")
+                body.prop(comp, "con_motor_force")
+
+        if comp.con_type == 'SPRING':
+            row = body.row(align=True)
+            row.prop(comp, "con_min")
+            row.prop(comp, "con_max")
+            body.prop(comp, "con_stiffness")
+            body.prop(comp, "con_damping")
 
     elif comp.comp_type == 'SCRIPT':
         pick_row = body.row(align=True)
@@ -337,6 +397,22 @@ class BJS_PT_export(Panel):
         layout = self.layout
         layout.operator("bjs.export_scene", text="Export Level", icon='EXPORT')
         layout.label(text="Writes .glb + .scene.json", icon='INFO')
+
+        layout.separator()
+        scene = context.scene
+        link_row = layout.row(align=True)
+        link_row.prop(scene, "bjs_live_link", text="Live Link (re-export on save)",
+                      icon='FILE_REFRESH')
+        if scene.bjs_live_link:
+            if scene.bjs_live_link_path:
+                layout.label(text=bpy.path.basename(scene.bjs_live_link_path),
+                             icon='FILE_TICK')
+            else:
+                layout.label(text="Export once to set the path", icon='ERROR')
+
+        layout.prop(scene, "bjs_debug_build", text="Debug Build", icon='TOOL_SETTINGS')
+
+        layout.operator("bjs.validate_scene", text="Validate", icon='CHECKMARK')
 
 
 classes = (

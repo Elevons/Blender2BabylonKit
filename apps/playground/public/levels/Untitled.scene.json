@@ -1,0 +1,467 @@
+{
+  "version": 4,
+  "glb": "Untitled.glb",
+  "scene": {
+    "clearColor": [
+      0.05,
+      0.05,
+      0.08,
+      1.0
+    ],
+    "ambientColor": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "environment": {
+      "file": "env/UNDERWATER-04SN.hdr",
+      "intensity": 0.10000000149011612,
+      "rotationY": 0.0,
+      "createSkybox": true
+    },
+    "fog": {
+      "mode": "EXP2",
+      "color": [
+        0.0603,
+        0.071,
+        0.0816
+      ],
+      "density": 0.0010000000474974513,
+      "start": 10.0,
+      "end": 100.0
+    },
+    "postProcessing": null
+  },
+  "entities": [
+    {
+      "id": "9625ef70a14f44e591f3c15960e54c95",
+      "name": "Sun",
+      "parent": null,
+      "components": [],
+      "light": {
+        "type": "SUN",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 1.0,
+        "castShadows": true,
+        "shadow": {
+          "mapSize": 0,
+          "bias": 4.999999873689376e-05,
+          "normalBias": 0.0,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "PCF"
+        }
+      }
+    },
+    {
+      "id": "2145cde77a2342a491fc03615329e393",
+      "name": "Cube.001",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9cf1d294c53b4e76a920cb740b3e11b3",
+      "name": "Camera.001",
+      "parent": null,
+      "components": [
+        {
+          "type": "CAMERA",
+          "cameraType": "FREE",
+          "attachControl": true,
+          "keys": {
+            "scheme": "ARROWS",
+            "up": "W",
+            "down": "S",
+            "left": "A",
+            "right": "D"
+          },
+          "useBlenderTransform": true,
+          "followMode": "OFFSET",
+          "speed": 1.0,
+          "inertia": 0.8999999761581421,
+          "radius": 10.0,
+          "lowerRadius": 0.0,
+          "upperRadius": 0.0,
+          "target": null,
+          "distance": 10.0,
+          "height": 4.0,
+          "rotationOffset": 0.0
+        }
+      ],
+      "camera": {
+        "type": "PERSP",
+        "clipStart": 0.10000000149011612,
+        "clipEnd": 1000.0,
+        "active": false,
+        "fov": 0.4710899591445923
+      }
+    },
+    {
+      "id": "a0a3a0b2a1b84d8d9f545a0d84148202",
+      "name": "Plane",
+      "parent": null,
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "STATIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            173.08456420898438,
+            7.2903313636779785,
+            173.4325408935547
+          ],
+          "radius": 86.71627044677734,
+          "height": 7.2903313636779785,
+          "center": [
+            -0.07346343994140625,
+            2.4946000576019287,
+            0.3185577392578125
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4741bcd5208c4f8d87fdf5da1d80c83d",
+      "name": "WHEEL.004",
+      "parent": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.355041742324829,
+            4.32642126083374,
+            4.327393531799316
+          ],
+          "radius": 2.163696765899658,
+          "height": 2.3164212703704834,
+          "center": [
+            0.19683977961540222,
+            0.0003390312194824219,
+            0.0030690431594848633
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        }
+      ]
+    },
+    {
+      "id": "217e0c1f17cf45659567913d638d89c6",
+      "name": "WHEEL.001",
+      "parent": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.176914691925049,
+            4.679642677307129,
+            4.680694580078125
+          ],
+          "radius": 2.3403472900390625,
+          "height": 2.3396427631378174,
+          "center": [
+            0.027710378170013428,
+            0.0003668069839477539,
+            0.0033196210861206055
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": true,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        }
+      ]
+    },
+    {
+      "id": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+      "name": "BODY.001",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0
+        }
+      ]
+    },
+    {
+      "id": "ecbf5216cfdd4b41a7a1ea1f20e7fbdc",
+      "name": "WHEEL.005",
+      "parent": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.176914691925049,
+            4.679642677307129,
+            4.680694580078125
+          ],
+          "radius": 2.3403472900390625,
+          "height": 2.429642677307129,
+          "center": [
+            -0.027710378170013428,
+            -0.0003668069839477539,
+            0.0033196210861206055
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": -10.0,
+          "max": 10.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": true,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        }
+      ]
+    },
+    {
+      "id": "48157102c73940d9a160244686189272",
+      "name": "WHEEL.006",
+      "parent": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.355041980743408,
+            4.32642126083374,
+            4.327393531799316
+          ],
+          "radius": 2.163696765899658,
+          "height": 2.166421413421631,
+          "center": [
+            -0.19683966040611267,
+            -0.0003390312194824219,
+            0.0030690431594848633
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        }
+      ]
+    }
+  ],
+  "debug": true
+}

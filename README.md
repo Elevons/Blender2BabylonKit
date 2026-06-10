@@ -79,46 +79,66 @@ hiding does *not* exclude an object; only the render toggle does.)
 
 ## Run the Babylon runtime
 
+The repo is an **npm workspaces monorepo**: the engine lives once in
+`packages/engine` (the `@bjs/engine` package) and every app under `apps/`
+depends on it via a workspace symlink — edit the engine and every app sees it
+immediately, no publishing or copying. Engine + Blender add-on versions stay in
+lockstep as before.
+
 ```bash
-cd babylon_runtime
-npm install
-# put your exported files where main.ts expects them:
-mkdir -p public/levels && cp /path/to/level.glb /path/to/level.scene.json public/levels/
-npm run dev
+npm install        # once, at the repo root — links all workspaces
+# put your exported files where the playground's main.ts expects them:
+cp /path/to/level.glb /path/to/level.scene.json apps/playground/public/levels/
+npm run dev        # the playground app (Vite)
+npm run typecheck  # tsc over the engine package + the app
 ```
 
-Open the dev URL. `src/main.ts` boots an engine, enables Havok physics,
-registers the example behaviors, and loads `/levels/level.scene.json`.
+Open the dev URL. `apps/playground/src/main.ts` boots an engine, enables Havok
+physics, registers the example behaviors, and loads `/levels/level.scene.json`.
 
 > Physics uses Babylon's **V2 / Havok** API. The `@babylonjs/havok` package
 > ships a `.wasm` that must be served — the included `vite.config.ts` handles
 > this by excluding it from dep pre-bundling.
 
 To **see the colliders** in the running scene, press **C** (toggles Babylon's
-physics debug wireframes), or call `level.ShowColliders(true)` yourself. You can
+physics debug wireframes), or call `level.ShowColliders(true)` yourself. Press
+**I** to toggle the Babylon **Inspector** (scene tree + property grids; dev-only,
+lazy-loaded). Both keys are gated by the **Debug Build** checkbox in the Export
+panel — untick it for a release export and the manifest carries `"debug": false`,
+disabling the debug keys (and the `debugColliders` loader option). Older
+manifests without the field behave as debug-enabled. You can
 also have them on from the start: `loader.Load(url)` with the loader constructed
 as `new LevelLoader(scene, registry, { debugColliders: true })`.
 
+## Iteration workflow (Live Link)
+
+The Export panel has a **Live Link** checkbox. Export once by hand to set the
+path, tick the box, and from then on every **Ctrl+S** in Blender re-exports the
+level automatically; the dev server watches `public/levels/*.scene.json` and
+reloads the browser. Save in Blender → see it in Babylon. Warnings from the
+validator are printed to Blender's console on each live export.
+
+The **Validate** button runs the same checks without exporting: missing script
+files, references to render-disabled objects, MESH colliders on DYNAMIC bodies,
+area lights, duplicate GUIDs, and a missing active camera. The Export Level
+operator also runs them and lists warnings in its report.
+
 ## Creating a new project
 
-`babylon_runtime/` doubles as a template. To spin up a fresh runtime under a new
-name, from inside `babylon_runtime/`:
+New games are apps inside the monorepo. From the repo root:
 
 ```bash
-npm run create -- --name "My Game"
+npm run create -- --name my-game --title "My Game" --level Arena
+npm install                              # links @bjs/engine into the new app
+npm run dev --workspace apps/my-game
 ```
 
-This copies the engine, behaviors, and config into a sibling folder
-(`../my-game` by default), rewrites the package name and browser-tab title, and
-skips generated files (`node_modules`, `dist`, exported levels, the scaffolder
-itself). Useful flags: `--dir <path>` (target location), `--title <text>`,
-`--level <name>` (point `main.ts` at `/levels/<name>.scene.json`), `--install`
-(run `npm install` for you), `--force` (allow a non-empty target). Then `cd` in,
-`npm install`, and `npm run dev`.
-
-Note: this is a *template copy*, so each project gets its own frozen copy of
-`src/engine/` — engine fixes don't propagate automatically. Packaging the engine
-as a shared dependency is the planned next step.
+This stamps `apps/my-game` from the playground template: its own `main.ts`,
+`behaviors/`, `index.html`, and an empty `public/levels/`. The engine is **not
+copied** — every app depends on `"@bjs/engine": "*"`, satisfied by a workspace
+symlink to `packages/engine`, so engine fixes reach all apps instantly. Flags:
+`--title <text>` (browser tab), `--level <name>` (point `main.ts` at
+`/levels/<name>.scene.json`), `--force` (overwrite an existing app).
 
 ### Behaviors (scripts)
 
@@ -127,7 +147,7 @@ default-exported. Mark editable fields with `@exposed`:
 
 ```ts
 // src/behaviors/Rotator.ts
-import { Behavior, exposed } from "../engine";
+import { Behavior, exposed } from "@bjs/engine";
 
 export default class Rotator extends Behavior
 {
@@ -194,7 +214,7 @@ Babylon follows.
 Mapping: `POINT → PointLight`, `SUN → DirectionalLight`, `SPOT → SpotLight`.
 Area lights aren't part of glTF and don't transfer (the panel warns you).
 Intensity is approximate by nature — `SUN_SCALE` and `PUNCTUAL_SCALE` in
-`src/engine/subsystems/lights.ts` are the two knobs to tune if a scene reads too bright or dim.
+`packages/engine/src/subsystems/lights.ts` are the two knobs to tune if a scene reads too bright or dim.
 Color transfers exactly.
 
 **Shadows** follow the lamp's **Cast Shadows** toggle (Blender's `use_shadow`).
@@ -257,7 +277,63 @@ at load:
   (it isn't part of the default pipeline). These attach to the active camera, so
   the scene needs one. Handles are exposed on `level.post`.
 
+## Audio
+
+Add an **Audio** component to any object: pick a sound file (.mp3/.wav/.ogg —
+copied into `audio/` next to the export), set volume, loop, auto-play, playback
+rate, and **3D Spatial** (positioned at the object and following it; off =
+ambient). Built on Babylon's **audio engine v2**. Browsers block sound until the
+first user gesture, so auto-play sounds start on the first click/keypress.
+Scripts reach them via `entity.GetSound("name")?.play()` (named by file stem) or
+`entity.sounds`.
+
+## Trigger events (messaging)
+
+A trigger collider (**Is Trigger** on) gains an **On Enter Events** list: each
+row is a target object, a message string, and an optional tag filter. When
+something enters the volume, the message is delivered to the target's behaviors
+via the `OnMessage(message, source)` hook — `source` is the entity that entered.
+From code, `entity.SendMessage("open", sender)` does the same thing. See
+`MessageLogger.ts` for a receiver that logs messages and can play a sound.
+Note: MESH-shaped triggers never fire in Havok (the validator warns); use a
+primitive or CONVEX shape for trigger volumes.
+
+## Constraints (physics joints)
+
+Add a **Constraint** component to a physics object and pick the **Target** body:
+**Fixed** (weld), **Ball & Socket**, **Hinge** (one rotation axis — doors,
+levers), **Slider** (one translation axis — drawers, pistons), or **Spring**
+(sprung translation — suspension). Pivot is authored in the object's local space
+(Blender axes); the axis is a local X/Y/Z choice. Hinge/Slider take optional
+min/max limits (degrees / meters) and an optional **Motor** (target speed + max
+force); Spring takes stiffness/damping plus travel limits. **Bodies Collide**
+controls whether the two jointed bodies collide with each other.
+
+Joints are built after all entities exist, pinning the **as-placed** relative
+pose — position the two objects in Blender exactly how they should rest, and
+nothing snaps on load. Both ends need a Collider/Rigid Body (the validator
+checks). Created joints are exposed as `level.constraints` and disposed with the
+level. For fully hand-rolled joints in code, see `PlayerVehicleController.ts`.
+
+## Input (action map)
+
+Behaviors can read named actions and axes instead of key codes:
+`Input.Axis("MoveX")` (-1..1 from WASD/arrows or a gamepad stick),
+`Input.IsDown("Sprint")`, `Input.WasPressed("Jump")` (one frame per press).
+Default bindings live in one place (`engine/scripting/Input.ts`) and can be
+changed at startup with `Input.BindAction` / `Input.BindAxis`. The level
+attaches, polls (first connected gamepad), and detaches it automatically. See
+`InputMover.ts`. Babylon's own camera key schemes are separate by design —
+cameras consume keycode arrays natively.
+
 ## Animation (NLA clips)
+
+> **Skinned/rigged characters:** put the GUID, Animation settings, and any
+> Script components on the **armature object**, not the mesh. glTF skinning
+> ignores the mesh node's own transform (joints define the final pose), and
+> skeletal clips target the joint nodes under the armature — so components on
+> the mesh silently do nothing. The validator warns about this.
+
 
 Animations ride in the glb: each Blender **NLA strip** is exported as a named
 glTF animation, which Babylon imports as an `AnimationGroup`. The manifest adds
@@ -311,29 +387,35 @@ blender_addon/      # the Blender plugin (a Python package)
   ui.py             # the Babylon N-panel
   export.py         # glb + JSON manifest writer
   script_parse.py   # reads @exposed decorators from .ts files
-babylon_runtime/    # the Babylon.js side (TypeScript + Vite)
-  index.html        # entry -> src/main.ts
-  src/
-    main.ts           # app bootstrap (engine + your scene wiring)
-    behaviors/        # YOUR scripts, one behavior per file (Rotator, LookAt…)
-    engine/           # the reusable engine library
-      index.ts          # barrel — always import the engine via "../engine"
+packages/
+  engine/             # "@bjs/engine" — the runtime engine, shared by every app
+    src/
+      index.ts          # barrel — apps import the engine via "@bjs/engine"
       core/             # schema + runtime container + load pipeline
-        types.ts          #   manifest schema + Entity + ID_KEY
+        types.ts          #   manifest schema (mirrors the exporter) + ID_KEY
+        Entity.ts         #   the runtime entity class
         Level.ts          #   runtime container: entities, update loop, debug view
         LevelLoader.ts    #   loads glb + manifest, builds the ECS, runs the loop
-      scripting/        # the behavior system
+      scripting/        # the behavior system (+ Input action map)
         Behavior.ts       #   scriptable behavior base class
         exposed.ts        #   @exposed decorator + value application
+        Input.ts          #   named input actions/axes
         BehaviorRegistry.ts  #  maps SCRIPT names -> Behavior classes
       subsystems/       # one module per manifest concern the glb can't express
-        physics.ts lights.ts cameras.ts shadows.ts
-        environment.ts fog.ts postprocess.ts animation.ts
+        physics.ts lights.ts cameras.ts shadows.ts constraints.ts
+        audio.ts triggers.ts environment.ts fog.ts postprocess.ts animation.ts
+apps/
+  playground/         # the dev/test app (Vite). New games: npm run create
+    index.html          # entry -> src/main.ts
+    src/
+      main.ts             # app bootstrap (engine + your scene wiring)
+      behaviors/          # YOUR scripts, one behavior per file (Rotator, LookAt…)
 
 Docs:
   README.md                  # this file — overview, authoring, engine reference
-  STYLE_GUIDE.md             # C#-style coding conventions for engine + behaviors
-  LLM_SCRIPTING_CONTEXT.md   # short context for an LLM generating a behavior file
+  docs/STYLE_GUIDE.md           # C#-style coding conventions for engine + behaviors
+  docs/LLM_SCRIPTING_CONTEXT.md # short context for an LLM generating a behavior file
+  docs/engine/00-INDEX.md    # full linked engine documentation + interactive diagram
 ```
 
 
@@ -341,7 +423,7 @@ Docs:
 
 # Engine reference (runtime internals)
 
-*This section is for working on the engine itself or understanding load-time behavior. To just write a behavior script, see `LLM_SCRIPTING_CONTEXT.md`; for coding conventions, `STYLE_GUIDE.md`.*
+*This section is for working on the engine itself or understanding load-time behavior. To just write a behavior script, see `docs/LLM_SCRIPTING_CONTEXT.md`; for coding conventions, `docs/STYLE_GUIDE.md`.*
 
 ### The load pipeline
 
@@ -391,7 +473,7 @@ in order (each step below is an extracted private method of `LevelLoader`):
 ### Runtime API
 
 
-#### Entity (`core/types.ts`)
+#### Entity (`core/Entity.ts`)
 
 ```ts
 class Entity
@@ -426,7 +508,7 @@ class Level
 ```
 
 > Note: fields/properties (`entities`, `activeCamera`, …) stay **camelCase** —
-> they're treated as variables. Only methods are PascalCase. See STYLE_GUIDE.md.
+> they're treated as variables. Only methods are PascalCase. See docs/STYLE_GUIDE.md.
 
 Three ways to reach another object from a behavior: an `@exposed({type:"entity"})`
 reference (cleanest), `node.metadata.bjsEntity` if you have a node, or `level.ById`
@@ -497,7 +579,7 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "glb": "level.glb",
   "scene": {
     "clearColor": [0,0,0,1], "ambientColor": [0,0,0],
@@ -516,11 +598,18 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
         { "type": "TAG", "tag": "Player" },
         { "type": "COLLIDER", "shape": "BOX", "isTrigger": false, "autoFit": true,
           "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0],
-          "rotation": [0,0,0,1] },
+          "rotation": [0,0,0,1],
+          "events": [ { "target": "guid", "message": "open", "filterTag": "Player" } ] },
         { "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1, "friction": 0.5,
           "restitution": 0.2, "linearDamping": 0, "angularDamping": 0 },
         { "type": "SCRIPT", "script": "Spinner", "path": "...",
           "vars": { "speed": 120, "axis": [0,1,0] } },
+        { "type": "AUDIO", "file": "audio/door.mp3", "volume": 1, "loop": false,
+          "autoPlay": false, "spatial": true, "maxDistance": 50, "playbackRate": 1 },
+        { "type": "CONSTRAINT", "constraintType": "HINGE", "target": "guid",
+          "pivot": [0,0,0], "axis": [0,1,0], "collision": false,
+          "useLimits": true, "min": -90, "max": 90, "stiffness": 100, "damping": 10,
+          "motor": false, "motorSpeed": 90, "motorMaxForce": 100 },
         { "type": "CAMERA", "cameraType": "ARC", "attachControl": true,
           "keys": { "scheme": "ARROWS", "up": "W", "down": "S", "left": "A", "right": "D" },
           "useBlenderTransform": true, "followMode": "OFFSET", "radius": 10, "lowerRadius": 0, "upperRadius": 0,
@@ -563,4 +652,4 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
 
 ### Code conventions
 
-Engine code and behaviors follow a C#-inspired TypeScript style (PascalCase methods, Allman braces, descriptive names, explicit null handling, with the `@exposed` decorator kept lowercase and Babylon `Nullable<T>` values using truthiness checks). Full rules live in **`STYLE_GUIDE.md`**.
+Engine code and behaviors follow a C#-inspired TypeScript style (PascalCase methods, Allman braces, descriptive names, explicit null handling, with the `@exposed` decorator kept lowercase and Babylon `Nullable<T>` values using truthiness checks). Full rules live in **`docs/STYLE_GUIDE.md`**.

@@ -8,6 +8,7 @@ along inside the glb, so the manifest only stores what glTF can't express.
 
 import json
 import os
+import shutil
 import bpy
 import mathutils
 
@@ -16,7 +17,7 @@ from .scene_export import serialize_scene
 from .anim_export import serialize_animation, nla_clip_names
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def _serialize_list(v):
@@ -66,6 +67,12 @@ def _iter_referenced_objects(comp):
     scalar entity refs and entity-list items — plus a follow-camera target."""
     if comp.comp_type == 'CAMERA' and comp.cam_target is not None:
         yield comp.cam_target
+    if comp.comp_type == 'COLLIDER':
+        for ev in comp.trigger_events:
+            if ev.target is not None:
+                yield ev.target
+    if comp.comp_type == 'CONSTRAINT' and comp.con_target is not None:
+        yield comp.con_target
     for v in comp.exposed_vars:
         if v.vtype == 'ENTITY' and v.obj_val is not None:
             yield v.obj_val
@@ -87,7 +94,30 @@ def _referenced_ids(context):
     return ids
 
 
-def _serialize_components(obj):
+# Blender local axis -> Babylon Y-up unit vector, via (x, y, z) -> (x, z, -y).
+_CONSTRAINT_AXIS_TO_BABYLON = {
+    'X': [1.0, 0.0, 0.0],
+    'Y': [0.0, 0.0, -1.0],
+    'Z': [0.0, 1.0, 0.0],
+}
+
+
+def _copy_audio_file(filepath, output_dir):
+    """Copy the authored sound file into <output_dir>/audio/ (like env textures)
+    and return its manifest-relative path, or None if the source is missing."""
+    src = bpy.path.abspath(filepath)
+    if not os.path.isfile(src):
+        return None
+    audio_dir = os.path.join(output_dir, "audio")
+    os.makedirs(audio_dir, exist_ok=True)
+    filename = os.path.basename(src)
+    dest = os.path.join(audio_dir, filename)
+    if os.path.abspath(src) != os.path.abspath(dest):
+        shutil.copy2(src, dest)
+    return "audio/" + filename
+
+
+def _serialize_components(obj, output_dir):
     comps = []
     for c in obj.bjs_components:
         if not c.enabled:
@@ -113,6 +143,12 @@ def _serialize_components(obj):
                 "center": [cx, cz, -cy],     # offset: (x, y, z) -> (x, z, -y)
                 "rotation": [q.x, q.z, -q.y, q.w],  # quaternion xyzw, axis Z-up -> Y-up
             })
+            if c.is_trigger and len(c.trigger_events) > 0:
+                d["events"] = [{
+                    "target": ensure_object_id(ev.target) if ev.target else None,
+                    "message": ev.message,
+                    "filterTag": ev.filter_tag,
+                } for ev in c.trigger_events]
 
         elif c.comp_type == 'RIGIDBODY':
             d.update({
@@ -149,6 +185,35 @@ def _serialize_components(obj):
                 "distance": c.cam_distance,
                 "height": c.cam_height,
                 "rotationOffset": c.cam_rotation_offset,
+            })
+
+        elif c.comp_type == 'CONSTRAINT':
+            px, py, pz = c.con_pivot
+            d.update({
+                "constraintType": c.con_type,
+                "target": ensure_object_id(c.con_target) if c.con_target else None,
+                "pivot": [px, pz, -py],  # owner-local, converted to Babylon Y-up
+                "axis": _CONSTRAINT_AXIS_TO_BABYLON[c.con_axis],
+                "collision": bool(c.con_collision),
+                "useLimits": bool(c.con_use_limits),
+                "min": c.con_min,   # degrees (hinge) / meters (slider, spring)
+                "max": c.con_max,
+                "stiffness": c.con_stiffness,
+                "damping": c.con_damping,
+                "motor": bool(c.con_motor),
+                "motorSpeed": c.con_motor_speed,   # deg/s (hinge) / m/s (slider)
+                "motorMaxForce": c.con_motor_force,
+            })
+
+        elif c.comp_type == 'AUDIO':
+            d.update({
+                "file": _copy_audio_file(c.audio_file, output_dir),
+                "volume": c.audio_volume,
+                "loop": bool(c.audio_loop),
+                "autoPlay": bool(c.audio_autoplay),
+                "spatial": bool(c.audio_spatial),
+                "maxDistance": c.audio_max_distance,
+                "playbackRate": c.audio_rate,
             })
 
         comps.append(d)
@@ -247,7 +312,7 @@ def _build_manifest(context, glb_filename, output_dir):
     for obj in context.scene.objects:
         if not _is_renderable(obj):
             continue  # disabled in renders → not part of the level
-        comps = _serialize_components(obj)
+        comps = _serialize_components(obj, output_dir)
         light = _serialize_light(obj) if obj.type == 'LIGHT' else None
         camera = _serialize_camera(obj, obj == context.scene.camera) if obj.type == 'CAMERA' else None
         animation = serialize_animation(obj)
@@ -316,6 +381,7 @@ def export_level(context, filepath):
     _export_glb(glb_path)
 
     manifest = _build_manifest(context, glb_filename, os.path.dirname(glb_path))
+    manifest["debug"] = bool(getattr(context.scene, "bjs_debug_build", True))
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 

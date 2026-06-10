@@ -45,6 +45,22 @@ COMPONENT_TYPES = [
     ('RIGIDBODY', "Rigid Body", "Physics body (mass, dynamics)"),
     ('SCRIPT',    "Script",     "Attach a named behavior script with parameters"),
     ('CAMERA',    "Camera",     "Override the camera type (ArcRotate / Follow / ...)"),
+    ('AUDIO',     "Audio",      "Attach a sound to this entity (ambient or 3D-positioned)"),
+    ('CONSTRAINT', "Constraint", "Physics joint to another body (hinge, slider, spring...)"),
+]
+
+CONSTRAINT_TYPES = [
+    ('FIXED',  "Fixed",          "Weld the two bodies together (no relative motion)"),
+    ('BALL',   "Ball & Socket",  "Free rotation around a shared pivot point"),
+    ('HINGE',  "Hinge",          "Rotation around one axis (door, lever, wheel)"),
+    ('SLIDER', "Slider",         "Translation along one axis (drawer, piston)"),
+    ('SPRING', "Spring",         "Sprung translation along one axis (suspension)"),
+]
+
+CONSTRAINT_AXES = [
+    ('X', "X", "The object's local X axis (Blender)"),
+    ('Y', "Y", "The object's local Y axis (Blender)"),
+    ('Z', "Z", "The object's local Z axis (Blender)"),
 ]
 
 CAMERA_TYPES = [
@@ -322,6 +338,18 @@ def _init_var_value(v, f):
             add_list_item(v, el)
 
 
+class BJSTriggerEvent(PropertyGroup):
+    """One authored trigger reaction: when something enters this trigger
+    collider, send `message` to `target`'s behaviors (OnMessage). An optional
+    tag filter restricts which entities may set it off."""
+    target:     PointerProperty(name="Target", type=Object,
+                                description="The entity whose behaviors receive the message")
+    message:    StringProperty(name="Message", default="",
+                               description="Delivered to the target's OnMessage(message, source)")
+    filter_tag: StringProperty(name="Only Tag", default="",
+                               description="Only entities with this tag set the event off (empty = any)")
+
+
 class BJSComponent(PropertyGroup):
     comp_type: EnumProperty(name="Type", items=COMPONENT_TYPES, default='TAG')
     enabled:   BoolProperty(name="Enabled", default=True)
@@ -358,6 +386,48 @@ class BJSComponent(PropertyGroup):
     restitution:     FloatProperty(name="Restitution (Bounce)", default=0.2, min=0.0, max=1.0)
     linear_damping:  FloatProperty(name="Linear Damping", default=0.0, min=0.0)
     angular_damping: FloatProperty(name="Angular Damping", default=0.0, min=0.0)
+
+    # --- COLLIDER: trigger events (shown when Is Trigger is on) ---
+    trigger_events: CollectionProperty(type=BJSTriggerEvent)
+
+    # --- AUDIO ---
+    audio_file:     StringProperty(name="Sound File", subtype='FILE_PATH', default="",
+                                   description=".mp3/.wav/.ogg — copied next to the export")
+    audio_volume:   FloatProperty(name="Volume", default=1.0, min=0.0, max=2.0)
+    audio_loop:     BoolProperty(name="Loop", default=False)
+    audio_autoplay: BoolProperty(name="Auto Play", default=False,
+                                 description="Start on load (after the browser allows audio)")
+    audio_spatial:  BoolProperty(name="3D Spatial", default=True,
+                                 description="Position the sound at this object (vs. ambient)")
+    audio_max_distance: FloatProperty(name="Max Distance", default=50.0, min=0.0,
+                                      description="Distance at which the sound is inaudible")
+    audio_rate:     FloatProperty(name="Playback Rate", default=1.0, min=0.1, max=4.0)
+
+    # --- CONSTRAINT ---
+    con_type:   EnumProperty(name="Joint", items=CONSTRAINT_TYPES, default='HINGE')
+    con_target: PointerProperty(name="Target", type=Object,
+                                description="The other body this object is jointed to")
+    con_pivot:  FloatVectorProperty(name="Pivot", size=3, default=(0.0, 0.0, 0.0),
+                                    subtype='XYZ',
+                                    description="Joint anchor, in this object's local space (Blender axes)")
+    con_axis:   EnumProperty(name="Axis", items=CONSTRAINT_AXES, default='Z',
+                             description="Hinge rotation / slide / spring axis (this object's local axes)")
+    con_collision: BoolProperty(name="Bodies Collide", default=False,
+                                description="Allow the two jointed bodies to collide with each other")
+    con_use_limits: BoolProperty(name="Use Limits", default=False)
+    con_min: FloatProperty(name="Min", default=0.0,
+                           description="Lower limit: degrees (hinge) or meters (slider/spring)")
+    con_max: FloatProperty(name="Max", default=0.0,
+                           description="Upper limit: degrees (hinge) or meters (slider/spring)")
+    con_stiffness: FloatProperty(name="Stiffness", default=100.0, min=0.0,
+                                 description="Spring stiffness (N/m)")
+    con_damping:   FloatProperty(name="Damping", default=10.0, min=0.0,
+                                 description="Spring damping")
+    con_motor: BoolProperty(name="Motor", default=False,
+                            description="Drive the joint at a target speed (hinge/slider)")
+    con_motor_speed: FloatProperty(name="Motor Speed", default=90.0,
+                                   description="Target speed: deg/s (hinge) or m/s (slider)")
+    con_motor_force: FloatProperty(name="Motor Max Force", default=100.0, min=0.0)
 
     # --- SCRIPT ---
     script_path: StringProperty(
@@ -445,6 +515,7 @@ class BJSAnimationSettings(PropertyGroup):
 classes = (
     BJSListItem,
     BJSExposedVar,
+    BJSTriggerEvent,
     BJSComponent,
     BJSLightShadow,
     BJSAnimationSettings,

@@ -1,0 +1,260 @@
+import {
+  Scene,
+  Vector3,
+  Quaternion,
+  LockConstraint,
+  BallAndSocketConstraint,
+  Physics6DoFConstraint,
+  PhysicsConstraintAxis,
+  PhysicsConstraintMotorType,
+  type PhysicsConstraint,
+  type Physics6DoFConstraintLimit,
+  type TransformNode,
+} from "@babylonjs/core";
+import type { Entity } from "../core/Entity";
+import type { ConstraintComponent } from "../core/types";
+import type { Level } from "../core/Level";
+
+/**
+ * Constraints subsystem: turns CONSTRAINT components into Havok V2 joints in a
+ * post-pass (both bodies must already exist). The authored pivot/axis live in
+ * the OWNER's local space; the matching target-side pivot/axes are derived from
+ * the two bodies' live world transforms, so the joint pins the CURRENT relative
+ * pose and nothing snaps on load — the same approach as a hand-written
+ * suspension (see PlayerVehicleController).
+ *
+ * Type mapping:
+ *   FIXED  -> LockConstraint (welded)
+ *   BALL   -> BallAndSocketConstraint (free rotation around the pivot)
+ *   HINGE  -> 6DoF, only ANGULAR_X free/limited; constraint-frame X = authored axis
+ *   SLIDER -> 6DoF, only LINEAR_X free/limited
+ *   SPRING -> 6DoF, LINEAR_X sprung (stiffness/damping) within limits
+ */
+
+/** One authored joint, registered while the entity loop runs. */
+export interface ConstraintRegistration {
+  ownerEntity: Entity;
+  component: ConstraintComponent;
+}
+
+/** The constraint frame: pivots and (axis, perpendicular) pairs for both bodies. */
+interface ConstraintFrame {
+  pivotA: Vector3;
+  pivotB: Vector3;
+  axisA: Vector3;
+  axisB: Vector3;
+  perpAxisA: Vector3;
+  perpAxisB: Vector3;
+}
+
+/** Any unit vector perpendicular to the given one (for the constraint frame). */
+function PerpendicularOf(axis: Vector3): Vector3
+{
+  // Cross with whichever world basis vector is least aligned, to avoid a
+  // degenerate (near-zero) result when the axis is parallel to the candidate.
+  const candidate = Math.abs(axis.y) < 0.9 ? Vector3.Up() : Vector3.Right();
+  return Vector3.Cross(axis, candidate).normalize();
+}
+
+/**
+ * Derive the shared constraint frame from the owner's authored pivot/axis and
+ * the two bodies' live world transforms. Everything is computed via the world
+ * frame so the target-side values match the as-placed relative pose.
+ */
+function ComputeConstraintFrame(
+  ownerNode: TransformNode,
+  targetNode: TransformNode,
+  component: ConstraintComponent
+): ConstraintFrame
+{
+  ownerNode.computeWorldMatrix(true);
+  targetNode.computeWorldMatrix(true);
+
+  const ownerRotation = ownerNode.absoluteRotationQuaternion;
+  const inverseTargetRotation = Quaternion.Inverse(targetNode.absoluteRotationQuaternion);
+
+  // Pivot: owner-local -> world -> target-local.
+  const pivotA = Vector3.FromArray(component.pivot);
+  const worldPivot = Vector3.TransformCoordinates(pivotA, ownerNode.getWorldMatrix());
+  const pivotB = Vector3.TransformCoordinates(
+    worldPivot,
+    targetNode.getWorldMatrix().clone().invert()
+  );
+
+  // Axis + a perpendicular: owner-local -> world -> each body's local frame.
+  const axisA = Vector3.FromArray(component.axis).normalize();
+  const worldAxis = axisA.applyRotationQuaternion(ownerRotation);
+  const worldPerpendicular = PerpendicularOf(worldAxis);
+
+  const inverseOwnerRotation = Quaternion.Inverse(ownerRotation);
+
+  return {
+    pivotA,
+    pivotB,
+    axisA: worldAxis.applyRotationQuaternion(inverseOwnerRotation),
+    axisB: worldAxis.applyRotationQuaternion(inverseTargetRotation),
+    perpAxisA: worldPerpendicular.applyRotationQuaternion(inverseOwnerRotation),
+    perpAxisB: worldPerpendicular.applyRotationQuaternion(inverseTargetRotation),
+  };
+}
+
+/** A fully locked axis (zero allowed motion). */
+function LockedAxis(axis: PhysicsConstraintAxis): Physics6DoFConstraintLimit
+{
+  return { axis, minLimit: 0, maxLimit: 0 };
+}
+
+/**
+ * The per-type 6DoF limit set. The constraint frame's X is the authored axis,
+ * so HINGE frees/limits ANGULAR_X and SLIDER/SPRING free/limit LINEAR_X.
+ */
+function BuildAxisLimits(component: ConstraintComponent): Physics6DoFConstraintLimit[]
+{
+  const limits: Physics6DoFConstraintLimit[] = [];
+  const degreesToRadians = Math.PI / 180;
+
+  if (component.constraintType === "HINGE")
+  {
+    limits.push(LockedAxis(PhysicsConstraintAxis.LINEAR_X));
+    limits.push(LockedAxis(PhysicsConstraintAxis.LINEAR_Y));
+    limits.push(LockedAxis(PhysicsConstraintAxis.LINEAR_Z));
+    limits.push(LockedAxis(PhysicsConstraintAxis.ANGULAR_Y));
+    limits.push(LockedAxis(PhysicsConstraintAxis.ANGULAR_Z));
+
+    if (component.useLimits)
+    {
+      limits.push({
+        axis: PhysicsConstraintAxis.ANGULAR_X,
+        minLimit: component.min * degreesToRadians,
+        maxLimit: component.max * degreesToRadians,
+      });
+    }
+  }
+  else // SLIDER and SPRING share the linear-X layout; SPRING adds the spring terms.
+  {
+    limits.push(LockedAxis(PhysicsConstraintAxis.LINEAR_Y));
+    limits.push(LockedAxis(PhysicsConstraintAxis.LINEAR_Z));
+    limits.push(LockedAxis(PhysicsConstraintAxis.ANGULAR_X));
+    limits.push(LockedAxis(PhysicsConstraintAxis.ANGULAR_Y));
+    limits.push(LockedAxis(PhysicsConstraintAxis.ANGULAR_Z));
+
+    const wantsLinearLimit = component.constraintType === "SPRING" || component.useLimits;
+    if (wantsLinearLimit)
+    {
+      const linearLimit: Physics6DoFConstraintLimit = {
+        axis: PhysicsConstraintAxis.LINEAR_X,
+        minLimit: component.min,
+        maxLimit: component.max,
+      };
+
+      if (component.constraintType === "SPRING")
+      {
+        linearLimit.stiffness = component.stiffness;
+        linearLimit.damping = component.damping;
+      }
+
+      limits.push(linearLimit);
+    }
+  }
+
+  return limits;
+}
+
+/** Build the Babylon constraint object for one registration. */
+function CreateConstraint(
+  frame: ConstraintFrame,
+  component: ConstraintComponent,
+  scene: Scene
+): PhysicsConstraint
+{
+  if (component.constraintType === "FIXED")
+  {
+    return new LockConstraint(frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene);
+  }
+
+  if (component.constraintType === "BALL")
+  {
+    return new BallAndSocketConstraint(frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene);
+  }
+
+  return new Physics6DoFConstraint(
+    {
+      pivotA: frame.pivotA,
+      pivotB: frame.pivotB,
+      axisA: frame.axisA,
+      axisB: frame.axisB,
+      perpAxisA: frame.perpAxisA,
+      perpAxisB: frame.perpAxisB,
+      collision: component.collision,
+    },
+    BuildAxisLimits(component),
+    scene
+  );
+}
+
+/** Drive a hinge/slider joint at the authored target speed. */
+function ApplyMotor(constraint: Physics6DoFConstraint, component: ConstraintComponent): void
+{
+  const isHinge = component.constraintType === "HINGE";
+  const motorAxis = isHinge ? PhysicsConstraintAxis.ANGULAR_X : PhysicsConstraintAxis.LINEAR_X;
+  const targetSpeed = isHinge
+    ? component.motorSpeed * (Math.PI / 180) // deg/s -> rad/s
+    : component.motorSpeed;
+
+  constraint.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
+  constraint.setAxisMotorTarget(motorAxis, targetSpeed);
+  constraint.setAxisMotorMaxForce(motorAxis, component.motorMaxForce);
+}
+
+/**
+ * Build every registered joint, now that all entities (and their bodies) exist.
+ * Returns the created constraints so the level can dispose them.
+ */
+export function BuildConstraints(
+  scene: Scene,
+  level: Level,
+  registrations: ConstraintRegistration[]
+): PhysicsConstraint[]
+{
+  const constraints: PhysicsConstraint[] = [];
+
+  for (const registration of registrations)
+  {
+    const { ownerEntity, component } = registration;
+
+    if (component.target === null)
+    {
+      console.warn(`[bjs] "${ownerEntity.name}": constraint has no target`);
+      continue;
+    }
+
+    const targetEntity = level.ById(component.target);
+    if (targetEntity === undefined)
+    {
+      console.warn(`[bjs] "${ownerEntity.name}": constraint target ${component.target} not found`);
+      continue;
+    }
+
+    if (ownerEntity.body === undefined || targetEntity.body === undefined)
+    {
+      console.warn(
+        `[bjs] constraint "${ownerEntity.name}" -> "${targetEntity.name}" skipped: ` +
+        `both objects need a Collider/Rigid Body`
+      );
+      continue;
+    }
+
+    const frame = ComputeConstraintFrame(ownerEntity.node, targetEntity.node, component);
+    const constraint = CreateConstraint(frame, component, scene);
+    ownerEntity.body.addConstraint(targetEntity.body, constraint);
+
+    if (component.motor && constraint instanceof Physics6DoFConstraint)
+    {
+      ApplyMotor(constraint, component);
+    }
+
+    constraints.push(constraint);
+  }
+
+  return constraints;
+}

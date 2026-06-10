@@ -8,6 +8,7 @@ from bpy_extras.io_utils import ExportHelper
 
 from .properties import COMPONENT_TYPES, ensure_object_id, sync_exposed_vars, add_list_item, copy_component
 from . import export as bjs_export
+from . import validate as bjs_validate
 from . import script_parse
 
 
@@ -272,6 +273,56 @@ class BJS_OT_remove_component(Operator):
         return {'FINISHED'}
 
 
+class BJS_OT_trigger_event_add(Operator):
+    """Add a trigger event row to a collider component."""
+    bl_idname = "bjs.trigger_event_add"
+    bl_label = "Add Trigger Event"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        comps = context.object.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            comps[self.comp_index].trigger_events.add()
+        return {'FINISHED'}
+
+
+class BJS_OT_trigger_event_remove(Operator):
+    """Remove a trigger event row from a collider component."""
+    bl_idname = "bjs.trigger_event_remove"
+    bl_label = "Remove Trigger Event"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index:  IntProperty()
+    event_index: IntProperty()
+
+    def execute(self, context):
+        comps = context.object.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            events = comps[self.comp_index].trigger_events
+            if 0 <= self.event_index < len(events):
+                events.remove(self.event_index)
+        return {'FINISHED'}
+
+
+class BJS_OT_validate(Operator):
+    """Check the scene for export problems without exporting."""
+    bl_idname = "bjs.validate_scene"
+    bl_label = "Validate Level"
+    bl_options = {'REGISTER'}
+
+    def execute(self, context):
+        warnings = bjs_validate.validate_scene(context)
+        if not warnings:
+            self.report({'INFO'}, "No problems found")
+            return {'FINISHED'}
+        for w in warnings:
+            self.report({'WARNING'}, w)
+        self.report({'INFO'}, f"{len(warnings)} warning{'s' if len(warnings) != 1 else ''} — open the Info log for details")
+        return {'FINISHED'}
+
+
 class BJS_OT_export(Operator, ExportHelper):
     """Export the scene as a .glb mesh + a .scene.json ECS manifest."""
     bl_idname = "bjs.export_scene"
@@ -282,12 +333,22 @@ class BJS_OT_export(Operator, ExportHelper):
     filter_glob: StringProperty(default="*.glb", options={'HIDDEN'})
 
     def execute(self, context):
+        warnings = bjs_validate.validate_scene(context)
         try:
             glb_path, json_path, n_entities = bjs_export.export_level(context, self.filepath)
         except Exception as e:  # surface errors in the Blender UI
             self.report({'ERROR'}, f"Export failed: {e}")
             return {'CANCELLED'}
-        self.report({'INFO'}, f"Exported {n_entities} entities -> {json_path}")
+
+        # Remember the path so Live Link can re-export on save.
+        context.scene.bjs_live_link_path = self.filepath
+
+        for w in warnings:
+            self.report({'WARNING'}, w)
+        summary = f"Exported {n_entities} entities -> {json_path}"
+        if warnings:
+            summary += f" ({len(warnings)} warning{'s' if len(warnings) != 1 else ''} — see report)"
+        self.report({'INFO'}, summary)
         return {'FINISHED'}
 
 
@@ -351,6 +412,9 @@ classes = (
     BJS_OT_paste_component,
     BJS_OT_component_menu,
     BJS_OT_remove_component,
+    BJS_OT_trigger_event_add,
+    BJS_OT_trigger_event_remove,
+    BJS_OT_validate,
     BJS_OT_export,
 )
 
