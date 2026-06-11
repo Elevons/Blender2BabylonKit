@@ -350,6 +350,10 @@ class BJSTriggerEvent(PropertyGroup):
                                description="Only entities with this tag set the event off (empty = any)")
 
 
+# The Input Actions data model (Scene.bjs_input_maps) lives in
+# input_properties.py, following the scene_properties.py pattern.
+
+
 class BJSComponent(PropertyGroup):
     comp_type: EnumProperty(name="Type", items=COMPONENT_TYPES, default='TAG')
     enabled:   BoolProperty(name="Enabled", default=True)

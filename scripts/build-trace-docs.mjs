@@ -127,7 +127,7 @@ const TRACES = [
       { title: "The manifest (data between the two halves)",
         code: `{ "type": "COLLIDER", "shape": "BOX", "isTrigger": false, "autoFit": true,\n  "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0],\n  "rotation": [0,0,0,1] },\n{ "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1,\n  "friction": 0.5, "restitution": 0.2,\n  "linearDamping": 0, "angularDamping": 0 }`,
         note: "Already Babylon-space (Y-up). The runtime never converts axes — that happened once, at export." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "ApplyComponents",
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD, per entity — receives Entity + Component[]. ClassifyComponents sorts them; collider/body pair goes to BuildPhysics; the returned PhysicsBody lands on entity.body." },
       { file: "packages/engine/src/subsystems/physics.ts", symbol: "BuildPhysics",
         note: "The dispatcher. In: node + ColliderComponent? + RigidBodyComponent? + scene. Builds the shared BodyBuildInput, picks one of three shape paths, applies dynamics. Out: PhysicsBody | undefined." },
@@ -152,11 +152,11 @@ const TRACES = [
         note: "BLENDER — regex-parses the .ts source (no TS runtime in Blender). This is why defaults must be single-line literals. Output feeds the BJSExposedVar rows you edit in the panel." },
       { file: "blender_addon/export.py", symbol: "_serialize_vars",
         note: "EXPORT — per-object edited values → the SCRIPT component's vars dict. Entity references serialize as the target's GUID (target force-included so it exists in the glb)." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "InstantiateScripts",
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "InstantiateScripts",
         note: "LOAD — registry.Create(name) → inject entity/scene → ApplyExposedVars. Entity refs come back as PendingRefs (the target may not exist yet)." },
       { file: "packages/engine/src/scripting/exposed.ts", symbol: "ApplyExposedVars",
         note: "Writes stored values onto the instance: scalars coerced (vector3/color arrays → Babylon types), lists per element, entity fields deferred." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "ResolveObjectReferences",
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ResolveObjectReferences",
         note: "SECOND PASS — every entity exists now; each PendingRef's GUID resolves via level.ById and the real Entity is assigned (or placed into its list slot). Then Begin → OnStart." },
     ],
   },
@@ -167,7 +167,7 @@ const TRACES = [
     steps: [
       { file: "blender_addon/properties.py", symbol: "BJSTriggerEvent",
         note: "AUTHORING — one row: target object + message + optional tag filter, on a trigger collider." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "ApplyComponents",
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — a trigger collider with events queues a TriggerRegistration {sourceEntity, events}; wiring waits for FinalizeLevel (the plugin observable needs physics live)." },
       { file: "packages/engine/src/subsystems/triggers.ts", symbol: "WireTriggerEvents",
         note: "ONE observer on HavokPlugin.onTriggerCollisionObservable. Registrations indexed by trigger body for O(1) dispatch. Returns the observer; Level removes it on dispose." },
@@ -203,7 +203,7 @@ const TRACES = [
     steps: [
       { file: "blender_addon/export.py", symbol: "_copy_audio_file",
         note: "EXPORT — the sound file is copied to audio/ next to the manifest; the component stores the relative path." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "ApplyComponents",
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — each AUDIO component queues an ApplyAudio promise (fetch+decode is async); the entity loop never blocks on sound I/O." },
       { file: "packages/engine/src/subsystems/audio.ts", symbol: "ApplyAudio",
         note: "CreateSoundAsync with spatialEnabled at creation; spatial.attach(entity.node) so 3D sounds follow. Name = file stem. Autoplay: void unlockAsync().then(play) — fire-and-forget." },
@@ -219,34 +219,42 @@ const TRACES = [
     intro: "The spine everything above hangs off.",
     steps: [
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "Load",
-        note: "The orchestrator: fetch/validate → right-handed glb append → GUID index → entity loop → second pass → FinalizeLevel. Returns the Level." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "BuildIdIndex",
+        note: "The orchestrator: fetch/validate → InputManager.LoadAsset (inputActions + defaultInputMap) → right-handed glb append → entity loop → second pass → FinalizeLevel. Returns the Level." },
+      { file: "packages/engine/src/core/loader/nodeResolution.ts", symbol: "BuildIdIndex",
         note: "GUID → node map from metadata.gltf.extras.bjs_id (needs the ExtrasAsMetadata import or this is empty and matching silently falls back to names)." },
-      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "ProcessEntity",
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ProcessEntity",
         note: "Per manifest entity: node match (GUID first), Entity created + registered + back-referenced, components applied, light/camera processed." },
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "FinalizeLevel",
         note: "Shadows → scene look → animations → audio settle → trigger wiring → constraints → Begin → (debug colliders if the export allows)." },
       { file: "packages/engine/src/core/Level.ts", symbol: "Begin",
-        note: "Attach Input, run every OnStart (error-isolated), subscribe RunFrame." },
+        note: "Attach InputManager (enables every action map), run every OnStart (error-isolated), subscribe RunFrame." },
       { file: "packages/engine/src/core/Level.ts", symbol: "RunFrame",
-        note: "Every frame: all OnUpdate(deltaSeconds) → updaters (offset cams) → Input.Update LAST so WasPressed edges last exactly one frame." },
+        note: "Every frame: InputManager.Process FIRST (actions evaluate, callbacks fire) → all OnUpdate(deltaSeconds) → updaters (offset cams) → InputManager.EndFrame LAST so device edges last exactly one frame." },
     ],
   },
   {
     id: "input",
-    title: "Input: key press → behavior",
-    intro: "No Blender side — bindings live in one runtime file.",
+    title: "Input: key press → action → behavior",
+    intro: "Unity Input System style: the Blender Input Actions panel authors the scene asset (maps > actions > bindings) plus a Scene Default map; the manifest carries inputActions + defaultInputMap; InputManager evaluates every frame.",
     steps: [
-      { file: "packages/engine/src/scripting/Input.ts", symbol: "DEFAULT_ACTIONS",
-        note: "THE binding table — change the control scheme here (or BindAction/BindAxis at startup)." },
-      { file: "packages/engine/src/scripting/Input.ts", symbol: "Attach",
-        note: "Level.Begin calls this: one scene keyboard observer maintains heldKeys + pressedThisFrame (edge set)." },
-      { file: "packages/engine/src/scripting/Input.ts", symbol: "Axis",
-        note: "Digital keys first (−1/0/+1), analog stick past the deadzone otherwise. Behaviors call this in OnUpdate." },
-      { file: "packages/engine/src/scripting/Input.ts", symbol: "Update",
-        note: "Called by Level.RunFrame AFTER behaviors: clears the edge set, re-polls the first gamepad (snapshots in some browsers)." },
+      { file: "blender_addon/scene_export.py", symbol: "_serialize_input_asset",
+        note: "BLENDER — maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty). serialize_scene also writes scene.defaultInputMap from the Scene Default picker." },
+      { file: "blender_addon/scene_export.py", symbol: "serialize_scene",
+        note: "BLENDER — assembles the manifest scene block: clear/ambient, environment, fog, post, inputActions, and defaultInputMap (which map scripts without @inputMap receive on behavior.input)." },
+      { file: "packages/engine/src/input/DefaultAsset.ts", symbol: "DEFAULT_INPUT_ASSET",
+        note: "Runtime fallback when a manifest omits inputActions — keep in sync with blender_addon/input_defaults.py." },
+      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "Load",
+        note: "LOAD — InputManager.LoadAsset(manifest.scene.inputActions ?? DEFAULT, defaultInputMap) runs before the glb append so maps exist when behaviors are built." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "InjectInputMaps",
+        note: "@inputMap(\"Name\") / @inputMap() fields get map handles; scripts with no @inputMap receive the scene default on behavior.input — all before OnStart." },
+      { file: "packages/engine/src/input/InputManager.ts", symbol: "Process",
+        note: "Called by Level.RunFrame BEFORE behaviors: poll the gamepad, evaluate every enabled map's actions, fire started/performed/canceled." },
+      { file: "packages/engine/src/input/InputAction.ts", symbol: "Process",
+        note: "Per action: resolve bindings (most-actuated wins), advance the BUTTON/VALUE/PASSTHROUGH phase machine, set the per-frame edge flags polling reads." },
+      { file: "packages/engine/src/input/InputBinding.ts", symbol: "ResolveBinding",
+        note: "Raw browser tokens: keyboard keys, gamepad button/axis/stick indices, and 1DAXIS/2DVECTOR composites built from part bindings." },
       { file: "apps/playground/src/behaviors/InputMover.ts", symbol: "OnUpdate",
-        note: "CONSUMER — a behavior reading axes/actions; no key codes anywhere in gameplay code." },
+        note: "CONSUMER — polls Move/Sprint off the injected map and subscribes to Jump's performed callback in OnStart; no key codes anywhere in gameplay code." },
     ],
   },
   {
@@ -343,24 +351,41 @@ function BuildNav(currentFile)
 
 // Patch appended to trace pages: widen the open panel and render n.code as a
 // read-only code block under the description textarea.
-const CODE_PANEL_PATCH = `
+const LAYOUT_PATCH = `
 <style>
-  /* Trace pages: the panel is the reading surface — let it breathe. */
+  /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }
-  #panel.open { width: var(--trace-panel-w, min(560px, 85vw)) !important; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  /* Sections are individually resizable (drag the bottom-right grip). */
   textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>`;
+
+const CODE_PANEL_PATCH = LAYOUT_PATCH + `
+<style>
+  /* Trace pages: widen the default and make the code block resizable. */
+  #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
     margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
     white-space:pre; tab-size:2; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
-  /* Drag the panel's left edge to resize the whole sidebar. */
-  #trace-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #trace-resizer:hover, #trace-resizer.dragging { background: #4f6df533; }
 </style>
 <script>
-  // Render the step's source under the description (read-only, scrollable).
   const __openNodePanel = openNodePanel;
   openNodePanel = function(n)
   {
@@ -376,38 +401,6 @@ const CODE_PANEL_PATCH = `
     panel.appendChild(loc);
     panel.appendChild(pre);
   };
-
-  // Left-edge drag handle: resize the whole sidebar (width persists per page load).
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'trace-resizer';
-    panel.appendChild(handle);
-
-    let dragging = false;
-    handle.addEventListener('mousedown', (mouseEvent) =>
-    {
-      dragging = true;
-      handle.classList.add('dragging');
-      panel.style.transition = 'none'; // no easing fight while dragging
-      mouseEvent.preventDefault();
-    });
-    window.addEventListener('mousemove', (mouseEvent) =>
-    {
-      if (!dragging) { return; }
-      const width = Math.min(Math.max(window.innerWidth - mouseEvent.clientX, 260), window.innerWidth * 0.92);
-      document.documentElement.style.setProperty('--trace-panel-w', width + 'px');
-    });
-    window.addEventListener('mouseup', () =>
-    {
-      if (!dragging) { return; }
-      dragging = false;
-      handle.classList.remove('dragging');
-      panel.style.transition = '';
-    });
-  })();
 </script>`;
 
 /** Serpentine layout: left→right, drop a row, right→left — reads like a script. */
@@ -468,6 +461,7 @@ for (const [file] of AREA_NAV)
   let page = fs.readFileSync(target, "utf8");
   page = RemoveNav(page);
   page = page.replace("<body>", "<body>" + BuildNav(file));
+  page = page.replace("</body>", LAYOUT_PATCH + "</body>");
   fs.writeFileSync(target, page);
 }
 console.log("area-page navs refreshed");

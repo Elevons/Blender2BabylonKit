@@ -1,4 +1,4 @@
-# 04 — Scripting: Entity, Behavior, @exposed, Input
+# 04 — Scripting: Entity, Behavior, @exposed, @inputMap, Input
 
 [← Index](00-INDEX.md) · Prev: [Load Pipeline](03-LOAD-PIPELINE.md) · Next: [Physics →](05-PHYSICS.md)
 
@@ -46,15 +46,31 @@ cross-language contract; the one PascalCase exception, see
 [STYLE_GUIDE](../STYLE_GUIDE.md)). Press **Sync** in Blender after changing
 exposed fields.
 
-## Input (`scripting/Input.ts`) <a name="input"></a>
+## Input (`src/input/`) <a name="input"></a>
 
-Named actions/axes instead of key codes: `Input.IsDown("Sprint")`,
-`Input.WasPressed("Jump")` (one frame per press), `Input.Axis("MoveX")`
-(−1..1, digital keys or analog stick past a deadzone). Defaults in one place
-(Jump/Interact/Sprint/Crouch; MoveX/MoveY from WASD+arrows; LookX/Y from the
-right stick); rebind via `BindAction`/`BindAxis`. Lifecycle is automatic:
-`Level.Begin` attaches (scene keyboard observable), `RunFrame` polls the first
-gamepad and clears edges *after* behaviors, `Dispose` detaches. Babylon camera
-key schemes intentionally stay native (cameras consume keycode arrays).
+A Unity Input System clone: `InputManager` owns the device state (keyboard +
+first gamepad, deadzoned) and the project-wide `InputActionAsset` of **Action
+Maps** > **Actions** > **Bindings** (direct key/button/axis/stick reads, plus
+`1DAXIS`/`2DVECTOR` composites). Actions have a type (`BUTTON`/`VALUE`/
+`PASSTHROUGH`) and fire Unity-style `started`/`performed`/`canceled`
+callbacks; polling: `ReadValue()`, `ReadVector2()`, `IsPressed()`,
+`WasPressedThisFrame()`, `WasReleasedThisFrame()`, `WasPerformedThisFrame()`.
+
+The asset and **Scene Default** map are authored in Blender's **Input Actions**
+panel (`input_properties.py` / `input_ui.py` / `input_ops.py`) and exported as
+`scene.inputActions` + `scene.defaultInputMap`. `LevelLoader` calls
+`InputManager.LoadAsset` before behaviors are built. Map injection
+(`core/loader/entityBuilder.ts` → `InjectInputMaps`):
+
+- `@inputMap("Name")` on a field → that map;
+- `@inputMap()` or `@inputMap("")` → scene default;
+- no `@inputMap` fields → `behavior.input` receives the scene default.
+
+`@inputMap` stays lowercase like `@exposed` (Blender scans the literal token).
+If the panel is empty at export, the built-in "Player" map is serialized anyway.
+Lifecycle is automatic: `Level.Begin` attaches and enables every map, `RunFrame`
+processes actions *before* behaviors and clears device edges in
+`InputManager.EndFrame` after, `Dispose` detaches. Babylon camera key schemes
+intentionally stay native (cameras consume keycode arrays).
 
 Continue: [Physics →](05-PHYSICS.md)

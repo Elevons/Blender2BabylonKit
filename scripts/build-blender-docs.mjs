@@ -69,21 +69,23 @@ const AREA_PAGES = {
     title: "Add-on overview",
     nodes: [
       N(1, 40, 40, "__init__.py", "registration", "The extension entry point. register()/unregister() pull in every submodule's own register() in dependency order (properties first — others reference its PropertyGroups). Dev-reloads submodules so editing during a session takes effect.", [["Blender", "4.2+ extension"], ["Reload", "importlib"]]),
-      N(2, 40, 150, "properties.py", "the data model", "Every PropertyGroup: BJSComponent (one group, per-type fields), exposed vars + list items, trigger events, light/shadow/animation settings. Owns ID_KEY and ensure_object_id(). The single source of truth for what an object can carry.", [["Key class", "BJSComponent"], ["Identity", "ID_KEY = bjs_id"]]),
-      N(3, 40, 270, "ui.py", "the N-panel", "Draws the Babylon panel: component list with per-type fields, light/camera/animation info, and the Export panel (Export / Live Link / Debug Build / Validate). Drawing only — every button calls an operator.", [["Panels", "BJS_PT_components / _export"]]),
-      N(4, 280, 200, "operators.py", "all the verbs", "Add/remove/duplicate/move/copy/cut/paste components, Assign GUID, Fit Collider, pick-script + Sync, list & trigger-event rows, Validate, Export. Each is a bpy Operator invoked by a button.", [["Export op", "BJS_OT_export"], ["Count", "~20 operators"]]),
+      N(2, 40, 150, "properties.py", "component data", "BJSComponent (one group, per-type fields), exposed vars + list items, trigger events, light/shadow/animation settings. Owns ID_KEY and ensure_object_id().", [["Key class", "BJSComponent"], ["Identity", "ID_KEY = bjs_id"]]),
+      N(12, 40, 260, "input_*.py", "Input Actions", "input_properties (maps/actions/bindings + Scene.bjs_input_default_map), input_ui (three-level panel + Scene Default picker), input_ops (edit/load/save/capture/sync), input_defaults (built-in asset).", [["Panel", "BJS_PT_input_map"], ["Export keys", "inputActions + defaultInputMap"]]),
+      N(3, 40, 370, "ui.py", "the N-panel", "Draws the Babylon panel: component list with per-type fields, light/camera/animation info, and the Export panel (Export / Live Link / Debug Build / Validate). Drawing only — every button calls an operator.", [["Panels", "BJS_PT_components / _export"]]),
+      N(4, 280, 200, "operators.py", "component verbs", "Add/remove/duplicate/move/copy/cut/paste components, Assign GUID, Fit Collider, pick-script + Sync, list & trigger-event rows, Validate, Export. Input ops live in input_ops.py.", [["Export op", "BJS_OT_export"]]),
       N(5, 520, 80, "script_parse.py", "TS → fields", "Regex-reads @exposed(...) out of a behavior's TypeScript so Blender can show editable widgets without a TS runtime. THE cross-language contract.", [["Trigger", "pick-script / Sync"]]),
       N(6, 520, 190, "export.py", "the heart", "Writes the glb (Blender glTF exporter, +Y-up, GUIDs in extras) and builds the schema-v4 manifest. Converts axes Blender→Babylon. Force-includes referenced objects. Copies audio files.", [["Output", "glb + scene.json"], ["Schema", "v4"]]),
-      N(7, 520, 300, "scene_export.py", "scene block", "Clear/ambient color, environment texture (copied out), fog, post-processing — the manifest's scene-wide settings.", [["Manifest key", "scene"]]),
+      N(7, 520, 300, "scene_export.py", "scene block", "Clear/ambient color, environment texture (copied out), fog, post-processing, inputActions + defaultInputMap — the manifest's scene-wide settings.", [["Manifest keys", "scene.*"]]),
       N(8, 520, 400, "anim_export.py", "NLA block", "Per-object animation: NLA strip names + autoplay clip/loop/speed. nla_clip_names() also feeds the validator.", [["Manifest key", "animation"]]),
-      N(9, 760, 120, "validate.py", "pre-export checks", "Catches silent failures before export: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, area lights, duplicate GUIDs, missing audio, no camera.", [["Entry", "validate_scene"]]),
+      N(9, 760, 120, "validate.py", "pre-export checks", "Catches silent failures before export: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, area lights, duplicate GUIDs, missing audio, no camera, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).", [["Entry", "validate_scene"]]),
       N(10, 760, 240, "live_link.py", "save → export", "save_post handler: when the scene opted in, every Ctrl+S re-validates + re-exports to the remembered path. Owns the live-link + Debug Build scene properties. Never breaks a save.", [["Hook", "_on_save_post"]]),
       N(11, 760, 360, "collider_preview.py", "viewport gizmo", "GPU wireframe of manual colliders drawn in the 3D view, in Blender space — so the preview matches the body export produces.", [["Draw", "POST_VIEW handler"]]),
     ],
     edges: [
-      E(100, 1, 2, "registers"), E(101, 1, 3), E(102, 1, 4), E(103, 3, 4, "buttons"),
-      E(104, 3, 2, "draws"), E(105, 4, 5, "Sync"), E(106, 4, 6, "Export"), E(107, 4, 9, "Validate"),
-      E(108, 6, 7), E(109, 6, 8), E(110, 9, 6, "warn"), E(111, 10, 6, "Ctrl+S"), E(112, 2, 11, "values"),
+      E(100, 1, 2, "registers"), E(101, 1, 12), E(102, 1, 3), E(103, 1, 4), E(104, 3, 4, "buttons"),
+      E(105, 3, 2, "draws"), E(106, 4, 5, "Sync"), E(107, 4, 6, "Export"), E(108, 4, 9, "Validate"),
+      E(109, 6, 7), E(110, 6, 8), E(111, 9, 6, "warn"), E(112, 10, 6, "Ctrl+S"), E(113, 2, 11, "values"),
+      E(114, 12, 7, "serializes"),
     ],
   },
   "data-model.html": {
@@ -114,7 +116,7 @@ const AREA_PAGES = {
       N(6, 560, 300, "_serialize_components", "per object", "One dict per component. Converts collider center/size/rotation and constraint pivot/axis to Babylon Y-up; attaches trigger events; copies audio files.", [["Axis conv", "here"]]),
       N(7, 560, 410, "_serialize_vars", "per script", "Exposed values → vars dict; entity refs become target GUIDs.", [["Refs", "GUID strings"]]),
       N(8, 800, 250, "_serialize_light / _serialize_camera", "auto blocks", "Derived from the lamp/camera datablock (no component needed); the active camera is flagged.", [["No component", "auto"]]),
-      N(9, 800, 380, "serialize_scene", "scene block", "Color, environment (copied), fog, post — from scene_export.py.", [["File", "scene_export.py"]]),
+      N(9, 800, 380, "serialize_scene", "scene block", "Color, environment (copied), fog, post, inputActions + defaultInputMap — from scene_export.py.", [["File", "scene_export.py"]]),
     ],
     edges: [
       E(100, 1, 2), E(101, 1, 3), E(102, 1, 4), E(103, 1, 5),
@@ -171,6 +173,18 @@ const TRACES = [
       { file: "blender_addon/validate.py", symbol: "_check_physics", note: "Example check: a MESH-shaped collider can't be a DYNAMIC body in Havok — warn before it silently fails at runtime." },
       { file: "blender_addon/validate.py", symbol: "_check_skinned_meshes", note: "The skinned-mesh trap: components/animation on a skinned mesh do nothing (its node transform is ignored; clips target the armature's joints). Warn to move them to the armature." },
       { file: "blender_addon/validate.py", symbol: "_check_constraints", note: "A joint needs a physics body on BOTH ends or it won't exist at runtime — warn if either is missing." },
+    ],
+  },
+  {
+    id: "input",
+    title: "Input Actions: panel → manifest",
+    intro: "How the scene-level Input Actions asset and Scene Default map reach the runtime.",
+    steps: [
+      { file: "blender_addon/input_ui.py", symbol: "BJS_PT_input_map", note: "The Input Actions panel: Scene Default picker, maps/actions/bindings editor, load/save .inputactions.json." },
+      { file: "blender_addon/scene_export.py", symbol: "_serialize_input_asset", note: "Maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty)." },
+      { file: "blender_addon/scene_export.py", symbol: "serialize_scene", note: "Writes scene.defaultInputMap alongside inputActions — the map scripts without @inputMap receive on behavior.input." },
+      { file: "blender_addon/validate.py", symbol: "_check_input_map", note: "Duplicate map/action names, actions without bindings, @inputMap refs without a matching map, and a Scene Default that doesn't exist." },
+      { file: "blender_addon/script_parse.py", symbol: "parse_input_maps", note: "Regex-scans behavior sources for @inputMap(\"Name\") so Sync / validate can create and check map references." },
     ],
   },
   {
@@ -236,18 +250,37 @@ function BuildNav(currentFile)
     + '<span style="color:#967a52;padding:2px 6px;">Traces:</span>' + TRACE_NAV.map(link).join("") + '</div></div>';
 }
 
-const CODE_PANEL_PATCH = `
+const LAYOUT_PATCH = `
 <style>
   #panel { position: relative; }
-  #panel.open { width: var(--trace-panel-w, min(560px, 85vw)) !important; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
   textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>`;
+
+const CODE_PANEL_PATCH = LAYOUT_PATCH + `
+<style>
+  #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
     margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
     white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
-  #trace-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #trace-resizer:hover, #trace-resizer.dragging { background: #e08a3c33; }
 </style>
 <script>
   const __openNodePanel = openNodePanel;
@@ -265,18 +298,6 @@ const CODE_PANEL_PATCH = `
     panel.appendChild(loc);
     panel.appendChild(pre);
   };
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'trace-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) return; const w = Math.min(Math.max(window.innerWidth - e.clientX, 260), window.innerWidth * 0.92); document.documentElement.style.setProperty('--trace-panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) return; dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
 </script>`;
 
 function EmitPage(file, title, data, isTrace)
@@ -288,7 +309,7 @@ function EmitPage(file, title, data, isTrace)
   page = page.replace(/<title>.*?<\/title>/, `<title>Blender — ${title}</title>`);
   page = RemoveNav(page);
   page = page.replace("<body>", "<body>" + BuildNav(file));
-  if (isTrace) { page = page.replace("</body>", CODE_PANEL_PATCH + "</body>"); }
+  page = page.replace("</body>", isTrace ? CODE_PANEL_PATCH + "</body>" : LAYOUT_PATCH + "</body>");
   fs.writeFileSync(path.join(OUT_DIR, file), page);
 }
 

@@ -148,14 +148,21 @@ joints are visible before they settle.
 - **Expect:** the object moves with analog speed (slight stick = slow). The
   A/Cross button hops.
 
-### 4.3 No-conflict check
+### 4.3 Scene default fallback
+- **Steps:** attach a script that uses `this.input` (no `@inputMap` fields) or
+  `@inputMap()` with no argument. Confirm the **Scene Default** picker in the
+  Input Actions panel is set to **Player**. Export and reload.
+- **Expect:** movement/actions work the same as an explicit `@inputMap("Player")`
+  field — the scene default map is injected on `behavior.input`.
+
+### 4.4 No-conflict check
 - **Expect:** the **C**/**I** debug keys still work, and a Blender-authored
   camera with an ARROWS key scheme still responds — Input doesn't swallow keys.
 
 ## 5. Regression sweep (v0.24 features that the refactors touched)
 
-The v0.26.1 style refactor restructured `physics.ts`, `cameras.ts`, and
-`LevelLoader.ts` without intending behavior changes — verify:
+The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
+`core/loader/` (from `LevelLoader.ts`) without intending behavior changes — verify:
 
 - **5.1 Colliders:** auto-fit box/sphere on a single-material mesh; a
   multi-material mesh (2+ materials) with auto-fit; a CONVEX dynamic body; a

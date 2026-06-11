@@ -28,12 +28,13 @@ the code is written*.
 - **Loop variables are not exempt:** `index` not `i`, unless it is a trivial
   numeric counter with no semantic meaning.
 
-### Exception: the `@exposed` decorator stays lowercase
+### Exception: `@exposed` and `@inputMap` stay lowercase
 
-`@exposed` is a **cross-language contract**, not ordinary code. The Blender add-on's
-`script_parse.py` scans the `.ts` source for the literal token `@exposed` to build
-its UI. Renaming it to `@Exposed` would silently break script authoring. It is the
-one deliberate violation of the PascalCase-function rule.
+`@exposed` and `@inputMap` are **cross-language contracts**, not ordinary code.
+The Blender add-on's `script_parse.py` scans behavior `.ts` sources for the literal
+tokens `@exposed` and `@inputMap("…")` to build its UI and validate Input Actions
+references. Renaming them to `@Exposed` / `@InputMap` would silently break script
+authoring. They are deliberate violations of the PascalCase-function rule.
 
 ---
 
@@ -53,8 +54,8 @@ one deliberate violation of the PascalCase-function rule.
 ## Functions and methods
 
 - **Extract any block longer than ~40 lines into its own named private method.**
-  For example, `LevelLoader.Load` is split into `FetchAndValidateManifest`,
-  `ProcessEntity`, `ProcessCameraForEntity`, `ResolveObjectReferences`, …; and
+  For example, `LevelLoader.Load` orchestrates `core/loader/` modules
+  (`FetchAndValidateManifest`, `ProcessEntity`, `InjectInputMaps`, …); and
   `ResolveCameraTargets` into `ResolveFollowCameras` / `ResolveArcCameras` /
   `ResolveOffsetCameras`.
 - **Always declare an explicit `void` return type** on methods that return nothing.

@@ -156,6 +156,31 @@ def _parse_default(literal, type_hint):
         return None
 
 
+# Matches the whole @inputMap("Name") decorator plus the field it precedes,
+# e.g.: @inputMap("Player") player!: InputActionMap;
+_INPUT_MAP = re.compile(
+    r'@inputMap\s*\(\s*["\']([^"\']+)["\']\s*\)'  # map name
+    r'\s*(?:(?:public|private|protected|readonly|declare)\s+)*'
+    r'([A-Za-z_]\w*)?'                            # field name (optional)
+)
+
+
+def parse_input_maps(filepath):
+    """Return a list of dicts {map, field} for each @inputMap("Name") found in
+    a behavior source file. Used by the Input Actions panel to validate map
+    references and create maps that scripts ask for."""
+    if not filepath or not os.path.isfile(filepath):
+        return []
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            src = f.read()
+    except OSError:
+        return []
+
+    return [{"map": m.group(1), "field": m.group(2) or ""}
+            for m in _INPUT_MAP.finditer(src)]
+
+
 def parse_exposed(filepath):
     """Return a list of dicts: {name, vtype, default, min, max, label}."""
     if not filepath or not os.path.isfile(filepath):

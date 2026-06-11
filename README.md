@@ -194,7 +194,7 @@ field keeps its code default at runtime. `main.ts` auto-registers everything in
 2. **`ui.py`** – draw the fields in `_draw_component`.
 3. **`export.py`** – serialize the fields in `_serialize_components`.
 4. **`types.ts`** – add the matching interface to the `Component` union.
-5. **`LevelLoader.ts`** – handle the new `type` in `ApplyComponents`.
+5. **`core/loader/entityBuilder.ts`** – handle the new `type` in `ApplyComponents`.
 
 Adding a new *behavior* (the common case) needs only the runtime: subclass
 `Behavior`, register it (`registry.RegisterScripts({ MyThing })`), and reference
@@ -315,16 +315,47 @@ nothing snaps on load. Both ends need a Collider/Rigid Body (the validator
 checks). Created joints are exposed as `level.constraints` and disposed with the
 level. For fully hand-rolled joints in code, see `PlayerVehicleController.ts`.
 
-## Input (action map)
+## Input (Action Maps + the Input Actions panel)
 
-Behaviors can read named actions and axes instead of key codes:
-`Input.Axis("MoveX")` (-1..1 from WASD/arrows or a gamepad stick),
-`Input.IsDown("Sprint")`, `Input.WasPressed("Jump")` (one frame per press).
-Default bindings live in one place (`engine/scripting/Input.ts`) and can be
-changed at startup with `Input.BindAction` / `Input.BindAxis`. The level
-attaches, polls (first connected gamepad), and detaches it automatically. See
-`InputMover.ts`. Babylon's own camera key schemes are separate by design —
-cameras consume keycode arrays natively.
+The input system clones Unity's Input System: an **Input Actions asset** holds
+**Action Maps** ("Player", "UI") that group **Actions** ("Jump", "Move"), each
+with **Bindings** — single keys/pad buttons, analog axes/sticks, or composites
+(1D Axis from a negative/positive key pair, 2D Vector from up/down/left/right,
+WASD-style). Maps enable/disable as a unit.
+
+The scene's asset and **Scene Default** map are defined in Blender's **Input
+Actions** panel (Babylon tab): Action Maps list, actions, bindings (with key
+capture), and a **Scene Default** picker at the top. Export writes
+`scene.inputActions` + `scene.defaultInputMap` into the manifest. First export
+also seeds the panel with the built-in "Player" map if it was empty.
+
+**Three ways to get a map in a behavior** (all injected before `OnStart`):
+
+```ts
+import { Behavior, inputMap } from "@bjs/engine";
+import type { InputActionMap } from "@bjs/engine";
+
+@inputMap("Player") player!: InputActionMap;  // explicit map
+@inputMap() input!: InputActionMap;           // scene default
+// — or omit @inputMap and use this.input (also the scene default)
+
+const move = this.player.FindAction("Move")?.ReadVector2();
+this.player.FindAction("Jump")?.performed.add(() => { /* ... */ });
+```
+
+`@inputMap` stays lowercase (Blender parses the literal token, like `@exposed`).
+**Load Default Asset** / **Create Maps Used by Scripts** help bootstrap and sync
+maps from your behavior sources. Key names are JS `KeyboardEvent.key` values
+("e", "shift", "arrowup", "space"). Input attaches/processes/detaches
+automatically; see `InputMover.ts`. Babylon camera key schemes stay separate.
+
+The asset is also a **standalone file**: **Save Asset (.json)** / **Load Asset
+(.json)** in the panel read/write `input.inputactions.json` — share one asset
+across scenes and games, and let other tools read it. Run
+`npm run input:gen -- --app <name>` to generate `src/InputActions.ts` from the
+asset (`Maps.Player`, `PlayerActions.Jump` constants), so a typo in an action
+name is a compile error instead of a silent runtime warning — keep the asset
+at `apps/<name>/input.inputactions.json` and regenerate after editing.
 
 ## Animation (NLA clips)
 
@@ -383,10 +414,12 @@ addressable" marker; objects without one stay as plain geometry inside the glb.
 blender_addon/      # the Blender plugin (a Python package)
   __init__.py       # manifest-based registration
   properties.py     # component data model (PropertyGroups) + exposed-var storage
+  input_properties.py input_ui.py input_ops.py input_defaults.py  # Input Actions
   operators.py      # add/remove components, script picker, export operator
-  ui.py             # the Babylon N-panel
+  ui.py             # the Babylon N-panel (components + export)
   export.py         # glb + JSON manifest writer
-  script_parse.py   # reads @exposed decorators from .ts files
+  scene_export.py   # scene block (environment, fog, post, inputActions)
+  script_parse.py   # reads @exposed and @inputMap from .ts files
 packages/
   engine/             # "@bjs/engine" — the runtime engine, shared by every app
     src/
@@ -395,14 +428,20 @@ packages/
         types.ts          #   manifest schema (mirrors the exporter) + ID_KEY
         Entity.ts         #   the runtime entity class
         Level.ts          #   runtime container: entities, update loop, debug view
-        LevelLoader.ts    #   loads glb + manifest, builds the ECS, runs the loop
-      scripting/        # the behavior system (+ Input action map)
+        LevelLoader.ts    #   load-pipeline orchestrator (sequences the stages)
+        loader/           #   the stages: manifest · nodeResolution · entityBuilder
+                          #   · sceneSettings · context
+      scripting/        # the behavior system
         Behavior.ts       #   scriptable behavior base class
         exposed.ts        #   @exposed decorator + value application
-        Input.ts          #   named input actions/axes
         BehaviorRegistry.ts  #  maps SCRIPT names -> Behavior classes
+      input/            # Unity-style input system
+        InputManager.ts   #   devices + the project-wide action asset
+        InputAction.ts InputActionMap.ts InputActionAsset.ts
+        InputBinding.ts Devices.ts DefaultAsset.ts
+        inputMap.ts       #   @inputMap decorator (action-map injection)
       subsystems/       # one module per manifest concern the glb can't express
-        physics.ts lights.ts cameras.ts shadows.ts constraints.ts
+        physics.ts lights.ts cameras/ shadows.ts constraints.ts
         audio.ts triggers.ts environment.ts fog.ts postprocess.ts animation.ts
 apps/
   playground/         # the dev/test app (Vite). New games: npm run create
@@ -428,24 +467,28 @@ Docs:
 ### The load pipeline
 
 
-`LevelLoader.Load(manifestUrl)` is the heart of the engine. It runs these steps
-in order (each step below is an extracted private method of `LevelLoader`):
+`LevelLoader.Load(manifestUrl)` is the orchestrator; stages live in
+`core/loader/`. It runs these steps in order:
 
 1. **Fetch + validate the manifest.** Clear errors if the file 404s or the dev
    server returned `index.html` (HTML instead of JSON) — the two most common
    "it doesn't load" mistakes.
-2. **Append the glb** with `appendSceneAsync(base + manifest.glb, scene)`. The glb
+2. **Load input** — `InputManager.LoadAsset` with `scene.inputActions` and
+   `scene.defaultInputMap` so `@inputMap` fields and `behavior.input` can be
+   injected before behaviors are built.
+3. **Append the glb** with `appendSceneAsync(base + manifest.glb, scene)`. The glb
    path is resolved relative to the manifest. This creates all meshes, transform
    nodes, materials, lights, and cameras in the scene. (Babylon 9 note: the old
    `SceneLoader.AppendAsync` statics are deprecated — use `appendSceneAsync`.)
    **The scene is switched to `useRightHandedSystem = true` immediately before this**
    so the glb imports without the handedness-flipping `__root__` mirror — see *Subsystem: physics* below.
-3. **Build the GUID index** (`BuildIdIndex`): walk every transform node and mesh,
-   read `node.metadata.gltf.extras.bjs_id`, and map GUID -> node. This requires
-   the `ExtrasAsMetadata` glTF loader extension, which is imported at the top of
-   `core/LevelLoader.ts`; without it `node.metadata` stays empty and GUID matching
-   silently fails.
-4. **Iterate the manifest entities** (`ProcessEntity` per entity). For each one:
+4. **Build the GUID index** (`loader/nodeResolution.ts` → `BuildIdIndex`): walk
+   every transform node and mesh, read `node.metadata.gltf.extras.bjs_id`, and
+   map GUID -> node. Requires the `ExtrasAsMetadata` glTF loader extension
+   (imported at the top of `core/LevelLoader.ts`); without it `node.metadata`
+   stays empty and GUID matching silently fails.
+5. **Iterate the manifest entities** (`loader/entityBuilder.ts` → `ProcessEntity`
+   per entity). For each one:
    - Resolve its glb node: **GUID first**, then a name-match fallback.
    - Create an `Entity(id, name, node)` and register it in `level.entities`.
    - Stash a back-reference: `node.metadata.bjsEntity = entity`.
@@ -455,20 +498,18 @@ in order (each step below is an extracted private method of `LevelLoader`):
      if it casts shadows, remember it for step 6.
    - If the entity has `camera`, call `ApplyBlenderCamera` (`ProcessCameraForEntity`);
      if it's the active one, set `scene.activeCamera` and `level.activeCamera`.
-5. **Resolve object references (second pass)** via `ResolveObjectReferences`.
+6. **Resolve object references (second pass)** via `ResolveObjectReferences`.
    Entity-typed `@exposed` fields were stored as GUIDs because the target may not
    have existed yet during step 4. Now that every entity exists, each `PendingRef`
    is resolved to its `Entity` (scalar fields assigned directly; entity-list fields
    assigned into their array slot by `index`). Camera targets (FOLLOW/ARC/offset)
-   are resolved in this same post-pass via `ResolveCameraTargets` (in `subsystems/cameras.ts`).
-6. **Set up shadows** (`SetupShadows`) for the collected shadow-casting lights —
-   unless disabled via loader options.
-7. **`level.Begin()`**: call `OnStart()` on every behavior, then subscribe a
-   single `onBeforeRenderObservable` callback that drives every behavior's
-   `OnUpdate(deltaSeconds)` each frame.
+   are resolved in this same post-pass via `ResolveCameraTargets` (in `subsystems/cameras/targets.ts`).
+7. **Finalize** — shadows, scene look, animations, audio settle, triggers,
+   constraints, then **`level.Begin()`** (`OnStart`, then `RunFrame` each frame:
+   `InputManager.Process` → behaviors → `InputManager.EndFrame`).
 
 `EnableHavokPhysics(scene)` **must be called before `Load`** (the example
-`main.ts` does this), because colliders/bodies are built during step 4.
+`main.ts` does this), because colliders/bodies are built during step 5.
 
 ### Runtime API
 
@@ -587,7 +628,9 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
     "fog": { "mode": "EXP2", "color": [0.5,0.6,0.7], "density": 0.01, "start": 10, "end": 100 },
     "postProcessing": { "defaultPipeline": true, "fxaa": true,
       "bloom": { "enabled": false, "threshold": 0.9, "intensity": 0.5 },
-      "ssao": false, "toneMapping": true, "exposure": 1, "contrast": 1 }
+      "ssao": false, "toneMapping": true, "exposure": 1, "contrast": 1 },
+    "inputActions": { "maps": [{ "name": "Player", "actions": [ "..."] }] },
+    "defaultInputMap": "Player"
   },
   "entities": [
     {
@@ -652,4 +695,4 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
 
 ### Code conventions
 
-Engine code and behaviors follow a C#-inspired TypeScript style (PascalCase methods, Allman braces, descriptive names, explicit null handling, with the `@exposed` decorator kept lowercase and Babylon `Nullable<T>` values using truthiness checks). Full rules live in **`docs/STYLE_GUIDE.md`**.
+Engine code and behaviors follow a C#-inspired TypeScript style (PascalCase methods, Allman braces, descriptive names, explicit null handling, with the `@exposed` and `@inputMap` decorators kept lowercase and Babylon `Nullable<T>` values using truthiness checks). Full rules live in **`docs/STYLE_GUIDE.md`**.

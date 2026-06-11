@@ -16,14 +16,16 @@ and `level.scene.json` (everything else). See
 
 ## The pages
 
-Area diagrams: **[index.html](index.html)** (all 11 modules + flow) ·
-**[data-model.html](data-model.html)** (properties.py — components, exposed
-vars, trigger events) · **[export.html](export.html)** (the export pipeline).
+Area diagrams: **[index.html](index.html)** (all modules + flow, including
+`input_*.py`) · **[data-model.html](data-model.html)** (properties.py —
+components, exposed vars, trigger events) · **[export.html](export.html)** (the
+export pipeline).
 
 Code traces (each node is a step; click for the explanation + the actual
 current Python source): **Export** (operator → glb + manifest) · **GUID**
-(object → entity) · **@exposed** (TypeScript → Blender fields) · **Validation**
-· **Live Link** · **Collider preview**.
+(object → entity) · **@exposed** (TypeScript → Blender fields) · **Input
+Actions** (panel → `inputActions` + `defaultInputMap`) · **Validation** · **Live
+Link** · **Collider preview**.
 
 ## Regenerating
 

@@ -415,6 +415,11 @@ class BJS_PT_export(Panel):
         layout.operator("bjs.validate_scene", text="Validate", icon='CHECKMARK')
 
 
+
+
+# The "Input Actions" panel (BJS_PT_input_map) lives in input_ui.py.
+
+
 classes = (
     BJS_MT_component_menu,
     BJS_PT_components,

@@ -301,7 +301,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title": "Babylon Level Kit \u2014 Scripting", "nodes": [{"id": 1, "x": 40, "y": 60, "w": 150, "h": 40, "label": "behaviors/ folder", "sub": "one class per file", "desc": "THE contract: file named after the class, export default. The filename stem is the registry key Blender stores.", "meta": [["Where", "apps/<app>/src/behaviors"]]}, {"id": 2, "x": 40, "y": 180, "w": 150, "h": 40, "label": "AutoRegisterBehaviors", "sub": "main.ts wiring", "desc": "import.meta.glob('./behaviors/*') eagerly loads every file; each registers by stem in the BehaviorRegistry.", "meta": [["File", "scripting/BehaviorRegistry.ts"]]}, {"id": 3, "x": 40, "y": 300, "w": 150, "h": 40, "label": "BehaviorRegistry", "sub": "name \u2192 class", "desc": "Maps a SCRIPT component's name to a Behavior class. Registers BEHAVIORS, not components \u2014 TAG/COLLIDER/etc. are applied directly by the loader.", "meta": [["Create", "warns on unknown name"]]}, {"id": 4, "x": 280, "y": 120, "w": 150, "h": 40, "label": "Behavior", "sub": "scripting/Behavior.ts", "desc": "Lifecycle: OnStart (after refs resolve) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase \u2014 a lowercase onStart silently never runs.", "meta": [["Order", "cross-entity OnStart unspecified"]]}, {"id": 5, "x": 280, "y": 240, "w": 150, "h": 40, "label": "@exposed", "sub": "scripting/exposed.ts", "desc": "Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (script_parse.py) \u2192 single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.", "meta": [["Types", "float int bool string vector3 color entity enum list"]]}, {"id": 6, "x": 280, "y": 360, "w": 150, "h": 40, "label": "ApplyExposedVars", "sub": "before OnStart", "desc": "Writes the manifest's stored values onto the instance. vector3/color arrays coerced; entity refs deferred as PendingRefs; entity lists pre-sized with nulls.", "meta": [["Second pass", "ResolveObjectReferences"]]}, {"id": 7, "x": 520, "y": 180, "w": 150, "h": 40, "label": "Entity", "sub": "core/Entity.ts", "desc": "id/name/node/tag, behaviors, body?, animations, sounds. GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage \u2192 every behavior's OnMessage.", "meta": [["Back-ref", "node.metadata.bjsEntity"]]}, {"id": 8, "x": 520, "y": 320, "w": 150, "h": 40, "label": "Input", "sub": "scripting/Input.ts", "desc": "Named actions/axes: IsDown / WasPressed (one-frame edge) / Axis (\u22121..1, keys or stick + deadzone). Level attaches/updates/detaches automatically; rebind via BindAction/BindAxis.", "meta": [["Defaults", "Jump Interact Sprint Crouch \u00b7 MoveX/Y LookX/Y"]]}, {"id": 9, "x": 760, "y": 250, "w": 150, "h": 40, "label": "Level", "sub": "runs them", "desc": "Begin \u2192 OnStart for all; RunFrame \u2192 OnUpdate for all, then updaters, then Input.Update; Dispose \u2192 OnDestroy + teardown.", "meta": [["File", "core/Level.ts"]]}], "edges": [{"id": 100, "src": 1, "tgt": 2, "label": "glob"}, {"id": 101, "src": 2, "tgt": 3, "label": "by stem"}, {"id": 102, "src": 3, "tgt": 4, "label": "Create()"}, {"id": 103, "src": 4, "tgt": 5, "label": "fields"}, {"id": 104, "src": 5, "tgt": 6, "label": "values"}, {"id": 105, "src": 6, "tgt": 7, "label": "refs resolve to"}, {"id": 106, "src": 4, "tgt": 7, "label": "this.entity"}, {"id": 107, "src": 4, "tgt": 8, "label": "reads"}, {"id": 108, "src": 9, "tgt": 4, "label": "lifecycle"}, {"id": 109, "src": 9, "tgt": 8, "label": "attach/update"}]};
+const DIAGRAM_DATA = {"title": "Babylon Level Kit \u2014 Scripting", "nodes": [{"id": 1, "x": 40, "y": 60, "w": 150, "h": 40, "label": "behaviors/ folder", "sub": "one class per file", "desc": "THE contract: file named after the class, export default. The filename stem is the registry key Blender stores.", "meta": [["Where", "apps/<app>/src/behaviors"]]}, {"id": 2, "x": 40, "y": 180, "w": 150, "h": 40, "label": "AutoRegisterBehaviors", "sub": "main.ts wiring", "desc": "import.meta.glob('./behaviors/*') eagerly loads every file; each registers by stem in the BehaviorRegistry.", "meta": [["File", "scripting/BehaviorRegistry.ts"]]}, {"id": 3, "x": 40, "y": 300, "w": 150, "h": 40, "label": "BehaviorRegistry", "sub": "name \u2192 class", "desc": "Maps a SCRIPT component's name to a Behavior class. Registers BEHAVIORS, not components \u2014 TAG/COLLIDER/etc. are applied directly by the loader.", "meta": [["Create", "warns on unknown name"]]}, {"id": 4, "x": 280, "y": 120, "w": 150, "h": 40, "label": "Behavior", "sub": "scripting/Behavior.ts", "desc": "Lifecycle: OnStart (after refs resolve) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase \u2014 a lowercase onStart silently never runs.", "meta": [["Order", "cross-entity OnStart unspecified"]]}, {"id": 5, "x": 280, "y": 240, "w": 150, "h": 40, "label": "@exposed", "sub": "scripting/exposed.ts", "desc": "Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (script_parse.py) \u2192 single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.", "meta": [["Types", "float int bool string vector3 color entity enum list"]]}, {"id": 6, "x": 280, "y": 360, "w": 150, "h": 40, "label": "ApplyExposedVars", "sub": "before OnStart", "desc": "Writes the manifest's stored values onto the instance. vector3/color arrays coerced; entity refs deferred as PendingRefs; entity lists pre-sized with nulls.", "meta": [["Second pass", "ResolveObjectReferences"]]}, {"id": 7, "x": 520, "y": 180, "w": 150, "h": 40, "label": "Entity", "sub": "core/Entity.ts", "desc": "id/name/node/tag, behaviors, body?, animations, sounds. GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage \u2192 every behavior's OnMessage.", "meta": [["Back-ref", "node.metadata.bjsEntity"]]}, {"id": 8, "x": 520, "y": 320, "w": 150, "h": 40, "label": "Input", "sub": "src/input/", "desc": "Unity-style: InputManager owns an asset of Action Maps > Actions > Bindings. @inputMap(\"Player\") injects a map handle; actions poll (ReadValue/ReadVector2/IsPressed/WasPressedThisFrame) and fire started/performed/canceled.", "meta": [["Defaults", "Player map \u00b7 Move Look Jump Interact Sprint Crouch"]]}, {"id": 9, "x": 760, "y": 250, "w": 150, "h": 40, "label": "Level", "sub": "runs them", "desc": "Begin \u2192 OnStart for all; RunFrame \u2192 InputManager.Process, OnUpdate for all, then updaters, then InputManager.EndFrame; Dispose \u2192 OnDestroy + teardown.", "meta": [["File", "core/Level.ts"]]}], "edges": [{"id": 100, "src": 1, "tgt": 2, "label": "glob"}, {"id": 101, "src": 2, "tgt": 3, "label": "by stem"}, {"id": 102, "src": 3, "tgt": 4, "label": "Create()"}, {"id": 103, "src": 4, "tgt": 5, "label": "fields"}, {"id": 104, "src": 5, "tgt": 6, "label": "values"}, {"id": 105, "src": 6, "tgt": 7, "label": "refs resolve to"}, {"id": 106, "src": 4, "tgt": 7, "label": "this.entity"}, {"id": 107, "src": 4, "tgt": 8, "label": "reads"}, {"id": 108, "src": 9, "tgt": 4, "label": "lifecycle"}, {"id": 109, "src": 9, "tgt": 8, "label": "attach/update"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1119,6 +1119,190 @@ function exportSelf() {
 })();
 </script>
 
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
 <style>
   /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }

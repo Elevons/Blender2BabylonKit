@@ -4,7 +4,9 @@ Status as of **v0.29.0** (npm-workspaces monorepo: `packages/engine` is the
 shared `@bjs/engine` package; games are `apps/*` created by `npm run create`). Shipped so far: C#-style codebase + engine reorg
 (core/scripting/subsystems), Live Link, export validation, Inspector key,
 Debug Build flag, AUDIO component, trigger messaging (OnMessage), CONSTRAINT
-component (fixed/ball/hinge/slider/spring + limits + motors), Input action map.
+component (fixed/ball/hinge/slider/spring + limits + motors), Input Actions
+(panel → `scene.inputActions` + `scene.defaultInputMap`, `@inputMap` /
+`behavior.input` injection).
 This file is the forward plan only; per-feature design notes live with each item.
 
 ## Deferred mid-build (explicit decisions, not omissions)
@@ -32,9 +34,9 @@ This file is the forward plan only; per-feature design notes live with each item
 2. **Particles component** — Blender component (preset: fire/smoke/sparks/
    custom texture, emit rate, lifetime, size/color ranges) -> Babylon
    ParticleSystem in a new `subsystems/particles.ts`. Medium.
-3. **Input: mouse + rebind persistence** — pointer buttons/delta as actions and
-   axes ("Fire", "LookX" from mouse delta); optional localStorage persistence
-   for user rebinds. Small-medium, runtime-only.
+3. **Input: mouse support** — pointer buttons/delta as actions and axes
+   ("Fire", "LookX" from mouse delta). The central Input Map (Blender panel →
+   manifest → runtime) shipped in v0.30; this extends it to pointer input.
 4. **Navmesh + NavAgent** — bake from tagged geometry via Babylon's Recast
    plugin; `NavAgent` behavior (SetDestination). Large; needs the recast wasm
    dependency. Do after prefabs (agents usually chase spawned things).

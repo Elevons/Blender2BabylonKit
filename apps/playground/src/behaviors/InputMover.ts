@@ -1,10 +1,13 @@
-import { Behavior, exposed, Input } from "@bjs/engine";
+import { Behavior, exposed, inputMap } from "@bjs/engine";
+import type { InputActionMap } from "@bjs/engine";
 import { Vector3 } from "@babylonjs/core";
+import { PlayerActions } from "../InputActions";
 
 /**
- * TEST/demo for the Input action map. Moves the node on the ground plane with
- * MoveX/MoveY (WASD, arrows, or a gamepad's left stick — no key codes here),
- * sprints while Sprint is held, and hops on Jump. Attach to any object.
+ * TEST/demo for the Input Actions system. The @inputMap decorator injects the
+ * "Player" Action Map; movement polls the Move action (WASD, arrows, or the
+ * left stick — no key codes here), Sprint is polled as a button, and the hop
+ * subscribes to Jump's `performed` callback. Attach to any object.
  */
 export default class InputMover extends Behavior
 {
@@ -17,32 +20,38 @@ export default class InputMover extends Behavior
   @exposed({ min: 0, max: 10, label: "Hop height" })
   hopHeight = 1;
 
+  /** Injected by the loader before OnStart — bindings live in the map, not here. */
+  @inputMap("Player") player!: InputActionMap;
+
   private restY = 0;
   private hopVelocity = 0;
 
-  /** Remember the rest height for the toy hop arc. */
+  /** Remember the rest height and subscribe to Jump (callback-style input). */
   OnStart(): void
   {
     this.restY = this.node.position.y;
+
+    this.player.FindAction(PlayerActions.Jump)?.performed.add(() =>
+    {
+      // A toy ballistic hop, just to demonstrate the performed callback.
+      if (this.node.position.y <= this.restY)
+      {
+        this.hopVelocity = Math.sqrt(2 * 9.81 * this.hopHeight);
+      }
+    });
   }
 
-  /** Read named actions/axes — bindings live in Input, not here. */
+  /** Poll named actions — Move is a Vector2, Sprint a button. */
   OnUpdate(deltaSeconds: number): void
   {
-    const moveX = Input.Axis("MoveX");
-    const moveY = Input.Axis("MoveY");
-    const currentSpeed = Input.IsDown("Sprint") ? this.speed * this.sprintMultiplier : this.speed;
+    const move = this.player.FindAction(PlayerActions.Move)?.ReadVector2() ?? { x: 0, y: 0 };
+    const sprinting = this.player.FindAction(PlayerActions.Sprint)?.IsPressed() === true;
+    const currentSpeed = sprinting ? this.speed * this.sprintMultiplier : this.speed;
 
-    if (moveX !== 0 || moveY !== 0)
+    if (move.x !== 0 || move.y !== 0)
     {
-      const step = new Vector3(moveX, 0, moveY).normalize().scale(currentSpeed * deltaSeconds);
+      const step = new Vector3(move.x, 0, move.y).normalize().scale(currentSpeed * deltaSeconds);
       this.node.position.addInPlace(step);
-    }
-
-    // A toy ballistic hop, just to demonstrate the WasPressed edge.
-    if (Input.WasPressed("Jump") && this.node.position.y <= this.restY)
-    {
-      this.hopVelocity = Math.sqrt(2 * 9.81 * this.hopHeight);
     }
 
     if (this.hopVelocity !== 0 || this.node.position.y > this.restY)

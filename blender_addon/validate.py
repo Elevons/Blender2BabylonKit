@@ -160,6 +160,55 @@ def _check_lights(obj, warnings):
             f"Point/Sun/Spot")
 
 
+def _check_input_map(scene, warnings):
+    """Input Actions sanity: duplicate map names, duplicate action names
+    within a map, actions with no bindings, and @inputMap("Name") references
+    in scripts that have no matching Action Map."""
+    from . import script_parse
+
+    seen_maps = set()
+    for m in scene.bjs_input_maps:
+        if m.name in seen_maps:
+            warnings.append(f"Input Actions: duplicate map name '{m.name}'")
+        seen_maps.add(m.name)
+
+        seen_actions = set()
+        for action in m.actions:
+            if action.name in seen_actions:
+                warnings.append(
+                    f"Input Actions: duplicate action name '{action.name}' in map '{m.name}'")
+            seen_actions.add(action.name)
+            if len(action.bindings) == 0:
+                warnings.append(
+                    f"Input Actions: action '{m.name}/{action.name}' has no bindings")
+
+    from .input_defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME
+
+    # An empty panel exports the built-in default asset ("Player" map).
+    if len(scene.bjs_input_maps) == 0:
+        seen_maps = {m["name"] for m in DEFAULT_INPUT_ASSET.get("maps", [])}
+    default_map = scene.bjs_input_default_map or DEFAULT_INPUT_MAP_NAME
+    if default_map not in seen_maps:
+        warnings.append(
+            f"Input Actions: default map '{default_map}' does not exist "
+            f"(set Scene Default in the Input Actions panel)")
+
+    reported = set()
+    for obj in scene.objects:
+        for comp in obj.bjs_components:
+            if comp.comp_type != 'SCRIPT' or not comp.script_path:
+                continue
+            path = bpy.path.abspath(comp.script_path)
+            for ref in script_parse.parse_input_maps(path):
+                name = ref["map"]
+                if name and name not in seen_maps and name not in reported:
+                    reported.add(name)
+                    warnings.append(
+                        f"{obj.name}: script '{comp.script_name}' uses @inputMap(\"{name}\") "
+                        f"but no Action Map with that name exists (Input Actions panel "
+                        f"> Create Maps Used by Scripts)")
+
+
 def _check_duplicate_guids(scene, warnings):
     """Two renderable objects sharing a GUID (copy-pasted between scenes/files)
     would collide in the manifest. export.py re-IDs duplicates automatically;
@@ -206,6 +255,7 @@ def validate_scene(context):
         _check_skinned_meshes(obj, warnings)
         _check_lights(obj, warnings)
 
+    _check_input_map(scene, warnings)
     _check_duplicate_guids(scene, warnings)
     _check_active_camera(scene, warnings)
 

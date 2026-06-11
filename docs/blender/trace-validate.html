@@ -247,7 +247,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Validation</span><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Validation</span><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -301,7 +301,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — Validation: catching silent failures","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. validate_scene","sub":"validate.py","desc":"The entry: iterate objects, run every per-object check, collect warnings, plus scene-wide checks (duplicate GUIDs, active camera).","meta":[["File","blender_addon/validate.py"],["Line","192"]],"code":"def validate_scene(context):\n    \"\"\"Run every check over the renderable scene. Returns a list of warning\n    strings; an empty list means the export looks clean.\"\"\"\n    warnings = []\n    scene = context.scene\n\n    for obj in scene.objects:\n        if not _is_renderable(obj):\n            continue\n        _check_scripts(obj, warnings)\n        _check_entity_refs(obj, warnings)\n        _check_physics(obj, warnings)\n        _check_triggers(obj, warnings)\n        _check_constraints(obj, warnings)\n        _check_skinned_meshes(obj, warnings)\n        _check_lights(obj, warnings)\n\n    _check_duplicate_guids(scene, warnings)\n    _check_active_camera(scene, warnings)\n\n    return warnings","file":"blender_addon/validate.py","line":192},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _check_physics","sub":"validate.py","desc":"Example check: a MESH-shaped collider can't be a DYNAMIC body in Havok — warn before it silently fails at runtime.","meta":[["File","blender_addon/validate.py"],["Line","57"]],"code":"def _check_physics(obj, warnings):\n    \"\"\"A MESH-shaped collider on a DYNAMIC rigid body is a Havok limitation —\n    the body won't move. CONVEX is the moving-body shape.\"\"\"\n    collider = None\n    body = None\n    for comp in obj.bjs_components:\n        if comp.comp_type == 'COLLIDER':\n            collider = comp\n        elif comp.comp_type == 'RIGIDBODY':\n            body = comp\n\n    if (collider is not None and body is not None\n            and collider.collider_shape == 'MESH' and body.body_type == 'DYNAMIC'):\n        warnings.append(\n            f\"{obj.name}: MESH collider + DYNAMIC body — Havok can't move mesh \"\n            f\"shapes; use CONVEX\")","file":"blender_addon/validate.py","line":57},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _check_skinned_meshes","sub":"validate.py","desc":"The skinned-mesh trap: components/animation on a skinned mesh do nothing (its node transform is ignored; clips target the armature's joints). Warn to move them to the armature.","meta":[["File","blender_addon/validate.py"],["Line","132"]],"code":"def _check_skinned_meshes(obj, warnings):\n    \"\"\"glTF skinning rule: a skinned mesh's own node transform is ignored\n    (joints define the final vertex positions), and its animation clips target\n    the JOINT nodes under the armature. Components on the mesh object therefore\n    silently misbehave — scripts move nothing, animation lookups find nothing.\n    Everything belongs on the armature object instead.\"\"\"\n    if not _is_skinned_mesh(obj):\n        return\n\n    if len(obj.bjs_components) > 0:\n        warnings.append(\n            f\"{obj.name}: components on a skinned mesh won't behave (its node \"\n            f\"transform is ignored by skinning) — attach them to the armature \"\n            f\"object instead\")\n\n    a = getattr(obj, \"bjs_animation\", None)\n    if a is not None and a.auto_play:\n        warnings.append(\n            f\"{obj.name}: animation autoplay is set on the skinned mesh, but \"\n            f\"skeletal clips target the armature's joints — set it on the \"\n            f\"armature object instead\")","file":"blender_addon/validate.py","line":132},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. _check_constraints","sub":"validate.py","desc":"A joint needs a physics body on BOTH ends or it won't exist at runtime — warn if either is missing.","meta":[["File","blender_addon/validate.py"],["Line","109"]],"code":"def _check_constraints(obj, warnings):\n    \"\"\"Constraints need a physics body on BOTH ends to exist at runtime.\"\"\"\n    for comp in obj.bjs_components:\n        if comp.comp_type != 'CONSTRAINT':\n            continue\n        if comp.con_target is None:\n            warnings.append(f\"{obj.name}: Constraint has no target object\")\n            continue\n        if not _has_physics(obj):\n            warnings.append(\n                f\"{obj.name}: Constraint needs a Collider/Rigid Body on this object\")\n        if not _has_physics(comp.con_target):\n            warnings.append(\n                f\"{obj.name}: constraint target '{comp.con_target.name}' has no \"\n                f\"Collider/Rigid Body\")","file":"blender_addon/validate.py","line":109}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — Validation: catching silent failures","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. validate_scene","sub":"validate.py","desc":"The entry: iterate objects, run every per-object check, collect warnings, plus scene-wide checks (duplicate GUIDs, active camera).","meta":[["File","blender_addon/validate.py"],["Line","241"]],"code":"def validate_scene(context):\n    \"\"\"Run every check over the renderable scene. Returns a list of warning\n    strings; an empty list means the export looks clean.\"\"\"\n    warnings = []\n    scene = context.scene\n\n    for obj in scene.objects:\n        if not _is_renderable(obj):\n            continue\n        _check_scripts(obj, warnings)\n        _check_entity_refs(obj, warnings)\n        _check_physics(obj, warnings)\n        _check_triggers(obj, warnings)\n        _check_constraints(obj, warnings)\n        _check_skinned_meshes(obj, warnings)\n        _check_lights(obj, warnings)\n\n    _check_input_map(scene, warnings)\n    _check_duplicate_guids(scene, warnings)\n    _check_active_camera(scene, warnings)\n\n    return warnings","file":"blender_addon/validate.py","line":241},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _check_physics","sub":"validate.py","desc":"Example check: a MESH-shaped collider can't be a DYNAMIC body in Havok — warn before it silently fails at runtime.","meta":[["File","blender_addon/validate.py"],["Line","57"]],"code":"def _check_physics(obj, warnings):\n    \"\"\"A MESH-shaped collider on a DYNAMIC rigid body is a Havok limitation —\n    the body won't move. CONVEX is the moving-body shape.\"\"\"\n    collider = None\n    body = None\n    for comp in obj.bjs_components:\n        if comp.comp_type == 'COLLIDER':\n            collider = comp\n        elif comp.comp_type == 'RIGIDBODY':\n            body = comp\n\n    if (collider is not None and body is not None\n            and collider.collider_shape == 'MESH' and body.body_type == 'DYNAMIC'):\n        warnings.append(\n            f\"{obj.name}: MESH collider + DYNAMIC body — Havok can't move mesh \"\n            f\"shapes; use CONVEX\")","file":"blender_addon/validate.py","line":57},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _check_skinned_meshes","sub":"validate.py","desc":"The skinned-mesh trap: components/animation on a skinned mesh do nothing (its node transform is ignored; clips target the armature's joints). Warn to move them to the armature.","meta":[["File","blender_addon/validate.py"],["Line","132"]],"code":"def _check_skinned_meshes(obj, warnings):\n    \"\"\"glTF skinning rule: a skinned mesh's own node transform is ignored\n    (joints define the final vertex positions), and its animation clips target\n    the JOINT nodes under the armature. Components on the mesh object therefore\n    silently misbehave — scripts move nothing, animation lookups find nothing.\n    Everything belongs on the armature object instead.\"\"\"\n    if not _is_skinned_mesh(obj):\n        return\n\n    if len(obj.bjs_components) > 0:\n        warnings.append(\n            f\"{obj.name}: components on a skinned mesh won't behave (its node \"\n            f\"transform is ignored by skinning) — attach them to the armature \"\n            f\"object instead\")\n\n    a = getattr(obj, \"bjs_animation\", None)\n    if a is not None and a.auto_play:\n        warnings.append(\n            f\"{obj.name}: animation autoplay is set on the skinned mesh, but \"\n            f\"skeletal clips target the armature's joints — set it on the \"\n            f\"armature object instead\")","file":"blender_addon/validate.py","line":132},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. _check_constraints","sub":"validate.py","desc":"A joint needs a physics body on BOTH ends or it won't exist at runtime — warn if either is missing.","meta":[["File","blender_addon/validate.py"],["Line","109"]],"code":"def _check_constraints(obj, warnings):\n    \"\"\"Constraints need a physics body on BOTH ends to exist at runtime.\"\"\"\n    for comp in obj.bjs_components:\n        if comp.comp_type != 'CONSTRAINT':\n            continue\n        if comp.con_target is None:\n            warnings.append(f\"{obj.name}: Constraint has no target object\")\n            continue\n        if not _has_physics(obj):\n            warnings.append(\n                f\"{obj.name}: Constraint needs a Collider/Rigid Body on this object\")\n        if not _has_physics(comp.con_target):\n            warnings.append(\n                f\"{obj.name}: constraint target '{comp.con_target.name}' has no \"\n                f\"Collider/Rigid Body\")","file":"blender_addon/validate.py","line":109}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1119,6 +1119,190 @@ function exportSelf() {
 })();
 </script>
 
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
 <style>
   /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }

@@ -4,7 +4,8 @@
  * in Entity.ts, and the loader that consumes these lives in LevelLoader.ts.
  */
 /**
- * Custom-property / glTF-extras key holding each entity's GUID. Must match the
+ * Custom-property / glTF-extras key holding each entity's GUID. Must match 
+ * the
  * Blender add-on's ID_KEY. Surfaces at node.metadata.gltf.extras[ID_KEY].
  */
 export const ID_KEY = "bjs_id";
@@ -207,6 +208,54 @@ export interface SceneInfo {
   environment?: EnvironmentInfo | null;
   fog?: FogInfo | null;
   postProcessing?: PostProcessingInfo | null;
+  /** The scene's Input Actions asset (Blender "Input Actions" panel). */
+  inputActions?: InputActionAssetData | null;
+  /** Map name injected when a script has no @inputMap (default "Player"). */
+  defaultInputMap?: string;
+}
+
+// ---- Input Actions asset (Unity Input System style) ----
+
+export type InputDevice = "KEYBOARD" | "GAMEPAD";
+/** The shape of the value an action produces. */
+export type InputControlType = "BUTTON" | "AXIS" | "VECTOR2";
+/** Unity's action behavior types (callback semantics differ per type). */
+export type InputActionType = "BUTTON" | "VALUE" | "PASSTHROUGH";
+export type InputCompositeType = "1DAXIS" | "2DVECTOR";
+
+/**
+ * One binding: either a direct control read (a keyboard key, a gamepad button,
+ * or a gamepad axis) or a composite combining part bindings into an axis or
+ * 2D-vector value.
+ */
+export interface InputBindingData {
+  device?: InputDevice;
+  /** Raw token: a KeyboardEvent.key string ("space", "w"), or "button"/"axis" for gamepads. */
+  control?: string;
+  /** Standard-mapping gamepad button/axis index (0 = A/Cross or left stick X). */
+  index?: number;
+  /** Multiplier applied to an analog value (-1 flips a stick). */
+  scale?: number;
+  /** When set, this binding composes its `parts` instead of reading a control. */
+  composite?: InputCompositeType | null;
+  /** 1DAXIS parts: negative/positive. 2DVECTOR parts: up/down/left/right. */
+  parts?: Record<string, InputBindingData>;
+}
+
+export interface InputActionData {
+  name: string;
+  type: InputActionType;
+  controlType: InputControlType;
+  bindings: InputBindingData[];
+}
+
+export interface InputActionMapData {
+  name: string;
+  actions: InputActionData[];
+}
+
+export interface InputActionAssetData {
+  maps: InputActionMapData[];
 }
 
 export interface LevelManifest {

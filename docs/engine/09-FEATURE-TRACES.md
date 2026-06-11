@@ -7,14 +7,14 @@ Format: `blender_addon/…` → manifest → `packages/engine/src/…`.
 
 ### GUID / entity identity
 `properties.ensure_object_id` (custom prop `bjs_id`) → glTF node `extras` →
-manifest `entities[].id` → `LevelLoader.BuildIdIndex` reads
+manifest `entities[].id` → the loader's `BuildIdIndex` (`core/loader/nodeResolution.ts`) reads
 `metadata.gltf.extras.bjs_id` (needs `ExtrasAsMetadata` import) →
 `ProcessEntity` matches GUID-first → `Entity` in `level.entities`, node gets
 `metadata.bjsEntity` back-reference.
 
 ### Tag
 TAG component (`properties` → `export._serialize_components`) → manifest
-`{type:"TAG", tag}` → `LevelLoader.ClassifyComponents` sets `entity.tag` →
+`{type:"TAG", tag}` → `entityBuilder.ClassifyComponents` sets `entity.tag` →
 query `level.ByTag("Enemy")`.
 
 ### Collider / RigidBody
@@ -30,7 +30,7 @@ import ([why](05-PHYSICS.md#right-handed)). Debug view: **C** →
 ### Script + @exposed values
 "Open Script…" stores the filename stem; **Sync** →
 `script_parse.py` regex-reads `@exposed` fields → `BJSExposedVar` rows → edits
-serialize into `vars` → manifest SCRIPT → `LevelLoader.InstantiateScripts` →
+serialize into `vars` → manifest SCRIPT → `InstantiateScripts` (`core/loader/entityBuilder.ts`) →
 `BehaviorRegistry.Create(stem)` (registered by `AutoRegisterBehaviors` from
 `import.meta.glob`) → inject `entity`/`scene` → `ApplyExposedVars` (coerce
 vector3/color; entity refs → `PendingRef`) → second pass
@@ -52,7 +52,7 @@ exact, intensity scaled) → casting lights collected →
 Camera object → `camera` block (clip/FOV/active) →
 `cameras.ApplyBlenderCamera` onto the glb FreeCamera; active →
 `scene.activeCamera`. CAMERA component → `BuildTypedCamera` per-type builder →
-target bindings via `RegisterCameraTargets` → second pass
+target bindings via `QueueCameraTargets` → second pass
 `ResolveCameraTargets` (FOLLOW lockedTarget / ARC re-pivot / OFFSET
 `AddUpdater`).
 
@@ -83,9 +83,17 @@ Lock/BallAndSocket or 6DoF with per-type `BuildAxisLimits` → optional
 `ApplyMotor` → `ownerBody.addConstraint` → `level.constraints`.
 
 ### Input action
-(No Blender side.) `Level.Begin` → `Input.Attach` (scene keyboard observable);
-`RunFrame` → behaviors read `IsDown/WasPressed/Axis` → `Input.Update` last
-(gamepad poll + edge clear); `Dispose` → `Detach`.
+Blender **Input Actions** panel (maps > actions > bindings + **Scene Default**
+map picker) → `_serialize_input_asset` + `defaultInputMap` → manifest
+`scene.inputActions` / `scene.defaultInputMap` → `InputManager.LoadAsset`
+(loader, before behaviors) → `@inputMap("Name")` fields injected per behavior;
+scripts without `@inputMap` receive the scene default on `behavior.input` →
+`Level.Begin` →
+`InputManager.Attach` (keyboard observable + enable maps); `RunFrame` →
+`InputManager.Process` FIRST (gamepad poll, actions evaluate,
+started/performed/canceled fire) → behaviors poll
+`ReadValue/ReadVector2/IsPressed/WasPressedThisFrame` →
+`InputManager.EndFrame` last (edge clear); `Dispose` → `Detach`.
 
 ### Live Link
 Export remembers path (`scene.bjs_live_link_path`) → Ctrl+S →

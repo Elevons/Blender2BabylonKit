@@ -13,7 +13,7 @@ warns). Color exact; intensity approximate (watts don't map cleanly):
 `SUN_SCALE` / `PUNCTUAL_SCALE` at the top of the file are the single tuning
 point. No fallback light — a dark scene means add a lamp in Blender.
 
-## Cameras (`subsystems/cameras.ts`)
+## Cameras (`subsystems/cameras/`)
 
 Mirrors the lights design: the glb creates a faithful `FreeCamera`
 (`FindCameraForNode` walks parents the same way); `ApplyBlenderCamera` copies

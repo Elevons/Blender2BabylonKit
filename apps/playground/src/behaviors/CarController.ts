@@ -1,13 +1,21 @@
-import { Behavior, exposed, Input } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
-import { Vector3, Color3 } from "@babylonjs/core";
+import { Behavior, exposed, inputMap } from "@bjs/engine";
+import type { Entity, InputActionMap } from "@bjs/engine";
+import { Vector3, Color3, Quaternion } from "@babylonjs/core";
+import { PlayerActions } from "../InputActions";
+
+interface WheelVisualState
+{
+  entity: Entity;
+  rest: Vector3;
+  isFront: boolean;
+}
 
 /**
  * Arcade car controller — a showcase behavior that leans on most of the kit:
  *
  *   @exposed        chassis + wheel entity lists, tuning floats, an enum, a color
- *   Input map       MoveX/MoveY steer + throttle (keys or gamepad stick),
- *                   Sprint = boost, Jump = handbrake, Interact = horn (edge)
+ *   @inputMap       the "Player" Action Map: Move steers + throttles (keys or
+ *                   stick), Sprint = boost, Jump = handbrake, Interact = horn
  *   Audio           "engine" loop pitched by speed, "horn" on demand
  *                   (add Audio components whose files are engine.* / horn.*)
  *   Messaging       OnMessage("boost") from trigger pads grants a timed boost;
@@ -59,9 +67,20 @@ export default class CarController extends Behavior
   @exposed({ type: "color", label: "Boost log color" })
   boostLogColor = new Color3(1, 0.5, 0);
 
-  // Local axis that points forward on the chassis; flip if the model faces -Z.
+  // Hood direction in the chassis node's local space (+Z is Babylon/glTF default;
+  // use [0, 0, -1] if W drives the car backward). Wheel roll sign follows this.
   @exposed({ label: "Forward axis (local)" })
   forwardAxis: [number, number, number] = [0, 0, 1];
+
+  /** Set -1 in Blender if roll still looks backward after forwardAxis is correct. */
+  @exposed({ min: -1, max: 1, step: 2, label: "Wheel roll sign (±1)" })
+  wheelRollSign = 1;
+
+  @exposed({ min: 5, max: 45, label: "Visual steer lock (deg)" })
+  visualSteerLockDegrees = 35;
+
+  /** Injected by the loader — all control bindings live in the Action Map. */
+  @inputMap("Player") player!: InputActionMap;
 
   // --- internals ------------------------------------------------------------
   private forwardLocal = new Vector3(0, 0, 1);
@@ -72,6 +91,8 @@ export default class CarController extends Behavior
   private currentSpeed = 0;
   private padBoostRemaining = 0;
   private wheelSpinAngle = 0;
+  private lastSteer = 0;
+  private wheelVisuals: WheelVisualState[] = [];
 
   /** Cache the start pose, enable node->body sync, start the engine loop. */
   OnStart(): void
@@ -89,6 +110,7 @@ export default class CarController extends Behavior
     body.disablePreStep = false;
 
     this.startPosition = this.chassis!.node.position.clone();
+    this.CacheWheelVisuals();
 
     // The engine loop starts with the level (Audio autoplay also works; doing
     // it here keeps the car self-contained). Pitch follows speed in OnUpdate.
@@ -104,7 +126,7 @@ export default class CarController extends Behavior
       return;
     }
 
-    if (Input.WasPressed("Interact"))
+    if (this.player.FindAction(PlayerActions.Interact)?.WasPerformedThisFrame() === true)
     {
       chassis.GetSound("horn")?.play();
     }
@@ -114,14 +136,18 @@ export default class CarController extends Behavior
       this.padBoostRemaining -= deltaSeconds;
     }
 
-    const throttle = Input.Axis("MoveY");          // w/s, arrows, or stick
-    const steer = Input.Axis("MoveX");             // a/d, arrows, or stick
-    const boosting = Input.IsDown("Sprint") || this.padBoostRemaining > 0;
-    const handbrake = Input.IsDown("Jump");
+    const move = this.player.FindAction(PlayerActions.Move)?.ReadVector2() ?? { x: 0, y: 0 };
+    const throttle = move.y;                       // w/s, arrows, or stick
+    const steer = move.x;                          // a/d, arrows, or stick
+    const boosting = this.player.FindAction(PlayerActions.Sprint)?.IsPressed() === true
+      || this.padBoostRemaining > 0;
+    const handbrake = this.player.FindAction(PlayerActions.Jump)?.IsPressed() === true;
 
+    this.lastSteer = steer;
     this.UpdateSpeed(throttle, boosting, handbrake, deltaSeconds);
     this.ApplyBodyVelocities(chassis, steer, handbrake);
-    this.AnimateWheels(steer, deltaSeconds);
+    this.UpdateWheelSpin(deltaSeconds);
+    this.ApplyWheelVisuals();
 
     // Engine pitch: idle ~0.8 up to ~2.0 at (boosted) top speed.
     const engineSound = chassis.GetSound("engine");
@@ -182,23 +208,29 @@ export default class CarController extends Behavior
     const speedFactor = Math.min(1, Math.abs(this.currentSpeed) / 3) * Math.sign(this.currentSpeed || 1);
     const driftFactor = handbrake && this.handling !== "drift" ? 0.4 : 1;
 
+    // Yaw is always world-Y; when local forward is -Z, left/right invert unless
+    // we flip steer (same reason wheel roll needed a sign fix).
+    const forwardSign = Math.sign(this.forwardLocal.z) || 1;
+
     body.getAngularVelocityToRef(this.angularVelocity);
-    this.angularVelocity.y = steer * this.turnRate * speedFactor * driftFactor;
+    this.angularVelocity.y = steer * forwardSign * this.turnRate * speedFactor * driftFactor;
     body.setAngularVelocity(this.angularVelocity);
   }
 
-  /** Visual wheel spin (all) + steering yaw (fronts). Wheels are just nodes. */
-  private AnimateWheels(steer: number, deltaSeconds: number): void
+  /** Remember each wheel's authored pose so roll/steer are offsets, not replacements. */
+  private CacheWheelVisuals(): void
   {
-    // Roughly correct spin for ~0.35 m radius wheels; visual, not simulated.
-    this.wheelSpinAngle += (this.currentSpeed / 0.35) * deltaSeconds;
-    const steerAngle = steer * 0.5; // ~30 degrees of visual steering lock
+    this.wheelVisuals = [];
 
     for (const wheel of this.frontWheels)
     {
       if (wheel !== null)
       {
-        wheel.node.rotation.set(this.wheelSpinAngle, steerAngle, 0);
+        this.wheelVisuals.push({
+          entity: wheel,
+          rest: wheel.node.rotation.clone(),
+          isFront: true,
+        });
       }
     }
 
@@ -206,8 +238,42 @@ export default class CarController extends Behavior
     {
       if (wheel !== null)
       {
-        wheel.node.rotation.set(this.wheelSpinAngle, 0, 0);
+        this.wheelVisuals.push({
+          entity: wheel,
+          rest: wheel.node.rotation.clone(),
+          isFront: false,
+        });
       }
+    }
+  }
+
+  private UpdateWheelSpin(deltaSeconds: number): void
+  {
+    const forwardSign = Math.sign(this.forwardLocal.z) || 1;
+    const rollSign = this.wheelRollSign * forwardSign;
+    this.wheelSpinAngle += rollSign * (this.currentSpeed / 0.35) * deltaSeconds;
+  }
+
+  /**
+   * Front wheels: steer (local Y) then roll (local X) on top of the Blender
+   * rest pose. Runs late each frame so hinge-driven physics wheels still show
+   * arcade steering.
+   */
+  private ApplyWheelVisuals(): void
+  {
+    const forwardSign = Math.sign(this.forwardLocal.z) || 1;
+    const steerLockRadians = this.visualSteerLockDegrees * (Math.PI / 180);
+    const steerAngle = this.lastSteer * forwardSign * steerLockRadians;
+    const rollAngle = this.wheelSpinAngle;
+
+    for (const state of this.wheelVisuals)
+    {
+      const restQuat = Quaternion.FromEulerAngles(state.rest.x, state.rest.y, state.rest.z);
+      const steerQuat = state.isFront
+        ? Quaternion.RotationAxis(Vector3.Up(), steerAngle)
+        : Quaternion.Identity();
+      const rollQuat = Quaternion.RotationAxis(Vector3.Right(), rollAngle);
+      state.entity.node.rotationQuaternion = restQuat.multiply(steerQuat).multiply(rollQuat);
     }
   }
 
@@ -222,5 +288,8 @@ export default class CarController extends Behavior
     body.setAngularVelocity(Vector3.Zero());
     this.currentSpeed = 0;
     this.padBoostRemaining = 0;
+    this.wheelSpinAngle = 0;
+    this.lastSteer = 0;
+    this.ApplyWheelVisuals();
   }
 }

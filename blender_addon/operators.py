@@ -306,6 +306,10 @@ class BJS_OT_trigger_event_remove(Operator):
         return {'FINISHED'}
 
 
+# Input Actions operators (Action Maps > Actions > Bindings, load/save,
+# key capture, script sync) live in input_ops.py.
+
+
 class BJS_OT_validate(Operator):
     """Check the scene for export problems without exporting."""
     bl_idname = "bjs.validate_scene"
@@ -333,6 +337,9 @@ class BJS_OT_export(Operator, ExportHelper):
     filter_glob: StringProperty(default="*.glb", options={'HIDDEN'})
 
     def execute(self, context):
+        from .input_ops import ensure_scene_input_maps
+        if ensure_scene_input_maps(context.scene):
+            self.report({'INFO'}, "Seeded Input Actions with the default asset")
         warnings = bjs_validate.validate_scene(context)
         try:
             glb_path, json_path, n_entities = bjs_export.export_level(context, self.filepath)

@@ -10,7 +10,7 @@
 | Artifact | Carries | Consumed by |
 |---|---|---|
 | `level.glb` | geometry, transforms, hierarchy, materials, lights, cameras, animation clips | Babylon's glTF importer |
-| `level.scene.json` | components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), per-light/camera/scene settings, schema **v4** | our `LevelLoader` |
+| `level.scene.json` | components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), per-light/camera/scene settings, `scene.inputActions` + `scene.defaultInputMap`, schema **v4** | our `LevelLoader` |
 
 The manifest never duplicates the glb — it only adds. This is why there's a
 `subsystems/physics.ts` but no `meshes.ts`: meshes ride entirely in the glb.
@@ -41,8 +41,10 @@ bjs-level-kit/
     src/
       index.ts            #   public barrel (apps import "@bjs/engine")
       core/               #   types.ts (schema) · Entity.ts · Level.ts · LevelLoader.ts
-      scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts · Input.ts
-      subsystems/         #   physics lights cameras shadows constraints audio
+                          #   loader/ (manifest · nodeResolution · entityBuilder · sceneSettings)
+      scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts
+      input/              #   InputManager · maps/actions/bindings · @inputMap
+      subsystems/         #   physics lights cameras/ shadows constraints audio
                           #   triggers environment fog postprocess animation
   apps/                   # each game is an app; engine reaches it via symlink
     playground/           #   the dev/test app (Vite); template for npm run create
@@ -67,8 +69,8 @@ level.glb  +  level.scene.json  (+ audio/ files, env textures)
    │  Vite dev server serves apps/<app>/public/levels/
    ▼
 LevelLoader.Load(manifestUrl)             [03-LOAD-PIPELINE.md]
-   │  appendSceneAsync (right-handed) → GUID index → per-entity pass
-   │  → second pass (refs, camera targets) → FinalizeLevel
+   │  InputManager.LoadAsset → appendSceneAsync (right-handed) → GUID index
+   │  → per-entity pass → second pass (refs, camera targets) → FinalizeLevel
    ▼
 Level (entities, update loop) ── behaviors run OnStart/OnUpdate
                                           [04-SCRIPTING.md]

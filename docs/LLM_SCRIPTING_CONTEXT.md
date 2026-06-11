@@ -44,6 +44,7 @@ OnMessage(message: string, source: Entity): void  // a message arrived (trigger 
 this.entity : Entity          // the entity this behavior is attached to
 this.scene  : Scene           // the Babylon scene
 this.node   : TransformNode   // shortcut === this.entity.node
+this.input? : InputActionMap  // scene default map — injected when you have no @inputMap fields
 ```
 
 ## Entity API
@@ -122,26 +123,63 @@ entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylon
 
 ## Input
 
-Prefer the engine's action map (`Input`, from the barrel) over raw key codes —
-bindings live in one place and gamepad comes for free. The Level attaches and
-updates it automatically; behaviors just read it. The canvas needs focus (the
-user clicks the viewport once).
+The input system clones Unity's Input System: an **InputActionAsset** of
+**Action Maps** ("Player", "UI") containing **Actions** ("Jump", "Move") with
+**Bindings** (keys, gamepad buttons/sticks, and 1D-axis / 2D-vector
+composites). Maps enable/disable as a unit. The scene's asset and **Scene
+Default** map are authored in Blender's **Input Actions** panel and exported as
+`scene.inputActions` + `scene.defaultInputMap` in the manifest. The canvas needs
+focus (the user clicks the viewport once).
+
+**Three ways to get a map handle** (all injected before `OnStart`):
 
 ```ts
-import { Behavior, Input } from "@bjs/engine";
+import { Behavior, inputMap } from "@bjs/engine";
+import type { InputActionMap } from "@bjs/engine";
 
-Input.Axis("MoveX");          // -1..1 — a/d, arrows, or left stick
-Input.Axis("MoveY");          // -1..1 — w/s, arrows, or left stick
-Input.IsDown("Sprint");       // true while Shift / pad button held
-Input.WasPressed("Jump");     // true for exactly one frame per press
+export default class MyBehavior extends Behavior
+{
+  // 1. Explicit map name:
+  @inputMap("Player") player!: InputActionMap;
+
+  // 2. Scene default (same map as Blender's "Scene Default" picker):
+  // @inputMap() input!: InputActionMap;
+
+  // 3. No @inputMap at all — use this.input (also the scene default)
+
+  OnStart(): void
+  {
+    this.player.FindAction("Jump")?.performed.add(() => { /* ... */ });
+  }
+
+  OnUpdate(): void
+  {
+    const move = this.player.FindAction("Move")?.ReadVector2() ?? { x: 0, y: 0 };
+    const sprinting = this.player.FindAction("Sprint")?.IsPressed() === true;
+    const jumped = this.player.FindAction("Jump")?.WasPressedThisFrame() === true;
+  }
+}
 ```
 
-Built-in actions: Jump (Space), Interact (E), Sprint (Shift), Crouch (C is also
-the collider debug key — rebind one of them if both matter). Axes: MoveX, MoveY,
-LookX/LookY (gamepad right stick). Rebind via `Input.BindAction` /
-`Input.BindAxis`. See `InputMover.ts` for a worked example.
+`@inputMap` stays **lowercase** (Blender parses the literal token, like
+`@exposed`). Actions have a type (`BUTTON` / `VALUE` / `PASSTHROUGH`) and a
+control type (`BUTTON` / `AXIS` / `VECTOR2`). Polling: `ReadValue()` (scalar),
+`ReadVector2()`, `IsPressed()`, `WasPressedThisFrame()`,
+`WasReleasedThisFrame()`, `WasPerformedThisFrame()`. `InputManager.actions` is
+the whole asset (`InputManager.FindAction("Player/Jump")` also works); maps can
+be toggled with `map.Enable()` / `map.Disable()`.
 
-For input the map doesn't cover (pointer events, custom keys), fall back to
+If the panel is empty at export, the built-in "Player" map (Move/Look/Jump/
+Interact/Sprint/Crouch) is serialized anyway; first export also seeds the panel
+so you can edit it. Scripts should reference **action names**, never key codes.
+If the app has a generated `src/InputActions.ts` (from `npm run input:gen`
+reading `input.inputactions.json`), import its constants —
+`import { PlayerActions } from "../InputActions"` then
+`this.player.FindAction(PlayerActions.Jump)` — so typos fail at compile time.
+If a behavior needs a NEW action, name it and note that it must be added in the
+Input Actions panel (and constants regenerated). See `InputMover.ts`.
+
+For input the asset doesn't cover (pointer events, custom keys), fall back to
 scene observables — never global `window` listeners — and remove them in
 `OnDestroy`:
 
@@ -178,8 +216,8 @@ always safe.
 PascalCase methods/functions; camelCase, fully-descriptive fields & locals (no
 `i`/`dt`/`tmp`); Allman braces (opening brace on its own line) for methods, `if`,
 `for`; braces on every `if`; explicit `: void`; explicit null checks
-(`if (x !== null)`), except real booleans. The `@exposed` decorator stays
-lowercase. Full rules: `STYLE_GUIDE.md`.
+(`if (x !== null)`), except real booleans. The `@exposed` and `@inputMap`
+decorators stay lowercase. Full rules: `STYLE_GUIDE.md`.
 
 ## Complete example
 

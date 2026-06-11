@@ -21,7 +21,9 @@ render-disabled objects · MESH collider + DYNAMIC body · MESH-shaped triggers
 target · constraints missing a target or physics on either end · components or
 animation autoplay on a **skinned mesh** (belongs on the armature —
 [why](07-AUDIO-ANIMATION.md)) · AREA lights · duplicate GUIDs · audio file
-missing · no active camera.
+missing · no active camera · **Input Actions** (duplicate map/action names,
+actions with no bindings, `@inputMap("Name")` referencing a missing map, Scene
+Default map not found).
 
 ## Debug Build & debug keys
 

@@ -30,7 +30,147 @@
       "start": 10.0,
       "end": 100.0
     },
-    "postProcessing": null
+    "postProcessing": null,
+    "inputActions": {
+      "maps": [
+        {
+          "name": "Player",
+          "actions": [
+            {
+              "name": "Move",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "w"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "s"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "a"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "d"
+                    }
+                  }
+                },
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "arrowup"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "arrowdown"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "arrowleft"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "arrowright"
+                    }
+                  }
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Look",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Jump",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": " "
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Interact",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "e"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 2
+                }
+              ]
+            },
+            {
+              "name": "Sprint",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "shift"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 10
+                }
+              ]
+            },
+            {
+              "name": "Crouch",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "c"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "defaultInputMap": "Player"
   },
   "entities": [
     {
@@ -45,7 +185,7 @@
           1.0,
           1.0
         ],
-        "energy": 1.0,
+        "energy": 2.0,
         "castShadows": true,
         "shadow": {
           "mapSize": 0,
@@ -199,7 +339,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 1.0,
-          "friction": 0.5,
+          "friction": 1.0,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.0
@@ -263,7 +403,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 1.0,
-          "friction": 0.5,
+          "friction": 1.0,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.0
@@ -288,8 +428,8 @@
           "max": 0.0,
           "stiffness": 100.0,
           "damping": 10.0,
-          "motor": true,
-          "motorSpeed": 90.0,
+          "motor": false,
+          "motorSpeed": 10.0,
           "motorMaxForce": 100.0
         }
       ]
@@ -326,11 +466,39 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 1.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.0
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../Projects/Blender2BabylonKit/apps/playground/src/behaviors/CarController.ts",
+          "vars": {
+            "chassis": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+            "frontWheels": [
+              "4741bcd5208c4f8d87fdf5da1d80c83d",
+              "48157102c73940d9a160244686189272"
+            ],
+            "rearWheels": [
+              "ecbf5216cfdd4b41a7a1ea1f20e7fbdc",
+              "217e0c1f17cf45659567913d638d89c6"
+            ],
+            "topSpeed": 18.0,
+            "acceleration": 14.0,
+            "turnRate": 2.200000047683716,
+            "boostMultiplier": 1.600000023841858,
+            "padBoostSeconds": 2.0,
+            "handling": "normal",
+            "forwardAxis": [
+              0.0,
+              0.0,
+              -1.0
+            ],
+            "wheelRollSign": 1.0
+          }
         }
       ]
     },
@@ -367,7 +535,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 1.0,
-          "friction": 0.5,
+          "friction": 1.0,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.0
@@ -392,8 +560,8 @@
           "max": 10.0,
           "stiffness": 100.0,
           "damping": 10.0,
-          "motor": true,
-          "motorSpeed": 90.0,
+          "motor": false,
+          "motorSpeed": 10.0,
           "motorMaxForce": 100.0
         }
       ]
@@ -416,7 +584,7 @@
           "radius": 2.163696765899658,
           "height": 2.166421413421631,
           "center": [
-            -0.19683966040611267,
+            1.1231602430343628,
             -0.0003390312194824219,
             0.0030690431594848633
           ],
@@ -431,7 +599,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 1.0,
-          "friction": 0.5,
+          "friction": 1.0,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.0

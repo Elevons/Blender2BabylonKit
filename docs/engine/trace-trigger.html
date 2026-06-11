@@ -301,7 +301,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — Triggers: On-Enter event → OnMessage","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. BJSTriggerEvent","sub":"properties.py","desc":"AUTHORING — one row: target object + message + optional tag filter, on a trigger collider.","meta":[["File","blender_addon/properties.py"],["Line","341"]],"code":"class BJSTriggerEvent(PropertyGroup):\n    \"\"\"One authored trigger reaction: when something enters this trigger\n    collider, send `message` to `target`'s behaviors (OnMessage). An optional\n    tag filter restricts which entities may set it off.\"\"\"\n    target:     PointerProperty(name=\"Target\", type=Object,\n                                description=\"The entity whose behaviors receive the message\")\n    message:    StringProperty(name=\"Message\", default=\"\",\n                               description=\"Delivered to the target's OnMessage(message, source)\")\n    filter_tag: StringProperty(name=\"Only Tag\", default=\"\",\n                               description=\"Only entities with this tag set the event off (empty = any)\")","file":"blender_addon/properties.py","line":341},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ApplyComponents","sub":"LevelLoader.ts","desc":"LOAD — a trigger collider with events queues a TriggerRegistration {sourceEntity, events}; wiring waits for FinalizeLevel (the plugin observable needs physics live).","meta":[["File","packages/engine/src/core/LevelLoader.ts"],["Line","523"]],"code":"  /**\n   * Interpret an entity's components: build one physics body from any COLLIDER /\n   * RIGIDBODY, register authored trigger reactions, queue sound creation, set the\n   * tag, and instantiate SCRIPT behaviors (deferring their entity references).\n   * Returns the deferred references for the second pass.\n   */\n  private ApplyComponents(entity: Entity, components: Component[], context: LoadContext): PendingRef[]\n  {\n    const { collider, body, scripts, audioComponents, constraintComponents } =\n      this.ClassifyComponents(entity, components);\n\n    if (collider !== undefined || body !== undefined)\n    {\n      entity.body = BuildPhysics(entity.node, collider, body, this.scene);\n    }\n\n    // Authored trigger reactions need the plugin observable; wired in a post-pass.\n    if (collider !== undefined && collider.isTrigger\n        && collider.events !== undefined && collider.events.length > 0)\n    {\n      context.triggerRegistrations.push({ sourceEntity: entity, events: collider.events });\n    }\n\n    // Sound creation is async (fetch + decode); collected and awaited after the loop.\n    for (const audioComponent of audioComponents)\n    {\n      context.audioTasks.push(ApplyAudio(entity, audioComponent, context.baseUrl));\n    }\n\n    // Joints need BOTH bodies to exist; built in a post-pass (FinalizeLevel).\n    for (const constraintComponent of constraintComponents)\n    {\n      context.constraintRegistrations.push({ ownerEntity: entity, component: constraintComponent });\n    }\n\n    return this.InstantiateScripts(entity, scripts);\n  }","file":"packages/engine/src/core/LevelLoader.ts","line":523},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. WireTriggerEvents","sub":"triggers.ts","desc":"ONE observer on HavokPlugin.onTriggerCollisionObservable. Registrations indexed by trigger body for O(1) dispatch. Returns the observer; Level removes it on dispose.","meta":[["File","packages/engine/src/subsystems/triggers.ts"],["Line","31"]],"code":"/**\n * Subscribe one plugin-level observer that dispatches TRIGGER_ENTERED events to\n * the authored reactions. Returns the observer so the level can detach it on\n * dispose (or null when physics isn't enabled / nothing was registered).\n */\nexport function WireTriggerEvents(\n  scene: Scene,\n  level: Level,\n  registrations: TriggerRegistration[]\n): Observer<IBasePhysicsCollisionEvent> | null\n{\n  if (registrations.length === 0)\n  {\n    return null;\n  }\n\n  const physicsEngine = scene.getPhysicsEngine();\n  const plugin = physicsEngine?.getPhysicsPlugin();\n  if (!plugin || !(plugin instanceof HavokPlugin))\n  {\n    console.warn(\"[bjs] trigger events authored but Havok physics isn't enabled\");\n    return null;\n  }\n\n  // Index registrations by their trigger body for O(1) dispatch per event.\n  const registrationByBody = new Map<unknown, TriggerRegistration>();\n  for (const registration of registrations)\n  {\n    if (registration.sourceEntity.body !== undefined)\n    {\n      registrationByBody.set(registration.sourceEntity.body, registration);\n    }\n  }\n\n  return plugin.onTriggerCollisionObservable.add((collisionEvent) =>\n  {\n    if (collisionEvent.type !== \"TRIGGER_ENTERED\")\n    {\n      return;\n    }\n\n    const registration = registrationByBody.get(collisionEvent.collider);\n    if (registration === undefined)\n    {\n      return;\n    }\n\n    const enteringEntity = EntityFromBody(collisionEvent.collidedAgainst);\n    if (enteringEntity === null)\n    {\n      return; // a non-entity body (no manifest record) entered; nothing to deliver\n    }\n\n    DeliverTriggerEvents(level, registration, enteringEntity);\n  });\n}","file":"packages/engine/src/subsystems/triggers.ts","line":31},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. DeliverTriggerEvents","sub":"triggers.ts","desc":"Per TRIGGER_ENTERED: entering body → entity (metadata.bjsEntity), tag gate, target lookup by GUID, then SendMessage(message, enteringEntity).","meta":[["File","packages/engine/src/subsystems/triggers.ts"],["Line","84"]],"code":"    DeliverTriggerEvents(level, registration, enteringEntity);\n  });","file":"packages/engine/src/subsystems/triggers.ts","line":84},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. SendMessage","sub":"Entity.ts","desc":"Fan-out to every behavior on the target, each call error-isolated.","meta":[["File","packages/engine/src/core/Entity.ts"],["Line","60"]],"code":"  /** Deliver a message to every behavior on this entity (their OnMessage hook). */\n  SendMessage(message: string, source: Entity): void\n  {\n    for (const behavior of this.behaviors)\n    {\n      try\n      {\n        behavior.OnMessage(message, source);\n      }\n      catch (error)\n      {\n        console.error(`[bjs] OnMessage \"${this.name}\"`, error);\n      }\n    }\n  }","file":"packages/engine/src/core/Entity.ts","line":60},{"id":6,"x":40,"y":190,"w":190,"h":56,"label":"6. OnMessage","sub":"Behavior.ts","desc":"RECEIVE — override in your behavior. source = the entity that entered the volume. See MessageLogger.ts / CarController.ts.","meta":[["File","packages/engine/src/scripting/Behavior.ts"],["Line","30"]],"code":"  /**\n   * Run when another entity (or a trigger event authored in Blender) sends this\n   * entity a message via Entity.SendMessage(message, source).\n   */\n  OnMessage(message: string, source: Entity): void {}","file":"packages/engine/src/scripting/Behavior.ts","line":30}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""},{"id":104,"src":5,"tgt":6,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — Triggers: On-Enter event → OnMessage","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. BJSTriggerEvent","sub":"properties.py","desc":"AUTHORING — one row: target object + message + optional tag filter, on a trigger collider.","meta":[["File","blender_addon/properties.py"],["Line","341"]],"code":"class BJSTriggerEvent(PropertyGroup):\n    \"\"\"One authored trigger reaction: when something enters this trigger\n    collider, send `message` to `target`'s behaviors (OnMessage). An optional\n    tag filter restricts which entities may set it off.\"\"\"\n    target:     PointerProperty(name=\"Target\", type=Object,\n                                description=\"The entity whose behaviors receive the message\")\n    message:    StringProperty(name=\"Message\", default=\"\",\n                               description=\"Delivered to the target's OnMessage(message, source)\")\n    filter_tag: StringProperty(name=\"Only Tag\", default=\"\",\n                               description=\"Only entities with this tag set the event off (empty = any)\")","file":"blender_addon/properties.py","line":341},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ApplyComponents","sub":"entityBuilder.ts","desc":"LOAD — a trigger collider with events queues a TriggerRegistration {sourceEntity, events}; wiring waits for FinalizeLevel (the plugin observable needs physics live).","meta":[["File","packages/engine/src/core/loader/entityBuilder.ts"],["Line","153"]],"code":"/**\n * Interpret an entity's components: build one physics body from any COLLIDER /\n * RIGIDBODY, register authored trigger reactions, queue sound creation, set the\n * tag, and instantiate SCRIPT behaviors (deferring their entity references).\n * Returns the deferred references for the second pass.\n */\nfunction ApplyComponents(\n  entity: Entity,\n  components: Component[],\n  scene: Scene,\n  registry: BehaviorRegistry,\n  context: LoadContext\n): PendingRef[]\n{\n  const { collider, body, scripts, audioComponents, constraintComponents } =\n    ClassifyComponents(entity, components);\n\n  if (collider !== undefined || body !== undefined)\n  {\n    entity.body = BuildPhysics(entity.node, collider, body, scene);\n  }\n\n  // Authored trigger reactions need the plugin observable; wired in a post-pass.\n  if (collider !== undefined && collider.isTrigger\n      && collider.events !== undefined && collider.events.length > 0)\n  {\n    context.triggerRegistrations.push({ sourceEntity: entity, events: collider.events });\n  }\n\n  // Sound creation is async (fetch + decode); collected and awaited after the loop.\n  for (const audioComponent of audioComponents)\n  {\n    context.audioTasks.push(ApplyAudio(entity, audioComponent, context.baseUrl));\n  }\n\n  // Joints need BOTH bodies to exist; built in a post-pass (FinalizeLevel).\n  for (const constraintComponent of constraintComponents)\n  {\n    context.constraintRegistrations.push({ ownerEntity: entity, component: constraintComponent });\n  }\n\n  return InstantiateScripts(entity, scripts, scene, registry, context.defaultInputMap);\n}","file":"packages/engine/src/core/loader/entityBuilder.ts","line":153},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. WireTriggerEvents","sub":"triggers.ts","desc":"ONE observer on HavokPlugin.onTriggerCollisionObservable. Registrations indexed by trigger body for O(1) dispatch. Returns the observer; Level removes it on dispose.","meta":[["File","packages/engine/src/subsystems/triggers.ts"],["Line","31"]],"code":"/**\n * Subscribe one plugin-level observer that dispatches TRIGGER_ENTERED events to\n * the authored reactions. Returns the observer so the level can detach it on\n * dispose (or null when physics isn't enabled / nothing was registered).\n */\nexport function WireTriggerEvents(\n  scene: Scene,\n  level: Level,\n  registrations: TriggerRegistration[]\n): Observer<IBasePhysicsCollisionEvent> | null\n{\n  if (registrations.length === 0)\n  {\n    return null;\n  }\n\n  const physicsEngine = scene.getPhysicsEngine();\n  const plugin = physicsEngine?.getPhysicsPlugin();\n  if (!plugin || !(plugin instanceof HavokPlugin))\n  {\n    console.warn(\"[bjs] trigger events authored but Havok physics isn't enabled\");\n    return null;\n  }\n\n  // Index registrations by their trigger body for O(1) dispatch per event.\n  const registrationByBody = new Map<unknown, TriggerRegistration>();\n  for (const registration of registrations)\n  {\n    if (registration.sourceEntity.body !== undefined)\n    {\n      registrationByBody.set(registration.sourceEntity.body, registration);\n    }\n  }\n\n  return plugin.onTriggerCollisionObservable.add((collisionEvent) =>\n  {\n    if (collisionEvent.type !== \"TRIGGER_ENTERED\")\n    {\n      return;\n    }\n\n    const registration = registrationByBody.get(collisionEvent.collider);\n    if (registration === undefined)\n    {\n      return;\n    }\n\n    const enteringEntity = EntityFromBody(collisionEvent.collidedAgainst);\n    if (enteringEntity === null)\n    {\n      return; // a non-entity body (no manifest record) entered; nothing to deliver\n    }\n\n    DeliverTriggerEvents(level, registration, enteringEntity);\n  });\n}","file":"packages/engine/src/subsystems/triggers.ts","line":31},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. DeliverTriggerEvents","sub":"triggers.ts","desc":"Per TRIGGER_ENTERED: entering body → entity (metadata.bjsEntity), tag gate, target lookup by GUID, then SendMessage(message, enteringEntity).","meta":[["File","packages/engine/src/subsystems/triggers.ts"],["Line","84"]],"code":"    DeliverTriggerEvents(level, registration, enteringEntity);\n  });","file":"packages/engine/src/subsystems/triggers.ts","line":84},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. SendMessage","sub":"Entity.ts","desc":"Fan-out to every behavior on the target, each call error-isolated.","meta":[["File","packages/engine/src/core/Entity.ts"],["Line","60"]],"code":"  /** Deliver a message to every behavior on this entity (their OnMessage hook). */\n  SendMessage(message: string, source: Entity): void\n  {\n    for (const behavior of this.behaviors)\n    {\n      try\n      {\n        behavior.OnMessage(message, source);\n      }\n      catch (error)\n      {\n        console.error(`[bjs] OnMessage \"${this.name}\"`, error);\n      }\n    }\n  }","file":"packages/engine/src/core/Entity.ts","line":60},{"id":6,"x":40,"y":190,"w":190,"h":56,"label":"6. OnMessage","sub":"Behavior.ts","desc":"RECEIVE — override in your behavior. source = the entity that entered the volume. See MessageLogger.ts / CarController.ts.","meta":[["File","packages/engine/src/scripting/Behavior.ts"],["Line","37"]],"code":"  /**\n   * Run when another entity (or a trigger event authored in Blender) sends this\n   * entity a message via Entity.SendMessage(message, source).\n   */\n  OnMessage(message: string, source: Entity): void {}","file":"packages/engine/src/scripting/Behavior.ts","line":37}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""},{"id":104,"src":5,"tgt":6,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1119,6 +1119,190 @@ function exportSelf() {
 })();
 </script>
 
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  /* All pages: full-width panel content + left-edge drag-to-resize */
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
 <style>
   /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }

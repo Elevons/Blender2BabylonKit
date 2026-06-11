@@ -8,7 +8,7 @@ import {
   type PhysicsConstraint,
 } from "@babylonjs/core";
 import { Entity } from "./Entity";
-import { Input } from "../scripting/Input";
+import { InputManager } from "../input";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
 
 /**
@@ -103,7 +103,7 @@ export class Level
    */
   Begin(): void
   {
-    Input.Attach(this.scene);
+    InputManager.Attach(this.scene);
 
     for (const entity of this.entities.values())
     {
@@ -129,6 +129,10 @@ export class Level
   /** One frame: every behavior's OnUpdate, then the registered updaters. */
   private RunFrame(deltaSeconds: number): void
   {
+    // Before behaviors, so action callbacks fire and WasPressedThisFrame edges
+    // are visible to every OnUpdate this frame.
+    InputManager.Process();
+
     for (const entity of this.entities.values())
     {
       for (const behavior of entity.behaviors)
@@ -156,8 +160,8 @@ export class Level
       }
     }
 
-    // After behaviors, so WasPressed edges last exactly one full frame.
-    Input.Update();
+    // After behaviors, so per-frame device edges last exactly one full frame.
+    InputManager.EndFrame();
   }
 
   /** Stop the update loop and run every behavior's OnDestroy. */
@@ -169,7 +173,7 @@ export class Level
     }
     this.disposed = true;
 
-    Input.Detach(this.scene);
+    InputManager.Detach(this.scene);
 
     if (this.physicsViewer !== undefined)
     {

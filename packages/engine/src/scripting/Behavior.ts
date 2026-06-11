@@ -1,5 +1,6 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
 import { Entity } from "../core/Entity";
+import type { InputActionMap } from "../input/InputActionMap";
 
 /**
  * Base class for scriptable behaviors. Subclass it, override the lifecycle
@@ -11,6 +12,12 @@ export abstract class Behavior
   // Injected by the loader before OnStart() runs.
   entity!: Entity;
   scene!: Scene;
+
+  /**
+   * The scene's default Action Map, injected when the script has no @inputMap
+   * fields. Set in Blender's Input Actions panel ("Scene Default").
+   */
+  input?: InputActionMap;
 
   /** The Babylon node this behavior drives (the entity's node). */
   get node(): TransformNode

@@ -8,7 +8,9 @@ export * from "./core/LevelLoader";
 export * from "./scripting/Behavior";
 export * from "./scripting/exposed";
 export * from "./scripting/BehaviorRegistry";
-export * from "./scripting/Input";
+
+// Input: the Unity-style input system (InputManager, action maps, @inputMap).
+export * from "./input";
 
 // Subsystems: each applies one slice of the manifest the glb can't express.
 export * from "./subsystems/physics";
