@@ -1,0 +1,42 @@
+"""Built-in Input Actions asset shared by Blender and the engine runtime.
+
+Keep in sync with packages/engine/src/input/DefaultAsset.ts.
+"""
+
+DEFAULT_INPUT_ASSET = {
+    "maps": [{
+        "name": "Player",
+        "actions": [
+            {"name": "Move", "type": "VALUE", "controlType": "VECTOR2",
+             "bindings": [
+                 {"composite": "2DVECTOR",
+                  "parts": {"up": {"device": "KEYBOARD", "control": "w"},
+                            "down": {"device": "KEYBOARD", "control": "s"},
+                            "left": {"device": "KEYBOARD", "control": "a"},
+                            "right": {"device": "KEYBOARD", "control": "d"}}},
+                 {"composite": "2DVECTOR",
+                  "parts": {"up": {"device": "KEYBOARD", "control": "arrowup"},
+                            "down": {"device": "KEYBOARD", "control": "arrowdown"},
+                            "left": {"device": "KEYBOARD", "control": "arrowleft"},
+                            "right": {"device": "KEYBOARD", "control": "arrowright"}}},
+                 {"device": "GAMEPAD", "control": "stick", "index": 0},
+             ]},
+            {"name": "Look", "type": "VALUE", "controlType": "VECTOR2",
+             "bindings": [{"device": "GAMEPAD", "control": "stick", "index": 1}]},
+            {"name": "Jump", "type": "BUTTON", "controlType": "BUTTON",
+             "bindings": [{"device": "KEYBOARD", "control": "space"},
+                          {"device": "GAMEPAD", "control": "button", "index": 0}]},
+            {"name": "Interact", "type": "BUTTON", "controlType": "BUTTON",
+             "bindings": [{"device": "KEYBOARD", "control": "e"},
+                          {"device": "GAMEPAD", "control": "button", "index": 2}]},
+            {"name": "Sprint", "type": "BUTTON", "controlType": "BUTTON",
+             "bindings": [{"device": "KEYBOARD", "control": "shift"},
+                          {"device": "GAMEPAD", "control": "button", "index": 10}]},
+            {"name": "Crouch", "type": "BUTTON", "controlType": "BUTTON",
+             "bindings": [{"device": "KEYBOARD", "control": "c"},
+                          {"device": "GAMEPAD", "control": "button", "index": 1}]},
+        ],
+    }],
+}
+
+DEFAULT_INPUT_MAP_NAME = "Player"
