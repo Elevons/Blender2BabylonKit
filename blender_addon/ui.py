@@ -145,7 +145,7 @@ def _draw_component(layout, obj, index, comp):
         body.prop(comp, "con_type")
         body.prop(comp, "con_target")
         body.prop(comp, "con_pivot")
-        if comp.con_type in {'HINGE', 'SLIDER', 'SPRING'}:
+        if comp.con_type in {'HINGE', 'SLIDER', 'SPRING', 'CUSTOM'}:
             body.prop(comp, "con_axis")
         body.prop(comp, "con_collision")
 
@@ -166,6 +166,25 @@ def _draw_component(layout, obj, index, comp):
             row.prop(comp, "con_max")
             body.prop(comp, "con_stiffness")
             body.prop(comp, "con_damping")
+
+        if comp.con_type == 'CUSTOM':
+            from .properties import ensure_custom_constraint_axes, CONSTRAINT_DOF_LABELS
+            ensure_custom_constraint_axes(comp)
+            box = body.box()
+            box.label(text="6DoF Axes (frame X = Axis above)", icon='CONSTRAINT')
+            for row_data in comp.con_custom_axes:
+                row_box = box.box()
+                header = row_box.row(align=True)
+                header.label(text=CONSTRAINT_DOF_LABELS.get(row_data.dof_axis, row_data.dof_axis))
+                header.prop(row_data, "mode", text="")
+                if row_data.mode in {'LIMITED', 'SPRING'}:
+                    lim = row_box.row(align=True)
+                    lim.prop(row_data, "min_limit", text="Min")
+                    lim.prop(row_data, "max_limit", text="Max")
+                if row_data.mode == 'SPRING':
+                    spring = row_box.row(align=True)
+                    spring.prop(row_data, "stiffness")
+                    spring.prop(row_data, "damping")
 
     elif comp.comp_type == 'SCRIPT':
         pick_row = body.row(align=True)

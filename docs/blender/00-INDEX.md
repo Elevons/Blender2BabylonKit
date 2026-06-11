@@ -29,6 +29,8 @@ Link** · **Collider preview**.
 
 ## Regenerating
 
-`npm run docs:blender` re-extracts every trace's source from `blender_addon/`.
-A renamed/deleted function fails the build loudly — the anti-rot guard. (The
-runtime packet is `npm run docs:trace`.)
+`npm run docs:build` regenerates both packets from the shared shell template
+(`docs/_template/diagram-shell.html`). `npm run docs:blender` rebuilds only
+this folder; it re-extracts every trace's source from `blender_addon/`. A
+renamed/deleted function fails the build loudly — the anti-rot guard. (The
+runtime packet alone is `npm run docs:trace`.)

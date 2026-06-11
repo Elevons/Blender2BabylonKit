@@ -1,68 +1,31 @@
 #!/usr/bin/env node
 /**
- * Build the Blender-add-on documentation packet (HTML diagram + trace pages),
- * the editor-side parallel to the engine packet:
+ * Build docs/blender/ — area diagrams + code-trace pages.
  *
- *   npm run docs:blender     (or: node scripts/build-blender-docs.mjs)
+ *   npm run docs:blender   (or: node scripts/build-blender-docs.mjs)
  *
- * Area pages are hand-authored node graphs; trace pages embed the ACTUAL
- * current Python source of each step, extracted at build time. A renamed or
- * deleted symbol fails the build loudly (the anti-rot guard). Output lands in
- * docs/blender/ alongside a copy of the viewer shell.
+ * All HTML is generated from docs/_template/diagram-shell.html.
  */
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ReadShell,
+  EmitDiagramPage,
+  BuildBlenderNav,
+  LAYOUT_PATCH_BLENDER,
+  CODE_PANEL_PATCH_BLENDER,
+  LayoutSteps,
+  ExtractPySymbol,
+  N,
+  E,
+} from "./docs/shared.mjs";
 
-const ROOT = path.resolve(fileURLToPath(import.meta.url), "../..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, "docs", "blender");
-const SHELL = fs.readFileSync(path.join(ROOT, "docs", "engine", "index.html"), "utf8");
-
-// ---------------------------------------------------------------------------
-// Python symbol extraction (def / class, captured until dedent; comments kept).
-// ---------------------------------------------------------------------------
-
-function ExtractPy(relativePath, symbol)
-{
-  const lines = fs.readFileSync(path.join(ROOT, relativePath), "utf8").split("\n");
-  const declaration = new RegExp(`^(\\s*)(def|class) ${symbol}\\b`);
-
-  for (let index = 0; index < lines.length; index++)
-  {
-    const match = lines[index].match(declaration);
-    if (match === null) { continue; }
-    const indent = match[1].length;
-
-    let end = index + 1;
-    while (end < lines.length)
-    {
-      const line = lines[end];
-      const blank = line.trim().length === 0;
-      const lineIndent = line.length - line.trimStart().length;
-      if (!blank && lineIndent <= indent) { break; }
-      end++;
-    }
-    while (end > index + 1 && lines[end - 1].trim().length === 0) { end--; }
-    return { start: index + 1, code: lines.slice(index, end).join("\n") };
-  }
-
-  console.error(`MISSING: ${symbol} in ${relativePath}`);
-  process.exitCode = 1;
-  return { start: 0, code: `# symbol "${symbol}" not found — regenerate after fixing` };
-}
 
 // ---------------------------------------------------------------------------
 // Area diagrams (hand-authored node graphs of the add-on's structure).
 // ---------------------------------------------------------------------------
-
-function N(id, x, y, label, sub, desc, meta, w = 160, h = 44)
-{
-  return { id, x, y, w, h, label, sub, desc, meta };
-}
-function E(id, src, tgt, label = "")
-{
-  return { id, src, tgt, label };
-}
 
 const AREA_PAGES = {
   "index.html": {
@@ -126,7 +89,7 @@ const AREA_PAGES = {
 };
 
 // ---------------------------------------------------------------------------
-// Trace chains (each step: real Python symbol → embedded source).
+// Trace chains.
 // ---------------------------------------------------------------------------
 
 const TRACES = [
@@ -172,7 +135,7 @@ const TRACES = [
       { file: "blender_addon/validate.py", symbol: "validate_scene", note: "The entry: iterate objects, run every per-object check, collect warnings, plus scene-wide checks (duplicate GUIDs, active camera)." },
       { file: "blender_addon/validate.py", symbol: "_check_physics", note: "Example check: a MESH-shaped collider can't be a DYNAMIC body in Havok — warn before it silently fails at runtime." },
       { file: "blender_addon/validate.py", symbol: "_check_skinned_meshes", note: "The skinned-mesh trap: components/animation on a skinned mesh do nothing (its node transform is ignored; clips target the armature's joints). Warn to move them to the armature." },
-      { file: "blender_addon/validate.py", symbol: "_check_constraints", note: "A joint needs a physics body on BOTH ends or it won't exist at runtime — warn if either is missing." },
+      { file: "blender_addon/validate.py", symbol: "_check_constraints", note: "A joint needs a physics body on BOTH ends or it won't exist at runtime — warn if either is missing. CUSTOM: six axis rows expected; min ≤ max on limited/spring rows." },
     ],
   },
   {
@@ -208,160 +171,72 @@ const TRACES = [
 ];
 
 // ---------------------------------------------------------------------------
-// Shared page assembly (nav, code-panel patch, layout) — mirrors the engine set.
-// ---------------------------------------------------------------------------
-
-const AREA_NAV = Object.entries(AREA_PAGES).map(([file, page]) => [file, page.title.split(" ")[0] === "Add-on" ? "Overview" : page.title]);
-const TRACE_NAV = TRACES.map((trace) => [`trace-${trace.id}.html`, trace.title.split(":")[0]]);
-
-function RemoveNav(html)
-{
-  const marker = '<div style="position:fixed;bottom:10px;';
-  const start = html.indexOf(marker);
-  if (start === -1) { return html; }
-  let depth = 0;
-  let index = start;
-  while (index < html.length)
-  {
-    if (html.startsWith("<div", index)) { depth++; index += 4; continue; }
-    if (html.startsWith("</div>", index))
-    {
-      depth--; index += 6;
-      if (depth === 0) { return html.slice(0, start) + html.slice(index); }
-      continue;
-    }
-    index++;
-  }
-  return html;
-}
-
-function BuildNav(currentFile)
-{
-  const link = ([file, label]) => file === currentFile
-    ? `<span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`
-    : `<a href="${file}" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">${label}</a>`;
-  return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
-    + 'background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;'
-    + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;">'
-    + '<span style="color:#967a52;padding:2px 6px;">Blender:</span>' + AREA_NAV.map(link).join("")
-    + '<a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div>'
-    + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;">'
-    + '<span style="color:#967a52;padding:2px 6px;">Traces:</span>' + TRACE_NAV.map(link).join("") + '</div></div>';
-}
-
-const LAYOUT_PATCH = `
-<style>
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>`;
-
-const CODE_PANEL_PATCH = LAYOUT_PATCH + `
-<style>
-  #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
-  .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
-  .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
-</style>
-<script>
-  const __openNodePanel = openNodePanel;
-  openNodePanel = function(n)
-  {
-    __openNodePanel(n);
-    if (!n.code) { return; }
-    const panel = document.getElementById('pi');
-    const loc = document.createElement('div');
-    loc.className = 'trace-loc';
-    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data';
-    const pre = document.createElement('pre');
-    pre.className = 'trace-code';
-    pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
-  };
-</script>`;
-
-function EmitPage(file, title, data, isTrace)
-{
-  const match = SHELL.match(/const DIAGRAM_DATA = \{[\s\S]*?\};/);
-  let page = SHELL.slice(0, match.index)
-    + "const DIAGRAM_DATA = " + JSON.stringify(data) + ";"
-    + SHELL.slice(match.index + match[0].length);
-  page = page.replace(/<title>.*?<\/title>/, `<title>Blender — ${title}</title>`);
-  page = RemoveNav(page);
-  page = page.replace("<body>", "<body>" + BuildNav(file));
-  page = page.replace("</body>", isTrace ? CODE_PANEL_PATCH + "</body>" : LAYOUT_PATCH + "</body>");
-  fs.writeFileSync(path.join(OUT_DIR, file), page);
-}
-
-function LayoutSteps(count)
-{
-  const PER_ROW = 3, GAP_X = 260, GAP_Y = 150;
-  return Array.from({ length: count }, (_, i) =>
-  {
-    const row = Math.floor(i / PER_ROW), col = i % PER_ROW;
-    return { x: 40 + (row % 2 === 0 ? col : PER_ROW - 1 - col) * GAP_X, y: 40 + row * GAP_Y, w: 190, h: 56 };
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Build.
 // ---------------------------------------------------------------------------
 
-fs.mkdirSync(OUT_DIR, { recursive: true });
-
-for (const [file, page] of Object.entries(AREA_PAGES))
+export function BuildBlenderDocs()
 {
-  EmitPage(file, page.title, { title: "Blender — " + page.title, nodes: page.nodes, edges: page.edges }, false);
-}
+  const shell = ReadShell();
+  const areaNav = Object.entries(AREA_PAGES).map(([file, page]) => [
+    file,
+    page.title.split(" ")[0] === "Add-on" ? "Overview" : page.title,
+  ]);
+  const traceNav = TRACES.map((trace) => [`trace-${trace.id}.html`, trace.title.split(":")[0]]);
 
-for (const trace of TRACES)
-{
-  for (const step of trace.steps)
+  for (const [file, page] of Object.entries(AREA_PAGES))
   {
-    const { start, code } = ExtractPy(step.file, step.symbol);
-    step.code = code; step.line = start;
+    EmitDiagramPage({
+      shell,
+      outPath: path.join(OUT_DIR, file),
+      pageTitle: `Blender — ${page.title}`,
+      diagramData: { title: "Blender — " + page.title, nodes: page.nodes, edges: page.edges },
+      navHtml: BuildBlenderNav(file, areaNav, traceNav),
+      bodyPatch: LAYOUT_PATCH_BLENDER,
+    });
   }
-}
-if (process.exitCode === 1)
-{
-  console.error("Extraction failures above — Blender trace pages NOT written.");
-  process.exit(1);
+
+  for (const trace of TRACES)
+  {
+    for (const step of trace.steps)
+    {
+      const { start, code } = ExtractPySymbol(step.file, step.symbol);
+      step.code = code; step.line = start;
+    }
+  }
+  if (process.exitCode === 1)
+  {
+    console.error("Extraction failures above — Blender trace pages NOT written.");
+    process.exit(1);
+  }
+
+  for (const trace of TRACES)
+  {
+    const pos = LayoutSteps(trace.steps.length);
+    const nodes = trace.steps.map((step, i) => ({
+      id: i + 1, ...pos[i],
+      label: `${i + 1}. ${step.symbol}`,
+      sub: step.file.split("/").pop(),
+      desc: step.note,
+      meta: [["File", step.file], ["Line", String(step.line)]],
+      code: step.code, file: step.file, line: step.line,
+    }));
+    const edges = trace.steps.slice(1).map((_, i) => ({ id: 100 + i, src: i + 1, tgt: i + 2, label: "" }));
+    const outFile = `trace-${trace.id}.html`;
+    EmitDiagramPage({
+      shell,
+      outPath: path.join(OUT_DIR, outFile),
+      pageTitle: `Blender — ${trace.title}`,
+      diagramData: { title: "Trace — " + trace.title, nodes, edges },
+      navHtml: BuildBlenderNav(outFile, areaNav, traceNav),
+      bodyPatch: CODE_PANEL_PATCH_BLENDER,
+    });
+  }
+
+  const total = TRACES.reduce((sum, t) => sum + t.steps.length, 0);
+  console.log(`Blender docs: ${Object.keys(AREA_PAGES).length} area pages, ${TRACES.length} trace pages (${total} steps) → docs/blender/`);
 }
 
-for (const trace of TRACES)
+if (import.meta.url === new URL(process.argv[1], "file:").href)
 {
-  const pos = LayoutSteps(trace.steps.length);
-  const nodes = trace.steps.map((step, i) => ({
-    id: i + 1, ...pos[i],
-    label: `${i + 1}. ${step.symbol}`,
-    sub: step.file.split("/").pop(),
-    desc: step.note,
-    meta: [["File", step.file], ["Line", String(step.line)]],
-    code: step.code, file: step.file, line: step.line,
-  }));
-  const edges = trace.steps.slice(1).map((_, i) => ({ id: 100 + i, src: i + 1, tgt: i + 2, label: "" }));
-  EmitPage(`trace-${trace.id}.html`, trace.title, { title: "Trace — " + trace.title, nodes, edges }, true);
+  BuildBlenderDocs();
 }
-
-const total = TRACES.reduce((sum, t) => sum + t.steps.length, 0);
-console.log(`Blender docs: ${Object.keys(AREA_PAGES).length} area pages, ${TRACES.length} trace pages (${total} steps) → docs/blender/`);

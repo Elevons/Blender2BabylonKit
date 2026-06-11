@@ -12,6 +12,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "tsc --noEmit -p packages/engine && tsc --noEmit -p apps/playground",
     "create": "node scripts/create-app.mjs",
+    "docs:build": "node scripts/build-docs.mjs",
     "docs:trace": "node scripts/build-trace-docs.mjs",
     "docs:blender": "node scripts/build-blender-docs.mjs",
     "input:gen": "node scripts/generate-input-constants.mjs"

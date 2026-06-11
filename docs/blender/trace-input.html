@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -301,7 +303,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — Input Actions: panel → manifest","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. BJS_PT_input_map","sub":"input_ui.py","desc":"The Input Actions panel: Scene Default picker, maps/actions/bindings editor, load/save .inputactions.json.","meta":[["File","blender_addon/input_ui.py"],["Line","10"]],"code":"class BJS_PT_input_map(Panel):\n    \"\"\"Scene-level Input Actions (Unity Input System style): Action Maps >\n    Actions > Bindings, edited once. Scripts with @inputMap(\"Name\") get that\n    map; scripts without @inputMap receive the scene Default Map below.\"\"\"\n    bl_label = \"Input Actions\"\n    bl_idname = \"BJS_PT_input_map\"\n    bl_space_type = 'VIEW_3D'\n    bl_region_type = 'UI'\n    bl_category = \"Babylon\"\n    bl_options = {'DEFAULT_CLOSED'}\n\n    def draw(self, context):\n        layout = self.layout\n        scene = context.scene\n\n        if len(scene.bjs_input_maps) == 0:\n            layout.label(text=\"No maps yet — load defaults or add a map\", icon='INFO')\n        row = layout.row(align=True)\n        row.operator(\"bjs.input_save_map\", icon='FILE_TICK')\n        row.operator(\"bjs.input_load_map\", icon='FILEBROWSER')\n        row = layout.row(align=True)\n        row.operator(\"bjs.input_load_defaults\", icon='IMPORT')\n        row.operator(\"bjs.input_sync_scripts\", icon='FILE_SCRIPT')\n\n        self._draw_default_map(layout, scene)\n        self._draw_maps(layout, scene)\n\n        active_map = None\n        if 0 <= scene.bjs_input_map_active < len(scene.bjs_input_maps):\n            active_map = scene.bjs_input_maps[scene.bjs_input_map_active]\n        if active_map is None:\n            return\n\n        self._draw_actions(layout, active_map)\n\n        if 0 <= active_map.active_action < len(active_map.actions):\n            self._draw_bindings(layout, active_map.actions[active_map.active_action])\n\n    def _draw_default_map(self, layout, scene):\n        \"\"\"The map scripts receive when they have no @inputMap decorator.\"\"\"\n        box = layout.box()\n        box.label(text=\"Scene Default\", icon='EVENT_A')\n        box.label(text=\"Injected when a script has no @inputMap\", icon='INFO')\n        if len(scene.bjs_input_maps) == 0:\n            return\n\n        row = box.row(align=True)\n        for m in scene.bjs_input_maps:\n            op = row.operator(\n                \"bjs.input_set_default_map\",\n                text=m.name,\n                depress=(scene.bjs_input_default_map == m.name),\n            )\n            op.map_name = m.name\n\n    def _draw_maps(self, layout, scene):\n        \"\"\"The Action Maps list (\"Player\", \"UI\", ...): the enable/disable unit.\"\"\"\n        box = layout.box()\n        header = box.row()\n        header.label(text=\"Action Maps\", icon='OUTLINER_COLLECTION')\n        add = header.operator(\"bjs.input_map_edit\", text=\"\", icon='ADD')\n        add.action = \"add\"\n        box.template_list(\"UI_UL_list\", \"bjs_input_maps\", scene, \"bjs_input_maps\",\n                          scene, \"bjs_input_map_active\", rows=2)\n        if 0 <= scene.bjs_input_map_active < len(scene.bjs_input_maps):\n            row = box.row(align=True)\n            row.prop(scene.bjs_input_maps[scene.bjs_input_map_active], \"name\", text=\"Map\")\n            rem = row.operator(\"bjs.input_map_edit\", text=\"\", icon='X')\n            rem.action, rem.index = \"remove\", scene.bjs_input_map_active\n\n    def _draw_actions(self, layout, active_map):\n        \"\"\"The selected map's actions (\"Jump\", \"Move\") with type settings.\"\"\"\n        box = layout.box()\n        header = box.row()\n        header.label(text=f\"Actions — {active_map.name}\", icon='EVENT_A')\n        add = header.operator(\"bjs.input_action_edit\", text=\"\", icon='ADD')\n        add.action = \"add\"\n        box.template_list(\"UI_UL_list\", \"bjs_input_actions\", active_map, \"actions\",\n                          active_map, \"active_action\", rows=3)\n        if 0 <= active_map.active_action < len(active_map.actions):\n            action = active_map.actions[active_map.active_action]\n            row = box.row(align=True)\n            row.prop(action, \"name\", text=\"Action\")\n            rem = row.operator(\"bjs.input_action_edit\", text=\"\", icon='X')\n            rem.action, rem.index = \"remove\", active_map.active_action\n            row = box.row(align=True)\n            row.prop(action, \"action_type\", text=\"\")\n            row.prop(action, \"control_type\", text=\"\")\n\n    def _draw_bindings(self, layout, action):\n        \"\"\"The selected action's bindings; composite parts indent under their\n        header row (Unity's serialized composite layout).\"\"\"\n        box = layout.box()\n        box.label(text=f\"Bindings — {action.name}\", icon='LINKED')\n        add_row = box.row(align=True)\n        for kind, label in ((\"DIRECT\", \"+ Binding\"),\n                            (\"1DAXIS\", \"+ 1D Axis\"),\n                            (\"2DVECTOR\", \"+ 2D Vector\")):\n            add = add_row.operator(\"bjs.input_binding_edit\", text=label)\n            add.action, add.kind = \"add\", kind\n\n        if len(action.bindings) == 0:\n            box.label(text=\"No bindings — this action never fires\", icon='ERROR')\n\n        for i, binding in enumerate(action.bindings):\n            if binding.composite != 'NONE':\n                row = box.row(align=True)\n                label = \"1D Axis\" if binding.composite == '1DAXIS' else \"2D Vector\"\n                row.label(text=label, icon='CON_TRANSFORM')\n                rem = row.operator(\"bjs.input_binding_edit\", text=\"\", icon='X')\n                rem.action, rem.index = \"remove\", i\n                continue\n\n            row = box.row(align=True)\n            if binding.part != 'NONE':\n                row.separator(factor=1.5)\n                row.label(text=binding.part.capitalize())\n            row.prop(binding, \"device\", text=\"\")\n            if binding.device == 'KEYBOARD':\n                row.prop(binding, \"key\", text=\"\")\n                cap = row.operator(\"bjs.input_capture_key\", text=\"\", icon='REC')\n                cap.binding_index = i\n            else:\n                row.prop(binding, \"gp_control\", text=\"\")\n                row.prop(binding, \"index\", text=\"\")\n                row.prop(binding, \"scale\", text=\"\")\n            if binding.part == 'NONE':\n                rem = row.operator(\"bjs.input_binding_edit\", text=\"\", icon='X')\n                rem.action, rem.index = \"remove\", i","file":"blender_addon/input_ui.py","line":10},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _serialize_input_asset","sub":"scene_export.py","desc":"Maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty).","meta":[["File","blender_addon/scene_export.py"],["Line","133"]],"code":"def _serialize_input_asset(scene):\n    \"\"\"The scene's Input Actions asset (maps > actions > bindings) -> manifest\n    data. When the panel is empty, the built-in default asset is serialized so\n    the runtime always receives the scene-level input set.\"\"\"\n    from .input_defaults import DEFAULT_INPUT_ASSET\n\n    if len(scene.bjs_input_maps) == 0:\n        return DEFAULT_INPUT_ASSET\n\n    return {\n        \"maps\": [{\n            \"name\": m.name,\n            \"actions\": [{\n                \"name\": a.name,\n                \"type\": a.action_type,\n                \"controlType\": a.control_type,\n                \"bindings\": _serialize_bindings(a),\n            } for a in m.actions],\n        } for m in scene.bjs_input_maps],\n    }","file":"blender_addon/scene_export.py","line":133},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. serialize_scene","sub":"scene_export.py","desc":"Writes scene.defaultInputMap alongside inputActions — the map scripts without @inputMap receive on behavior.input.","meta":[["File","blender_addon/scene_export.py"],["Line","155"]],"code":"def serialize_scene(context, output_dir):\n    s = context.scene.bjs_scene\n    data = {\n        \"clearColor\": _round3(s.clear_color) + [1.0],\n        \"ambientColor\": _round3(s.ambient_color),\n        \"environment\": _serialize_environment(context, output_dir),\n        \"fog\": None,\n        \"postProcessing\": None,\n    }\n\n    if s.use_fog:\n        data[\"fog\"] = {\n            \"mode\": s.fog_mode, \"color\": _round3(s.fog_color),\n            \"density\": s.fog_density, \"start\": s.fog_start, \"end\": s.fog_end,\n        }\n\n    if s.use_pipeline:\n        data[\"postProcessing\"] = {\n            \"defaultPipeline\": True,\n            \"fxaa\": s.use_fxaa,\n            \"bloom\": {\"enabled\": s.use_bloom,\n                      \"threshold\": s.bloom_threshold,\n                      \"intensity\": s.bloom_intensity},\n            \"ssao\": s.use_ssao,\n            \"toneMapping\": s.use_tone_mapping,\n            \"exposure\": s.exposure,\n            \"contrast\": s.contrast,\n        }\n    data[\"inputActions\"] = _serialize_input_asset(context.scene)\n    data[\"defaultInputMap\"] = context.scene.bjs_input_default_map\n\n    return data","file":"blender_addon/scene_export.py","line":155},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. _check_input_map","sub":"validate.py","desc":"Duplicate map/action names, actions without bindings, @inputMap refs without a matching map, and a Scene Default that doesn't exist.","meta":[["File","blender_addon/validate.py"],["Line","163"]],"code":"def _check_input_map(scene, warnings):\n    \"\"\"Input Actions sanity: duplicate map names, duplicate action names\n    within a map, actions with no bindings, and @inputMap(\"Name\") references\n    in scripts that have no matching Action Map.\"\"\"\n    from . import script_parse\n\n    seen_maps = set()\n    for m in scene.bjs_input_maps:\n        if m.name in seen_maps:\n            warnings.append(f\"Input Actions: duplicate map name '{m.name}'\")\n        seen_maps.add(m.name)\n\n        seen_actions = set()\n        for action in m.actions:\n            if action.name in seen_actions:\n                warnings.append(\n                    f\"Input Actions: duplicate action name '{action.name}' in map '{m.name}'\")\n            seen_actions.add(action.name)\n            if len(action.bindings) == 0:\n                warnings.append(\n                    f\"Input Actions: action '{m.name}/{action.name}' has no bindings\")\n\n    from .input_defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME\n\n    # An empty panel exports the built-in default asset (\"Player\" map).\n    if len(scene.bjs_input_maps) == 0:\n        seen_maps = {m[\"name\"] for m in DEFAULT_INPUT_ASSET.get(\"maps\", [])}\n    default_map = scene.bjs_input_default_map or DEFAULT_INPUT_MAP_NAME\n    if default_map not in seen_maps:\n        warnings.append(\n            f\"Input Actions: default map '{default_map}' does not exist \"\n            f\"(set Scene Default in the Input Actions panel)\")\n\n    reported = set()\n    for obj in scene.objects:\n        for comp in obj.bjs_components:\n            if comp.comp_type != 'SCRIPT' or not comp.script_path:\n                continue\n            path = bpy.path.abspath(comp.script_path)\n            for ref in script_parse.parse_input_maps(path):\n                name = ref[\"map\"]\n                if name and name not in seen_maps and name not in reported:\n                    reported.add(name)\n                    warnings.append(\n                        f\"{obj.name}: script '{comp.script_name}' uses @inputMap(\\\"{name}\\\") \"\n                        f\"but no Action Map with that name exists (Input Actions panel \"\n                        f\"> Create Maps Used by Scripts)\")","file":"blender_addon/validate.py","line":163},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. parse_input_maps","sub":"script_parse.py","desc":"Regex-scans behavior sources for @inputMap(\"Name\") so Sync / validate can create and check map references.","meta":[["File","blender_addon/script_parse.py"],["Line","168"]],"code":"def parse_input_maps(filepath):\n    \"\"\"Return a list of dicts {map, field} for each @inputMap(\"Name\") found in\n    a behavior source file. Used by the Input Actions panel to validate map\n    references and create maps that scripts ask for.\"\"\"\n    if not filepath or not os.path.isfile(filepath):\n        return []\n    try:\n        with open(filepath, \"r\", encoding=\"utf-8\") as f:\n            src = f.read()\n    except OSError:\n        return []\n\n    return [{\"map\": m.group(1), \"field\": m.group(2) or \"\"}\n            for m in _INPUT_MAP.finditer(src)]","file":"blender_addon/script_parse.py","line":168}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — Input Actions: panel → manifest","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. BJS_PT_input_map","sub":"input_ui.py","desc":"The Input Actions panel: Scene Default picker, maps/actions/bindings editor, load/save .inputactions.json.","meta":[["File","blender_addon/input_ui.py"],["Line","10"]],"code":"class BJS_PT_input_map(Panel):\n    \"\"\"Scene-level Input Actions (Unity Input System style): Action Maps >\n    Actions > Bindings, edited once. Scripts with @inputMap(\"Name\") get that\n    map; scripts without @inputMap receive the scene Default Map below.\"\"\"\n    bl_label = \"Input Actions\"\n    bl_idname = \"BJS_PT_input_map\"\n    bl_space_type = 'VIEW_3D'\n    bl_region_type = 'UI'\n    bl_category = \"Babylon\"\n    bl_options = {'DEFAULT_CLOSED'}\n\n    def draw(self, context):\n        layout = self.layout\n        scene = context.scene\n\n        if len(scene.bjs_input_maps) == 0:\n            layout.label(text=\"No maps yet — load defaults or add a map\", icon='INFO')\n        row = layout.row(align=True)\n        row.operator(\"bjs.input_save_map\", icon='FILE_TICK')\n        row.operator(\"bjs.input_load_map\", icon='FILEBROWSER')\n        row = layout.row(align=True)\n        row.operator(\"bjs.input_load_defaults\", icon='IMPORT')\n        row.operator(\"bjs.input_sync_scripts\", icon='FILE_SCRIPT')\n\n        self._draw_default_map(layout, scene)\n        self._draw_maps(layout, scene)\n\n        active_map = None\n        if 0 <= scene.bjs_input_map_active < len(scene.bjs_input_maps):\n            active_map = scene.bjs_input_maps[scene.bjs_input_map_active]\n        if active_map is None:\n            return\n\n        self._draw_actions(layout, active_map)\n\n        if 0 <= active_map.active_action < len(active_map.actions):\n            self._draw_bindings(layout, active_map.actions[active_map.active_action])\n\n    def _draw_default_map(self, layout, scene):\n        \"\"\"The map scripts receive when they have no @inputMap decorator.\"\"\"\n        box = layout.box()\n        box.label(text=\"Scene Default\", icon='EVENT_A')\n        box.label(text=\"Injected when a script has no @inputMap\", icon='INFO')\n        if len(scene.bjs_input_maps) == 0:\n            return\n\n        row = box.row(align=True)\n        for m in scene.bjs_input_maps:\n            op = row.operator(\n                \"bjs.input_set_default_map\",\n                text=m.name,\n                depress=(scene.bjs_input_default_map == m.name),\n            )\n            op.map_name = m.name\n\n    def _draw_maps(self, layout, scene):\n        \"\"\"The Action Maps list (\"Player\", \"UI\", ...): the enable/disable unit.\"\"\"\n        box = layout.box()\n        header = box.row()\n        header.label(text=\"Action Maps\", icon='OUTLINER_COLLECTION')\n        add = header.operator(\"bjs.input_map_edit\", text=\"\", icon='ADD')\n        add.action = \"add\"\n        box.template_list(\"UI_UL_list\", \"bjs_input_maps\", scene, \"bjs_input_maps\",\n                          scene, \"bjs_input_map_active\", rows=2)\n        if 0 <= scene.bjs_input_map_active < len(scene.bjs_input_maps):\n            row = box.row(align=True)\n            row.prop(scene.bjs_input_maps[scene.bjs_input_map_active], \"name\", text=\"Map\")\n            rem = row.operator(\"bjs.input_map_edit\", text=\"\", icon='X')\n            rem.action, rem.index = \"remove\", scene.bjs_input_map_active\n\n    def _draw_actions(self, layout, active_map):\n        \"\"\"The selected map's actions (\"Jump\", \"Move\") with type settings.\"\"\"\n        box = layout.box()\n        header = box.row()\n        header.label(text=f\"Actions — {active_map.name}\", icon='EVENT_A')\n        add = header.operator(\"bjs.input_action_edit\", text=\"\", icon='ADD')\n        add.action = \"add\"\n        box.template_list(\"UI_UL_list\", \"bjs_input_actions\", active_map, \"actions\",\n                          active_map, \"active_action\", rows=3)\n        if 0 <= active_map.active_action < len(active_map.actions):\n            action = active_map.actions[active_map.active_action]\n            row = box.row(align=True)\n            row.prop(action, \"name\", text=\"Action\")\n            rem = row.operator(\"bjs.input_action_edit\", text=\"\", icon='X')\n            rem.action, rem.index = \"remove\", active_map.active_action\n            row = box.row(align=True)\n            row.prop(action, \"action_type\", text=\"\")\n            row.prop(action, \"control_type\", text=\"\")\n\n    def _draw_bindings(self, layout, action):\n        \"\"\"The selected action's bindings; composite parts indent under their\n        header row (Unity's serialized composite layout).\"\"\"\n        box = layout.box()\n        box.label(text=f\"Bindings — {action.name}\", icon='LINKED')\n        add_row = box.row(align=True)\n        for kind, label in ((\"DIRECT\", \"+ Binding\"),\n                            (\"1DAXIS\", \"+ 1D Axis\"),\n                            (\"2DVECTOR\", \"+ 2D Vector\")):\n            add = add_row.operator(\"bjs.input_binding_edit\", text=label)\n            add.action, add.kind = \"add\", kind\n\n        if len(action.bindings) == 0:\n            box.label(text=\"No bindings — this action never fires\", icon='ERROR')\n\n        for i, binding in enumerate(action.bindings):\n            if binding.composite != 'NONE':\n                row = box.row(align=True)\n                label = \"1D Axis\" if binding.composite == '1DAXIS' else \"2D Vector\"\n                row.label(text=label, icon='CON_TRANSFORM')\n                rem = row.operator(\"bjs.input_binding_edit\", text=\"\", icon='X')\n                rem.action, rem.index = \"remove\", i\n                continue\n\n            row = box.row(align=True)\n            if binding.part != 'NONE':\n                row.separator(factor=1.5)\n                row.label(text=binding.part.capitalize())\n            row.prop(binding, \"device\", text=\"\")\n            if binding.device == 'KEYBOARD':\n                row.prop(binding, \"key\", text=\"\")\n                cap = row.operator(\"bjs.input_capture_key\", text=\"\", icon='REC')\n                cap.binding_index = i\n            else:\n                row.prop(binding, \"gp_control\", text=\"\")\n                row.prop(binding, \"index\", text=\"\")\n                row.prop(binding, \"scale\", text=\"\")\n            if binding.part == 'NONE':\n                rem = row.operator(\"bjs.input_binding_edit\", text=\"\", icon='X')\n                rem.action, rem.index = \"remove\", i","file":"blender_addon/input_ui.py","line":10},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _serialize_input_asset","sub":"scene_export.py","desc":"Maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty).","meta":[["File","blender_addon/scene_export.py"],["Line","133"]],"code":"def _serialize_input_asset(scene):\n    \"\"\"The scene's Input Actions asset (maps > actions > bindings) -> manifest\n    data. When the panel is empty, the built-in default asset is serialized so\n    the runtime always receives the scene-level input set.\"\"\"\n    from .input_defaults import DEFAULT_INPUT_ASSET\n\n    if len(scene.bjs_input_maps) == 0:\n        return DEFAULT_INPUT_ASSET\n\n    return {\n        \"maps\": [{\n            \"name\": m.name,\n            \"actions\": [{\n                \"name\": a.name,\n                \"type\": a.action_type,\n                \"controlType\": a.control_type,\n                \"bindings\": _serialize_bindings(a),\n            } for a in m.actions],\n        } for m in scene.bjs_input_maps],\n    }","file":"blender_addon/scene_export.py","line":133},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. serialize_scene","sub":"scene_export.py","desc":"Writes scene.defaultInputMap alongside inputActions — the map scripts without @inputMap receive on behavior.input.","meta":[["File","blender_addon/scene_export.py"],["Line","155"]],"code":"def serialize_scene(context, output_dir):\n    s = context.scene.bjs_scene\n    data = {\n        \"clearColor\": _round3(s.clear_color) + [1.0],\n        \"ambientColor\": _round3(s.ambient_color),\n        \"environment\": _serialize_environment(context, output_dir),\n        \"fog\": None,\n        \"postProcessing\": None,\n    }\n\n    if s.use_fog:\n        data[\"fog\"] = {\n            \"mode\": s.fog_mode, \"color\": _round3(s.fog_color),\n            \"density\": s.fog_density, \"start\": s.fog_start, \"end\": s.fog_end,\n        }\n\n    if s.use_pipeline:\n        data[\"postProcessing\"] = {\n            \"defaultPipeline\": True,\n            \"fxaa\": s.use_fxaa,\n            \"bloom\": {\"enabled\": s.use_bloom,\n                      \"threshold\": s.bloom_threshold,\n                      \"intensity\": s.bloom_intensity},\n            \"ssao\": s.use_ssao,\n            \"toneMapping\": s.use_tone_mapping,\n            \"exposure\": s.exposure,\n            \"contrast\": s.contrast,\n        }\n    data[\"inputActions\"] = _serialize_input_asset(context.scene)\n    data[\"defaultInputMap\"] = context.scene.bjs_input_default_map\n\n    return data","file":"blender_addon/scene_export.py","line":155},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. _check_input_map","sub":"validate.py","desc":"Duplicate map/action names, actions without bindings, @inputMap refs without a matching map, and a Scene Default that doesn't exist.","meta":[["File","blender_addon/validate.py"],["Line","174"]],"code":"def _check_input_map(scene, warnings):\n    \"\"\"Input Actions sanity: duplicate map names, duplicate action names\n    within a map, actions with no bindings, and @inputMap(\"Name\") references\n    in scripts that have no matching Action Map.\"\"\"\n    from . import script_parse\n\n    seen_maps = set()\n    for m in scene.bjs_input_maps:\n        if m.name in seen_maps:\n            warnings.append(f\"Input Actions: duplicate map name '{m.name}'\")\n        seen_maps.add(m.name)\n\n        seen_actions = set()\n        for action in m.actions:\n            if action.name in seen_actions:\n                warnings.append(\n                    f\"Input Actions: duplicate action name '{action.name}' in map '{m.name}'\")\n            seen_actions.add(action.name)\n            if len(action.bindings) == 0:\n                warnings.append(\n                    f\"Input Actions: action '{m.name}/{action.name}' has no bindings\")\n\n    from .input_defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME\n\n    # An empty panel exports the built-in default asset (\"Player\" map).\n    if len(scene.bjs_input_maps) == 0:\n        seen_maps = {m[\"name\"] for m in DEFAULT_INPUT_ASSET.get(\"maps\", [])}\n    default_map = scene.bjs_input_default_map or DEFAULT_INPUT_MAP_NAME\n    if default_map not in seen_maps:\n        warnings.append(\n            f\"Input Actions: default map '{default_map}' does not exist \"\n            f\"(set Scene Default in the Input Actions panel)\")\n\n    reported = set()\n    for obj in scene.objects:\n        for comp in obj.bjs_components:\n            if comp.comp_type != 'SCRIPT' or not comp.script_path:\n                continue\n            path = bpy.path.abspath(comp.script_path)\n            for ref in script_parse.parse_input_maps(path):\n                name = ref[\"map\"]\n                if name and name not in seen_maps and name not in reported:\n                    reported.add(name)\n                    warnings.append(\n                        f\"{obj.name}: script '{comp.script_name}' uses @inputMap(\\\"{name}\\\") \"\n                        f\"but no Action Map with that name exists (Input Actions panel \"\n                        f\"> Create Maps Used by Scripts)\")","file":"blender_addon/validate.py","line":174},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. parse_input_maps","sub":"script_parse.py","desc":"Regex-scans behavior sources for @inputMap(\"Name\") so Sync / validate can create and check map references.","meta":[["File","blender_addon/script_parse.py"],["Line","168"]],"code":"def parse_input_maps(filepath):\n    \"\"\"Return a list of dicts {map, field} for each @inputMap(\"Name\") found in\n    a behavior source file. Used by the Input Actions panel to validate map\n    references and create maps that scripts ask for.\"\"\"\n    if not filepath or not os.path.isfile(filepath):\n        return []\n    try:\n        with open(filepath, \"r\", encoding=\"utf-8\") as f:\n            src = f.read()\n    except OSError:\n        return []\n\n    return [{\"map\": m.group(1), \"field\": m.group(2) or \"\"}\n            for m in _INPUT_MAP.finditer(src)]","file":"blender_addon/script_parse.py","line":168}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1120,213 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
@@ -1364,7 +1159,7 @@ function exportSelf() {
     const panel = document.getElementById('pi');
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
-    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data';
+    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;

@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -301,7 +303,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title": "Babylon Level Kit \u2014 Rendering", "nodes": [{"id": 1, "x": 40, "y": 80, "w": 150, "h": 40, "label": "Lights", "sub": "subsystems/lights.ts", "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. FindLightForNode walks the parent chain (orientation-correction node in between).", "meta": [["AREA", "unsupported by glTF"], ["No fallback light", "add a lamp"]]}, {"id": 2, "x": 40, "y": 220, "w": 150, "h": 40, "label": "Cameras", "sub": "subsystems/cameras/", "desc": "Mirrors lights: faithful glb FreeCamera + ApplyBlenderCamera (clip, FOV/ortho); exporter flags the active one \u2192 scene.activeCamera. No controls by default (faithful playback).", "meta": [["Fallback", "main.ts ArcRotate only if none shipped"]]}, {"id": 3, "x": 300, "y": 220, "w": 150, "h": 40, "label": "BuildTypedCamera", "sub": "CAMERA component", "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset).", "meta": [["Targets", "resolve in second pass"]]}, {"id": 4, "x": 40, "y": 360, "w": 150, "h": 40, "label": "Shadows", "sub": "subsystems/shadows.ts", "desc": "One ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light: filter (PCF/PCSS/Poisson/BlurESM/hard), bias, normalBias, darkness, mapSize, frustum minZ/maxZ on the light.", "meta": [["Options", "{ shadows?, shadowMapSize? }"], ["Exposed", "level.shadowGenerators"]]}, {"id": 5, "x": 300, "y": 80, "w": 150, "h": 40, "label": "Scene look", "sub": "environment / fog / postprocess", "desc": "From the manifest scene block in FinalizeLevel: clear/ambient color; env texture \u2192 IBL (+skybox; .env best, .exr impossible); fog LINEAR/EXP/EXP2; BuildDefaultPipeline (FXAA/bloom/tone) + separate SSAO2 \u2192 level.post.", "meta": [["Attach", "active camera"]]}, {"id": 6, "x": 560, "y": 180, "w": 150, "h": 40, "label": "Level", "sub": "holds the handles", "desc": "activeCamera, shadowGenerators, post \u2014 all reachable from gameplay code for further tuning.", "meta": [["See", "load-pipeline.html"]]}], "edges": [{"id": 100, "src": 1, "tgt": 4, "label": "casting lamps"}, {"id": 101, "src": 2, "tgt": 3, "label": "override"}, {"id": 102, "src": 1, "tgt": 6, "label": ""}, {"id": 103, "src": 3, "tgt": 6, "label": "activeCamera"}, {"id": 104, "src": 4, "tgt": 6, "label": ""}, {"id": 105, "src": 5, "tgt": 6, "label": "post"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Rendering","nodes":[{"id":1,"x":40,"y":80,"w":150,"h":40,"label":"Lights","sub":"subsystems/lights.ts","desc":"Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. FindLightForNode walks the parent chain (orientation-correction node in between).","meta":[["AREA","unsupported by glTF"],["No fallback light","add a lamp"]]},{"id":2,"x":40,"y":220,"w":150,"h":40,"label":"Cameras","sub":"subsystems/cameras/","desc":"Mirrors lights: faithful glb FreeCamera + ApplyBlenderCamera (clip, FOV/ortho); exporter flags the active one → scene.activeCamera. No controls by default (faithful playback).","meta":[["Fallback","main.ts ArcRotate only if none shipped"]]},{"id":3,"x":300,"y":220,"w":150,"h":40,"label":"BuildTypedCamera","sub":"CAMERA component","desc":"Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset).","meta":[["Targets","resolve in second pass"]]},{"id":4,"x":40,"y":360,"w":150,"h":40,"label":"Shadows","sub":"subsystems/shadows.ts","desc":"One ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light: filter (PCF/PCSS/Poisson/BlurESM/hard), bias, normalBias, darkness, mapSize, frustum minZ/maxZ on the light.","meta":[["Options","{ shadows?, shadowMapSize? }"],["Exposed","level.shadowGenerators"]]},{"id":5,"x":300,"y":80,"w":150,"h":40,"label":"Scene look","sub":"environment / fog / postprocess","desc":"From the manifest scene block in FinalizeLevel: clear/ambient color; env texture → IBL (+skybox; .env best, .exr impossible); fog LINEAR/EXP/EXP2; BuildDefaultPipeline (FXAA/bloom/tone) + separate SSAO2 → level.post.","meta":[["Attach","active camera"]]},{"id":6,"x":560,"y":180,"w":150,"h":40,"label":"Level","sub":"holds the handles","desc":"activeCamera, shadowGenerators, post — all reachable from gameplay code for further tuning.","meta":[["See","load-pipeline.html"]]}],"edges":[{"id":100,"src":1,"tgt":4,"label":"casting lamps"},{"id":101,"src":2,"tgt":3,"label":"override"},{"id":102,"src":1,"tgt":6,"label":""},{"id":103,"src":3,"tgt":6,"label":"activeCamera"},{"id":104,"src":4,"tgt":6,"label":""},{"id":105,"src":5,"tgt":6,"label":"post"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1120,191 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }

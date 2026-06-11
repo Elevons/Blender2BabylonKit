@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -301,7 +303,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — GUID identity: object → entity","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. ensure_object_id","sub":"properties.py","desc":"Stamps obj['bjs_id'] (ID_KEY). Having a GUID is what makes an object an entity; pure geometry without one just rides in the glb.","meta":[["File","blender_addon/properties.py"],["Line","33"]],"code":"def ensure_object_id(obj):\n    \"\"\"Return obj's GUID, generating and storing one if it doesn't have it yet.\"\"\"\n    current = obj.get(ID_KEY)\n    if not current:\n        current = uuid.uuid4().hex\n        obj[ID_KEY] = current\n    return current","file":"blender_addon/properties.py","line":33},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _referenced_ids","sub":"export.py","desc":"Collects GUIDs that MUST exist because something points at them: entity fields, camera/constraint/trigger targets — so references never dangle.","meta":[["File","blender_addon/export.py"],["Line","85"]],"code":"def _referenced_ids(context):\n    \"\"\"GUIDs of objects referenced by any ENTITY exposed var (scalar or list).\"\"\"\n    ids = set()\n    for obj in context.scene.objects:\n        for comp in obj.bjs_components:\n            for ref in _iter_referenced_objects(comp):\n                rid = ref.get(ID_KEY)\n                if rid:\n                    ids.add(rid)\n    return ids","file":"blender_addon/export.py","line":85},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _dedupe_entity_ids","sub":"export.py","desc":"Duplicated objects (Shift+D) inherit the same custom prop; this detects collisions and re-issues fresh GUIDs before export.","meta":[["File","blender_addon/export.py"],["Line","275"]],"code":"def _dedupe_entity_ids(context):\n    \"\"\"Blender object duplication copies custom properties — including our GUID —\n    so a duplicated object shares the original's id. Give each later duplicate a\n    fresh id so it becomes a distinct entity. Runs before ids/refs are resolved.\"\"\"\n    seen = {}\n    for obj in context.scene.objects:\n        oid = obj.get(ID_KEY)\n        if not oid:\n            continue\n        owner = seen.get(oid)\n        if owner is not None and owner is not obj:\n            del obj[ID_KEY]\n            ensure_object_id(obj)      # assign a fresh, unique id\n        else:\n            seen[oid] = obj","file":"blender_addon/export.py","line":275}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — GUID identity: object → entity","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. ensure_object_id","sub":"properties.py","desc":"Stamps obj['bjs_id'] (ID_KEY). Having a GUID is what makes an object an entity; pure geometry without one just rides in the glb.","meta":[["File","blender_addon/properties.py"],["Line","33"]],"code":"def ensure_object_id(obj):\n    \"\"\"Return obj's GUID, generating and storing one if it doesn't have it yet.\"\"\"\n    current = obj.get(ID_KEY)\n    if not current:\n        current = uuid.uuid4().hex\n        obj[ID_KEY] = current\n    return current","file":"blender_addon/properties.py","line":33},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _referenced_ids","sub":"export.py","desc":"Collects GUIDs that MUST exist because something points at them: entity fields, camera/constraint/trigger targets — so references never dangle.","meta":[["File","blender_addon/export.py"],["Line","85"]],"code":"def _referenced_ids(context):\n    \"\"\"GUIDs of objects referenced by any ENTITY exposed var (scalar or list).\"\"\"\n    ids = set()\n    for obj in context.scene.objects:\n        for comp in obj.bjs_components:\n            for ref in _iter_referenced_objects(comp):\n                rid = ref.get(ID_KEY)\n                if rid:\n                    ids.add(rid)\n    return ids","file":"blender_addon/export.py","line":85},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _dedupe_entity_ids","sub":"export.py","desc":"Duplicated objects (Shift+D) inherit the same custom prop; this detects collisions and re-issues fresh GUIDs before export.","meta":[["File","blender_addon/export.py"],["Line","286"]],"code":"def _dedupe_entity_ids(context):\n    \"\"\"Blender object duplication copies custom properties — including our GUID —\n    so a duplicated object shares the original's id. Give each later duplicate a\n    fresh id so it becomes a distinct entity. Runs before ids/refs are resolved.\"\"\"\n    seen = {}\n    for obj in context.scene.objects:\n        oid = obj.get(ID_KEY)\n        if not oid:\n            continue\n        owner = seen.get(oid)\n        if owner is not None and owner is not obj:\n            del obj[ID_KEY]\n            ensure_object_id(obj)      # assign a fresh, unique id\n        else:\n            seen[oid] = obj","file":"blender_addon/export.py","line":286}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1120,213 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
@@ -1364,7 +1159,7 @@ function exportSelf() {
     const panel = document.getElementById('pi');
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
-    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data';
+    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;

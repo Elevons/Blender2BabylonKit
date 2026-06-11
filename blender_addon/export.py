@@ -188,6 +188,7 @@ def _serialize_components(obj, output_dir):
             })
 
         elif c.comp_type == 'CONSTRAINT':
+            from .properties import ensure_custom_constraint_axes
             px, py, pz = c.con_pivot
             d.update({
                 "constraintType": c.con_type,
@@ -204,6 +205,16 @@ def _serialize_components(obj, output_dir):
                 "motorSpeed": c.con_motor_speed,   # deg/s (hinge) / m/s (slider)
                 "motorMaxForce": c.con_motor_force,
             })
+            if c.con_type == 'CUSTOM':
+                ensure_custom_constraint_axes(c)
+                d["axes"] = [{
+                    "axis": ax.dof_axis,
+                    "mode": ax.mode.lower(),
+                    "min": ax.min_limit,
+                    "max": ax.max_limit,
+                    "stiffness": ax.stiffness,
+                    "damping": ax.damping,
+                } for ax in c.con_custom_axes]
 
         elif c.comp_type == 'AUDIO':
             d.update({

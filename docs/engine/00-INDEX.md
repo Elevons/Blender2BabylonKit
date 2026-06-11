@@ -9,7 +9,10 @@ description, file path, and key facts. The **Traces row** in the nav opens the
 per-feature trace diagrams (trace-physics.html, trace-input.html, …): each node
 is one step of the call chain — click it for the explanation AND the actual
 current source of that function, extracted from the repo at build time.
-Regenerate after code changes with `npm run docs:trace`. These markdown pages
+Regenerate after code or template changes with `npm run docs:build` (or
+`npm run docs:trace` for the engine packet only). HTML pages are generated from
+`docs/_template/diagram-shell.html`; area diagram data lives in
+`scripts/docs/engine-areas.mjs`. These markdown pages
 are the prose companion.
 
 ## The one-paragraph version

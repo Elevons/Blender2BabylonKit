@@ -82,29 +82,53 @@ export interface CameraComponent {
   rotationOffset: number;// FOLLOW: angle behind target (deg)
 }
 
+/** One 6DoF axis in a CUSTOM constraint (constraint-frame coordinates). */
+export type ConstraintAxisName =
+  | "LINEAR_X"
+  | "LINEAR_Y"
+  | "LINEAR_Z"
+  | "ANGULAR_X"
+  | "ANGULAR_Y"
+  | "ANGULAR_Z";
+
+export type ConstraintAxisMode = "free" | "locked" | "limited" | "spring";
+
+export interface ConstraintAxisConfig {
+  axis: ConstraintAxisName;
+  mode: ConstraintAxisMode;
+  /** Degrees for angular axes; meters for linear. LIMITED/SPRING only. */
+  min?: number;
+  max?: number;
+  /** SPRING only. */
+  stiffness?: number;
+  damping?: number;
+}
+
 export interface ConstraintComponent {
   type: "CONSTRAINT";
-  constraintType: "FIXED" | "BALL" | "HINGE" | "SLIDER" | "SPRING";
+  constraintType: "FIXED" | "BALL" | "HINGE" | "SLIDER" | "SPRING" | "CUSTOM";
   /** GUID of the other body's entity (null = unset). */
   target: string | null;
   /** Joint anchor in the OWNER's local space, already converted to Babylon Y-up. */
   pivot: [number, number, number];
-  /** Hinge/slide/spring axis in the owner's local space (Babylon Y-up unit vector). */
+  /** Frame X axis in the owner's local space (Babylon Y-up unit vector). */
   axis: [number, number, number];
   /** Allow the two jointed bodies to collide with each other. */
   collision: boolean;
   useLimits: boolean;
-  /** Degrees for HINGE; meters for SLIDER/SPRING. */
+  /** Degrees for HINGE; meters for SLIDER/SPRING. Preset types only. */
   min: number;
   max: number;
-  /** SPRING only. */
+  /** SPRING preset only. */
   stiffness: number;
   damping: number;
-  /** HINGE/SLIDER only: drive the joint at a target speed. */
+  /** HINGE/SLIDER preset only: drive the joint at a target speed. */
   motor: boolean;
   /** Deg/s for HINGE; m/s for SLIDER. */
   motorSpeed: number;
   motorMaxForce: number;
+  /** CUSTOM only: per-axis 6DoF configuration (omit axis = FREE at runtime). */
+  axes?: ConstraintAxisConfig[];
 }
 
 export interface AudioComponent {

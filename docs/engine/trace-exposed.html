@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -1120,7 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
@@ -1143,191 +1144,6 @@ function exportSelf() {
   })();
 </script>
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* Trace pages: widen the default and make the code block resizable. */
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
     margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;

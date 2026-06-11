@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -301,7 +303,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — @exposed: TypeScript → Blender fields","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. parse_exposed","sub":"script_parse.py","desc":"Entry: read a behavior .ts file, scan its @exposed decorators, return field descriptors (name, type, default, options). No TS runtime — pure regex, hence the single-line-literal rule.","meta":[["File","blender_addon/script_parse.py"],["Line","184"]],"code":"def parse_exposed(filepath):\n    \"\"\"Return a list of dicts: {name, vtype, default, min, max, label}.\"\"\"\n    if not filepath or not os.path.isfile(filepath):\n        return []\n    try:\n        with open(filepath, \"r\", encoding=\"utf-8\") as f:\n            src = f.read()\n    except OSError:\n        return []\n\n    fields = []\n    seen = set()\n    for arg_src, after in _scan_decorators(src):\n        m = _FIELD.match(src, after)\n        if not m:\n            continue\n        name, default = m.group(1), m.group(2)\n        if name in seen:\n            continue\n        opts = _parse_options(arg_src)\n        type_hint = opts.get(\"type\")\n        elem_type = \"\"\n        options = None\n\n        if type_hint == \"enum\":\n            options = opts.get(\"options\", [])\n            value = _parse_string_literal(default)\n            if value is None:\n                value = options[0] if options else \"\"\n            vtype = \"ENUM\"\n        elif type_hint == \"list\":\n            elem_type = opts.get(\"of\", \"float\")\n            value = _parse_list_default(default, elem_type)\n            vtype = \"LIST\"\n        else:\n            parsed = _parse_default(default, type_hint)\n            if parsed is None:\n                continue\n            vtype, value = parsed\n\n        seen.add(name)\n        fields.append({\n            \"name\": name,\n            \"vtype\": vtype,\n            \"default\": value,\n            \"elem_type\": elem_type.upper(),  # list element type (LIST only)\n            \"options\": options,              # enum choices (ENUM only)\n            \"min\": opts.get(\"min\"),\n            \"max\": opts.get(\"max\"),\n            \"label\": opts.get(\"label\", \"\"),\n        })\n    return fields","file":"blender_addon/script_parse.py","line":184},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _scan_decorators","sub":"script_parse.py","desc":"Finds each `@exposed(...)` and the field it annotates, capturing the option blob and the field name + default expression.","meta":[["File","blender_addon/script_parse.py"],["Line","37"]],"code":"def _scan_decorators(src):\n    \"\"\"Yield (args_src, index_after_close_paren) for each @exposed(...).\n\n    Scans parentheses with string-literal awareness so labels/values containing\n    '(' or ')' (e.g. label: \"Speed (deg/s)\") don't break parsing — which a\n    naive regex would.\"\"\"\n    token = \"@exposed\"\n    i = 0\n    while True:\n        idx = src.find(token, i)\n        if idx == -1:\n            return\n        j = idx + len(token)\n        while j < len(src) and src[j].isspace():\n            j += 1\n        if j >= len(src) or src[j] != '(':\n            i = idx + len(token)\n            continue\n        depth, k, in_str = 0, j, None\n        while k < len(src):\n            c = src[k]\n            if in_str:\n                if c == '\\\\':\n                    k += 2\n                    continue\n                if c == in_str:\n                    in_str = None\n            elif c in \"\\\"'`\":\n                in_str = c\n            elif c == '(':\n                depth += 1\n            elif c == ')':\n                depth -= 1\n                if depth == 0:\n                    break\n            k += 1\n        yield (src[j + 1:k], k + 1)\n        i = k + 1","file":"blender_addon/script_parse.py","line":37},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _parse_default","sub":"script_parse.py","desc":"Turns a literal default ([0,1,0], 5, \"idle\", true) into a Python value of the right type for the Blender property.","meta":[["File","blender_addon/script_parse.py"],["Line","131"]],"code":"def _parse_default(literal, type_hint):\n    \"\"\"Return (vtype, value) or None if unparseable.\"\"\"\n    lit = literal.strip()\n\n    # Object references default to null; the type hint is required to know it's\n    # an entity (a bare `= null` carries no type information on its own).\n    if type_hint in (\"entity\", \"node\", \"object\"):\n        return (\"ENTITY\", None)\n\n    if lit in (\"true\", \"false\"):\n        return (\"BOOL\", lit == \"true\")\n\n    if lit.startswith(\"[\"):\n        nums = re.findall(r'-?\\d+(?:\\.\\d+)?', lit)[:3]\n        vals = [float(n) for n in nums]\n        vals += [0.0] * (3 - len(vals))\n        return (\"COLOR\" if type_hint == \"color\" else \"VECTOR3\", vals[:3])\n\n    if lit and lit[0] in \"\\\"'`\":\n        return (\"STRING\", lit.strip(\"\\\"'`\"))\n\n    num = lit.split(\"//\")[0].strip()\n    try:\n        return (\"FLOAT\", float(num))\n    except ValueError:\n        return None","file":"blender_addon/script_parse.py","line":131},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. BJS_OT_sync_vars","sub":"operators.py","desc":"The Sync button: re-parse the script and reconcile the component's vars (add new, drop removed, keep existing values).","meta":[["File","blender_addon/operators.py"],["Line","101"]],"code":"class BJS_OT_sync_vars(Operator):\n    \"\"\"Re-read @exposed variables from the script file (after editing it).\"\"\"\n    bl_idname = \"bjs.sync_vars\"\n    bl_label = \"Sync Variables\"\n    bl_options = {'REGISTER', 'UNDO'}\n\n    comp_index: IntProperty()\n\n    def execute(self, context):\n        obj = context.object\n        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):\n            return {'CANCELLED'}\n        comp = obj.bjs_components[self.comp_index]\n        if not comp.script_path:\n            self.report({'WARNING'}, \"Pick a script first\")\n            return {'CANCELLED'}\n        n = _sync_component_vars(comp)\n        self.report({'INFO'}, f\"Synced {n} variable(s)\")\n        return {'FINISHED'}","file":"blender_addon/operators.py","line":101},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. sync_exposed_vars","sub":"properties.py","desc":"The reconcile itself — the function Sync and the script-path callback share.","meta":[["File","blender_addon/properties.py"],["Line","217"]],"code":"def sync_exposed_vars(comp, fields):\n    \"\"\"Reconcile a component's exposed_vars with freshly parsed `fields`,\n    preserving existing values where the name and type still match.\"\"\"\n    existing = {v.name: v for v in comp.exposed_vars}\n    keep = {f[\"name\"] for f in fields}\n\n    # Prune vars no longer exposed by the script.\n    for i in range(len(comp.exposed_vars) - 1, -1, -1):\n        if comp.exposed_vars[i].name not in keep:\n            comp.exposed_vars.remove(i)\n\n    for f in fields:\n        v = existing.get(f[\"name\"])\n        new_type = f[\"vtype\"]\n        new_elem = f.get(\"elem_type\") or 'FLOAT'\n        # A list whose element type changed must be rebuilt; same for any type swap.\n        recreate = (\n            v is None\n            or v.vtype != new_type\n            or (new_type == 'LIST' and v.elem_type != new_elem)\n        )\n        if recreate:\n            if v is not None:\n                comp.exposed_vars.remove(list(comp.exposed_vars).index(v))\n            v = comp.exposed_vars.add()\n            v.name = f[\"name\"]\n            v.vtype = new_type\n            v.elem_type = new_elem\n            _init_var_value(v, f)\n        # Enum choices can change without a type change, so refresh every sync.\n        if new_type == 'ENUM':\n            v.enum_options = _ENUM_SEP.join(f.get(\"options\") or [])\n            choices = _enum_choices(v)\n            if choices and v.s_val not in choices:\n                v.s_val = choices[0]\n        v.label = f[\"label\"]","file":"blender_addon/properties.py","line":217}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — @exposed: TypeScript → Blender fields","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. parse_exposed","sub":"script_parse.py","desc":"Entry: read a behavior .ts file, scan its @exposed decorators, return field descriptors (name, type, default, options). No TS runtime — pure regex, hence the single-line-literal rule.","meta":[["File","blender_addon/script_parse.py"],["Line","184"]],"code":"def parse_exposed(filepath):\n    \"\"\"Return a list of dicts: {name, vtype, default, min, max, label}.\"\"\"\n    if not filepath or not os.path.isfile(filepath):\n        return []\n    try:\n        with open(filepath, \"r\", encoding=\"utf-8\") as f:\n            src = f.read()\n    except OSError:\n        return []\n\n    fields = []\n    seen = set()\n    for arg_src, after in _scan_decorators(src):\n        m = _FIELD.match(src, after)\n        if not m:\n            continue\n        name, default = m.group(1), m.group(2)\n        if name in seen:\n            continue\n        opts = _parse_options(arg_src)\n        type_hint = opts.get(\"type\")\n        elem_type = \"\"\n        options = None\n\n        if type_hint == \"enum\":\n            options = opts.get(\"options\", [])\n            value = _parse_string_literal(default)\n            if value is None:\n                value = options[0] if options else \"\"\n            vtype = \"ENUM\"\n        elif type_hint == \"list\":\n            elem_type = opts.get(\"of\", \"float\")\n            value = _parse_list_default(default, elem_type)\n            vtype = \"LIST\"\n        else:\n            parsed = _parse_default(default, type_hint)\n            if parsed is None:\n                continue\n            vtype, value = parsed\n\n        seen.add(name)\n        fields.append({\n            \"name\": name,\n            \"vtype\": vtype,\n            \"default\": value,\n            \"elem_type\": elem_type.upper(),  # list element type (LIST only)\n            \"options\": options,              # enum choices (ENUM only)\n            \"min\": opts.get(\"min\"),\n            \"max\": opts.get(\"max\"),\n            \"label\": opts.get(\"label\", \"\"),\n        })\n    return fields","file":"blender_addon/script_parse.py","line":184},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _scan_decorators","sub":"script_parse.py","desc":"Finds each `@exposed(...)` and the field it annotates, capturing the option blob and the field name + default expression.","meta":[["File","blender_addon/script_parse.py"],["Line","37"]],"code":"def _scan_decorators(src):\n    \"\"\"Yield (args_src, index_after_close_paren) for each @exposed(...).\n\n    Scans parentheses with string-literal awareness so labels/values containing\n    '(' or ')' (e.g. label: \"Speed (deg/s)\") don't break parsing — which a\n    naive regex would.\"\"\"\n    token = \"@exposed\"\n    i = 0\n    while True:\n        idx = src.find(token, i)\n        if idx == -1:\n            return\n        j = idx + len(token)\n        while j < len(src) and src[j].isspace():\n            j += 1\n        if j >= len(src) or src[j] != '(':\n            i = idx + len(token)\n            continue\n        depth, k, in_str = 0, j, None\n        while k < len(src):\n            c = src[k]\n            if in_str:\n                if c == '\\\\':\n                    k += 2\n                    continue\n                if c == in_str:\n                    in_str = None\n            elif c in \"\\\"'`\":\n                in_str = c\n            elif c == '(':\n                depth += 1\n            elif c == ')':\n                depth -= 1\n                if depth == 0:\n                    break\n            k += 1\n        yield (src[j + 1:k], k + 1)\n        i = k + 1","file":"blender_addon/script_parse.py","line":37},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _parse_default","sub":"script_parse.py","desc":"Turns a literal default ([0,1,0], 5, \"idle\", true) into a Python value of the right type for the Blender property.","meta":[["File","blender_addon/script_parse.py"],["Line","131"]],"code":"def _parse_default(literal, type_hint):\n    \"\"\"Return (vtype, value) or None if unparseable.\"\"\"\n    lit = literal.strip()\n\n    # Object references default to null; the type hint is required to know it's\n    # an entity (a bare `= null` carries no type information on its own).\n    if type_hint in (\"entity\", \"node\", \"object\"):\n        return (\"ENTITY\", None)\n\n    if lit in (\"true\", \"false\"):\n        return (\"BOOL\", lit == \"true\")\n\n    if lit.startswith(\"[\"):\n        nums = re.findall(r'-?\\d+(?:\\.\\d+)?', lit)[:3]\n        vals = [float(n) for n in nums]\n        vals += [0.0] * (3 - len(vals))\n        return (\"COLOR\" if type_hint == \"color\" else \"VECTOR3\", vals[:3])\n\n    if lit and lit[0] in \"\\\"'`\":\n        return (\"STRING\", lit.strip(\"\\\"'`\"))\n\n    num = lit.split(\"//\")[0].strip()\n    try:\n        return (\"FLOAT\", float(num))\n    except ValueError:\n        return None","file":"blender_addon/script_parse.py","line":131},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. BJS_OT_sync_vars","sub":"operators.py","desc":"The Sync button: re-parse the script and reconcile the component's vars (add new, drop removed, keep existing values).","meta":[["File","blender_addon/operators.py"],["Line","101"]],"code":"class BJS_OT_sync_vars(Operator):\n    \"\"\"Re-read @exposed variables from the script file (after editing it).\"\"\"\n    bl_idname = \"bjs.sync_vars\"\n    bl_label = \"Sync Variables\"\n    bl_options = {'REGISTER', 'UNDO'}\n\n    comp_index: IntProperty()\n\n    def execute(self, context):\n        obj = context.object\n        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):\n            return {'CANCELLED'}\n        comp = obj.bjs_components[self.comp_index]\n        if not comp.script_path:\n            self.report({'WARNING'}, \"Pick a script first\")\n            return {'CANCELLED'}\n        n = _sync_component_vars(comp)\n        self.report({'INFO'}, f\"Synced {n} variable(s)\")\n        return {'FINISHED'}","file":"blender_addon/operators.py","line":101},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. sync_exposed_vars","sub":"properties.py","desc":"The reconcile itself — the function Sync and the script-path callback share.","meta":[["File","blender_addon/properties.py"],["Line","246"]],"code":"def sync_exposed_vars(comp, fields):\n    \"\"\"Reconcile a component's exposed_vars with freshly parsed `fields`,\n    preserving existing values where the name and type still match.\"\"\"\n    existing = {v.name: v for v in comp.exposed_vars}\n    keep = {f[\"name\"] for f in fields}\n\n    # Prune vars no longer exposed by the script.\n    for i in range(len(comp.exposed_vars) - 1, -1, -1):\n        if comp.exposed_vars[i].name not in keep:\n            comp.exposed_vars.remove(i)\n\n    for f in fields:\n        v = existing.get(f[\"name\"])\n        new_type = f[\"vtype\"]\n        new_elem = f.get(\"elem_type\") or 'FLOAT'\n        # A list whose element type changed must be rebuilt; same for any type swap.\n        recreate = (\n            v is None\n            or v.vtype != new_type\n            or (new_type == 'LIST' and v.elem_type != new_elem)\n        )\n        if recreate:\n            if v is not None:\n                comp.exposed_vars.remove(list(comp.exposed_vars).index(v))\n            v = comp.exposed_vars.add()\n            v.name = f[\"name\"]\n            v.vtype = new_type\n            v.elem_type = new_elem\n            _init_var_value(v, f)\n        # Enum choices can change without a type change, so refresh every sync.\n        if new_type == 'ENUM':\n            v.enum_options = _ENUM_SEP.join(f.get(\"options\") or [])\n            choices = _enum_choices(v)\n            if choices and v.s_val not in choices:\n                v.s_val = choices[0]\n        v.label = f[\"label\"]","file":"blender_addon/properties.py","line":246}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1120,213 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
@@ -1364,7 +1159,7 @@ function exportSelf() {
     const panel = document.getElementById('pi');
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
-    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data';
+    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;

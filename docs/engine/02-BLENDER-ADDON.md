@@ -46,7 +46,8 @@ GUID assignment, and the export that produces the [two artifacts](01-ARCHITECTUR
 Done **at export**, so the runtime receives Babylon-space values unchanged:
 vectors `(x, y, z) → (x, z, −y)`; sizes swap y/z; quaternions keep `w` with
 vector part converted; constraint axis enum X/Y/Z → unit vectors via the same
-map. `collider_preview.py` draws raw Blender values, so the viewport preview
-matches the exported body.
+map. CUSTOM constraints also export six per-axis rows (`axes[]`: mode,
+min/max, stiffness/damping). `collider_preview.py` draws raw Blender values, so
+the viewport preview matches the exported body.
 
 Continue: [Load Pipeline →](03-LOAD-PIPELINE.md)

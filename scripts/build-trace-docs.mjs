@@ -1,119 +1,32 @@
 #!/usr/bin/env node
 /**
- * Build docs/engine/trace.html — the interactive CODE TRACE EXPLORER.
+ * Build docs/engine/ — area diagrams + code-trace pages.
  *
- *   npm run docs:trace        (or: node scripts/build-trace-docs.mjs)
+ *   npm run docs:trace   (or: node scripts/build-trace-docs.mjs)
  *
- * For each feature, a trace is an ordered chain of steps; each step names a
- * real file + symbol. This script EXTRACTS the actual source of every symbol
- * from the repo at build time and embeds it, so the explorer always shows the
- * code as it is now — re-run after engine changes and the docs can't rot.
- * A missing symbol fails the build loudly (that's the point).
+ * All HTML is generated from docs/_template/diagram-shell.html.
+ * Area diagram data lives in scripts/docs/engine-areas.mjs.
+ * Trace chains and symbol extraction are defined below.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ENGINE_AREA_PAGES } from "./docs/engine-areas.mjs";
+import {
+  ReadShell,
+  EmitDiagramPage,
+  BuildEngineNav,
+  LAYOUT_PATCH_ENGINE,
+  CODE_PANEL_PATCH_ENGINE,
+  LayoutSteps,
+  ExtractSymbol,
+} from "./docs/shared.mjs";
 
-const ROOT = path.resolve(fileURLToPath(import.meta.url), "../..");
-const OUT = path.join(ROOT, "docs", "engine", "trace.html");
-
-// ---------------------------------------------------------------------------
-// Extraction: pull one function/method/class out of a TS or Python file.
-// ---------------------------------------------------------------------------
-
-function ReadFileLines(relativePath)
-{
-  return fs.readFileSync(path.join(ROOT, relativePath), "utf8").split("\n");
-}
-
-/** TS: find the symbol's declaration line, then brace-match to its end. */
-function ExtractTs(lines, symbol)
-{
-  const declaration = new RegExp(
-    `^(export )?(async )?(function )?(private |public |static )*(async )?(get )?${symbol}\\b|^(export )?(abstract )?class ${symbol}\\b|^(export )?const ${symbol}\\b`
-  );
-
-  for (let index = 0; index < lines.length; index++)
-  {
-    if (!declaration.test(lines[index].trim()) && !lines[index].trim().startsWith(`${symbol}(`))
-    {
-      continue;
-    }
-    // Walk back over a JSDoc block so the comment ships with the code.
-    let start = index;
-    if (lines[start - 1]?.trim().endsWith("*/"))
-    {
-      while (start > 0 && !lines[start - 1].trim().startsWith("/**")) { start--; }
-      start--;
-    }
-
-    let depth = 0;
-    let sawBrace = false;
-    for (let end = index; end < lines.length; end++)
-    {
-      for (const character of lines[end])
-      {
-        if (character === "{") { depth++; sawBrace = true; }
-        else if (character === "}") { depth--; }
-      }
-      if (sawBrace && depth <= 0)
-      {
-        return { start: start + 1, code: lines.slice(start, end + 1).join("\n") };
-      }
-      // const X = [...] / = {...}; ends at depth 0 with a semicolon line
-      if (!sawBrace && lines[end].trimEnd().endsWith(";") && end > index)
-      {
-        return { start: start + 1, code: lines.slice(start, end + 1).join("\n") };
-      }
-    }
-  }
-  return null;
-}
-
-/** Python: find `def symbol` / `class symbol`, capture until dedent. */
-function ExtractPy(lines, symbol)
-{
-  const declaration = new RegExp(`^(\\s*)(def|class) ${symbol}\\b`);
-  for (let index = 0; index < lines.length; index++)
-  {
-    const match = lines[index].match(declaration);
-    if (match === null) { continue; }
-    const indent = match[1].length;
-
-    let end = index + 1;
-    while (end < lines.length)
-    {
-      const line = lines[end];
-      const isBlank = line.trim().length === 0;
-      const lineIndent = line.length - line.trimStart().length;
-      if (!isBlank && lineIndent <= indent) { break; }
-      end++;
-    }
-    while (lines[end - 1].trim().length === 0) { end--; }
-    return { start: index + 1, code: lines.slice(index, end).join("\n") };
-  }
-  return null;
-}
-
-function ExtractSymbol(relativePath, symbol)
-{
-  const lines = ReadFileLines(relativePath);
-  const extracted = relativePath.endsWith(".py")
-    ? ExtractPy(lines, symbol)
-    : ExtractTs(lines, symbol);
-
-  if (extracted === null)
-  {
-    console.error(`MISSING: ${symbol} in ${relativePath}`);
-    process.exitCode = 1;
-    return { start: 0, code: `// symbol "${symbol}" not found — regenerate after fixing` };
-  }
-  return extracted;
-}
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const OUT_DIR = path.join(ROOT, "docs", "engine");
 
 // ---------------------------------------------------------------------------
-// The traces. step = { file, symbol, note } — note explains what data flows.
-// step = { title, code, note } embeds literal text (e.g. a manifest excerpt).
+// Trace chains — step = { file, symbol, note } or { title, code, note }.
 // ---------------------------------------------------------------------------
 
 const TRACES = [
@@ -185,15 +98,17 @@ const TRACES = [
     intro: "Joints pin the as-placed pose — position things in Blender how they should rest.",
     steps: [
       { file: "blender_addon/export.py", symbol: "_serialize_components",
-        note: "EXPORT — the CONSTRAINT case: pivot converted to Y-up, the axis enum mapped to a unit vector (_CONSTRAINT_AXIS_TO_BABYLON), target GUID, limits/motor/spring numbers passed through raw (degrees/meters; runtime converts)." },
+        note: "EXPORT — the CONSTRAINT case: pivot/axis → Y-up, target GUID, preset limits/motor/spring. CUSTOM also exports axes[] (six rows: axis id, mode, min/max, stiffness/damping)." },
       { file: "packages/engine/src/subsystems/constraints.ts", symbol: "BuildConstraints",
         note: "FINALIZE — both bodies exist now. Per registration: resolve target, require body on both ends, compute the frame, create, addConstraint, optional motor. Out: level.constraints." },
       { file: "packages/engine/src/subsystems/constraints.ts", symbol: "ComputeConstraintFrame",
         note: "THE key math. Owner-local pivot/axis → world via live transforms → target-local. Pins the CURRENT relative pose so nothing snaps on load." },
       { file: "packages/engine/src/subsystems/constraints.ts", symbol: "BuildAxisLimits",
-        note: "Per-type 6DoF table: frame X = authored axis; HINGE frees/limits ANGULAR_X (deg→rad), SLIDER/SPRING free/limit LINEAR_X, SPRING adds stiffness/damping to the limit." },
+        note: "Preset 6DoF table: frame X = authored axis; HINGE frees/limits ANGULAR_X (deg→rad), SLIDER/SPRING free/limit LINEAR_X, SPRING adds stiffness/damping. Dispatches CUSTOM to BuildCustomAxisLimits." },
+      { file: "packages/engine/src/subsystems/constraints.ts", symbol: "BuildCustomAxisLimits",
+        note: "CUSTOM — per manifest axes[] row: free (omit), locked (0,0), limited (min/max), spring (+ stiffness/damping). Angular limits deg→rad at runtime." },
       { file: "packages/engine/src/subsystems/constraints.ts", symbol: "ApplyMotor",
-        note: "VELOCITY motor on the moving axis: target speed (deg/s→rad/s for hinges) + max force." },
+        note: "VELOCITY motor on the moving axis: target speed (deg/s→rad/s for hinges) + max force. HINGE/SLIDER presets only." },
     ],
   },
   {
@@ -271,201 +186,92 @@ const TRACES = [
 ];
 
 // ---------------------------------------------------------------------------
-// Resolve every step (extract code), embed, emit HTML.
+// Build.
 // ---------------------------------------------------------------------------
 
-for (const trace of TRACES)
+export function BuildEngineDocs()
 {
-  for (const step of trace.steps)
+  const shell = ReadShell();
+  const areaNav = Object.entries(ENGINE_AREA_PAGES).map(([file, page]) => [file, page.navLabel]);
+  const traceNav = TRACES.map((trace) => [`trace-${trace.id}.html`, trace.title.split(":")[0]]);
+
+  for (const [file, page] of Object.entries(ENGINE_AREA_PAGES))
   {
-    if (step.file !== undefined)
+    const pageTitle = file === "index.html"
+      ? "BJS Level Kit — Engine overview"
+      : `BJS Level Kit — ${page.diagram.title.replace(/^Babylon Level Kit — /, "")}`;
+    EmitDiagramPage({
+      shell,
+      outPath: path.join(OUT_DIR, file),
+      pageTitle,
+      diagramData: page.diagram,
+      navHtml: BuildEngineNav(file, areaNav, traceNav),
+      bodyPatch: LAYOUT_PATCH_ENGINE,
+    });
+  }
+  console.log("engine area pages:", areaNav.map(([f]) => f).join(", "));
+
+  for (const trace of TRACES)
+  {
+    for (const step of trace.steps)
     {
-      const { start, code } = ExtractSymbol(step.file, step.symbol);
-      step.code = code;
-      step.line = start;
-      step.title = `${step.symbol} — ${step.file.split("/").pop()}`;
-    }
-    else
-    {
-      step.file = ""; step.line = 0; step.symbol = step.title;
+      if (step.file !== undefined)
+      {
+        const { start, code } = ExtractSymbol(step.file, step.symbol);
+        step.code = code;
+        step.line = start;
+        step.title = `${step.symbol} — ${step.file.split("/").pop()}`;
+      }
+      else
+      {
+        step.file = ""; step.line = 0; step.symbol = step.title;
+      }
     }
   }
-}
 
-if (process.exitCode === 1)
-{
-  console.error("Extraction failures above — trace.html NOT written.");
-  process.exit(1);
-}
-
-const SHELL = fs.readFileSync(path.join(ROOT, "docs", "engine", "index.html"), "utf8");
-
-// Trace pages + the area pages they coexist with (two nav rows).
-const AREA_NAV = [
-  ["index.html","Overview"],["blender-addon.html","Blender add-on"],["load-pipeline.html","Load pipeline"],
-  ["scripting.html","Scripting"],["physics.html","Physics"],["rendering.html","Rendering"],
-  ["audio-animation.html","Audio/Anim"],["workflow.html","Workflow"],
-];
-const TRACE_NAV = TRACES.map((trace) => [`trace-${trace.id}.html`, trace.title.split(":")[0]]);
-
-/**
- * Remove a previously injected nav (the fixed bottom bar) by walking div depth
- * from its opening tag to the matching close — regex can't handle the nesting.
- */
-function RemoveNav(html)
-{
-  const marker = '<div style="position:fixed;bottom:10px;';
-  const start = html.indexOf(marker);
-  if (start === -1) { return html; }
-
-  let depth = 0;
-  let index = start;
-  while (index < html.length)
+  if (process.exitCode === 1)
   {
-    if (html.startsWith("<div", index)) { depth++; index += 4; continue; }
-    if (html.startsWith("</div>", index))
-    {
-      depth--;
-      index += 6;
-      if (depth === 0) { return html.slice(0, start) + html.slice(index); }
-      continue;
-    }
-    index++;
+    console.error("Extraction failures above — engine trace pages NOT written.");
+    process.exit(1);
   }
-  return html; // unbalanced — leave untouched rather than corrupt
-}
 
-function BuildNav(currentFile)
-{
-  const link = ([file, label]) => file === currentFile
-    ? `<span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`
-    : `<a href="${file}" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">${label}</a>`;
-  return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
-    + 'background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;'
-    + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;">' + AREA_NAV.map(link).join("")
-    + '<a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a>' + '</div>'
-    + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;">'
-    + '<span style="color:#6c7396;padding:2px 6px;">Traces:</span>' + TRACE_NAV.map(link).join("") + '</div></div>';
-}
-
-// Patch appended to trace pages: widen the open panel and render n.code as a
-// read-only code block under the description textarea.
-const LAYOUT_PATCH = `
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
+  const traceFiles = [];
+  for (const trace of TRACES)
   {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>`;
+    const positions = LayoutSteps(trace.steps.length);
+    const nodes = trace.steps.map((step, index) => ({
+      id: index + 1,
+      ...positions[index],
+      label: `${index + 1}. ${step.symbol}`,
+      sub: step.file ? step.file.split("/").pop() : "data",
+      desc: step.note,
+      meta: step.file ? [["File", step.file], ["Line", String(step.line)]] : [["Kind", "data contract"]],
+      code: step.code,
+      file: step.file,
+      line: step.line,
+    }));
+    const edges = trace.steps.slice(1).map((step, index) => ({
+      id: 100 + index, src: index + 1, tgt: index + 2, label: "",
+    }));
 
-const CODE_PANEL_PATCH = LAYOUT_PATCH + `
-<style>
-  /* Trace pages: widen the default and make the code block resizable. */
-  #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
-  .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:2; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
-  .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
-</style>
-<script>
-  const __openNodePanel = openNodePanel;
-  openNodePanel = function(n)
-  {
-    __openNodePanel(n);
-    if (!n.code) { return; }
-    const panel = document.getElementById('pi');
-    const loc = document.createElement('div');
-    loc.className = 'trace-loc';
-    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
-    const pre = document.createElement('pre');
-    pre.className = 'trace-code';
-    pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
-  };
-</script>`;
-
-/** Serpentine layout: left→right, drop a row, right→left — reads like a script. */
-function LayoutSteps(stepCount)
-{
-  const PER_ROW = 3, W = 190, H = 56, GAP_X = 260, GAP_Y = 150;
-  const positions = [];
-  for (let index = 0; index < stepCount; index++)
-  {
-    const row = Math.floor(index / PER_ROW);
-    const column = index % PER_ROW;
-    const x = 40 + (row % 2 === 0 ? column : PER_ROW - 1 - column) * GAP_X;
-    positions.push({ x, y: 40 + row * GAP_Y, w: W, h: H });
+    const outFile = `trace-${trace.id}.html`;
+    EmitDiagramPage({
+      shell,
+      outPath: path.join(OUT_DIR, outFile),
+      pageTitle: `Trace — ${trace.title}`,
+      diagramData: { title: "Trace — " + trace.title, nodes, edges },
+      navHtml: BuildEngineNav(outFile, areaNav, traceNav),
+      bodyPatch: CODE_PANEL_PATCH_ENGINE,
+    });
+    traceFiles.push(outFile);
   }
-  return positions;
+  console.log("engine trace pages:", traceFiles.join(", "));
+
+  const legacy = path.join(OUT_DIR, "trace.html");
+  if (fs.existsSync(legacy)) { fs.unlinkSync(legacy); console.log("trace.html (list UI) removed"); }
 }
 
-function BuildTracePage(trace)
+if (import.meta.url === new URL(process.argv[1], "file:").href)
 {
-  const positions = LayoutSteps(trace.steps.length);
-  const nodes = trace.steps.map((step, index) => ({
-    id: index + 1,
-    ...positions[index],
-    label: `${index + 1}. ${step.symbol}`,
-    sub: step.file ? step.file.split("/").pop() : "data",
-    desc: step.note,
-    meta: step.file ? [["File", step.file], ["Line", String(step.line)]] : [["Kind", "data contract"]],
-    code: step.code,
-    file: step.file,
-    line: step.line,
-  }));
-  const edges = trace.steps.slice(1).map((step, index) => ({
-    id: 100 + index, src: index + 1, tgt: index + 2, label: "",
-  }));
-
-  const data = { title: "Trace — " + trace.title, nodes, edges };
-  const match = SHELL.match(/const DIAGRAM_DATA = \{[\s\S]*?\};/);
-  let page = SHELL.slice(0, match.index)
-    + "const DIAGRAM_DATA = " + JSON.stringify(data) + ";"
-    + SHELL.slice(match.index + match[0].length);
-  page = page.replace(/<title>.*?<\/title>/, `<title>Trace — ${trace.title}</title>`);
-  page = RemoveNav(page);
-  page = page.replace("<body>", "<body>" + BuildNav(`trace-${trace.id}.html`));
-  page = page.replace("</body>", CODE_PANEL_PATCH + "</body>");
-
-  const out = path.join(ROOT, "docs", "engine", `trace-${trace.id}.html`);
-  fs.writeFileSync(out, page);
-  return out;
+  BuildEngineDocs();
 }
-
-const written = TRACES.map(BuildTracePage);
-console.log("trace pages:", written.map((p) => path.basename(p)).join(", "));
-
-// Refresh the nav on the eight area pages so both rows appear everywhere.
-for (const [file] of AREA_NAV)
-{
-  const target = path.join(ROOT, "docs", "engine", file);
-  let page = fs.readFileSync(target, "utf8");
-  page = RemoveNav(page);
-  page = page.replace("<body>", "<body>" + BuildNav(file));
-  page = page.replace("</body>", LAYOUT_PATCH + "</body>");
-  fs.writeFileSync(target, page);
-}
-console.log("area-page navs refreshed");
-
-// The old list-style explorer is superseded by the per-feature diagram pages.
-const legacy = path.join(ROOT, "docs", "engine", "trace.html");
-if (fs.existsSync(legacy)) { fs.unlinkSync(legacy); console.log("trace.html (list UI) removed"); }

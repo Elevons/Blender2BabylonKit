@@ -108,6 +108,7 @@ def _has_physics(obj):
 
 def _check_constraints(obj, warnings):
     """Constraints need a physics body on BOTH ends to exist at runtime."""
+    from .properties import ensure_custom_constraint_axes
     for comp in obj.bjs_components:
         if comp.comp_type != 'CONSTRAINT':
             continue
@@ -121,6 +122,16 @@ def _check_constraints(obj, warnings):
             warnings.append(
                 f"{obj.name}: constraint target '{comp.con_target.name}' has no "
                 f"Collider/Rigid Body")
+        if comp.con_type == 'CUSTOM':
+            ensure_custom_constraint_axes(comp)
+            if len(comp.con_custom_axes) != 6:
+                warnings.append(
+                    f"{obj.name}: Custom constraint should have 6 axis rows "
+                    f"(has {len(comp.con_custom_axes)})")
+            for ax in comp.con_custom_axes:
+                if ax.mode in {'LIMITED', 'SPRING'} and ax.min_limit > ax.max_limit:
+                    warnings.append(
+                        f"{obj.name}: Custom {ax.dof_axis} min > max")
 
 
 def _is_skinned_mesh(obj):

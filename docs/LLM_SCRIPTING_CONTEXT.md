@@ -114,12 +114,41 @@ entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylon
 
 - To move/rotate a body by hand each frame, set it to `ANIMATED` (kinematic) first,
   or drive it via velocity. Don't fight the solver by writing `node.position` on a
-  DYNAMIC body.
+  DYNAMIC body (`disablePreStep` defaults to true, but sync still wins after the
+  physics step).
 - MESH-shaped colliders can't be DYNAMIC (Havok limitation) — author CONVEX for
   moving bodies.
-- Joints between bodies are usually authored as CONSTRAINT components in Blender
-  (hinge/slider/spring/ball/fixed) — `level.constraints` holds them. Only build
-  `Physics6DoFConstraint` by hand for custom rigs (see PlayerVehicleController).
+- **Joints are authored in Blender, not in behavior scripts.** There is no
+  `@exposed` for constraints — add a **Constraint** component in the N-panel.
+  The loader builds them in a post-pass and stores them on the `Level` object
+  (`level.constraints` in app/load code; behaviors don't receive a `level` handle).
+
+### Constraint types (author in Blender)
+
+| Preset | What it does |
+|--------|----------------|
+| Fixed | Weld — no relative motion |
+| Ball & Socket | Free rotation at the pivot |
+| Hinge | One rotation axis (frame X); optional limits + motor |
+| Slider | One slide axis (frame X); optional limits + motor |
+| Spring | Sprung slide on frame X; **locks all relative rotation** |
+| **Custom (6DoF)** | Six rows (Linear/Angular X/Y/Z): each **Free**, **Locked**, **Limited**, or **Spring** |
+
+**Custom** is one `Physics6DoFConstraint` — use it when presets would fight. Example:
+trailer hitch on the rear chassis → Target = front chassis, Axis = vehicle width (X),
+pivot at hitch; **Angular X** = Free (relative pitch), **Linear Y** = Spring
+(±0.15 m), everything else Locked. Do **not** stack Hinge + Spring on the same two
+bodies (Spring welds rotation; you get both pitching the same way).
+
+**Authoring pitfalls (mention in comments if the behavior drives a constrained rig):**
+- Constrained bodies work best as **siblings**, not parented to each other.
+- Don't overwrite `node.rotation` every frame on entities that have hinge-driven
+  `PhysicsBody` wheels — visual spin should be visual-only meshes, or skip the
+  override (see `CarController.ts`: arcade visuals vs physics wheels).
+- Spring travel limits are **meters**; hinge limits are **degrees**.
+
+Hand-built `Physics6DoFConstraint` in code is still possible — reuse
+`ComputeConstraintFrame` / limit patterns from `subsystems/constraints.ts`.
 
 ## Input
 

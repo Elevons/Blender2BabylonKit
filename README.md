@@ -61,6 +61,15 @@ APIs.
 - **Rigid Body** – Dynamic / Static / Kinematic, plus mass, friction, bounce,
   damping. Combine with a Collider on the same object; the collider supplies the
   shape and the rigid body supplies the dynamics.
+- **Constraint** – physics joint to another body: Fixed, Ball & Socket, Hinge,
+  Slider, Spring, or **Custom (6DoF)** (per-axis free/locked/limited/spring on one
+  joint). Pick a **Target**, set the **Pivot** (owner-local), and for hinge/slider/
+  spring/custom pick the **Axis** (becomes constraint frame X). See
+  [Constraints (physics joints)](#constraints-physics-joints) below.
+- **Audio** – attach a sound file (copied next to the export); volume, loop,
+  auto-play, 3D spatial, max distance, playback rate.
+- **Camera** – opt-in type override on a camera object (ArcRotate / Follow / …);
+  most cameras stay faithful FreeCameras with no component.
 - **Script** – click **Open Script…** to pick the behavior's source file in a
   file browser. The picked filename (minus extension) becomes the *registry
   key* (e.g. `behaviors/Rotator.ts` → `Rotator`); the field stays editable. Add
@@ -120,8 +129,9 @@ validator are printed to Blender's console on each live export.
 
 The **Validate** button runs the same checks without exporting: missing script
 files, references to render-disabled objects, MESH colliders on DYNAMIC bodies,
-area lights, duplicate GUIDs, and a missing active camera. The Export Level
-operator also runs them and lists warnings in its report.
+constraint ends without physics, invalid CUSTOM axis rows (min > max), area
+lights, duplicate GUIDs, and a missing active camera. The Export Level operator
+also runs them and lists warnings in its report.
 
 ## Creating a new project
 
@@ -301,19 +311,45 @@ primitive or CONVEX shape for trigger volumes.
 ## Constraints (physics joints)
 
 Add a **Constraint** component to a physics object and pick the **Target** body:
-**Fixed** (weld), **Ball & Socket**, **Hinge** (one rotation axis — doors,
-levers), **Slider** (one translation axis — drawers, pistons), or **Spring**
-(sprung translation — suspension). Pivot is authored in the object's local space
-(Blender axes); the axis is a local X/Y/Z choice. Hinge/Slider take optional
-min/max limits (degrees / meters) and an optional **Motor** (target speed + max
-force); Spring takes stiffness/damping plus travel limits. **Bodies Collide**
-controls whether the two jointed bodies collide with each other.
+
+| Type | Use for |
+|------|---------|
+| **Fixed** | Weld two bodies (no relative motion) |
+| **Ball & Socket** | Free rotation around a shared pivot |
+| **Hinge** | One rotation axis (doors, levers, wheels) |
+| **Slider** | One translation axis (drawers, pistons) |
+| **Spring** | Sprung translation along one axis (wheel suspension) |
+| **Custom (6DoF)** | Per-axis free / locked / limited / spring on **one** joint |
+
+Pivot is authored in the object's local space (Blender axes). For hinge, slider,
+spring, and custom types, **Axis** picks which local direction becomes constraint
+frame X. Hinge/Slider take optional min/max limits (degrees / meters) and an
+optional **Motor** (target speed + max force). Spring takes stiffness/damping
+plus travel limits (meters). **Bodies Collide** controls whether the two jointed
+bodies collide with each other.
+
+**Custom (6DoF)** exposes six rows (Linear X/Y/Z, Angular X/Y/Z). Each axis can
+be **Free**, **Locked**, **Limited** (min/max), or **Spring** (min/max +
+stiffness/damping). Angular limits are in degrees; linear limits are in meters.
+Use this when presets fight each other — e.g. a trailer hitch needs relative
+pitch (Angular X free) plus optional vertical compliance (Linear Y spring) in a
+**single** joint, not a Hinge stacked on a Spring. **Trailer hitch recipe:** on
+the rear body, Custom → Target = front chassis, Axis = X (vehicle width), pivot
+at the hitch; **Angular X** = Free (or Limited ±45°), **Linear Y** = Spring
+(±0.15 m, stiffness ~80), all other rows Locked.
+
+You can add **multiple Constraint components** on one object (e.g. one joint per
+target), but don't put two constraints on the **same body pair** if they fight
+over the same degrees of freedom. Prefer **Custom** for combined motion.
+Constrained bodies should ideally be **siblings** in the hierarchy, not parented
+to each other — both having `PhysicsBody` plus a parent-child link often jitters.
 
 Joints are built after all entities exist, pinning the **as-placed** relative
 pose — position the two objects in Blender exactly how they should rest, and
 nothing snaps on load. Both ends need a Collider/Rigid Body (the validator
 checks). Created joints are exposed as `level.constraints` and disposed with the
-level. For fully hand-rolled joints in code, see `PlayerVehicleController.ts`.
+level. For fully hand-rolled joints in code, build a `Physics6DoFConstraint`
+directly (same frame math as `subsystems/constraints.ts`).
 
 ## Input (Action Maps + the Input Actions panel)
 
@@ -653,6 +689,17 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
           "pivot": [0,0,0], "axis": [0,1,0], "collision": false,
           "useLimits": true, "min": -90, "max": 90, "stiffness": 100, "damping": 10,
           "motor": false, "motorSpeed": 90, "motorMaxForce": 100 },
+        { "type": "CONSTRAINT", "constraintType": "CUSTOM", "target": "guid",
+          "pivot": [0,0,0], "axis": [1,0,0], "collision": false,
+          "axes": [
+            { "axis": "ANGULAR_X", "mode": "free" },
+            { "axis": "LINEAR_Y", "mode": "spring", "min": -0.15, "max": 0.15,
+              "stiffness": 80, "damping": 10 },
+            { "axis": "LINEAR_X", "mode": "locked" },
+            { "axis": "LINEAR_Z", "mode": "locked" },
+            { "axis": "ANGULAR_Y", "mode": "locked" },
+            { "axis": "ANGULAR_Z", "mode": "locked" }
+          ] },
         { "type": "CAMERA", "cameraType": "ARC", "attachControl": true,
           "keys": { "scheme": "ARROWS", "up": "W", "down": "S", "left": "A", "right": "D" },
           "useBlenderTransform": true, "followMode": "OFFSET", "radius": 10, "lowerRadius": 0, "upperRadius": 0,
@@ -684,7 +731,10 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
   unspecified — don't assume another entity is fully initialised; guard `null`
   references.
 - **Physics is V2/Havok and must be enabled before load.** Mesh colliders can't be
-  dynamic.
+  dynamic. **Constraints** pin the as-placed pose — position both bodies in Blender
+  before export. A **Spring** preset locks all relative rotation (two bodies pitch
+  together); use **Custom** or **Hinge** for trailer-style pitch. Don't parent a
+  physics wheel under a physics chassis if both are joined by a constraint.
 - **The Blender camera is fixed by default** (no controls). The fallback
   `ArcRotateCamera` uses arrow keys, leaving WASD free for behaviors; a manually
   attached `FreeCamera` would fight WASD.

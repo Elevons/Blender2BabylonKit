@@ -48,15 +48,32 @@ root reappears.
 ## Constraints (`BuildConstraints`) <a name="constraints"></a>
 
 CONSTRAINT components become joints in `FinalizeLevel` (both bodies must
-exist). FIXED → `LockConstraint`; BALL → `BallAndSocketConstraint`;
-HINGE/SLIDER/SPRING share one `Physics6DoFConstraint` path where the constraint
-frame's X = the authored axis: HINGE frees/limits ANGULAR_X (degrees→radians),
-SLIDER/SPRING free/limit LINEAR_X (spring adds stiffness/damping to the limit).
+exist):
+
+| `constraintType` | Havok joint |
+|---|---|
+| FIXED | `LockConstraint` |
+| BALL | `BallAndSocketConstraint` |
+| HINGE / SLIDER / SPRING / CUSTOM | `Physics6DoFConstraint` |
+
+For 6DoF types, the constraint frame's **X** = the authored axis; Y/Z follow
+from a perpendicular pair (`ComputeConstraintFrame`). Preset mapping:
+
+- **HINGE** — locks linear + ANGULAR_Y/Z; frees or limits **ANGULAR_X**
+  (degrees→radians). Optional velocity motor.
+- **SLIDER** — locks everything except **LINEAR_X** (meters). Optional motor.
+- **SPRING** — locks all rotation + linear Y/Z; **LINEAR_X** sprung within
+  limits (stiffness/damping on the limit row).
+- **CUSTOM** — manifest `axes[]` lists each of the six DOFs as `free`,
+  `locked`, `limited`, or `spring` (`BuildCustomAxisLimits`). Angular limits are
+  authored in degrees, converted at runtime. Use for combined joints (e.g. trailer
+  hitch: ANGULAR_X free for pitch, LINEAR_Y spring for vertical compliance) —
+  stacking two preset constraints on the same body pair over-constrains rotation.
+
 `ComputeConstraintFrame` derives the target-side pivot/axes from **live world
-transforms**, pinning the as-placed relative pose — nothing snaps on load (the
-generalized `PlayerVehicleController` suspension trick). Motors:
-`setAxisMotorType(VELOCITY)` + target + max force. Joints land in
-`level.constraints`, disposed with the level.
+transforms**, pinning the as-placed relative pose — nothing snaps on load.
+Motors (`setAxisMotorType(VELOCITY)` + target + max force) apply to HINGE/SLIDER
+presets only. Joints land in `level.constraints`, disposed with the level.
 
 ## Trigger messaging (`WireTriggerEvents`) <a name="triggers"></a>
 

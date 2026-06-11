@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -301,7 +303,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title": "Babylon Level Kit — Blender add-on", "nodes": [{"id": 1, "x": 40, "y": 40, "w": 150, "h": 40, "label": "N-panel UI", "sub": "ui.py", "desc": "Draws the Babylon panel: component list with per-type fields, the Animation box, and the Export panel (Export / Live Link / Debug Build / Validate). Input Actions has its own panel in input_ui.py.", "meta": [["Kind", "drawing only"], ["Entry", "BJS_PT_* panels"]]}, {"id": 2, "x": 40, "y": 160, "w": 150, "h": 40, "label": "Data model", "sub": "properties.py", "desc": "Component PropertyGroups: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint), exposed vars + list items, trigger events, light/shadow/animation settings. Input Actions data lives in input_properties.py (Scene.bjs_input_maps + default map). Owns ID_KEY + ensure_object_id().", "meta": [["Identity", "bjs_id custom prop"], ["Registered on", "Object / Scene"]]}, {"id": 3, "x": 40, "y": 280, "w": 150, "h": 40, "label": "Operators", "sub": "operators.py", "desc": "Add/remove/duplicate/move/copy/paste components, Assign GUID, script picker + Sync, list and trigger-event row editing, Validate, Export.", "meta": [["Export op", "BJS_OT_export"], ["Validate op", "BJS_OT_validate"]]}, {"id": 4, "x": 280, "y": 40, "w": 150, "h": 40, "label": "Script parser", "sub": "script_parse.py", "desc": "Regex-parses @exposed(...) and @inputMap(\"…\") out of behavior .ts source. THE cross-language contract: decorators must stay literally lowercase.", "meta": [["Trigger", "Open Script / Sync / Create Maps Used by Scripts"], ["Reads", "apps/<app>/src/behaviors/*.ts"]]}, {"id": 5, "x": 280, "y": 160, "w": 150, "h": 40, "label": "Validator", "sub": "validate.py", "desc": "Pre-export checks: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).", "meta": [["Runs from", "Validate / Export / Live Link"], ["Output", "report warnings"]]}, {"id": 6, "x": 280, "y": 280, "w": 150, "h": 40, "label": "Exporter", "sub": "export.py", "desc": "Writes the glb (Blender glTF, +Y-up, GUIDs into node extras) and builds the schema-v4 manifest. Converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects so refs always resolve. Copies audio files.", "meta": [["Schema", "v4"], ["Axis conv", "at export"]]}, {"id": 7, "x": 520, "y": 200, "w": 150, "h": 40, "label": "Scene block", "sub": "scene_export.py", "desc": "Clear/ambient color, environment texture (copied next to export), fog, post-processing, inputActions + defaultInputMap (built-in Player asset when the panel is empty).", "meta": [["Manifest key", "scene"], ["Input", "input_defaults.py when empty"]]}, {"id": 8, "x": 520, "y": 300, "w": 150, "h": 40, "label": "Animation block", "sub": "anim_export.py", "desc": "Per-object NLA strip names + autoplay clip/loop/speed. nla_clip_names() also feeds the validator.", "meta": [["Manifest key", "entities[].animation"], ["Source", "NLA strips"]]}, {"id": 9, "x": 520, "y": 80, "w": 150, "h": 40, "label": "Live Link", "sub": "live_link.py", "desc": "save_post handler: when the Scene checkbox is on, every Ctrl+S re-runs validate + export with the remembered path. Failures never break the save. Also owns the Debug Build scene property.", "meta": [["Props", "bjs_live_link*, bjs_debug_build"], ["No", "timers/sockets"]]}, {"id": 10, "x": 760, "y": 160, "w": 150, "h": 40, "label": "level.glb", "sub": "artifact", "desc": "Geometry, transforms, hierarchy, materials, lights, cameras, animation clips. GUIDs ride in node extras.", "meta": [["Consumer", "Babylon glTF importer"]]}, {"id": 11, "x": 760, "y": 260, "w": 150, "h": 40, "label": "level.scene.json", "sub": "artifact", "desc": "Components, per-light/camera settings, scene block (incl. inputActions + defaultInputMap), animation blocks, debug flag.", "meta": [["Consumer", "LevelLoader"], ["Version", "4"]]}, {"id": 12, "x": 760, "y": 360, "w": 150, "h": 40, "label": "audio/ files", "sub": "artifact", "desc": "Sound files copied next to the export so the manifest's relative paths resolve.", "meta": [["Copied by", "export._copy_audio_file"]]}, {"id": 13, "x": 520, "y": 420, "w": 150, "h": 40, "label": "Collider preview", "sub": "collider_preview.py", "desc": "GPU wireframe of manual colliders drawn in the viewport, in Blender space — matches what export converts, so preview == runtime body.", "meta": [["Draw", "SpaceView3D POST_VIEW"]]}, {"id": 14, "x": 40, "y": 400, "w": 150, "h": 40, "label": "Input Actions", "sub": "input_*.py", "desc": "Scene-level Input Actions panel: Action Maps > Actions > Bindings editor, Scene Default picker, key capture, load/save .inputactions.json, sync @inputMap refs from scripts. First export seeds defaults when empty.", "meta": [["Modules", "input_properties · input_ui · input_ops"], ["Panel", "BJS_PT_input_map"]]}], "edges": [{"id": 100, "src": 1, "tgt": 3, "label": "buttons"}, {"id": 101, "src": 1, "tgt": 2, "label": "draws"}, {"id": 102, "src": 3, "tgt": 2, "label": "edits"}, {"id": 103, "src": 3, "tgt": 4, "label": "pick/Sync"}, {"id": 104, "src": 4, "tgt": 2, "label": "fields"}, {"id": 105, "src": 3, "tgt": 5, "label": "Validate"}, {"id": 106, "src": 3, "tgt": 6, "label": "Export"}, {"id": 107, "src": 5, "tgt": 6, "label": "warnings"}, {"id": 108, "src": 6, "tgt": 7, "label": ""}, {"id": 109, "src": 6, "tgt": 8, "label": ""}, {"id": 110, "src": 9, "tgt": 6, "label": "Ctrl+S"}, {"id": 111, "src": 6, "tgt": 10, "label": "glTF"}, {"id": 112, "src": 6, "tgt": 11, "label": "serialize"}, {"id": 113, "src": 6, "tgt": 12, "label": "copy"}, {"id": 114, "src": 2, "tgt": 13, "label": "values"}, {"id": 115, "src": 4, "tgt": 14, "label": "@inputMap"}, {"id": 116, "src": 3, "tgt": 14, "label": "seed/sync"}, {"id": 117, "src": 14, "tgt": 7, "label": "values"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Blender add-on","nodes":[{"id":1,"x":40,"y":40,"w":150,"h":40,"label":"N-panel UI","sub":"ui.py","desc":"Draws the Babylon panel: component list with per-type fields, the Animation box, and the Export panel (Export / Live Link / Debug Build / Validate). Input Actions has its own panel in input_ui.py.","meta":[["Kind","drawing only"],["Entry","BJS_PT_* panels"]]},{"id":2,"x":40,"y":160,"w":150,"h":40,"label":"Data model","sub":"properties.py","desc":"Component PropertyGroups: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint), exposed vars + list items, trigger events, light/shadow/animation settings. Input Actions data lives in input_properties.py (Scene.bjs_input_maps + default map). Owns ID_KEY + ensure_object_id().","meta":[["Identity","bjs_id custom prop"],["Registered on","Object / Scene"]]},{"id":3,"x":40,"y":280,"w":150,"h":40,"label":"Operators","sub":"operators.py","desc":"Add/remove/duplicate/move/copy/paste components, Assign GUID, script picker + Sync, list and trigger-event row editing, Validate, Export.","meta":[["Export op","BJS_OT_export"],["Validate op","BJS_OT_validate"]]},{"id":4,"x":280,"y":40,"w":150,"h":40,"label":"Script parser","sub":"script_parse.py","desc":"Regex-parses @exposed(...) and @inputMap(\"…\") out of behavior .ts source. THE cross-language contract: decorators must stay literally lowercase.","meta":[["Trigger","Open Script / Sync / Create Maps Used by Scripts"],["Reads","apps/<app>/src/behaviors/*.ts"]]},{"id":5,"x":280,"y":160,"w":150,"h":40,"label":"Validator","sub":"validate.py","desc":"Pre-export checks: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).","meta":[["Runs from","Validate / Export / Live Link"],["Output","report warnings"]]},{"id":6,"x":280,"y":280,"w":150,"h":40,"label":"Exporter","sub":"export.py","desc":"Writes the glb (Blender glTF, +Y-up, GUIDs into node extras) and builds the schema-v4 manifest. Converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects so refs always resolve. Copies audio files.","meta":[["Schema","v4"],["Axis conv","at export"]]},{"id":7,"x":520,"y":200,"w":150,"h":40,"label":"Scene block","sub":"scene_export.py","desc":"Clear/ambient color, environment texture (copied next to export), fog, post-processing, inputActions + defaultInputMap (built-in Player asset when the panel is empty).","meta":[["Manifest key","scene"],["Input","input_defaults.py when empty"]]},{"id":8,"x":520,"y":300,"w":150,"h":40,"label":"Animation block","sub":"anim_export.py","desc":"Per-object NLA strip names + autoplay clip/loop/speed. nla_clip_names() also feeds the validator.","meta":[["Manifest key","entities[].animation"],["Source","NLA strips"]]},{"id":9,"x":520,"y":80,"w":150,"h":40,"label":"Live Link","sub":"live_link.py","desc":"save_post handler: when the Scene checkbox is on, every Ctrl+S re-runs validate + export with the remembered path. Failures never break the save. Also owns the Debug Build scene property.","meta":[["Props","bjs_live_link*, bjs_debug_build"],["No","timers/sockets"]]},{"id":10,"x":760,"y":160,"w":150,"h":40,"label":"level.glb","sub":"artifact","desc":"Geometry, transforms, hierarchy, materials, lights, cameras, animation clips. GUIDs ride in node extras.","meta":[["Consumer","Babylon glTF importer"]]},{"id":11,"x":760,"y":260,"w":150,"h":40,"label":"level.scene.json","sub":"artifact","desc":"Components, per-light/camera settings, scene block (incl. inputActions + defaultInputMap), animation blocks, debug flag.","meta":[["Consumer","LevelLoader"],["Version","4"]]},{"id":12,"x":760,"y":360,"w":150,"h":40,"label":"audio/ files","sub":"artifact","desc":"Sound files copied next to the export so the manifest's relative paths resolve.","meta":[["Copied by","export._copy_audio_file"]]},{"id":13,"x":520,"y":420,"w":150,"h":40,"label":"Collider preview","sub":"collider_preview.py","desc":"GPU wireframe of manual colliders drawn in the viewport, in Blender space — matches what export converts, so preview == runtime body.","meta":[["Draw","SpaceView3D POST_VIEW"]]},{"id":14,"x":40,"y":400,"w":150,"h":40,"label":"Input Actions","sub":"input_*.py","desc":"Scene-level Input Actions panel: Action Maps > Actions > Bindings editor, Scene Default picker, key capture, load/save .inputactions.json, sync @inputMap refs from scripts. First export seeds defaults when empty.","meta":[["Modules","input_properties · input_ui · input_ops"],["Panel","BJS_PT_input_map"]]}],"edges":[{"id":100,"src":1,"tgt":3,"label":"buttons"},{"id":101,"src":1,"tgt":2,"label":"draws"},{"id":102,"src":3,"tgt":2,"label":"edits"},{"id":103,"src":3,"tgt":4,"label":"pick/Sync"},{"id":104,"src":4,"tgt":2,"label":"fields"},{"id":105,"src":3,"tgt":5,"label":"Validate"},{"id":106,"src":3,"tgt":6,"label":"Export"},{"id":107,"src":5,"tgt":6,"label":"warnings"},{"id":108,"src":6,"tgt":7,"label":""},{"id":109,"src":6,"tgt":8,"label":""},{"id":110,"src":9,"tgt":6,"label":"Ctrl+S"},{"id":111,"src":6,"tgt":10,"label":"glTF"},{"id":112,"src":6,"tgt":11,"label":"serialize"},{"id":113,"src":6,"tgt":12,"label":"copy"},{"id":114,"src":2,"tgt":13,"label":"values"},{"id":115,"src":4,"tgt":14,"label":"@inputMap"},{"id":116,"src":3,"tgt":14,"label":"seed/sync"},{"id":117,"src":14,"tgt":7,"label":"values"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1120,191 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }

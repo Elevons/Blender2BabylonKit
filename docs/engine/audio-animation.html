@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -301,7 +303,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title": "Babylon Level Kit \u2014 Audio & Animation", "nodes": [{"id": 1, "x": 40, "y": 80, "w": 150, "h": 40, "label": "AUDIO component", "sub": "Blender", "desc": "File picker (copied to audio/), volume, loop, autoplay, 3D spatial + max distance, playback rate.", "meta": [["Validator", "missing file warn"]]}, {"id": 2, "x": 300, "y": 80, "w": 150, "h": 40, "label": "ApplyAudio", "sub": "subsystems/audio.ts", "desc": "Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Names = file stem.", "meta": [["Legacy Sound class", "deprecated \u2014 not used"]]}, {"id": 3, "x": 560, "y": 40, "w": 150, "h": 40, "label": "Autoplay & unlock", "sub": "browser policy", "desc": "Auto-play sounds await audioEngine.unlockAsync() (first user gesture) WITHOUT blocking the load \u2014 creation promises settle in FinalizeLevel via allSettled.", "meta": [["Bad file", "logs, level still loads"]]}, {"id": 4, "x": 560, "y": 140, "w": 150, "h": 40, "label": "entity.sounds", "sub": "runtime", "desc": "GetSound('door') \u2192 play/stop/pitch from behaviors. Disposed with the level.", "meta": [["Demo", "MessageLogger plays on message"]]}, {"id": 5, "x": 40, "y": 280, "w": 150, "h": 40, "label": "NLA strips", "sub": "Blender", "desc": "Strips export as glTF animations \u2192 global AnimationGroups. The Animation box sets autoplay clip/loop/speed.", "meta": [["Block", "entities[].animation"]]}, {"id": 6, "x": 300, "y": 280, "w": 150, "h": 40, "label": "FindAnimationGroups", "sub": "membership scoping", "desc": "A group belongs to an entity if any targeted animation targets its node or a descendant \u2014 no global-name reliance.", "meta": [["File", "subsystems/animation.ts"]]}, {"id": 7, "x": 560, "y": 280, "w": 150, "h": 40, "label": "ApplyAutoPlayAnimations", "sub": "FinalizeLevel", "desc": "Stops the glTF loader's auto-started groups first, then plays each entity's chosen clip (exact \u2192 contains \u2192 first).", "meta": [["Runtime control", "entity.GetAnimation('Walk')?.start()"]]}, {"id": 8, "x": 300, "y": 400, "w": 150, "h": 40, "label": "Skinned-mesh rule", "sub": "author on the ARMATURE", "desc": "glTF skinning ignores the mesh node's transform (joints define the pose) and clips target the joints under the armature \u2014 so GUID, Animation settings, and Scripts on the mesh object silently do nothing. Validator warns.", "meta": [["State machine", "prototyped + reverted; see DEVELOPMENT_PLAN"]]}], "edges": [{"id": 100, "src": 1, "tgt": 2, "label": "manifest"}, {"id": 101, "src": 2, "tgt": 3, "label": ""}, {"id": 102, "src": 2, "tgt": 4, "label": ""}, {"id": 103, "src": 5, "tgt": 6, "label": "groups"}, {"id": 104, "src": 6, "tgt": 7, "label": ""}, {"id": 105, "src": 5, "tgt": 8, "label": "if rigged"}, {"id": 106, "src": 6, "tgt": 8, "label": "joints scope"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Audio & Animation","nodes":[{"id":1,"x":40,"y":80,"w":150,"h":40,"label":"AUDIO component","sub":"Blender","desc":"File picker (copied to audio/), volume, loop, autoplay, 3D spatial + max distance, playback rate.","meta":[["Validator","missing file warn"]]},{"id":2,"x":300,"y":80,"w":150,"h":40,"label":"ApplyAudio","sub":"subsystems/audio.ts","desc":"Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Names = file stem.","meta":[["Legacy Sound class","deprecated — not used"]]},{"id":3,"x":560,"y":40,"w":150,"h":40,"label":"Autoplay & unlock","sub":"browser policy","desc":"Auto-play sounds await audioEngine.unlockAsync() (first user gesture) WITHOUT blocking the load — creation promises settle in FinalizeLevel via allSettled.","meta":[["Bad file","logs, level still loads"]]},{"id":4,"x":560,"y":140,"w":150,"h":40,"label":"entity.sounds","sub":"runtime","desc":"GetSound('door') → play/stop/pitch from behaviors. Disposed with the level.","meta":[["Demo","MessageLogger plays on message"]]},{"id":5,"x":40,"y":280,"w":150,"h":40,"label":"NLA strips","sub":"Blender","desc":"Strips export as glTF animations → global AnimationGroups. The Animation box sets autoplay clip/loop/speed.","meta":[["Block","entities[].animation"]]},{"id":6,"x":300,"y":280,"w":150,"h":40,"label":"FindAnimationGroups","sub":"membership scoping","desc":"A group belongs to an entity if any targeted animation targets its node or a descendant — no global-name reliance.","meta":[["File","subsystems/animation.ts"]]},{"id":7,"x":560,"y":280,"w":150,"h":40,"label":"ApplyAutoPlayAnimations","sub":"FinalizeLevel","desc":"Stops the glTF loader's auto-started groups first, then plays each entity's chosen clip (exact → contains → first).","meta":[["Runtime control","entity.GetAnimation('Walk')?.start()"]]},{"id":8,"x":300,"y":400,"w":150,"h":40,"label":"Skinned-mesh rule","sub":"author on the ARMATURE","desc":"glTF skinning ignores the mesh node's transform (joints define the pose) and clips target the joints under the armature — so GUID, Animation settings, and Scripts on the mesh object silently do nothing. Validator warns.","meta":[["State machine","prototyped + reverted; see DEVELOPMENT_PLAN"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"manifest"},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":2,"tgt":4,"label":""},{"id":103,"src":5,"tgt":6,"label":"groups"},{"id":104,"src":6,"tgt":7,"label":""},{"id":105,"src":5,"tgt":8,"label":"if rigged"},{"id":106,"src":6,"tgt":8,"label":"joints scope"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1120,191 +1122,6 @@ function exportSelf() {
 </script>
 
 <style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
-  #panel { position: relative; }
-  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
-  #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
-  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
-  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
-</style>
-<script>
-  (function AttachPanelResizer()
-  {
-    const panel = document.getElementById('panel');
-    if (!panel) { return; }
-    const handle = document.createElement('div');
-    handle.id = 'panel-resizer';
-    panel.appendChild(handle);
-    let dragging = false;
-    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
-    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
-  })();
-</script>
-<style>
-  /* All pages: full-width panel content + left-edge drag-to-resize */
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }

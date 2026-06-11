@@ -12,7 +12,7 @@ import {
   type TransformNode,
 } from "@babylonjs/core";
 import type { Entity } from "../core/Entity";
-import type { ConstraintComponent } from "../core/types";
+import type { ConstraintAxisName, ConstraintComponent } from "../core/types";
 import type { Level } from "../core/Level";
 
 /**
@@ -29,6 +29,7 @@ import type { Level } from "../core/Level";
  *   HINGE  -> 6DoF, only ANGULAR_X free/limited; constraint-frame X = authored axis
  *   SLIDER -> 6DoF, only LINEAR_X free/limited
  *   SPRING -> 6DoF, LINEAR_X sprung (stiffness/damping) within limits
+ *   CUSTOM -> 6DoF, per-axis free/locked/limited/spring from manifest `axes`
  */
 
 /** One authored joint, registered while the entity loop runs. */
@@ -104,12 +105,82 @@ function LockedAxis(axis: PhysicsConstraintAxis): Physics6DoFConstraintLimit
   return { axis, minLimit: 0, maxLimit: 0 };
 }
 
+const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
+  LINEAR_X: PhysicsConstraintAxis.LINEAR_X,
+  LINEAR_Y: PhysicsConstraintAxis.LINEAR_Y,
+  LINEAR_Z: PhysicsConstraintAxis.LINEAR_Z,
+  ANGULAR_X: PhysicsConstraintAxis.ANGULAR_X,
+  ANGULAR_Y: PhysicsConstraintAxis.ANGULAR_Y,
+  ANGULAR_Z: PhysicsConstraintAxis.ANGULAR_Z,
+};
+
+function IsAngularAxis(name: ConstraintAxisName): boolean
+{
+  return name.startsWith("ANGULAR_");
+}
+
+/** CUSTOM: map authored per-axis rows to Havok 6DoF limits (FREE = omitted). */
+function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFConstraintLimit[]
+{
+  const limits: Physics6DoFConstraintLimit[] = [];
+  const degreesToRadians = Math.PI / 180;
+
+  if (component.axes === undefined || component.axes.length === 0)
+  {
+    console.warn("[bjs] CUSTOM constraint has no axes configured — all DOF will be free");
+    return limits;
+  }
+
+  for (const axisConfig of component.axes)
+  {
+    const physicsAxis = CONSTRAINT_AXIS_MAP[axisConfig.axis];
+    if (physicsAxis === undefined)
+    {
+      console.warn(`[bjs] CUSTOM constraint: unknown axis "${axisConfig.axis}"`);
+      continue;
+    }
+
+    if (axisConfig.mode === "free")
+    {
+      continue;
+    }
+
+    if (axisConfig.mode === "locked")
+    {
+      limits.push(LockedAxis(physicsAxis));
+      continue;
+    }
+
+    const scale = IsAngularAxis(axisConfig.axis) ? degreesToRadians : 1;
+    const linearLimit: Physics6DoFConstraintLimit = {
+      axis: physicsAxis,
+      minLimit: (axisConfig.min ?? 0) * scale,
+      maxLimit: (axisConfig.max ?? 0) * scale,
+    };
+
+    if (axisConfig.mode === "spring")
+    {
+      linearLimit.stiffness = axisConfig.stiffness;
+      linearLimit.damping = axisConfig.damping;
+    }
+
+    limits.push(linearLimit);
+  }
+
+  return limits;
+}
+
 /**
  * The per-type 6DoF limit set. The constraint frame's X is the authored axis,
  * so HINGE frees/limits ANGULAR_X and SLIDER/SPRING free/limit LINEAR_X.
  */
 function BuildAxisLimits(component: ConstraintComponent): Physics6DoFConstraintLimit[]
 {
+  if (component.constraintType === "CUSTOM")
+  {
+    return BuildCustomAxisLimits(component);
+  }
+
   const limits: Physics6DoFConstraintLimit[] = [];
   const degreesToRadians = Math.PI / 180;
 
@@ -177,6 +248,25 @@ function CreateConstraint(
     return new BallAndSocketConstraint(frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene);
   }
 
+  if (component.constraintType === "CUSTOM" || component.constraintType === "HINGE"
+    || component.constraintType === "SLIDER" || component.constraintType === "SPRING")
+  {
+    return new Physics6DoFConstraint(
+      {
+        pivotA: frame.pivotA,
+        pivotB: frame.pivotB,
+        axisA: frame.axisA,
+        axisB: frame.axisB,
+        perpAxisA: frame.perpAxisA,
+        perpAxisB: frame.perpAxisB,
+        collision: component.collision,
+      },
+      BuildAxisLimits(component),
+      scene
+    );
+  }
+
+  console.warn(`[bjs] unknown constraint type "${component.constraintType}"`);
   return new Physics6DoFConstraint(
     {
       pivotA: frame.pivotA,
@@ -187,7 +277,7 @@ function CreateConstraint(
       perpAxisB: frame.perpAxisB,
       collision: component.collision,
     },
-    BuildAxisLimits(component),
+    [],
     scene
   );
 }

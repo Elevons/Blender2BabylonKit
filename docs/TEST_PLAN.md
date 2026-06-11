@@ -133,6 +133,16 @@ joints are visible before they settle.
 - **Steps:** remove the target's Rigid Body, Validate.
 - **Expect:** warning that the constraint target has no Collider/Rigid Body.
 
+### 3.6 Custom (6DoF) — trailer hitch
+- **Steps:** two dynamic chassis cubes, rear cube gets **Constraint**: Joint =
+  Custom (6DoF), Target = front cube, Axis = X (vehicle width), pivot at the
+  hitch. Set **Angular X** = Free (or Limited ±45°), **Linear Y** = Spring
+  (−0.15 / 0.15 m, stiffness ~80), all other rows Locked. Export, reload.
+- **Expect:** when the front cube pitches nose-up over a bump, the rear cube
+  pitches **opposite** (relative hinge motion), not in lockstep. Optional:
+  slight vertical compliance at the hitch from the Linear Y spring. Validator
+  warns if a limited/spring row has min > max.
+
 ## 4. v0.28 — input action map
 
 ### 4.1 Keyboard axes + actions
@@ -190,5 +200,7 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
 2. **§2.1** — browser autoplay policy differences (Safari is strictest).
 3. **§3.x** — constraint frame math: if a hinge rotates around the wrong axis,
    the Blender→Babylon axis conversion in `export.py` is the first suspect.
+   CUSTOM: wrong per-axis modes (e.g. spring on all rotation) welds bodies
+   together — check `axes[]` in the manifest.
 EOF
 echo "TEST_PLAN.md: $(wc -l < /home/claude/bjs-level-kit/docs/TEST_PLAN.md) lines"

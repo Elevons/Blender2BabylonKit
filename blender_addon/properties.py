@@ -55,7 +55,36 @@ CONSTRAINT_TYPES = [
     ('HINGE',  "Hinge",          "Rotation around one axis (door, lever, wheel)"),
     ('SLIDER', "Slider",         "Translation along one axis (drawer, piston)"),
     ('SPRING', "Spring",         "Sprung translation along one axis (suspension)"),
+    ('CUSTOM', "Custom (6DoF)",  "Per-axis free/locked/limited/spring on one 6DoF joint"),
 ]
+
+CONSTRAINT_DOF_AXES = [
+    ('LINEAR_X',  "Linear X",  "Slide along constraint frame X (the authored Axis)"),
+    ('LINEAR_Y',  "Linear Y",  "Slide along constraint frame Y"),
+    ('LINEAR_Z',  "Linear Z",  "Slide along constraint frame Z"),
+    ('ANGULAR_X', "Angular X", "Rotate around frame X (degrees)"),
+    ('ANGULAR_Y', "Angular Y", "Rotate around frame Y (degrees)"),
+    ('ANGULAR_Z', "Angular Z", "Rotate around frame Z (degrees)"),
+]
+
+CONSTRAINT_AXIS_MODES = [
+    ('FREE',    "Free",    "Unrestricted on this axis"),
+    ('LOCKED',  "Locked",  "No relative motion"),
+    ('LIMITED', "Limited", "Min/max range"),
+    ('SPRING',  "Spring",  "Sprung within min/max range"),
+]
+
+CONSTRAINT_DOF_LABELS = {item[0]: item[1] for item in CONSTRAINT_DOF_AXES}
+
+# Default CUSTOM rows: all locked until the author opens up the DOFs they need.
+_CUSTOM_AXIS_DEFAULTS = (
+    ('LINEAR_X',  'LOCKED'),
+    ('LINEAR_Y',  'LOCKED'),
+    ('LINEAR_Z',  'LOCKED'),
+    ('ANGULAR_X', 'LOCKED'),
+    ('ANGULAR_Y', 'LOCKED'),
+    ('ANGULAR_Z', 'LOCKED'),
+)
 
 CONSTRAINT_AXES = [
     ('X', "X", "The object's local X axis (Blender)"),
@@ -338,6 +367,40 @@ def _init_var_value(v, f):
             add_list_item(v, el)
 
 
+def ensure_custom_constraint_axes(comp):
+    """Ensure a CUSTOM constraint owns the six standard 6DoF axis rows."""
+    if comp.con_type != 'CUSTOM':
+        return
+    if len(comp.con_custom_axes) == len(_CUSTOM_AXIS_DEFAULTS):
+        return
+    comp.con_custom_axes.clear()
+    for axis_id, mode in _CUSTOM_AXIS_DEFAULTS:
+        row = comp.con_custom_axes.add()
+        row.dof_axis = axis_id
+        row.mode = mode
+
+
+def _on_con_type_update(self, context):
+    """When switching to CUSTOM, seed the six per-axis rows."""
+    ensure_custom_constraint_axes(self)
+
+
+class BJSConstraintAxisDoF(PropertyGroup):
+    """One 6DoF axis row for a CUSTOM constraint."""
+    dof_axis: EnumProperty(name="Axis", items=CONSTRAINT_DOF_AXES, default='LINEAR_X')
+    mode: EnumProperty(name="Mode", items=CONSTRAINT_AXIS_MODES, default='LOCKED')
+    min_limit: FloatProperty(
+        name="Min", default=0.0,
+        description="Lower limit: meters (linear) or degrees (angular)")
+    max_limit: FloatProperty(
+        name="Max", default=0.0,
+        description="Upper limit: meters (linear) or degrees (angular)")
+    stiffness: FloatProperty(name="Stiffness", default=100.0, min=0.0,
+                             description="Spring stiffness (N/m)")
+    damping: FloatProperty(name="Damping", default=10.0, min=0.0,
+                           description="Spring damping")
+
+
 class BJSTriggerEvent(PropertyGroup):
     """One authored trigger reaction: when something enters this trigger
     collider, send `message` to `target`'s behaviors (OnMessage). An optional
@@ -408,7 +471,8 @@ class BJSComponent(PropertyGroup):
     audio_rate:     FloatProperty(name="Playback Rate", default=1.0, min=0.1, max=4.0)
 
     # --- CONSTRAINT ---
-    con_type:   EnumProperty(name="Joint", items=CONSTRAINT_TYPES, default='HINGE')
+    con_type:   EnumProperty(name="Joint", items=CONSTRAINT_TYPES, default='HINGE',
+                             update=_on_con_type_update)
     con_target: PointerProperty(name="Target", type=Object,
                                 description="The other body this object is jointed to")
     con_pivot:  FloatVectorProperty(name="Pivot", size=3, default=(0.0, 0.0, 0.0),
@@ -432,6 +496,7 @@ class BJSComponent(PropertyGroup):
     con_motor_speed: FloatProperty(name="Motor Speed", default=90.0,
                                    description="Target speed: deg/s (hinge) or m/s (slider)")
     con_motor_force: FloatProperty(name="Motor Max Force", default=100.0, min=0.0)
+    con_custom_axes: CollectionProperty(type=BJSConstraintAxisDoF)
 
     # --- SCRIPT ---
     script_path: StringProperty(
@@ -519,6 +584,7 @@ class BJSAnimationSettings(PropertyGroup):
 classes = (
     BJSListItem,
     BJSExposedVar,
+    BJSConstraintAxisDoF,
     BJSTriggerEvent,
     BJSComponent,
     BJSLightShadow,

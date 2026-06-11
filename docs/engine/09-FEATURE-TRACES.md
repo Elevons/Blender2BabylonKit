@@ -77,10 +77,12 @@ Is Trigger + **On Enter Events** rows (`BJSTriggerEvent`) → manifest
 
 ### Constraint
 CONSTRAINT fields → `_serialize_components` (pivot/axis → Y-up; target GUID
-force-included) → `constraints.BuildConstraints` in `FinalizeLevel`:
+force-included; CUSTOM also exports `axes[]` per 6DoF row) →
+`constraints.BuildConstraints` in `FinalizeLevel`:
 `ComputeConstraintFrame` from live world transforms (pins as-placed pose) →
-Lock/BallAndSocket or 6DoF with per-type `BuildAxisLimits` → optional
-`ApplyMotor` → `ownerBody.addConstraint` → `level.constraints`.
+Lock/BallAndSocket or 6DoF with `BuildAxisLimits` (presets) or
+`BuildCustomAxisLimits` (CUSTOM) → optional `ApplyMotor` (HINGE/SLIDER only) →
+`ownerBody.addConstraint` → `level.constraints`.
 
 ### Input action
 Blender **Input Actions** panel (maps > actions > bindings + **Scene Default**
