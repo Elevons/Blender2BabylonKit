@@ -113,7 +113,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "level.scene.json",
           "sub": "what it can't",
-          "desc": "Components, tags, physics, script bindings + exposed values, trigger events, constraints, audio, per-light/camera and scene settings, the debug flag.",
+          "desc": "Components, tags, physics, script bindings + exposed values, trigger events, constraints, audio, GUI/particle JSON refs, 3D GUI button/panel settings, per-light/camera and scene settings, the debug flag.",
           "meta": [
             [
               "Owner",
@@ -941,7 +941,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyComponents",
           "sub": "per entity",
-          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → queue trigger registrations → queue async audio creation → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → queue trigger registrations → queue async audio/GUI/particle tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
           "meta": [
             [
               "Helpers",
@@ -989,7 +989,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "SetupShadows → ApplyScene (env/fog/post) → ApplyAutoPlayAnimations → settle audio promises (allSettled) → WireTriggerEvents → BuildConstraints → Level.Begin → debugColliders (gated by Debug Build).",
+          "desc": "SetupShadows → ApplyScene (env/fog/post) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls (panels first, then controls + click wiring) → Level.Begin → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1887,6 +1887,205 @@ export const ENGINE_AREA_PAGES = {
           "tgt": 8,
           "label": "joints scope"
         }
+      ]
+    }
+  },
+  "ui.html": {
+    "navLabel": "UI",
+    "diagram": {
+      "title": "Babylon Level Kit — UI (2D GUI, particles, 3D GUI)",
+      "nodes": [
+        {
+          "id": 1,
+          "x": 40,
+          "y": 60,
+          "w": 150,
+          "h": 40,
+          "label": "GUI component",
+          "sub": "2D — Blender",
+          "desc": "References a .json from Babylon's GUI Editor. FULLSCREEN = HUD overlay; MESH = projected onto this entity's mesh surface (needs a mesh). File copied to gui/ next to the export.",
+          "meta": [
+            [
+              "Editor",
+              "gui.babylonjs.com"
+            ],
+            [
+              "Validator",
+              "MESH mode needs mesh"
+            ]
+          ]
+        },
+        {
+          "id": 2,
+          "x": 300,
+          "y": 60,
+          "w": 150,
+          "h": 40,
+          "label": "ApplyGui",
+          "sub": "ui/gui2d.ts",
+          "desc": "CreateForMesh or CreateFullscreenUI, then parseFromURLAsync. Texture name = file stem → entity.GetGui(\"hud\"). Queued as an async task during ApplyComponents.",
+          "meta": [
+            [
+              "Peer dep",
+              "@babylonjs/gui"
+            ],
+            [
+              "Storage",
+              "entity.guiTextures"
+            ]
+          ]
+        },
+        {
+          "id": 3,
+          "x": 40,
+          "y": 200,
+          "w": 150,
+          "h": 40,
+          "label": "PARTICLE component",
+          "sub": "Blender",
+          "desc": "References a .json from Babylon's Particle Editor. GPU toggle, autoStart, attachToEntity (mesh or empty position), optional capacity override. File copied to particles/.",
+          "meta": [
+            [
+              "Editor",
+              "particles.babylonjs.com"
+            ],
+            [
+              "Validator",
+              "missing file warn"
+            ]
+          ]
+        },
+        {
+          "id": 4,
+          "x": 300,
+          "y": 200,
+          "w": 150,
+          "h": 40,
+          "label": "ApplyParticles",
+          "sub": "subsystems/particles.ts",
+          "desc": "ParticleHelper.ParseFromFileAsync (GPU when supported). Emitter = entity mesh or absolute position clone. Queued async; settled in FinalizeLevel.",
+          "meta": [
+            [
+              "Storage",
+              "entity.particleSystems"
+            ],
+            [
+              "Lookup",
+              "GetParticles(stem)"
+            ]
+          ]
+        },
+        {
+          "id": 5,
+          "x": 40,
+          "y": 380,
+          "w": 150,
+          "h": 40,
+          "label": "GUI3D_* components",
+          "sub": "9 control/panel types",
+          "desc": "One component per Babylon 3D control: Button3D, Holographic/TouchHolographic, MeshButton3D, plus Stack/Sphere/Cylinder/Plane/Scatter panels. Buttons carry On Click events (target + message). Panels lay out Blender child objects.",
+          "meta": [
+            [
+              "No external editor",
+              "Blender is the editor"
+            ],
+            [
+              "Images",
+              "gui/ via _copy_asset"
+            ]
+          ]
+        },
+        {
+          "id": 6,
+          "x": 300,
+          "y": 340,
+          "w": 150,
+          "h": 40,
+          "label": "gui3dRegistrations",
+          "sub": "entity pass",
+          "desc": "Each GUI3D component queued with {entity, component, parentId}. parentId = manifest parent GUID so a button finds its panel. Built only in FinalizeLevel (panels + click targets must exist).",
+          "meta": [
+            [
+              "File",
+              "loader/context.ts"
+            ]
+          ]
+        },
+        {
+          "id": 7,
+          "x": 560,
+          "y": 300,
+          "w": 150,
+          "h": 40,
+          "label": "BuildGui3DControls",
+          "sub": "ui/gui3d/builder.ts",
+          "desc": "One GUI3DManager per level. Panels first (addControl → linkToTransformNode). Controls: parent panel addControl OR manager root + link. blockLayout while batching children. ApplyControlContent AFTER addControl.",
+          "meta": [
+            [
+              "Disposal",
+              "level.gui3DManager"
+            ]
+          ]
+        },
+        {
+          "id": 8,
+          "x": 560,
+          "y": 400,
+          "w": 150,
+          "h": 40,
+          "label": "WireClickEvents",
+          "sub": "ui/gui3d/events.ts",
+          "desc": "onPointerClickObservable → targetEntity.SendMessage(message, buttonEntity). Same OnMessage hook trigger colliders use — zero sender-side code.",
+          "meta": [
+            [
+              "Requires",
+              "click target GUID in manifest"
+            ]
+          ]
+        },
+        {
+          "id": 9,
+          "x": 820,
+          "y": 340,
+          "w": 150,
+          "h": 40,
+          "label": "entity.controls3D",
+          "sub": "runtime",
+          "desc": "Every panel/control created for this entity. GetControl3D(name) for scripts — exact match, then contains. HolographicButton.text, visibility, hover observables, etc.",
+          "meta": [
+            [
+              "Hierarchy",
+              "Blender parenting = panel children"
+            ]
+          ]
+        },
+        {
+          "id": 10,
+          "x": 300,
+          "y": 480,
+          "w": 150,
+          "h": 40,
+          "label": "SettleTasks",
+          "sub": "FinalizeLevel",
+          "desc": "Promise.allSettled for audioTasks, guiTasks, particleTasks — one bad JSON logs a warning; the level still loads.",
+          "meta": [
+            [
+              "File",
+              "core/LevelLoader.ts"
+            ]
+          ]
+        }
+      ],
+      "edges": [
+        { "id": 100, "src": 1, "tgt": 2, "label": "manifest" },
+        { "id": 101, "src": 2, "tgt": 10, "label": "async" },
+        { "id": 102, "src": 3, "tgt": 4, "label": "manifest" },
+        { "id": 103, "src": 4, "tgt": 10, "label": "async" },
+        { "id": 104, "src": 5, "tgt": 6, "label": "export" },
+        { "id": 105, "src": 6, "tgt": 7, "label": "post-pass" },
+        { "id": 106, "src": 7, "tgt": 8, "label": "controls" },
+        { "id": 107, "src": 7, "tgt": 9, "label": "register" },
+        { "id": 108, "src": 8, "tgt": 9, "label": "OnMessage" }
       ]
     }
   },

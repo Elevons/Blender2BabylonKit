@@ -7,6 +7,7 @@ import {
   type IBasePhysicsCollisionEvent,
   type PhysicsConstraint,
 } from "@babylonjs/core";
+import type { GUI3DManager } from "@babylonjs/gui";
 import { Entity } from "./Entity";
 import { InputManager } from "../input";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
@@ -31,6 +32,8 @@ export class Level
   triggerObserver: Observer<IBasePhysicsCollisionEvent> | null = null;
   /** Joints built from CONSTRAINT components (disposed with the level). */
   constraints: PhysicsConstraint[] = [];
+  /** Shared 3D GUI manager, present when any GUI3D_* component was authored. */
+  gui3DManager?: GUI3DManager;
 
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
@@ -198,6 +201,13 @@ export class Level
     }
     this.constraints.length = 0;
 
+    // Disposing the manager disposes every 3D control it owns.
+    if (this.gui3DManager !== undefined)
+    {
+      this.gui3DManager.dispose();
+      this.gui3DManager = undefined;
+    }
+
     for (const entity of this.entities.values())
     {
       for (const behavior of entity.behaviors)
@@ -217,6 +227,21 @@ export class Level
         sound.dispose();
       }
       entity.sounds.length = 0;
+
+      for (const texture of entity.guiTextures)
+      {
+        texture.dispose();
+      }
+      entity.guiTextures.length = 0;
+
+      for (const system of entity.particleSystems)
+      {
+        system.dispose();
+      }
+      entity.particleSystems.length = 0;
+
+      // The controls themselves were disposed with the manager above.
+      entity.controls3D.length = 0;
     }
   }
 }

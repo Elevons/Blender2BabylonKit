@@ -7,7 +7,7 @@ component stack for the active object plus the export button.
 import bpy
 from bpy.types import Panel, Menu
 
-from .properties import LIST_ELEM_SLOT
+from .properties import LIST_ELEM_SLOT, GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED
 
 
 def _draw_var(layout, comp_index, var_index, v):
@@ -43,6 +43,24 @@ def _draw_var(layout, comp_index, var_index, v):
     layout.prop(v, slot, text=label)
 
 
+def _draw_click_events(body, comp, index):
+    """The On Click events box for 3D GUI controls (mirrors trigger events)."""
+    box = body.box()
+    header = box.row()
+    header.label(text="On Click Events", icon='RESTRICT_SELECT_OFF')
+    add = header.operator("bjs.gui3d_event_add", text="", icon='ADD')
+    add.comp_index = index
+    for ev_i, ev in enumerate(comp.gui3d_events):
+        row = box.row(align=True)
+        row.prop(ev, "target", text="")
+        row.prop(ev, "message", text="")
+        rem = row.operator("bjs.gui3d_event_remove", text="", icon='X')
+        rem.comp_index = index
+        rem.event_index = ev_i
+    if len(comp.gui3d_events) == 0:
+        box.label(text="On click: send Message to Target", icon='INFO')
+
+
 def _draw_component(layout, obj, index, comp):
     hdr, panel = layout.panel_prop(comp, "show_expanded")
     hdr.prop(comp, "enabled", text="")
@@ -55,6 +73,16 @@ def _draw_component(layout, obj, index, comp):
     elif comp.comp_type == 'AUDIO' and comp.audio_file:
         import os as _os
         label = f"Audio: {_os.path.basename(comp.audio_file)}"
+    elif comp.comp_type == 'GUI' and comp.gui_file:
+        import os as _os
+        label = f"GUI: {_os.path.basename(comp.gui_file)}"
+    elif comp.comp_type == 'PARTICLE' and comp.particle_file:
+        import os as _os
+        label = f"Particles: {_os.path.basename(comp.particle_file)}"
+    elif comp.comp_type in GUI3D_TEXTURED and comp.gui3d_text:
+        kind = {'GUI3D_BUTTON': "3D Button", 'GUI3D_HOLO': "3D Holo Button",
+                'GUI3D_TOUCH_HOLO': "3D Touch Button"}[comp.comp_type]
+        label = f"{kind}: {comp.gui3d_text}"
     elif comp.comp_type == 'SCRIPT' and comp.script_name:
         label = f"Script: {comp.script_name}"
     elif comp.comp_type == 'CAMERA':
@@ -140,6 +168,62 @@ def _draw_component(layout, obj, index, comp):
         if comp.audio_spatial:
             body.prop(comp, "audio_max_distance")
         body.prop(comp, "audio_rate")
+
+    elif comp.comp_type == 'GUI':
+        body.prop(comp, "gui_file")
+        body.prop(comp, "gui_mode")
+        if comp.gui_mode == 'FULLSCREEN':
+            body.prop(comp, "gui_foreground")
+        else:
+            if obj.type != 'MESH':
+                body.label(text="On-Mesh mode needs a mesh object", icon='INFO')
+            body.prop(comp, "gui_width")
+            body.prop(comp, "gui_height")
+
+    elif comp.comp_type == 'PARTICLE':
+        body.prop(comp, "particle_file")
+        body.prop(comp, "particle_attach")
+        body.prop(comp, "particle_autostart")
+        body.prop(comp, "particle_gpu")
+        body.prop(comp, "particle_capacity")
+
+    elif comp.comp_type in GUI3D_CONTROLS:
+        if comp.comp_type in GUI3D_TEXTURED:
+            body.prop(comp, "gui3d_text")
+            body.prop(comp, "gui3d_image")
+            if comp.comp_type in {'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO'}:
+                body.prop(comp, "gui3d_tooltip")
+            if comp.comp_type == 'GUI3D_BUTTON':
+                body.prop(comp, "gui3d_content_resolution")
+        else:  # GUI3D_MESH — the object's own mesh is the visual
+            if obj.type != 'MESH':
+                body.label(text="Needs a mesh object to wrap", icon='ERROR')
+            else:
+                body.label(text="This mesh becomes the clickable control", icon='INFO')
+        if obj.parent is not None and any(
+                c.comp_type in GUI3D_PANELS for c in obj.parent.bjs_components):
+            body.label(text="Laid out by the parent panel", icon='CON_CHILDOF')
+        _draw_click_events(body, comp, index)
+
+    elif comp.comp_type in GUI3D_PANELS:
+        body.prop(comp, "gui3d_margin")
+        if comp.comp_type == 'GUI3D_STACK':
+            body.prop(comp, "gui3d_vertical")
+        else:
+            row = body.row(align=True)
+            row.prop(comp, "gui3d_columns")
+            row.prop(comp, "gui3d_rows")
+        if comp.comp_type in {'GUI3D_SPHERE', 'GUI3D_CYLINDER'}:
+            body.prop(comp, "gui3d_radius")
+        if comp.comp_type == 'GUI3D_SCATTER':
+            body.prop(comp, "gui3d_iterations")
+        child_buttons = sum(
+            1 for child in obj.children
+            for c in child.bjs_components if c.comp_type in GUI3D_CONTROLS)
+        if child_buttons == 0:
+            body.label(text="Parent 3D button objects under this one", icon='INFO')
+        else:
+            body.label(text=f"{child_buttons} child control(s)", icon='CON_CHILDOF')
 
     elif comp.comp_type == 'CONSTRAINT':
         body.prop(comp, "con_type")

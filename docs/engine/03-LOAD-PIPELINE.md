@@ -27,7 +27,8 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
      `level.entities`, back-reference `node.metadata.bjsEntity = entity`;
    - **`ApplyComponents`** → `ClassifyComponents` sorts the component array,
      then: physics body from COLLIDER/RIGIDBODY (`BuildPhysics`), trigger-event
-     registrations queued, AUDIO sound-creation promises queued,
+     registrations queued, AUDIO/GUI/PARTICLE async tasks queued, GUI3D
+     registrations queued (with manifest `parent` GUID for panel nesting),
      `InstantiateScripts` builds behaviors, applies `@exposed` values, and
      `InjectInputMaps` (entity refs deferred as `PendingRef`s);
    - `ProcessLightForEntity` / `ProcessCameraForEntity` (typed camera override
@@ -37,12 +38,16 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    (FOLLOW lockedTarget / ARC re-pivot / OFFSET per-frame updater).
 7. **`FinalizeLevel`** — shadows (`SetupShadows`), scene block
    (`loader/sceneSettings.ts` → environment/fog/post), `ApplyAutoPlayAnimations`
-   (stop the glTF loader's auto-started groups, start the chosen clips), settle
-   the audio promises (`Promise.allSettled` so one bad file logs instead of
-   rejecting the load), wire trigger events (`WireTriggerEvents` →
-   `level.triggerObserver`), build constraints (`BuildConstraints` →
-   `level.constraints`), then **`level.Begin()`** and, if `debugColliders`
-   *and* the export's Debug Build flag allow, show collider wireframes.
+   (stop the glTF loader's auto-started groups, start the chosen clips),
+   `SettleTasks` for audio/GUI/particle promises (`Promise.allSettled` so one
+   bad file logs instead of rejecting the load), wire trigger events
+   (`WireTriggerEvents` → `level.triggerObserver`), build constraints
+   (`BuildConstraints` → `level.constraints`), build 3D GUI
+   (`BuildGui3DControls` → `level.gui3DManager`), then **`level.Begin()`** and,
+   if `debugColliders` *and* the export's Debug Build flag allow, show collider
+   wireframes.
+
+See [10 — UI](10-UI.md) for the 2D GUI, particle, and 3D GUI pipelines.
 
 `EnableHavokPhysics(scene)` must run before `Load` — bodies are built in step 5.
 

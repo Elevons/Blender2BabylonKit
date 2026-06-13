@@ -16,11 +16,25 @@ import { SetupShadows } from "../subsystems/shadows";
 import { ResolveCameraTargets } from "../subsystems/cameras";
 import { WireTriggerEvents } from "../subsystems/triggers";
 import { BuildConstraints } from "../subsystems/constraints";
+import { BuildGui3DControls } from "../ui/gui3d/builder";
 import { FetchAndValidateManifest, GetDirectory } from "./loader/manifest";
 import { NeutralizeGltfRoot } from "./loader/nodeResolution";
 import { CreateLoadContext, type LoadContext } from "./loader/context";
 import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
+
+/** Await a batch of asset-load promises, logging any that rejected. */
+async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
+{
+  const results = await Promise.allSettled(tasks);
+  for (const result of results)
+  {
+    if (result.status === "rejected")
+    {
+      console.warn(`[bjs] ${label} failed to load:`, result.reason);
+    }
+  }
+}
 
 export interface LevelLoaderOptions {
   /** Create shadow generators for lights flagged to cast shadows. Default true. */
@@ -104,22 +118,22 @@ export class LevelLoader
 
     ApplyAutoPlayAnimations(this.scene, context.animatedEntities);
 
-    // Sounds were created in parallel during the entity loop; settle them now so
-    // a bad file logs here rather than as an unhandled rejection later.
-    const audioResults = await Promise.allSettled(context.audioTasks);
-    for (const result of audioResults)
-    {
-      if (result.status === "rejected")
-      {
-        console.warn("[bjs] sound failed to load:", result.reason);
-      }
-    }
+    // Asset-backed components (audio, GUI, particles) load in parallel during
+    // the entity loop; settle them now so a bad file logs here rather than as
+    // an unhandled rejection later.
+    await SettleTasks(context.audioTasks, "sound");
+    await SettleTasks(context.guiTasks, "GUI");
+    await SettleTasks(context.particleTasks, "particle system");
 
     context.level.triggerObserver =
       WireTriggerEvents(this.scene, context.level, context.triggerRegistrations);
 
     context.level.constraints =
       BuildConstraints(this.scene, context.level, context.constraintRegistrations);
+
+    context.level.gui3DManager = BuildGui3DControls(
+      this.scene, context.level, context.gui3dRegistrations, context.baseUrl
+    );
 
     context.level.Begin();
 

@@ -629,6 +629,21 @@
           "motorMaxForce": 100.0
         }
       ]
+    },
+    {
+      "id": "ce48d96956944461b0763a8382a26411",
+      "name": "Plane.001",
+      "parent": null,
+      "components": [
+        {
+          "type": "GUI",
+          "file": "gui/guiTexture.json",
+          "mode": "MESH",
+          "foreground": true,
+          "width": 1024,
+          "height": 1024
+        }
+      ]
     }
   ],
   "debug": true

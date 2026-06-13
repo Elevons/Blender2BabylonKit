@@ -6,6 +6,7 @@ import {
 } from "@babylonjs/core";
 import type { Entity } from "../core/Entity";
 import type { AudioComponent } from "../core/types";
+import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
 /**
  * Audio subsystem, built on Babylon's audio engine v2 (the legacy `Sound` class
@@ -49,7 +50,10 @@ export async function ApplyAudio(
   const fileName = audioComponent.file.split("/").pop() ?? audioComponent.file;
   const soundName = fileName.replace(/\.[^.]+$/, "");
 
-  const sound = await CreateSoundAsync(soundName, baseUrl + audioComponent.file, {
+  const sound = await CreateSoundAsync(
+    soundName,
+    ResolveManifestAssetUrl(baseUrl, audioComponent.file),
+    {
     volume: audioComponent.volume,
     loop: audioComponent.loop,
     playbackRate: audioComponent.playbackRate,

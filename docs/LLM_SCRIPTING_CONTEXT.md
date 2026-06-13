@@ -57,9 +57,15 @@ entity.tag: string                // from a TAG component ("Untagged" default)
 entity.body?: PhysicsBody         // Havok V2 body — present iff a COLLIDER/RIGIDBODY was authored
 entity.animations: AnimationGroup[]               // glTF clips targeting this entity
 entity.sounds: StaticSound[]                      // sounds from AUDIO components (audio engine v2)
+entity.guiTextures: AdvancedDynamicTexture[]      // from GUI components (@babylonjs/gui)
+entity.particleSystems: IParticleSystem[]         // from PARTICLE components
+entity.controls3D: Control3D[]                    // from GUI3D_* components (buttons + panels)
 entity.GetBehavior<T>(Ctor): T | undefined        // another behavior on the same entity
 entity.GetAnimation(name): AnimationGroup | undefined  // exact match, then contains
 entity.GetSound(name): StaticSound | undefined         // exact match, then contains
+entity.GetGui(name): AdvancedDynamicTexture | undefined      // exact match, then contains
+entity.GetParticles(name): IParticleSystem | undefined       // exact match, then contains
+entity.GetControl3D(name): Control3D | undefined             // exact match, then contains
 entity.SendMessage(message, source): void              // deliver to all its behaviors' OnMessage
 ```
 
@@ -239,6 +245,38 @@ Trigger colliders can be authored in Blender to send a message on enter — rece
 it by overriding `OnMessage`. Sounds with Auto Play start after the browser's
 first user gesture (autoplay policy); calling `.play()` from input handlers is
 always safe.
+
+## GUI & particles
+
+GUI layouts and particle systems are authored in Blender as **GUI** / **Particles**
+components pointing at a Babylon-editor `.json`; the runtime loads them, so a
+behavior just drives the already-built objects:
+
+```ts
+this.entity.GetGui("hud")?.getControlByName("Score");   // names = file stem ("gui/hud.json" -> "hud")
+this.entity.GetParticles("fire")?.start();              // or .stop(); also this.entity.particleSystems
+```
+
+`AdvancedDynamicTexture` / GUI control types import from `@babylonjs/gui`;
+`IParticleSystem` imports from `@babylonjs/core`.
+
+## 3D GUI
+
+3D buttons and panels are authored as **GUI3D_*** components (one per Babylon
+control type — `Button3D`, `HolographicButton`, `TouchHolographicButton`,
+`MeshButton3D`, plus stack/sphere/cylinder/plane/scatter panels). Panels lay
+out the controls on their Blender *child* objects. The runtime builds them all
+on a shared `GUI3DManager` after entities exist, so behaviors only drive the
+finished controls:
+
+```ts
+this.entity.GetControl3D("StartButton");          // named after the Blender object
+(this.entity.GetControl3D("StartButton") as HolographicButton).text = "Resume";
+```
+
+Authored On Click events arrive as `OnMessage(message, buttonEntity)` on the
+target entity's behaviors — handle clicks the same way as trigger messages.
+`Control3D` / button classes import from `@babylonjs/gui`.
 
 ## Style (generated code must match)
 

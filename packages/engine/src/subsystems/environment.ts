@@ -6,6 +6,7 @@ import {
   type BaseTexture,
 } from "@babylonjs/core";
 import type { EnvironmentInfo } from "../core/types";
+import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
 /**
  * Set up image-based lighting (and an optional skybox) from a Blender world
@@ -22,7 +23,7 @@ export function ApplyEnvironment(
   baseUrl: string
 ): BaseTexture
 {
-  const textureUrl = baseUrl + environmentInfo.file;
+  const textureUrl = ResolveManifestAssetUrl(baseUrl, environmentInfo.file);
   const lowerCaseFile = environmentInfo.file.toLowerCase();
 
   let environmentTexture: BaseTexture;

@@ -31,16 +31,28 @@ This file is the forward plan only; per-feature design notes live with each item
 1. **Prefabs + Spawn/Despawn API** — the biggest remaining capability; full
    design already in `PREFAB_SPEC.md` (linked .blend collections -> per-prefab
    glb/manifest, composite GUIDs, `level.Spawn()`). Schema v5. Large.
-2. **Particles component** — Blender component (preset: fire/smoke/sparks/
-   custom texture, emit rate, lifetime, size/color ranges) -> Babylon
-   ParticleSystem in a new `subsystems/particles.ts`. Medium.
-3. **Input: mouse support** — pointer buttons/delta as actions and axes
+2. ~~**Particles component**~~ — **shipped** as an editor-JSON component:
+   **GUI** and **Particles** components reference the `.json` saved by Babylon's
+   online GUI/Particle editors (copied next to the export), loaded at runtime in
+   `ui/gui2d.ts` (`AdvancedDynamicTexture`, `@babylonjs/gui` peer dep) and
+   `subsystems/particles.ts` (`ParticleHelper.ParseFromFileAsync`). This replaces
+   the originally-planned preset-based particle component — the external editors
+   already cover authoring far more thoroughly. A preset/quick-emit component
+   could still be layered on later if in-Blender authoring is wanted.
+3. ~~**3D GUI components**~~ — **shipped**: nine `GUI3D_*` components (Button3D,
+   Holographic + TouchHolographic buttons, MeshButton3D, stack/sphere/cylinder/
+   plane/scatter panels) built in a FinalizeLevel post-pass on a shared
+   `GUI3DManager` (`ui/gui3d/`). Panels lay out Blender child objects; On Click
+   rows deliver `OnMessage`. Still unwrapped (add as components when needed):
+   **HolographicSlate**, **NearMenu**, **HandMenu** (XR-followers — most useful
+   alongside a WebXR session story), and per-control scaling overrides.
+4. **Input: mouse support** — pointer buttons/delta as actions and axes
    ("Fire", "LookX" from mouse delta). The central Input Map (Blender panel →
    manifest → runtime) shipped in v0.30; this extends it to pointer input.
-4. **Navmesh + NavAgent** — bake from tagged geometry via Babylon's Recast
+5. **Navmesh + NavAgent** — bake from tagged geometry via Babylon's Recast
    plugin; `NavAgent` behavior (SetDestination). Large; needs the recast wasm
    dependency. Do after prefabs (agents usually chase spawned things).
-5. **LOD / level streaming** — distance-based mesh swap component; later,
+6. **LOD / level streaming** — distance-based mesh swap component; later,
    multi-manifest loading. Large; only when a real level needs it.
 
 ## Standing engineering debt
@@ -63,5 +75,5 @@ This file is the forward plan only; per-feature design notes live with each item
 | v0.29 | (shipped) monorepo: @bjs/engine workspace package + app scaffolder |
 | v0.30 | Prefabs phase 1: exporter (prefab artifacts + placements) |
 | v0.31 | Prefabs phase 2: runtime instancing + Spawn/Despawn |
-| v0.32 | Particles component; Input mouse support |
+| v0.32 | (shipped early) GUI + Particles + 3D GUI components; Input mouse support |
 | v0.33 | Navmesh + NavAgent |

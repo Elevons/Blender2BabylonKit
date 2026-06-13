@@ -17,8 +17,8 @@ GUID assignment, and the export that produces the [two artifacts](01-ARCHITECTUR
 | `input_ops.py` | Input Actions operators: edit maps/actions/bindings, key capture, load/save `.inputactions.json`, sync `@inputMap` refs, seed defaults |
 | `input_defaults.py` | built-in default asset (keep in sync with `src/input/DefaultAsset.ts`) |
 | `ui.py` | the N-panel: component list + per-type drawing, Animation box, Export panel (Export / Live Link / Debug Build / Validate) |
-| `operators.py` | add/remove/duplicate/move/copy/paste components, GUID assign, script picker + Sync, list & trigger-event row editing, **Validate**, **Export** |
-| `export.py` | the heart: writes the glb (Blender's glTF exporter) + builds the manifest; serializes every component; converts axes Blender→Babylon; copies audio files; force-includes referenced objects |
+| `operators.py` | add/remove/duplicate/move/copy/paste components, GUID assign, script picker + Sync, list & trigger-event row editing, **3D GUI click-event** rows, **Validate**, **Export** |
+| `export.py` | the heart: writes the glb (Blender's glTF exporter) + builds the manifest; serializes every component; converts axes Blender→Babylon; copies audio, GUI/particle JSON, and 3D button images via `_copy_asset`; force-includes referenced objects |
 | `scene_export.py` | the scene-wide block: clear/ambient color, environment texture (copied next to the export), fog, post-processing, **inputActions** + **defaultInputMap** |
 | `anim_export.py` | the per-object animation block from NLA strips (`nla_clip_names`) |
 | `script_parse.py` | regex-parses `@exposed(...)` and `@inputMap("…")` out of behavior `.ts` source — the cross-language contract (decorators must stay lowercase) |
@@ -38,7 +38,8 @@ GUID assignment, and the export that produces the [two artifacts](01-ARCHITECTUR
    component; see per-feature conversion notes below), plus auto-derived
    `light` / `camera` / `animation` blocks; plus the scene block; plus the
    top-level `"debug"` flag (Debug Build checkbox). Schema `"version": 4`.
-5. **Copy side files** — environment texture, audio files → `audio/`.
+5. **Copy side files** — environment texture, audio → `audio/`, GUI layouts →
+   `gui/`, particle systems → `particles/`, 3D button images → `gui/`.
 6. Remember the path for [Live Link](08-WORKFLOW.md#live-link).
 
 ### Axis conversions (Blender Z-up → Babylon Y-up)

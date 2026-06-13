@@ -306,6 +306,39 @@ class BJS_OT_trigger_event_remove(Operator):
         return {'FINISHED'}
 
 
+class BJS_OT_gui3d_event_add(Operator):
+    """Add an On Click event row to a 3D GUI control component."""
+    bl_idname = "bjs.gui3d_event_add"
+    bl_label = "Add Click Event"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        comps = context.object.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            comps[self.comp_index].gui3d_events.add()
+        return {'FINISHED'}
+
+
+class BJS_OT_gui3d_event_remove(Operator):
+    """Remove an On Click event row from a 3D GUI control component."""
+    bl_idname = "bjs.gui3d_event_remove"
+    bl_label = "Remove Click Event"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index:  IntProperty()
+    event_index: IntProperty()
+
+    def execute(self, context):
+        comps = context.object.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            events = comps[self.comp_index].gui3d_events
+            if 0 <= self.event_index < len(events):
+                events.remove(self.event_index)
+        return {'FINISHED'}
+
+
 # Input Actions operators (Action Maps > Actions > Bindings, load/save,
 # key capture, script sync) live in input_ops.py.
 
@@ -421,6 +454,8 @@ classes = (
     BJS_OT_remove_component,
     BJS_OT_trigger_event_add,
     BJS_OT_trigger_event_remove,
+    BJS_OT_gui3d_event_add,
+    BJS_OT_gui3d_event_remove,
     BJS_OT_validate,
     BJS_OT_export,
 )

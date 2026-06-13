@@ -1,6 +1,6 @@
 # Babylon Level Kit — Blender Add-on Documentation
 
-The editor half of the kit, current as of **v0.29.2**. The interactive version
+The editor half of the kit, current as of **v0.31.1**. The interactive version
 is the HTML diagram set in this folder — open **[index.html](index.html)** and
 use the bottom nav (a **Blender** row for the area diagrams + a **Traces** row
 for code walk-throughs; "Runtime docs →" jumps to the engine packet).
@@ -25,7 +25,7 @@ Code traces (each node is a step; click for the explanation + the actual
 current Python source): **Export** (operator → glb + manifest) · **GUID**
 (object → entity) · **@exposed** (TypeScript → Blender fields) · **Input
 Actions** (panel → `inputActions` + `defaultInputMap`) · **Validation** · **Live
-Link** · **Collider preview**.
+Link** · **Collider preview** · **3D GUI** (GUI3D_* authoring → manifest).
 
 ## Regenerating
 

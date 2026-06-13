@@ -9,7 +9,7 @@ import os
 
 import bpy
 
-from .properties import ID_KEY
+from .properties import ID_KEY, GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED
 
 
 def _is_renderable(obj):
@@ -96,6 +96,54 @@ def _check_triggers(obj, warnings):
             elif not os.path.isfile(bpy.path.abspath(comp.audio_file)):
                 warnings.append(
                     f"{obj.name}: audio file not found: {comp.audio_file}")
+
+
+def _check_media(obj, warnings):
+    """GUI / particle JSON files that don't exist on disk won't load at runtime;
+    on-mesh GUIs also need a mesh object to project onto."""
+    for comp in obj.bjs_components:
+        if comp.comp_type == 'GUI':
+            if not comp.gui_file:
+                warnings.append(f"{obj.name}: GUI component has no JSON file")
+            elif not os.path.isfile(bpy.path.abspath(comp.gui_file)):
+                warnings.append(f"{obj.name}: GUI file not found: {comp.gui_file}")
+            if comp.gui_mode == 'MESH' and obj.type != 'MESH':
+                warnings.append(
+                    f"{obj.name}: GUI is in On-Mesh mode but the object isn't a "
+                    f"mesh — use Fullscreen, or attach it to a mesh")
+        elif comp.comp_type == 'PARTICLE':
+            if not comp.particle_file:
+                warnings.append(f"{obj.name}: Particles component has no JSON file")
+            elif not os.path.isfile(bpy.path.abspath(comp.particle_file)):
+                warnings.append(
+                    f"{obj.name}: particle file not found: {comp.particle_file}")
+
+
+def _check_gui3d(obj, warnings):
+    """3D GUI sanity: a mesh button needs a mesh, panels need button children,
+    click events need targets, and image files must exist on disk."""
+    for comp in obj.bjs_components:
+        if comp.comp_type in GUI3D_CONTROLS:
+            if comp.comp_type == 'GUI3D_MESH' and obj.type != 'MESH':
+                warnings.append(
+                    f"{obj.name}: 3D Mesh Button needs a mesh object to wrap")
+            if comp.comp_type in GUI3D_TEXTURED and comp.gui3d_image:
+                if not os.path.isfile(bpy.path.abspath(comp.gui3d_image)):
+                    warnings.append(
+                        f"{obj.name}: 3D button image not found: {comp.gui3d_image}")
+            for ev in comp.gui3d_events:
+                if ev.target is None:
+                    warnings.append(
+                        f"{obj.name}: a 3D GUI click event has no target object")
+        elif comp.comp_type in GUI3D_PANELS:
+            has_child_control = any(
+                child_comp.comp_type in GUI3D_CONTROLS
+                for child in obj.children
+                for child_comp in child.bjs_components)
+            if not has_child_control:
+                warnings.append(
+                    f"{obj.name}: 3D panel has no child objects with 3D button "
+                    f"components — parent the buttons under it")
 
 
 def _has_physics(obj):
@@ -262,6 +310,8 @@ def validate_scene(context):
         _check_entity_refs(obj, warnings)
         _check_physics(obj, warnings)
         _check_triggers(obj, warnings)
+        _check_media(obj, warnings)
+        _check_gui3d(obj, warnings)
         _check_constraints(obj, warnings)
         _check_skinned_meshes(obj, warnings)
         _check_lights(obj, warnings)

@@ -6,6 +6,7 @@ import type { PendingRef } from "../../scripting/exposed";
 import type { ShadowCaster } from "../../subsystems/shadows";
 import type { TriggerRegistration } from "../../subsystems/triggers";
 import type { ConstraintRegistration } from "../../subsystems/constraints";
+import type { Gui3DRegistration } from "../../ui/gui3d/builder";
 import { CreateCameraTargetSets, type CameraTargetSets } from "../../subsystems/cameras";
 import { BuildIdIndex } from "./nodeResolution";
 
@@ -23,8 +24,11 @@ export interface LoadContext {
   animatedEntities: { entity: Entity; info: AnimationInfo }[];
   cameraTargets: CameraTargetSets;
   audioTasks: Promise<unknown>[];
+  guiTasks: Promise<unknown>[];
+  particleTasks: Promise<unknown>[];
   triggerRegistrations: TriggerRegistration[];
   constraintRegistrations: ConstraintRegistration[];
+  gui3dRegistrations: Gui3DRegistration[];
   /** Scene default map for scripts without @inputMap (from manifest.scene). */
   defaultInputMap: string;
 }
@@ -45,8 +49,11 @@ export function CreateLoadContext(
     animatedEntities: [],
     cameraTargets: CreateCameraTargetSets(),
     audioTasks: [],
+    guiTasks: [],
+    particleTasks: [],
     triggerRegistrations: [],
     constraintRegistrations: [],
+    gui3dRegistrations: [],
     defaultInputMap,
   };
 }

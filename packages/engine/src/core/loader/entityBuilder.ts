@@ -9,6 +9,9 @@ import type {
   CameraComponent,
   AudioComponent,
   ConstraintComponent,
+  GuiComponent,
+  ParticleComponent,
+  Gui3DComponent,
   LightInfo,
   CameraInfo,
 } from "../types";
@@ -22,6 +25,8 @@ import { BuildPhysics } from "../../subsystems/physics";
 import { ApplyBlenderLight } from "../../subsystems/lights";
 import { ApplyBlenderCamera, BuildTypedCamera, QueueCameraTargets } from "../../subsystems/cameras";
 import { ApplyAudio } from "../../subsystems/audio";
+import { ApplyGui } from "../../ui/gui2d";
+import { ApplyParticles } from "../../subsystems/particles";
 import { FindNodeByName } from "./nodeResolution";
 import type { LoadContext } from "./context";
 
@@ -39,6 +44,9 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
   scripts: ScriptComponent[];
   audioComponents: AudioComponent[];
   constraintComponents: ConstraintComponent[];
+  guiComponents: GuiComponent[];
+  particleComponents: ParticleComponent[];
+  gui3dComponents: Gui3DComponent[];
 }
 {
   let collider: ColliderComponent | undefined;
@@ -46,6 +54,9 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
   const scripts: ScriptComponent[] = [];
   const audioComponents: AudioComponent[] = [];
   const constraintComponents: ConstraintComponent[] = [];
+  const guiComponents: GuiComponent[] = [];
+  const particleComponents: ParticleComponent[] = [];
+  const gui3dComponents: Gui3DComponent[] = [];
 
   for (const component of components)
   {
@@ -69,10 +80,30 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
       case "CONSTRAINT":
         constraintComponents.push(component);
         break;
+      case "GUI":
+        guiComponents.push(component);
+        break;
+      case "PARTICLE":
+        particleComponents.push(component);
+        break;
+      case "GUI3D_BUTTON":
+      case "GUI3D_HOLO":
+      case "GUI3D_TOUCH_HOLO":
+      case "GUI3D_MESH":
+      case "GUI3D_STACK":
+      case "GUI3D_SPHERE":
+      case "GUI3D_CYLINDER":
+      case "GUI3D_PLANE":
+      case "GUI3D_SCATTER":
+        gui3dComponents.push(component);
+        break;
     }
   }
 
-  return { collider, body, scripts, audioComponents, constraintComponents };
+  return {
+    collider, body, scripts, audioComponents, constraintComponents,
+    guiComponents, particleComponents, gui3dComponents,
+  };
 }
 
 /** Resolve a map name; blank uses the scene default, then the asset's first map. */
@@ -158,14 +189,16 @@ function InstantiateScripts(
  */
 function ApplyComponents(
   entity: Entity,
-  components: Component[],
+  entityData: EntityData,
   scene: Scene,
   registry: BehaviorRegistry,
   context: LoadContext
 ): PendingRef[]
 {
-  const { collider, body, scripts, audioComponents, constraintComponents } =
-    ClassifyComponents(entity, components);
+  const {
+    collider, body, scripts, audioComponents, constraintComponents,
+    guiComponents, particleComponents, gui3dComponents,
+  } = ClassifyComponents(entity, entityData.components);
 
   if (collider !== undefined || body !== undefined)
   {
@@ -189,6 +222,30 @@ function ApplyComponents(
   for (const constraintComponent of constraintComponents)
   {
     context.constraintRegistrations.push({ ownerEntity: entity, component: constraintComponent });
+  }
+
+  // GUI layouts and particle systems are fetched/parsed from JSON; collect the
+  // promises and settle them after the entity loop (like audio).
+  for (const guiComponent of guiComponents)
+  {
+    context.guiTasks.push(ApplyGui(entity, guiComponent, context.baseUrl));
+  }
+
+  for (const particleComponent of particleComponents)
+  {
+    context.particleTasks.push(ApplyParticles(entity, particleComponent, context.baseUrl));
+  }
+
+  // 3D GUI needs panels before child controls and resolvable click targets,
+  // so everything is queued and built in a post-pass (FinalizeLevel). The
+  // parent GUID is how a control finds the panel it belongs to.
+  for (const gui3dComponent of gui3dComponents)
+  {
+    context.gui3dRegistrations.push({
+      entity,
+      component: gui3dComponent,
+      parentId: entityData.parent,
+    });
   }
 
   return InstantiateScripts(entity, scripts, scene, registry, context.defaultInputMap);
@@ -265,7 +322,7 @@ export function ProcessEntity(
   resolvedNode.metadata = { ...(resolvedNode.metadata ?? {}), bjsEntity: entity };
 
   context.pendingReferences.push(
-    ...ApplyComponents(entity, entityData.components, scene, registry, context)
+    ...ApplyComponents(entity, entityData, scene, registry, context)
   );
 
   if (entityData.animation !== undefined)

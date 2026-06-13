@@ -1,10 +1,10 @@
 # Babylon Level Kit — Engine Documentation
 
-Interlinked documentation of the whole engine, current as of **v0.29.2**.
+Interlinked documentation of the whole engine, current as of **v0.31.1**.
 Start here; every page links back. **The interactive version of this
 documentation is the HTML diagram set — open [index.html](index.html)** and
 navigate with the bottom bar: Overview · Blender add-on · Load pipeline ·
-Scripting · Physics · Rendering · Audio/Anim · Workflow. Click any node for its
+Scripting · Physics · Rendering · Audio/Anim · **UI** · Workflow. Click any node for its
 description, file path, and key facts. The **Traces row** in the nav opens the
 per-feature trace diagrams (trace-physics.html, trace-input.html, …): each node
 is one step of the call chain — click it for the explanation AND the actual
@@ -36,6 +36,7 @@ manifest, and hands each concern to a small subsystem module.
 | [05 — Physics](05-PHYSICS.md) | colliders/bodies, the owned-meshes rule, right-handed import, constraints, triggers |
 | [06 — Rendering](06-RENDERING.md) | lights, cameras (+ typed overrides), shadows, environment/fog/post |
 | [07 — Audio & Animation](07-AUDIO-ANIMATION.md) | audio engine v2, NLA clip scoping, the skinned-mesh rule |
+| [10 — UI](10-UI.md) | 2D GUI Editor JSON, particle systems, 3D GUI buttons/panels |
 | [08 — Workflow & Tooling](08-WORKFLOW.md) | Live Link, validator checks, Debug Build, debug keys, monorepo/scaffolder |
 | [09 — Feature Traces](09-FEATURE-TRACES.md) | per feature: the exact file/function chain from Blender to runtime |
 

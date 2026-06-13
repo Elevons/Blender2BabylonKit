@@ -68,6 +68,19 @@ APIs.
   [Constraints (physics joints)](#constraints-physics-joints) below.
 - **Audio** – attach a sound file (copied next to the export); volume, loop,
   auto-play, 3D spatial, max distance, playback rate.
+- **GUI** – attach a Babylon GUI layout (the `.json` saved by the online **GUI
+  Editor**, copied next to the export) as a **Fullscreen** HUD overlay or
+  projected **On Mesh** for in-world UI.
+- **Particles** – attach a Babylon particle system (the `.json` saved by the
+  online **Particle Editor**, copied next to the export); emits from this
+  object, with optional GPU mode, auto-start, and a capacity override.
+- **3D GUI** – in-scene interactive UI, one component per Babylon 3D control:
+  **3D Button** / **3D Holographic Button** / **3D Touch Holographic Button**
+  (anchored to the object, with text/image and On Click events), **3D Mesh
+  Button** (your own mesh becomes the clickable control), and the layout
+  panels **3D Stack / Sphere / Cylinder / Plane / Scatter Panel** (children =
+  Blender child objects carrying button components). Clicks send messages via
+  the same `OnMessage` hook trigger volumes use.
 - **Camera** – opt-in type override on a camera object (ArcRotate / Follow / …);
   most cameras stay faithful FreeCameras with no component.
 - **Script** – click **Open Script…** to pick the behavior's source file in a
@@ -297,6 +310,67 @@ first user gesture, so auto-play sounds start on the first click/keypress.
 Scripts reach them via `entity.GetSound("name")?.play()` (named by file stem) or
 `entity.sounds`.
 
+## GUI
+
+Add a **GUI** component to any object and pick the `.json` exported from the
+[online GUI Editor](https://gui.babylonjs.com/) (copied into `gui/` next to the
+export). Two modes:
+
+- **Fullscreen** — a 2D overlay (a HUD), rendered with
+  `AdvancedDynamicTexture.CreateFullscreenUI`. The **Foreground** toggle draws it
+  in front of (or behind) the scene.
+- **On Mesh** — projects the layout onto the object's own mesh for in-world UI
+  (`CreateForMesh`), at the **Texture Width/Height** resolution. Needs a mesh
+  object (the validator warns otherwise).
+
+The layout JSON is fetched and parsed at load. Scripts reach the texture via
+`entity.GetGui("name")?.getControlByName("PlayButton")` (named by file stem) or
+`entity.guiTextures`. The runtime depends on `@babylonjs/gui` (already wired into
+the playground and every scaffolded app).
+
+## Particles
+
+Add a **Particles** component and pick the `.json` exported from the
+[online Particle Editor](https://particles.babylonjs.com/) (copied into
+`particles/` next to the export). Options: **Use GPU** (creates a
+`GPUParticleSystem` when supported, else CPU), **Auto Start** (emit on load),
+**Attach to Object** (emit from this entity — a mesh follows it; an empty uses its
+position), and **Max Particles** (override the JSON's capacity; 0 keeps it). Any
+texture the JSON names is loaded from beside the `.json`, so drop it in
+`particles/` too. Scripts reach the system via `entity.GetParticles("name")` (named
+by file stem) or `entity.particleSystems` to `.start()` / `.stop()` it.
+
+## 3D GUI (in-scene interfaces)
+
+Babylon's 3D GUI has no external editor — Blender *is* the editor here. Each
+control is its own component; place objects where the UI should live and
+attach:
+
+| Component | Babylon class | Put it on |
+|---|---|---|
+| **3D Button** | `Button3D` | An empty (or any anchor) — text or image on a 3D plate |
+| **3D Holographic Button** | `HolographicButton` | An anchor — MRTK-style, with text/image/tooltip |
+| **3D Touch Holographic Button** | `TouchHolographicButton` | An anchor — adds XR near-touch |
+| **3D Mesh Button** | `MeshButton3D` | A **mesh** — your own geometry becomes the control |
+| **3D Stack / Sphere / Cylinder / Plane / Scatter Panel** | `StackPanel3D` … | An empty — lays out child buttons |
+
+Every button has an **On Click Events** list (target object + message — the
+same rows as trigger colliders): clicking delivers
+`OnMessage(message, buttonEntity)` to the target's behaviors. Button images
+are copied into `gui/` next to the export.
+
+**Panels use Blender parenting**: parent button objects under the panel object
+(Ctrl+P) and the panel arranges them at runtime — child transforms only express
+membership, not position. Standalone buttons (no panel parent) are anchored to
+their object with `linkToTransformNode`, so they follow it if it moves. A
+**3D Mesh Button** keeps its mesh's own world placement.
+
+At load, all 3D GUI builds in a post-pass on one shared `GUI3DManager`
+(`level.gui3DManager`, disposed with the level). Scripts reach controls via
+`entity.controls3D` or `entity.GetControl3D("name")` (named after the Blender
+object) to change text, hide menus, or subscribe to hover events. The
+holographic slate and the XR Near/Hand menus are not yet wrapped as components.
+
 ## Trigger events (messaging)
 
 A trigger collider (**Is Trigger** on) gains an **On Enter Events** list: each
@@ -478,7 +552,11 @@ packages/
         inputMap.ts       #   @inputMap decorator (action-map injection)
       subsystems/       # one module per manifest concern the glb can't express
         physics.ts lights.ts cameras/ shadows.ts constraints.ts
-        audio.ts triggers.ts environment.ts fog.ts postprocess.ts animation.ts
+        audio.ts particles.ts triggers.ts environment.ts fog.ts
+        postprocess.ts animation.ts
+      ui/               # user interfaces (2D GUI Editor layouts + 3D GUI)
+        gui2d.ts          #   GUI component: GUI Editor JSON -> AdvancedDynamicTexture
+        gui3d/            #   GUI3D_* components: builder · panels · controls · events
 apps/
   playground/         # the dev/test app (Vite). New games: npm run create
     index.html          # entry -> src/main.ts
@@ -561,8 +639,16 @@ class Entity
   tag = "Untagged";             // from a TAG component
   behaviors: Behavior[];
   body?: PhysicsBody;           // present if it has a Collider/RigidBody
+  sounds: StaticSound[];                  // from AUDIO components
+  guiTextures: AdvancedDynamicTexture[];  // from GUI components
+  particleSystems: IParticleSystem[];     // from PARTICLE components
+  controls3D: Control3D[];                // from GUI3D_* components
   GetBehavior<T extends Behavior>(behaviorConstructor: new () => T): T | undefined;
   GetAnimation(clipName: string): AnimationGroup | undefined;
+  GetSound(soundName: string): StaticSound | undefined;
+  GetGui(guiName: string): AdvancedDynamicTexture | undefined;
+  GetParticles(systemName: string): IParticleSystem | undefined;
+  GetControl3D(controlName: string): Control3D | undefined;
 }
 ```
 
@@ -685,6 +771,14 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
           "vars": { "speed": 120, "axis": [0,1,0] } },
         { "type": "AUDIO", "file": "audio/door.mp3", "volume": 1, "loop": false,
           "autoPlay": false, "spatial": true, "maxDistance": 50, "playbackRate": 1 },
+        { "type": "GUI", "file": "gui/hud.json", "mode": "FULLSCREEN",
+          "foreground": true, "width": 1024, "height": 1024 },
+        { "type": "PARTICLE", "file": "particles/fire.json", "gpu": false,
+          "autoStart": true, "attachToEntity": true, "capacity": 0 },
+        { "type": "GUI3D_HOLO", "text": "Open", "image": null, "tooltip": "",
+          "events": [ { "target": "guid", "message": "open" } ] },
+        { "type": "GUI3D_CYLINDER", "margin": 0.02, "columns": 3, "rows": 0,
+          "radius": 5.0 },
         { "type": "CONSTRAINT", "constraintType": "HINGE", "target": "guid",
           "pivot": [0,0,0], "axis": [0,1,0], "collision": false,
           "useLimits": true, "min": -90, "max": 90, "stiffness": 100, "damping": 10,

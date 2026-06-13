@@ -8,11 +8,15 @@ along inside the glb, so the manifest only stores what glTF can't express.
 
 import json
 import os
+import re
 import shutil
 import bpy
 import mathutils
 
-from .properties import ID_KEY, ensure_object_id, LIST_ELEM_SLOT, _ENUM_SEP
+from .properties import (
+    ID_KEY, ensure_object_id, LIST_ELEM_SLOT, _ENUM_SEP,
+    GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED,
+)
 from .scene_export import serialize_scene
 from .anim_export import serialize_animation, nla_clip_names
 
@@ -73,6 +77,10 @@ def _iter_referenced_objects(comp):
                 yield ev.target
     if comp.comp_type == 'CONSTRAINT' and comp.con_target is not None:
         yield comp.con_target
+    if comp.comp_type in GUI3D_CONTROLS:
+        for ev in comp.gui3d_events:
+            if ev.target is not None:
+                yield ev.target
     for v in comp.exposed_vars:
         if v.vtype == 'ENTITY' and v.obj_val is not None:
             yield v.obj_val
@@ -102,19 +110,41 @@ _CONSTRAINT_AXIS_TO_BABYLON = {
 }
 
 
-def _copy_audio_file(filepath, output_dir):
-    """Copy the authored sound file into <output_dir>/audio/ (like env textures)
+def _sanitize_asset_filename(filename):
+    """Strip characters that break URL fetch (parens, spaces, …) from copied assets."""
+    name, ext = os.path.splitext(filename)
+    safe = re.sub(r'[^\w.\-]+', '_', name)
+    safe = safe.strip('._') or 'asset'
+    return safe + ext.lower()
+
+
+def _copy_asset(filepath, output_dir, subdir):
+    """Copy an authored asset file into <output_dir>/<subdir>/ (like env textures)
     and return its manifest-relative path, or None if the source is missing."""
     src = bpy.path.abspath(filepath)
     if not os.path.isfile(src):
         return None
-    audio_dir = os.path.join(output_dir, "audio")
-    os.makedirs(audio_dir, exist_ok=True)
-    filename = os.path.basename(src)
-    dest = os.path.join(audio_dir, filename)
+    dest_dir = os.path.join(output_dir, subdir)
+    os.makedirs(dest_dir, exist_ok=True)
+    filename = _sanitize_asset_filename(os.path.basename(src))
+    dest = os.path.join(dest_dir, filename)
+    # Two different sources can sanitize to the same name — pick a free variant.
+    if os.path.isfile(dest) and os.path.abspath(src) != os.path.abspath(dest):
+        stem, ext = os.path.splitext(filename)
+        n = 2
+        while os.path.isfile(dest):
+            filename = f"{stem}_{n}{ext}"
+            dest = os.path.join(dest_dir, filename)
+            n += 1
     if os.path.abspath(src) != os.path.abspath(dest):
         shutil.copy2(src, dest)
-    return "audio/" + filename
+    return subdir + "/" + filename
+
+
+def _copy_audio_file(filepath, output_dir):
+    """Copy the authored sound file into <output_dir>/audio/, returning its
+    manifest-relative path (or None if the source is missing)."""
+    return _copy_asset(filepath, output_dir, "audio")
 
 
 def _serialize_components(obj, output_dir):
@@ -226,6 +256,50 @@ def _serialize_components(obj, output_dir):
                 "maxDistance": c.audio_max_distance,
                 "playbackRate": c.audio_rate,
             })
+
+        elif c.comp_type == 'GUI':
+            d.update({
+                "file": _copy_asset(c.gui_file, output_dir, "gui"),
+                "mode": c.gui_mode,
+                "foreground": bool(c.gui_foreground),
+                "width": c.gui_width,
+                "height": c.gui_height,
+            })
+
+        elif c.comp_type == 'PARTICLE':
+            d.update({
+                "file": _copy_asset(c.particle_file, output_dir, "particles"),
+                "gpu": bool(c.particle_gpu),
+                "autoStart": bool(c.particle_autostart),
+                "attachToEntity": bool(c.particle_attach),
+                "capacity": c.particle_capacity,
+            })
+
+        elif c.comp_type in GUI3D_CONTROLS:
+            d["events"] = [{
+                "target": ensure_object_id(ev.target) if ev.target else None,
+                "message": ev.message,
+            } for ev in c.gui3d_events]
+            if c.comp_type in GUI3D_TEXTURED:
+                d["text"] = c.gui3d_text
+                d["image"] = (_copy_asset(c.gui3d_image, output_dir, "gui")
+                              if c.gui3d_image else None)
+            if c.comp_type == 'GUI3D_BUTTON':
+                d["contentResolution"] = c.gui3d_content_resolution
+            if c.comp_type in {'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO'}:
+                d["tooltip"] = c.gui3d_tooltip
+
+        elif c.comp_type in GUI3D_PANELS:
+            d["margin"] = c.gui3d_margin
+            if c.comp_type == 'GUI3D_STACK':
+                d["vertical"] = bool(c.gui3d_vertical)
+            else:
+                d["columns"] = c.gui3d_columns
+                d["rows"] = c.gui3d_rows
+            if c.comp_type in {'GUI3D_SPHERE', 'GUI3D_CYLINDER'}:
+                d["radius"] = c.gui3d_radius
+            if c.comp_type == 'GUI3D_SCATTER':
+                d["iterations"] = c.gui3d_iterations
 
         comps.append(d)
     return comps

@@ -1,4 +1,11 @@
-import type { TransformNode, PhysicsBody, AnimationGroup, StaticSound } from "@babylonjs/core";
+import type {
+  TransformNode,
+  PhysicsBody,
+  AnimationGroup,
+  StaticSound,
+  IParticleSystem,
+} from "@babylonjs/core";
+import type { AdvancedDynamicTexture, Control3D } from "@babylonjs/gui";
 // Type-only import: Entity references Behavior, Behavior references Entity.
 // `import type` erases at compile time, so the cycle is harmless at runtime.
 import type { Behavior } from "../scripting/Behavior";
@@ -15,6 +22,12 @@ export class Entity
   animations: AnimationGroup[] = [];
   /** Sounds created from AUDIO components (audio engine v2 StaticSounds). */
   sounds: StaticSound[] = [];
+  /** GUI textures created from GUI components (fullscreen HUDs or mesh UIs). */
+  guiTextures: AdvancedDynamicTexture[] = [];
+  /** 3D GUI controls/panels created from GUI3D_* components. */
+  controls3D: Control3D[] = [];
+  /** Particle systems created from PARTICLE components. */
+  particleSystems: IParticleSystem[] = [];
 
   constructor(id: string, name: string, node: TransformNode)
   {
@@ -55,6 +68,56 @@ export class Entity
     }
 
     return this.sounds.find((sound) => sound.name.toLowerCase().includes(wanted));
+  }
+
+  /** Find one of this entity's GUI textures by name (exact match, then contains). */
+  GetGui(guiName: string): AdvancedDynamicTexture | undefined
+  {
+    const wanted = guiName.toLowerCase();
+
+    const exactMatch = this.guiTextures.find(
+      (texture) => texture.name.toLowerCase() === wanted
+    );
+    if (exactMatch !== undefined)
+    {
+      return exactMatch;
+    }
+
+    return this.guiTextures.find((texture) => texture.name.toLowerCase().includes(wanted));
+  }
+
+  /** Find one of this entity's 3D GUI controls by name (exact match, then contains). */
+  GetControl3D(controlName: string): Control3D | undefined
+  {
+    const wanted = controlName.toLowerCase();
+
+    const exactMatch = this.controls3D.find(
+      (control) => (control.name ?? "").toLowerCase() === wanted
+    );
+    if (exactMatch !== undefined)
+    {
+      return exactMatch;
+    }
+
+    return this.controls3D.find(
+      (control) => (control.name ?? "").toLowerCase().includes(wanted)
+    );
+  }
+
+  /** Find one of this entity's particle systems by name (exact match, then contains). */
+  GetParticles(systemName: string): IParticleSystem | undefined
+  {
+    const wanted = systemName.toLowerCase();
+
+    const exactMatch = this.particleSystems.find(
+      (system) => system.name.toLowerCase() === wanted
+    );
+    if (exactMatch !== undefined)
+    {
+      return exactMatch;
+    }
+
+    return this.particleSystems.find((system) => system.name.toLowerCase().includes(wanted));
   }
 
   /** Deliver a message to every behavior on this entity (their OnMessage hook). */

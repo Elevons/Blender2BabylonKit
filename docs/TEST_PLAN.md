@@ -188,8 +188,44 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
 - **5.4 Animation:** an object with 2 NLA strips + Auto Play plays only the
   chosen clip on load (nothing else auto-plays); `ClipSwitcher.ts` cycles clips.
 - **5.5 Sounds/level teardown:** if your app ever calls `level.Dispose()`,
-  sounds stop, constraints release, and the trigger observer detaches (no
+  sounds stop, constraints release, GUI textures and particle systems dispose,
+  the 3D GUI manager disposes, and the trigger observer detaches (no
   console errors on a second load).
+
+## 6. v0.32 — GUI, particles, 3D GUI
+
+### 6.1 2D GUI (fullscreen HUD)
+- **Steps:** create an empty, add a **GUI** component, pick a `.json` from the
+  GUI Editor, mode **Fullscreen**, Foreground ON. Export, reload.
+- **Expect:** the HUD renders over the scene. `entity.GetGui("<stem>")` resolves
+  (stem = filename without extension). File copied to `levels/gui/`. Validate
+  warns if the JSON path is missing.
+
+### 6.2 2D GUI (mesh mode)
+- **Steps:** add **GUI** to a mesh (not an empty), mode **On Mesh**, set width/
+  height (e.g. 512×512). Export, reload.
+- **Expect:** UI texture projected on the mesh. Validator warns if GUI MESH mode
+  is on a non-mesh object.
+
+### 6.3 Particles
+- **Steps:** add **Particles** to the cube: pick a Particle Editor `.json`, Auto
+  Start ON, Attach to Entity ON. Export, reload.
+- **Expect:** particles emit from the cube; file in `levels/particles/`.
+  `entity.GetParticles("<stem>")?.stop()` works from a script.
+
+### 6.4 3D GUI — cylinder menu
+- **Steps:** create an empty with **3D Cylinder Panel** (margin ~0.02, columns
+  3). Parent 2–3 child empties under it, each with **3D Holographic Button**
+  (text labels). On one button add an On Click event: Target = an object with a
+  **Script** (`MessageLogger.ts`), Message = `open`. Export, reload, click the
+  button in the viewport.
+- **Expect:** buttons arranged on the cylinder; click logs
+  `[MessageLogger:…] "open" from "<button>"`. Validator warns if the panel has
+  no button children or a click event has no target.
+
+### 6.5 3D Mesh Button
+- **Steps:** add **3D Mesh Button** to a mesh cube (not an empty). Export.
+- **Expect:** the mesh is clickable. Validator warns on non-mesh objects.
 
 ## Known risk areas (where a failure is most likely)
 
@@ -202,5 +238,5 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
    the Blender→Babylon axis conversion in `export.py` is the first suspect.
    CUSTOM: wrong per-axis modes (e.g. spring on all rotation) welds bodies
    together — check `axes[]` in the manifest.
-EOF
-echo "TEST_PLAN.md: $(wc -l < /home/claude/bjs-level-kit/docs/TEST_PLAN.md) lines"
+4. **§6.x** — 3D GUI content must be applied after `addControl`; if buttons
+   appear blank, check load order in `ui/gui3d/builder.ts`.

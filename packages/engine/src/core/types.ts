@@ -144,6 +144,128 @@ export interface AudioComponent {
   playbackRate: number;
 }
 
+export interface GuiComponent {
+  type: "GUI";
+  /** Manifest-relative path ("gui/hud.json"); null if the source file was missing. */
+  file: string | null;
+  /** FULLSCREEN: a 2D overlay (HUD). MESH: drawn on this entity's mesh surface. */
+  mode: "FULLSCREEN" | "MESH";
+  /** FULLSCREEN only: draw in front of the scene (vs behind it). */
+  foreground: boolean;
+  /** MESH only: UI texture resolution. */
+  width: number;
+  height: number;
+}
+
+export interface ParticleComponent {
+  type: "PARTICLE";
+  /** Manifest-relative path ("particles/fire.json"); null if the source was missing. */
+  file: string | null;
+  /** Create a GPUParticleSystem when supported (falls back to CPU otherwise). */
+  gpu: boolean;
+  /** Begin emitting as soon as the level finishes loading. */
+  autoStart: boolean;
+  /** Emit from this entity's node (a mesh follows it; an empty uses its position). */
+  attachToEntity: boolean;
+  /** Override the JSON's capacity; 0 = keep the file's value. */
+  capacity: number;
+}
+
+// ---- 3D GUI components (Babylon's @babylonjs/gui 3D controls + panels) ----
+
+/** One authored click reaction: on click, send `message` to `target`. */
+export interface Gui3DClickEvent {
+  /** GUID of the entity whose behaviors receive the message (null = unset). */
+  target: string | null;
+  message: string;
+}
+
+/** Fields shared by the text/image button controls (Button3D + holographic). */
+interface Gui3DTexturedButtonBase {
+  text: string;
+  /** Manifest-relative image path ("gui/icon.png"); null if unset or missing. */
+  image: string | null;
+  events: Gui3DClickEvent[];
+}
+
+/** A generic Button3D: a 3D plate rendering 2D content (text or image). */
+export interface Gui3DButtonComponent extends Gui3DTexturedButtonBase {
+  type: "GUI3D_BUTTON";
+  /** Resolution of the texture rendering the button content (Babylon default 512). */
+  contentResolution: number;
+}
+
+/** An MRTK-style HolographicButton (text + image + tooltip). */
+export interface Gui3DHoloButtonComponent extends Gui3DTexturedButtonBase {
+  type: "GUI3D_HOLO";
+  tooltip: string;
+}
+
+/** A TouchHolographicButton: HolographicButton with XR near-touch support. */
+export interface Gui3DTouchHoloButtonComponent extends Gui3DTexturedButtonBase {
+  type: "GUI3D_TOUCH_HOLO";
+  tooltip: string;
+}
+
+/** A MeshButton3D: the entity's own mesh becomes the interactive control. */
+export interface Gui3DMeshButtonComponent {
+  type: "GUI3D_MESH";
+  events: Gui3DClickEvent[];
+}
+
+/** Fields shared by the volume panels (sphere/cylinder/plane/scatter). */
+interface Gui3DVolumePanelBase {
+  /** Distance between child controls. */
+  margin: number;
+  /** 0 = let Babylon derive it from `rows` (Babylon default is 10 columns). */
+  columns: number;
+  /** 0 = derive from `columns`. Setting both prefers `rows`. */
+  rows: number;
+}
+
+export interface Gui3DStackPanelComponent {
+  type: "GUI3D_STACK";
+  margin: number;
+  vertical: boolean;
+}
+
+export interface Gui3DSpherePanelComponent extends Gui3DVolumePanelBase {
+  type: "GUI3D_SPHERE";
+  radius: number;
+}
+
+export interface Gui3DCylinderPanelComponent extends Gui3DVolumePanelBase {
+  type: "GUI3D_CYLINDER";
+  radius: number;
+}
+
+export interface Gui3DPlanePanelComponent extends Gui3DVolumePanelBase {
+  type: "GUI3D_PLANE";
+}
+
+export interface Gui3DScatterPanelComponent extends Gui3DVolumePanelBase {
+  type: "GUI3D_SCATTER";
+  /** Iterations used to scatter the controls (Babylon default 100). */
+  iterations: number;
+}
+
+/** The interactive 3D controls (clickable; carry `events`). */
+export type Gui3DControlComponent =
+  | Gui3DButtonComponent
+  | Gui3DHoloButtonComponent
+  | Gui3DTouchHoloButtonComponent
+  | Gui3DMeshButtonComponent;
+
+/** The layout containers; children come from Blender child objects. */
+export type Gui3DPanelComponent =
+  | Gui3DStackPanelComponent
+  | Gui3DSpherePanelComponent
+  | Gui3DCylinderPanelComponent
+  | Gui3DPlanePanelComponent
+  | Gui3DScatterPanelComponent;
+
+export type Gui3DComponent = Gui3DControlComponent | Gui3DPanelComponent;
+
 export type Component =
   | TagComponent
   | ColliderComponent
@@ -151,7 +273,10 @@ export type Component =
   | ScriptComponent
   | CameraComponent
   | AudioComponent
-  | ConstraintComponent;
+  | ConstraintComponent
+  | GuiComponent
+  | ParticleComponent
+  | Gui3DComponent;
 
 export interface ShadowSettings {
   mapSize?: number;    // per-light resolution override; 0/undefined = loader default

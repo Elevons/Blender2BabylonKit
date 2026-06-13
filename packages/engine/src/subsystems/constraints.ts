@@ -8,7 +8,7 @@ import {
   PhysicsConstraintAxis,
   PhysicsConstraintMotorType,
   type PhysicsConstraint,
-  type Physics6DoFConstraintLimit,
+  type Physics6DoFLimit,
   type TransformNode,
 } from "@babylonjs/core";
 import type { Entity } from "../core/Entity";
@@ -100,7 +100,7 @@ function ComputeConstraintFrame(
 }
 
 /** A fully locked axis (zero allowed motion). */
-function LockedAxis(axis: PhysicsConstraintAxis): Physics6DoFConstraintLimit
+function LockedAxis(axis: PhysicsConstraintAxis): Physics6DoFLimit
 {
   return { axis, minLimit: 0, maxLimit: 0 };
 }
@@ -120,9 +120,9 @@ function IsAngularAxis(name: ConstraintAxisName): boolean
 }
 
 /** CUSTOM: map authored per-axis rows to Havok 6DoF limits (FREE = omitted). */
-function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFConstraintLimit[]
+function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFLimit[]
 {
-  const limits: Physics6DoFConstraintLimit[] = [];
+  const limits: Physics6DoFLimit[] = [];
   const degreesToRadians = Math.PI / 180;
 
   if (component.axes === undefined || component.axes.length === 0)
@@ -152,7 +152,7 @@ function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFConst
     }
 
     const scale = IsAngularAxis(axisConfig.axis) ? degreesToRadians : 1;
-    const linearLimit: Physics6DoFConstraintLimit = {
+    const linearLimit: Physics6DoFLimit = {
       axis: physicsAxis,
       minLimit: (axisConfig.min ?? 0) * scale,
       maxLimit: (axisConfig.max ?? 0) * scale,
@@ -174,14 +174,14 @@ function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFConst
  * The per-type 6DoF limit set. The constraint frame's X is the authored axis,
  * so HINGE frees/limits ANGULAR_X and SLIDER/SPRING free/limit LINEAR_X.
  */
-function BuildAxisLimits(component: ConstraintComponent): Physics6DoFConstraintLimit[]
+function BuildAxisLimits(component: ConstraintComponent): Physics6DoFLimit[]
 {
   if (component.constraintType === "CUSTOM")
   {
     return BuildCustomAxisLimits(component);
   }
 
-  const limits: Physics6DoFConstraintLimit[] = [];
+  const limits: Physics6DoFLimit[] = [];
   const degreesToRadians = Math.PI / 180;
 
   if (component.constraintType === "HINGE")
@@ -212,7 +212,7 @@ function BuildAxisLimits(component: ConstraintComponent): Physics6DoFConstraintL
     const wantsLinearLimit = component.constraintType === "SPRING" || component.useLimits;
     if (wantsLinearLimit)
     {
-      const linearLimit: Physics6DoFConstraintLimit = {
+      const linearLimit: Physics6DoFLimit = {
         axis: PhysicsConstraintAxis.LINEAR_X,
         minLimit: component.min,
         maxLimit: component.max,

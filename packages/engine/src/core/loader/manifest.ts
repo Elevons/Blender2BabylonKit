@@ -12,6 +12,20 @@ export function GetDirectory(url: string): string
   return lastSlash >= 0 ? url.slice(0, lastSlash + 1) : "";
 }
 
+/**
+ * Build a fetch URL for a manifest-relative asset path. Encodes each path
+ * segment so filenames with spaces, parentheses, etc. still resolve (the dev
+ * server otherwise 404s and may return HTML, which breaks JSON.parse).
+ */
+export function ResolveManifestAssetUrl(baseUrl: string, manifestPath: string): string
+{
+  const encodedPath = manifestPath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  return baseUrl + encodedPath;
+}
+
 /** Fetch the manifest JSON, with clear errors for the two common failures. */
 export async function FetchAndValidateManifest(manifestUrl: string): Promise<LevelManifest>
 {

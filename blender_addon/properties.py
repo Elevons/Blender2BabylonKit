@@ -47,6 +47,29 @@ COMPONENT_TYPES = [
     ('CAMERA',    "Camera",     "Override the camera type (ArcRotate / Follow / ...)"),
     ('AUDIO',     "Audio",      "Attach a sound to this entity (ambient or 3D-positioned)"),
     ('CONSTRAINT', "Constraint", "Physics joint to another body (hinge, slider, spring...)"),
+    ('GUI',       "GUI",        "Attach a Babylon GUI (.json from the GUI Editor) as a HUD or on this mesh"),
+    ('PARTICLE',  "Particles",  "Attach a Babylon particle system (.json from the Particle Editor)"),
+    ('GUI3D_BUTTON',     "3D Button",                    "A 3D button plate rendering text or an image (Button3D)"),
+    ('GUI3D_HOLO',       "3D Holographic Button",        "MRTK-style holographic button with text/image/tooltip"),
+    ('GUI3D_TOUCH_HOLO', "3D Touch Holographic Button",  "Holographic button with XR near-touch support"),
+    ('GUI3D_MESH',       "3D Mesh Button",               "Make this object's own mesh a clickable 3D control"),
+    ('GUI3D_STACK',      "3D Stack Panel",               "Stack child 3D buttons in a row or column"),
+    ('GUI3D_SPHERE',     "3D Sphere Panel",              "Arrange child 3D buttons on a sphere surface"),
+    ('GUI3D_CYLINDER',   "3D Cylinder Panel",            "Arrange child 3D buttons on a cylinder surface"),
+    ('GUI3D_PLANE',      "3D Plane Panel",               "Arrange child 3D buttons on a plane"),
+    ('GUI3D_SCATTER',    "3D Scatter Panel",             "Scatter child 3D buttons with randomized placement"),
+]
+
+# Membership sets for the 3D GUI family: interactive controls carry On Click
+# events; panels lay out the controls on their Blender CHILD objects.
+GUI3D_CONTROLS = {'GUI3D_BUTTON', 'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO', 'GUI3D_MESH'}
+GUI3D_PANELS = {'GUI3D_STACK', 'GUI3D_SPHERE', 'GUI3D_CYLINDER', 'GUI3D_PLANE', 'GUI3D_SCATTER'}
+# Controls that render text/image content (everything but the mesh button).
+GUI3D_TEXTURED = {'GUI3D_BUTTON', 'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO'}
+
+GUI_MODES = [
+    ('FULLSCREEN', "Fullscreen", "Render as a fullscreen 2D overlay (a HUD)"),
+    ('MESH',       "On Mesh",    "Project the UI onto this object's mesh (in-world UI)"),
 ]
 
 CONSTRAINT_TYPES = [
@@ -469,6 +492,58 @@ class BJSComponent(PropertyGroup):
     audio_max_distance: FloatProperty(name="Max Distance", default=50.0, min=0.0,
                                       description="Distance at which the sound is inaudible")
     audio_rate:     FloatProperty(name="Playback Rate", default=1.0, min=0.1, max=4.0)
+
+    # --- GUI ---
+    gui_file:       StringProperty(name="GUI File", subtype='FILE_PATH', default="",
+                                   description=".json exported from the Babylon GUI Editor — "
+                                               "copied next to the export")
+    gui_mode:       EnumProperty(name="Mode", items=GUI_MODES, default='FULLSCREEN')
+    gui_foreground: BoolProperty(name="Foreground", default=True,
+                                 description="Fullscreen: draw in front of the scene (vs behind it)")
+    gui_width:      IntProperty(name="Texture Width", default=1024, min=1,
+                                description="On Mesh: resolution of the UI texture")
+    gui_height:     IntProperty(name="Texture Height", default=1024, min=1,
+                                description="On Mesh: resolution of the UI texture")
+
+    # --- PARTICLE ---
+    particle_file:      StringProperty(name="Particle File", subtype='FILE_PATH', default="",
+                                       description=".json exported from the Babylon Particle "
+                                                   "Editor — copied next to the export")
+    particle_gpu:       BoolProperty(name="Use GPU", default=False,
+                                     description="Create a GPUParticleSystem when supported "
+                                                 "(falls back to CPU)")
+    particle_autostart: BoolProperty(name="Auto Start", default=True,
+                                     description="Begin emitting as soon as the level loads")
+    particle_attach:    BoolProperty(name="Attach to Object", default=True,
+                                     description="Emit from this object (a mesh follows it; an "
+                                                 "empty uses its position)")
+    particle_capacity:  IntProperty(name="Max Particles", default=0, min=0,
+                                    description="Override the JSON's capacity (0 = use the file's value)")
+
+    # --- GUI3D (3D buttons + layout panels) ---
+    gui3d_text:    StringProperty(name="Text", default="",
+                                  description="Button label text")
+    gui3d_image:   StringProperty(name="Image", subtype='FILE_PATH', default="",
+                                  description="Button icon image — copied next to the export")
+    gui3d_tooltip: StringProperty(name="Tooltip", default="",
+                                  description="Hover tooltip (holographic buttons)")
+    gui3d_content_resolution: IntProperty(
+        name="Content Resolution", default=512, min=64, max=4096,
+        description="Texture resolution rendering the 3D Button's content")
+    # On Click reactions: reuses the trigger-event rows (target + message).
+    gui3d_events:  CollectionProperty(type=BJSTriggerEvent)
+    gui3d_margin:  FloatProperty(name="Margin", default=0.02, min=0.0,
+                                 description="Distance between child controls")
+    gui3d_columns: IntProperty(name="Columns", default=10, min=0,
+                               description="0 = derive from Rows")
+    gui3d_rows:    IntProperty(name="Rows", default=0, min=0,
+                               description="0 = derive from Columns (setting Rows wins)")
+    gui3d_radius:  FloatProperty(name="Radius", default=5.0, min=0.0,
+                                 description="Radius of the sphere/cylinder hosting the children")
+    gui3d_vertical: BoolProperty(name="Vertical", default=False,
+                                 description="Stack children vertically instead of horizontally")
+    gui3d_iterations: IntProperty(name="Iterations", default=100, min=1,
+                                  description="Iterations used to scatter the children")
 
     # --- CONSTRAINT ---
     con_type:   EnumProperty(name="Joint", items=CONSTRAINT_TYPES, default='HINGE',

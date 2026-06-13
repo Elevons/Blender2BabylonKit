@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blender — 3D GUI: authoring → manifest</title>
+<style>
+/* ─────────────────────────────────────────────
+   RESET & BASE
+   ───────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: #0c0c0a;
+  font-family: monospace;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   APP SHELL  (flex column filling the viewport)
+   ───────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ─────────────────────────────────────────────
+   TOOLBAR
+   ───────────────────────────────────────────── */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: #111109;
+  border-bottom: 1px solid #2a2820;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Button group wrapper */
+.tg { display: flex; align-items: center; gap: 4px; }
+
+/* Muted group label (e.g. "mode", "file") */
+.tlbl {
+  font-size: 9px;
+  color: #4a4838;
+  letter-spacing: .08em;
+  margin-right: 1px;
+}
+
+/* Toolbar button — default state */
+.tb {
+  background: #1a1a12;
+  border: 1px solid #2e2c20;
+  color: #887858;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.tb:hover    { border-color: #c8a84a; color: #e0c878; }
+.tb.on       { border-color: #c8a84a; color: #f0d060; background: #1c1b0e; }
+.tb:disabled { opacity: .3; cursor: default; }
+
+/* Vertical rule between toolbar groups */
+.tsep {
+  width: 1px;
+  height: 18px;
+  background: #2a2820;
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+/* Zoom percentage label — clickable to reset */
+#zoom-lbl {
+  font-size: 10px;
+  color: #5a5040;
+  min-width: 36px;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+#zoom-lbl:hover { color: #a09070; }
+
+/* Editable diagram title in toolbar */
+#title-bar {
+  font-size: 10px;
+  color: #5a5040;
+  padding: 0 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  outline: none;
+  background: transparent;
+}
+#title-bar:hover { border-color: #3a3428; color: #a09070; }
+#title-bar:focus { border-color: #7a6830; color: #c8c09a; background: #161612; }
+
+/* ─────────────────────────────────────────────
+   WORKSPACE  (canvas area + side panel, side by side)
+   ───────────────────────────────────────────── */
+#workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   CANVAS AREA
+   ───────────────────────────────────────────── */
+#ca {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+canvas#cv {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* Minimap overlay — bottom-right corner */
+#minimap {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  width: 130px; height: 86px;
+  background: #111109;
+  border: 1px solid #2a2820;
+  border-radius: 4px;
+  overflow: hidden;
+  pointer-events: none;
+}
+canvas#mm { display: block; width: 100%; height: 100%; }
+
+/* Keyboard shortcut hint — bottom-left corner */
+#hint {
+  position: absolute;
+  bottom: 10px; left: 12px;
+  font-size: 10px;
+  color: #2e2c20;
+  pointer-events: none;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────
+   SIDE PANEL  (slides in from the right edge)
+   ───────────────────────────────────────────── */
+#panel {
+  width: 0;
+  overflow: hidden;
+  background: #111109;
+  border-left: 1px solid #1e1e16;
+  transition: width .18s ease;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+#panel.open { width: 230px; }
+
+/* Fixed-width inner container prevents layout reflow during slide animation */
+#pi {
+  width: 230px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Panel section label (uppercase, muted) */
+.pl {
+  font-size: 9px;
+  color: #5a5848;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+/* Panel text input and textarea */
+.inp {
+  background: #161612;
+  border: 1px solid #2e2c20;
+  color: #c8c09a;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 5px 8px;
+  border-radius: 4px;
+  width: 100%;
+  outline: none;
+  resize: none;
+}
+.inp:focus { border-color: #7a6830; }
+.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+
+/* "+ add row" button inside panel */
+.padd {
+  background: #161612;
+  border: 1px solid #2e2c20;
+  color: #887858;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 2px;
+}
+.padd:hover { border-color: #c8a84a; color: #e0c878; }
+
+/* Destructive delete button */
+.pdel {
+  background: #160e0e;
+  border: 1px solid #2e1818;
+  color: #7a3838;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 6px;
+  width: 100%;
+}
+.pdel:hover { border-color: #b03030; color: #d04040; }
+
+/* "✕ close" ghost button at top of panel */
+.pclose {
+  background: none;
+  border: none;
+  color: #4a4838;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: inherit;
+  text-align: left;
+  padding: 0 0 4px;
+}
+.pclose:hover { color: #a09070; }
+
+/* Metadata key/value row */
+.meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+</style>
+</head>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">3D GUI</span></div></div>
+<div id="app">
+
+  <div id="toolbar">
+    <div class="tg">
+      <span class="tlbl">file</span>
+      <input id="title-bar" value="untitled diagram" spellcheck="false" title="Click to rename">
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <span class="tlbl">mode</span>
+      <button class="tb on" id="btn-select" onclick="setMode('select')">Select</button>
+      <button class="tb"    id="btn-node"   onclick="setMode('node')">+ Node</button>
+      <button class="tb"    id="btn-edge"   onclick="setMode('edge')">+ Edge</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" id="btn-undo" onclick="undo()" disabled title="Ctrl+Z">↩ Undo</button>
+      <button class="tb" id="btn-redo" onclick="redo()" disabled title="Ctrl+Y">↪ Redo</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" onclick="zoomBy(-0.15)">−</button>
+      <span id="zoom-lbl" onclick="resetView()" title="Reset zoom">100%</span>
+      <button class="tb" onclick="zoomBy(0.15)">+</button>
+      <button class="tb" onclick="fitView()">Fit</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" onclick="autoLayout()">Auto layout</button>
+      <button class="tb" onclick="deleteSelected()">Delete</button>
+      <button class="tb" onclick="clearAll()">Clear</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" onclick="exportSelf()" title="Save a self-contained copy of this file with data baked in">&#8595; Save as file</button>
+    </div>
+  </div>
+
+  <div id="workspace">
+    <div id="ca">
+      <canvas id="cv"></canvas>
+      <div id="minimap"><canvas id="mm"></canvas></div>
+      <div id="hint">Double-click canvas to add node &nbsp;·&nbsp; Drag empty space to pan &nbsp;·&nbsp; Scroll to zoom</div>
+    </div>
+    <div id="panel"><div id="pi"></div></div>
+  </div>
+
+</div>
+<script>
+// =============================================================================
+// DATA  —  this block is replaced wholesale on every "Save as file" export.
+//          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
+// =============================================================================
+const DIAGRAM_DATA = {"title":"Trace — 3D GUI: authoring → manifest","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. BJSComponent","sub":"properties.py","desc":"AUTHORING — one PropertyGroup, many faces. GUI3D_* types share gui3d_text/image/tooltip/events and panel layout fields. Membership sets GUI3D_CONTROLS / GUI3D_PANELS / GUI3D_TEXTURED classify draw + export branches.","meta":[["File","blender_addon/properties.py"],["Line","443"]],"code":"class BJSComponent(PropertyGroup):\n    comp_type: EnumProperty(name=\"Type\", items=COMPONENT_TYPES, default='TAG')\n    enabled:   BoolProperty(name=\"Enabled\", default=True)\n    show_expanded: BoolProperty(name=\"Expanded\", default=True)\n\n    # --- TAG ---\n    tag: StringProperty(name=\"Tag\", default=\"Untagged\")\n\n    # --- COLLIDER ---\n    collider_shape: EnumProperty(name=\"Shape\", items=COLLIDER_SHAPES, default='BOX')\n    is_trigger:     BoolProperty(name=\"Is Trigger\",\n                                 description=\"Detect overlaps without solid collision\",\n                                 default=False)\n    auto_fit:       BoolProperty(name=\"Auto-Fit to Bounds\",\n                                 description=\"Compute size from the mesh bounding box at runtime\",\n                                 default=True)\n    collider_show:  BoolProperty(name=\"Show Preview\", default=True,\n                                 description=\"Draw this collider in the viewport (when selected)\")\n    collider_size:   FloatVectorProperty(name=\"Size\", size=3, default=(1.0, 1.0, 1.0),\n                                          min=0.0, subtype='XYZ',\n                                          description=\"Full size, in Blender axes\")\n    collider_radius: FloatProperty(name=\"Radius\", default=0.5, min=0.0)\n    collider_height: FloatProperty(name=\"Height\", default=2.0, min=0.0)\n    collider_center: FloatVectorProperty(name=\"Center Offset\", size=3, default=(0.0, 0.0, 0.0),\n                                         subtype='XYZ', description=\"Offset, in Blender axes\")\n    collider_rotation: FloatVectorProperty(name=\"Rotation\", size=3, default=(0.0, 0.0, 0.0),\n                                           subtype='EULER',\n                                           description=\"Local rotation of the collider, in Blender axes\")\n\n    # --- RIGIDBODY ---\n    body_type:       EnumProperty(name=\"Body Type\", items=BODY_TYPES, default='DYNAMIC')\n    mass:            FloatProperty(name=\"Mass\", default=1.0, min=0.0)\n    friction:        FloatProperty(name=\"Friction\", default=0.5, min=0.0, max=1.0)\n    restitution:     FloatProperty(name=\"Restitution (Bounce)\", default=0.2, min=0.0, max=1.0)\n    linear_damping:  FloatProperty(name=\"Linear Damping\", default=0.0, min=0.0)\n    angular_damping: FloatProperty(name=\"Angular Damping\", default=0.0, min=0.0)\n\n    # --- COLLIDER: trigger events (shown when Is Trigger is on) ---\n    trigger_events: CollectionProperty(type=BJSTriggerEvent)\n\n    # --- AUDIO ---\n    audio_file:     StringProperty(name=\"Sound File\", subtype='FILE_PATH', default=\"\",\n                                   description=\".mp3/.wav/.ogg — copied next to the export\")\n    audio_volume:   FloatProperty(name=\"Volume\", default=1.0, min=0.0, max=2.0)\n    audio_loop:     BoolProperty(name=\"Loop\", default=False)\n    audio_autoplay: BoolProperty(name=\"Auto Play\", default=False,\n                                 description=\"Start on load (after the browser allows audio)\")\n    audio_spatial:  BoolProperty(name=\"3D Spatial\", default=True,\n                                 description=\"Position the sound at this object (vs. ambient)\")\n    audio_max_distance: FloatProperty(name=\"Max Distance\", default=50.0, min=0.0,\n                                      description=\"Distance at which the sound is inaudible\")\n    audio_rate:     FloatProperty(name=\"Playback Rate\", default=1.0, min=0.1, max=4.0)\n\n    # --- GUI ---\n    gui_file:       StringProperty(name=\"GUI File\", subtype='FILE_PATH', default=\"\",\n                                   description=\".json exported from the Babylon GUI Editor — \"\n                                               \"copied next to the export\")\n    gui_mode:       EnumProperty(name=\"Mode\", items=GUI_MODES, default='FULLSCREEN')\n    gui_foreground: BoolProperty(name=\"Foreground\", default=True,\n                                 description=\"Fullscreen: draw in front of the scene (vs behind it)\")\n    gui_width:      IntProperty(name=\"Texture Width\", default=1024, min=1,\n                                description=\"On Mesh: resolution of the UI texture\")\n    gui_height:     IntProperty(name=\"Texture Height\", default=1024, min=1,\n                                description=\"On Mesh: resolution of the UI texture\")\n\n    # --- PARTICLE ---\n    particle_file:      StringProperty(name=\"Particle File\", subtype='FILE_PATH', default=\"\",\n                                       description=\".json exported from the Babylon Particle \"\n                                                   \"Editor — copied next to the export\")\n    particle_gpu:       BoolProperty(name=\"Use GPU\", default=False,\n                                     description=\"Create a GPUParticleSystem when supported \"\n                                                 \"(falls back to CPU)\")\n    particle_autostart: BoolProperty(name=\"Auto Start\", default=True,\n                                     description=\"Begin emitting as soon as the level loads\")\n    particle_attach:    BoolProperty(name=\"Attach to Object\", default=True,\n                                     description=\"Emit from this object (a mesh follows it; an \"\n                                                 \"empty uses its position)\")\n    particle_capacity:  IntProperty(name=\"Max Particles\", default=0, min=0,\n                                    description=\"Override the JSON's capacity (0 = use the file's value)\")\n\n    # --- GUI3D (3D buttons + layout panels) ---\n    gui3d_text:    StringProperty(name=\"Text\", default=\"\",\n                                  description=\"Button label text\")\n    gui3d_image:   StringProperty(name=\"Image\", subtype='FILE_PATH', default=\"\",\n                                  description=\"Button icon image — copied next to the export\")\n    gui3d_tooltip: StringProperty(name=\"Tooltip\", default=\"\",\n                                  description=\"Hover tooltip (holographic buttons)\")\n    gui3d_content_resolution: IntProperty(\n        name=\"Content Resolution\", default=512, min=64, max=4096,\n        description=\"Texture resolution rendering the 3D Button's content\")\n    # On Click reactions: reuses the trigger-event rows (target + message).\n    gui3d_events:  CollectionProperty(type=BJSTriggerEvent)\n    gui3d_margin:  FloatProperty(name=\"Margin\", default=0.02, min=0.0,\n                                 description=\"Distance between child controls\")\n    gui3d_columns: IntProperty(name=\"Columns\", default=10, min=0,\n                               description=\"0 = derive from Rows\")\n    gui3d_rows:    IntProperty(name=\"Rows\", default=0, min=0,\n                               description=\"0 = derive from Columns (setting Rows wins)\")\n    gui3d_radius:  FloatProperty(name=\"Radius\", default=5.0, min=0.0,\n                                 description=\"Radius of the sphere/cylinder hosting the children\")\n    gui3d_vertical: BoolProperty(name=\"Vertical\", default=False,\n                                 description=\"Stack children vertically instead of horizontally\")\n    gui3d_iterations: IntProperty(name=\"Iterations\", default=100, min=1,\n                                  description=\"Iterations used to scatter the children\")\n\n    # --- CONSTRAINT ---\n    con_type:   EnumProperty(name=\"Joint\", items=CONSTRAINT_TYPES, default='HINGE',\n                             update=_on_con_type_update)\n    con_target: PointerProperty(name=\"Target\", type=Object,\n                                description=\"The other body this object is jointed to\")\n    con_pivot:  FloatVectorProperty(name=\"Pivot\", size=3, default=(0.0, 0.0, 0.0),\n                                    subtype='XYZ',\n                                    description=\"Joint anchor, in this object's local space (Blender axes)\")\n    con_axis:   EnumProperty(name=\"Axis\", items=CONSTRAINT_AXES, default='Z',\n                             description=\"Hinge rotation / slide / spring axis (this object's local axes)\")\n    con_collision: BoolProperty(name=\"Bodies Collide\", default=False,\n                                description=\"Allow the two jointed bodies to collide with each other\")\n    con_use_limits: BoolProperty(name=\"Use Limits\", default=False)\n    con_min: FloatProperty(name=\"Min\", default=0.0,\n                           description=\"Lower limit: degrees (hinge) or meters (slider/spring)\")\n    con_max: FloatProperty(name=\"Max\", default=0.0,\n                           description=\"Upper limit: degrees (hinge) or meters (slider/spring)\")\n    con_stiffness: FloatProperty(name=\"Stiffness\", default=100.0, min=0.0,\n                                 description=\"Spring stiffness (N/m)\")\n    con_damping:   FloatProperty(name=\"Damping\", default=10.0, min=0.0,\n                                 description=\"Spring damping\")\n    con_motor: BoolProperty(name=\"Motor\", default=False,\n                            description=\"Drive the joint at a target speed (hinge/slider)\")\n    con_motor_speed: FloatProperty(name=\"Motor Speed\", default=90.0,\n                                   description=\"Target speed: deg/s (hinge) or m/s (slider)\")\n    con_motor_force: FloatProperty(name=\"Motor Max Force\", default=100.0, min=0.0)\n    con_custom_axes: CollectionProperty(type=BJSConstraintAxisDoF)\n\n    # --- SCRIPT ---\n    script_path: StringProperty(\n        name=\"File\", subtype='FILE_PATH', default=\"\",\n        description=\"Path to the behavior source file (picked via Open Script)\",\n        update=_on_script_path_update)\n    # Registry key, derived from the picked file. Not user-editable; exposed\n    # variables will come from decorators in the script itself.\n    script_name: StringProperty(name=\"Script\", default=\"\")\n    exposed_vars: CollectionProperty(type=BJSExposedVar)\n\n    # --- CAMERA (opt-in type override; default cameras stay faithful FreeCameras) ---\n    cam_type:           EnumProperty(name=\"Camera Type\", items=CAMERA_TYPES, default='ARC')\n    cam_attach_control: BoolProperty(name=\"Attach Controls\", default=True)\n    cam_key_scheme:     EnumProperty(name=\"Keys\", items=CAMERA_KEY_SCHEMES, default='ARROWS')\n    cam_key_up:         StringProperty(name=\"Up\", default=\"W\", maxlen=1)\n    cam_key_down:       StringProperty(name=\"Down\", default=\"S\", maxlen=1)\n    cam_key_left:       StringProperty(name=\"Left\", default=\"A\", maxlen=1)\n    cam_key_right:      StringProperty(name=\"Right\", default=\"D\", maxlen=1)\n    cam_use_blender_transform: BoolProperty(\n        name=\"Use Blender Position\", default=True,\n        description=\"Start the follow camera where it sits in Blender, relative \"\n                    \"to the target (derives distance/height/angle)\")\n    cam_follow_mode:    EnumProperty(name=\"Follow Mode\", items=FOLLOW_MODES, default='OFFSET')\n    cam_speed:          FloatProperty(name=\"Speed\", default=1.0, min=0.0)\n    cam_inertia:        FloatProperty(name=\"Inertia\", default=0.9, min=0.0, max=1.0)\n    cam_radius:         FloatProperty(name=\"Orbit Distance\", default=10.0, min=0.1)\n    cam_lower_radius:   FloatProperty(name=\"Min Zoom\", default=0.0, min=0.0,\n                                      description=\"0 = no limit\")\n    cam_upper_radius:   FloatProperty(name=\"Max Zoom\", default=0.0, min=0.0,\n                                      description=\"0 = no limit\")\n    cam_target:         PointerProperty(name=\"Target\", type=Object,\n                                        update=_on_cam_target_update)\n    cam_distance:       FloatProperty(name=\"Follow Distance\", default=10.0, min=0.0)\n    cam_height:         FloatProperty(name=\"Height Offset\", default=4.0)\n    cam_rotation_offset: FloatProperty(name=\"Rotation Offset\", default=0.0,\n                                       description=\"Degrees behind the target\")","file":"blender_addon/properties.py","line":443},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _draw_click_events","sub":"ui.py","desc":"The On Click Events box for 3D controls — same target+message UI as trigger colliders, wired to bjs.gui3d_event_add/remove operators.","meta":[["File","blender_addon/ui.py"],["Line","46"]],"code":"def _draw_click_events(body, comp, index):\n    \"\"\"The On Click events box for 3D GUI controls (mirrors trigger events).\"\"\"\n    box = body.box()\n    header = box.row()\n    header.label(text=\"On Click Events\", icon='RESTRICT_SELECT_OFF')\n    add = header.operator(\"bjs.gui3d_event_add\", text=\"\", icon='ADD')\n    add.comp_index = index\n    for ev_i, ev in enumerate(comp.gui3d_events):\n        row = box.row(align=True)\n        row.prop(ev, \"target\", text=\"\")\n        row.prop(ev, \"message\", text=\"\")\n        rem = row.operator(\"bjs.gui3d_event_remove\", text=\"\", icon='X')\n        rem.comp_index = index\n        rem.event_index = ev_i\n    if len(comp.gui3d_events) == 0:\n        box.label(text=\"On click: send Message to Target\", icon='INFO')","file":"blender_addon/ui.py","line":46},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _serialize_components","sub":"export.py","desc":"GUI3D_* cases emit type-specific fields; button images copied via _copy_asset to gui/; click-event targets yielded by _iter_referenced_objects for GUID assignment.","meta":[["File","blender_addon/export.py"],["Line","133"]],"code":"def _serialize_components(obj, output_dir):\n    comps = []\n    for c in obj.bjs_components:\n        if not c.enabled:\n            continue\n        d = {\"type\": c.comp_type}\n\n        if c.comp_type == 'TAG':\n            d[\"tag\"] = c.tag\n\n        elif c.comp_type == 'COLLIDER':\n            # Authored in Blender axes (Z-up); convert offset + size + rotation to\n            # Babylon Y-up so the runtime body matches the viewport preview.\n            cx, cy, cz = c.collider_center\n            sx, sy, sz = c.collider_size\n            q = mathutils.Euler(c.collider_rotation, 'XYZ').to_quaternion()\n            d.update({\n                \"shape\": c.collider_shape,\n                \"isTrigger\": bool(c.is_trigger),\n                \"autoFit\": bool(c.auto_fit),\n                \"size\": [sx, sz, sy],        # extents: y<->z axes swap\n                \"radius\": c.collider_radius,\n                \"height\": c.collider_height,\n                \"center\": [cx, cz, -cy],     # offset: (x, y, z) -> (x, z, -y)\n                \"rotation\": [q.x, q.z, -q.y, q.w],  # quaternion xyzw, axis Z-up -> Y-up\n            })\n            if c.is_trigger and len(c.trigger_events) > 0:\n                d[\"events\"] = [{\n                    \"target\": ensure_object_id(ev.target) if ev.target else None,\n                    \"message\": ev.message,\n                    \"filterTag\": ev.filter_tag,\n                } for ev in c.trigger_events]\n\n        elif c.comp_type == 'RIGIDBODY':\n            d.update({\n                \"bodyType\": c.body_type,\n                \"mass\": c.mass,\n                \"friction\": c.friction,\n                \"restitution\": c.restitution,\n                \"linearDamping\": c.linear_damping,\n                \"angularDamping\": c.angular_damping,\n            })\n\n        elif c.comp_type == 'SCRIPT':\n            d[\"script\"] = c.script_name\n            d[\"path\"] = c.script_path\n            d[\"vars\"] = _serialize_vars(c)\n\n        elif c.comp_type == 'CAMERA':\n            d.update({\n                \"cameraType\": c.cam_type,\n                \"attachControl\": bool(c.cam_attach_control),\n                \"keys\": {\n                    \"scheme\": c.cam_key_scheme,\n                    \"up\": c.cam_key_up, \"down\": c.cam_key_down,\n                    \"left\": c.cam_key_left, \"right\": c.cam_key_right,\n                },\n                \"useBlenderTransform\": bool(c.cam_use_blender_transform),\n                \"followMode\": c.cam_follow_mode,\n                \"speed\": c.cam_speed,\n                \"inertia\": c.cam_inertia,\n                \"radius\": c.cam_radius,\n                \"lowerRadius\": c.cam_lower_radius,\n                \"upperRadius\": c.cam_upper_radius,\n                \"target\": ensure_object_id(c.cam_target) if c.cam_target else None,\n                \"distance\": c.cam_distance,\n                \"height\": c.cam_height,\n                \"rotationOffset\": c.cam_rotation_offset,\n            })\n\n        elif c.comp_type == 'CONSTRAINT':\n            from .properties import ensure_custom_constraint_axes\n            px, py, pz = c.con_pivot\n            d.update({\n                \"constraintType\": c.con_type,\n                \"target\": ensure_object_id(c.con_target) if c.con_target else None,\n                \"pivot\": [px, pz, -py],  # owner-local, converted to Babylon Y-up\n                \"axis\": _CONSTRAINT_AXIS_TO_BABYLON[c.con_axis],\n                \"collision\": bool(c.con_collision),\n                \"useLimits\": bool(c.con_use_limits),\n                \"min\": c.con_min,   # degrees (hinge) / meters (slider, spring)\n                \"max\": c.con_max,\n                \"stiffness\": c.con_stiffness,\n                \"damping\": c.con_damping,\n                \"motor\": bool(c.con_motor),\n                \"motorSpeed\": c.con_motor_speed,   # deg/s (hinge) / m/s (slider)\n                \"motorMaxForce\": c.con_motor_force,\n            })\n            if c.con_type == 'CUSTOM':\n                ensure_custom_constraint_axes(c)\n                d[\"axes\"] = [{\n                    \"axis\": ax.dof_axis,\n                    \"mode\": ax.mode.lower(),\n                    \"min\": ax.min_limit,\n                    \"max\": ax.max_limit,\n                    \"stiffness\": ax.stiffness,\n                    \"damping\": ax.damping,\n                } for ax in c.con_custom_axes]\n\n        elif c.comp_type == 'AUDIO':\n            d.update({\n                \"file\": _copy_audio_file(c.audio_file, output_dir),\n                \"volume\": c.audio_volume,\n                \"loop\": bool(c.audio_loop),\n                \"autoPlay\": bool(c.audio_autoplay),\n                \"spatial\": bool(c.audio_spatial),\n                \"maxDistance\": c.audio_max_distance,\n                \"playbackRate\": c.audio_rate,\n            })\n\n        elif c.comp_type == 'GUI':\n            d.update({\n                \"file\": _copy_asset(c.gui_file, output_dir, \"gui\"),\n                \"mode\": c.gui_mode,\n                \"foreground\": bool(c.gui_foreground),\n                \"width\": c.gui_width,\n                \"height\": c.gui_height,\n            })\n\n        elif c.comp_type == 'PARTICLE':\n            d.update({\n                \"file\": _copy_asset(c.particle_file, output_dir, \"particles\"),\n                \"gpu\": bool(c.particle_gpu),\n                \"autoStart\": bool(c.particle_autostart),\n                \"attachToEntity\": bool(c.particle_attach),\n                \"capacity\": c.particle_capacity,\n            })\n\n        elif c.comp_type in GUI3D_CONTROLS:\n            d[\"events\"] = [{\n                \"target\": ensure_object_id(ev.target) if ev.target else None,\n                \"message\": ev.message,\n            } for ev in c.gui3d_events]\n            if c.comp_type in GUI3D_TEXTURED:\n                d[\"text\"] = c.gui3d_text\n                d[\"image\"] = (_copy_asset(c.gui3d_image, output_dir, \"gui\")\n                              if c.gui3d_image else None)\n            if c.comp_type == 'GUI3D_BUTTON':\n                d[\"contentResolution\"] = c.gui3d_content_resolution\n            if c.comp_type in {'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO'}:\n                d[\"tooltip\"] = c.gui3d_tooltip\n\n        elif c.comp_type in GUI3D_PANELS:\n            d[\"margin\"] = c.gui3d_margin\n            if c.comp_type == 'GUI3D_STACK':\n                d[\"vertical\"] = bool(c.gui3d_vertical)\n            else:\n                d[\"columns\"] = c.gui3d_columns\n                d[\"rows\"] = c.gui3d_rows\n            if c.comp_type in {'GUI3D_SPHERE', 'GUI3D_CYLINDER'}:\n                d[\"radius\"] = c.gui3d_radius\n            if c.comp_type == 'GUI3D_SCATTER':\n                d[\"iterations\"] = c.gui3d_iterations\n\n        comps.append(d)\n    return comps","file":"blender_addon/export.py","line":133},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. _check_gui3d","sub":"validate.py","desc":"Mesh button on non-mesh, panel without button children, click events without targets, missing button image files.","meta":[["File","blender_addon/validate.py"],["Line","122"]],"code":"def _check_gui3d(obj, warnings):\n    \"\"\"3D GUI sanity: a mesh button needs a mesh, panels need button children,\n    click events need targets, and image files must exist on disk.\"\"\"\n    for comp in obj.bjs_components:\n        if comp.comp_type in GUI3D_CONTROLS:\n            if comp.comp_type == 'GUI3D_MESH' and obj.type != 'MESH':\n                warnings.append(\n                    f\"{obj.name}: 3D Mesh Button needs a mesh object to wrap\")\n            if comp.comp_type in GUI3D_TEXTURED and comp.gui3d_image:\n                if not os.path.isfile(bpy.path.abspath(comp.gui3d_image)):\n                    warnings.append(\n                        f\"{obj.name}: 3D button image not found: {comp.gui3d_image}\")\n            for ev in comp.gui3d_events:\n                if ev.target is None:\n                    warnings.append(\n                        f\"{obj.name}: a 3D GUI click event has no target object\")\n        elif comp.comp_type in GUI3D_PANELS:\n            has_child_control = any(\n                child_comp.comp_type in GUI3D_CONTROLS\n                for child in obj.children\n                for child_comp in child.bjs_components)\n            if not has_child_control:\n                warnings.append(\n                    f\"{obj.name}: 3D panel has no child objects with 3D button \"\n                    f\"components — parent the buttons under it\")","file":"blender_addon/validate.py","line":122},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. _check_media","sub":"validate.py","desc":"GUI (missing JSON, MESH mode on non-mesh) and PARTICLE (missing JSON) checks run alongside 3D GUI validation.","meta":[["File","blender_addon/validate.py"],["Line","101"]],"code":"def _check_media(obj, warnings):\n    \"\"\"GUI / particle JSON files that don't exist on disk won't load at runtime;\n    on-mesh GUIs also need a mesh object to project onto.\"\"\"\n    for comp in obj.bjs_components:\n        if comp.comp_type == 'GUI':\n            if not comp.gui_file:\n                warnings.append(f\"{obj.name}: GUI component has no JSON file\")\n            elif not os.path.isfile(bpy.path.abspath(comp.gui_file)):\n                warnings.append(f\"{obj.name}: GUI file not found: {comp.gui_file}\")\n            if comp.gui_mode == 'MESH' and obj.type != 'MESH':\n                warnings.append(\n                    f\"{obj.name}: GUI is in On-Mesh mode but the object isn't a \"\n                    f\"mesh — use Fullscreen, or attach it to a mesh\")\n        elif comp.comp_type == 'PARTICLE':\n            if not comp.particle_file:\n                warnings.append(f\"{obj.name}: Particles component has no JSON file\")\n            elif not os.path.isfile(bpy.path.abspath(comp.particle_file)):\n                warnings.append(\n                    f\"{obj.name}: particle file not found: {comp.particle_file}\")","file":"blender_addon/validate.py","line":101}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
+
+// =============================================================================
+// CANVAS & DOM REFERENCES
+// =============================================================================
+const cv   = document.getElementById('cv');   // main diagram canvas
+const ctx  = cv.getContext('2d');
+const mmEl = document.getElementById('mm');   // minimap canvas
+const mctx = mmEl.getContext('2d');
+const ca   = document.getElementById('ca');   // canvas container div
+
+// =============================================================================
+// STATE
+// =============================================================================
+
+// Graph data
+let nodes = [];   // [{ id, x, y, w, h, label, sub, desc, meta:[['k','v']…] }]
+let edges = [];   // [{ id, src, tgt, label }]
+let nid   = 1;    // auto-incrementing id counter for nodes and edges
+
+// Interaction
+let mode      = 'select';  // 'select' | 'node' | 'edge'
+let sel       = null;      // { type:'node'|'edge', id } — currently selected item
+let selNodeId = null;      // id of selected node (drives connected-edge highlight)
+let edgeSrc   = null;      // node id awaiting second click when drawing an edge
+let drag      = null;      // node object currently being dragged
+let dragOffsetX = 0;  // distance from mouse to node origin X at drag start
+let dragOffsetY = 0;  // distance from mouse to node origin Y at drag start
+let isPanning = false;
+let mouseWorld = { x: 0, y: 0 };  // current mouse in world space (used for ghost edge)
+
+// Viewport transform  —  world → screen:  screenX = worldX * zoom + panX
+let panX = 0;
+let panY = 0;
+let zoom = 1;
+
+// =============================================================================
+// HISTORY  (undo / redo)
+// =============================================================================
+const undoStack = [];  // past graph states, oldest → newest
+const redoStack = [];  // states popped by undo, available to redo
+
+/** Serialise the current graph and push it onto the undo stack. */
+function snapshot() {
+  undoStack.push(JSON.stringify({ nodes, edges, nid }));
+  redoStack.length = 0;  // any new action invalidates the redo stack
+  if (undoStack.length > 80) undoStack.shift();
+  refreshUndoRedo();
+}
+
+/** Restore the graph from a serialised snapshot string. */
+const restoreSnapshot = str => {
+  const saved = JSON.parse(str);
+  nodes = saved.nodes; edges = saved.edges; nid = saved.nid;
+};
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify({ nodes, edges, nid }));
+  restoreSnapshot(undoStack.pop());
+  clearSelection(); draw(); refreshUndoRedo();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify({ nodes, edges, nid }));
+  restoreSnapshot(redoStack.pop());
+  clearSelection(); draw(); refreshUndoRedo();
+}
+
+/** Enable/disable the undo and redo toolbar buttons to match stack state. */
+function refreshUndoRedo() {
+  document.getElementById('btn-undo').disabled = !undoStack.length;
+  document.getElementById('btn-redo').disabled = !redoStack.length;
+}
+
+// =============================================================================
+// KEYBOARD SHORTCUTS
+// =============================================================================
+document.addEventListener('keydown', e => {
+  const ctrl   = e.ctrlKey || e.metaKey;
+  const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+
+  if (ctrl && e.key === 'z' && !e.shiftKey)                       { e.preventDefault(); undo(); }
+  if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey)))   { e.preventDefault(); redo(); }
+  if (ctrl && e.key === 's')                                       { e.preventDefault(); exportSelf(); }
+  if (e.key === 'Escape')                                          { edgeSrc = null; draw(); }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !typing)   { e.preventDefault(); deleteSelected(); }
+});
+
+// =============================================================================
+// MATH & GEOMETRY HELPERS
+// =============================================================================
+
+/** Live canvas pixel dimensions (read each frame — canvas can be resized). */
+const canvasW = () => cv.width;
+const canvasH = () => cv.height;
+
+/** Clamp value between lo and hi. */
+const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
+
+/** Euclidean distance between two points. */
+const dist = (ax, ay, bx, by) => Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+
+/** Convert screen (canvas-pixel) coordinates to world space. */
+const toWorld  = (screenX, screenY) => ({ x: (screenX - panX) / zoom, y: (screenY - panY) / zoom });
+
+/** Convert world coordinates to screen (canvas-pixel) space. */
+const toScreen = (worldX,  worldY)  => ({ x: worldX * zoom + panX,    y: worldY * zoom + panY    });
+
+/** Horizontal centre of a node rectangle. */
+const nodeCentreX = n => n.x + n.w / 2;
+
+/** Vertical centre of a node rectangle. */
+const nodeCentreY = n => n.y + n.h / 2;
+
+/**
+ * Axis-aligned bounding box of all nodes, expanded by `padding` on every side.
+ * Returns { minX, minY, maxX, maxY } or null when there are no nodes.
+ */
+function nodeBounds(padding = 0) {
+  if (!nodes.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x - padding);
+    minY = Math.min(minY, n.y - padding);
+    maxX = Math.max(maxX, n.x + n.w + padding);
+    maxY = Math.max(maxY, n.y + n.h + padding);
+  });
+  return { minX, minY, maxX, maxY };
+}
+
+/**
+ * Compute the quadratic-bezier geometry for an edge.
+ * Returns { x1, y1, x2, y2, cpx, cpy, mx, my }  (mx/my = midpoint for label placement)
+ * or null if either endpoint node is missing from the nodes array.
+ *
+ * Geometry overview:
+ *
+ *   source centre ──► unit vector ──► x1/y1 (point on source box wall)
+ *                                         ↓  curve
+ *   target centre ◄── unit vector ◄── x2/y2 (point on target box wall, + arrowhead gap)
+ *                          ↑
+ *                     control point lifted above the straight midpoint
+ *                     by 18% of the horizontal separation, giving a
+ *                     gentle arc that grows with distance.
+ */
+function edgeEP(e) {
+  const src = nodes.find(n => n.id === e.src);
+  const tgt = nodes.find(n => n.id === e.tgt);
+  if (!src || !tgt) return null;
+
+  // Vector from source centre to target centre
+  const dx = nodeCentreX(tgt) - nodeCentreX(src);
+  const dy = nodeCentreY(tgt) - nodeCentreY(src);
+
+  // Normalised direction (unit vector)
+  const length = Math.sqrt(dx * dx + dy * dy) || 1;
+  const unitX  = dx / length;
+  const unitY  = dy / length;
+
+  // Straight-line midpoint between the two centres
+  const midX = (nodeCentreX(src) + nodeCentreX(tgt)) / 2;
+  const midY = (nodeCentreY(src) + nodeCentreY(tgt)) / 2;
+
+  // Arc height: lift the control point above the midpoint.
+  // Using horizontal separation (dx) means wider edges arc higher.
+  const arcLift       = Math.abs(dx) * 0.18;
+  const labelLift     = Math.abs(dx) * 0.09;  // label sits halfway up the arc
+  const ARROWHEAD_GAP = 7;
+
+  // Where the line exits the source box wall
+  const startX = nodeCentreX(src) + unitX * src.w / 2;
+  const startY = nodeCentreY(src) + unitY * src.h / 2;
+
+  // Where the line enters the target box wall (pulled back for the arrowhead)
+  const endX = nodeCentreX(tgt) - unitX * (tgt.w / 2 + ARROWHEAD_GAP);
+  const endY = nodeCentreY(tgt) - unitY * (tgt.h / 2 + ARROWHEAD_GAP);
+
+  return {
+    x1: startX,  y1: startY,
+    x2: endX,    y2: endY,
+    cpx: midX,   cpy: midY - arcLift,
+    mx:  midX,   my:  midY - labelLift,
+  };
+}
+
+// =============================================================================
+// HIT TESTING
+// =============================================================================
+
+/**
+ * Return the topmost node whose bounding box contains world point (wx, wy),
+ * or null. Iterates in reverse so later-drawn (visually on top) nodes win.
+ */
+function hitNode(wx, wy) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const withinX = wx >= n.x && wx <= n.x + n.w;
+    const withinY = wy >= n.y && wy <= n.y + n.h;
+    if (withinX && withinY) return n;
+  }
+  return null;
+}
+
+/** Return the first edge whose midpoint is within 14px of (wx, wy), or null. */
+const hitEdge = (wx, wy) => edges.find(e => {
+  const ep = edgeEP(e);
+  return ep && dist(wx, wy, ep.mx, ep.my) < 14;
+}) ?? null;
+
+// =============================================================================
+// VIEWPORT  (zoom, pan, fit)
+// =============================================================================
+
+/** Resize both canvases to fill their container and redraw. */
+function resize() {
+  const bounds  = ca.getBoundingClientRect();
+  cv.width      = bounds.width;
+  cv.height     = bounds.height;
+  mmEl.width    = 130;
+  mmEl.height   = 86;
+  draw();
+}
+new ResizeObserver(resize).observe(ca);
+
+/**
+ * Zoom by `delta` (positive = in, negative = out), pivoting around the
+ * screen point (pivotX, pivotY).  Omit pivot to use the canvas centre.
+ */
+function zoomBy(delta, pivotX = canvasW() / 2, pivotY = canvasH() / 2) {
+  const newZoom = clamp(zoom + delta, 0.1, 4);
+  // Keep the world point under the pivot stationary
+  const worldX = (pivotX - panX) / zoom;
+  const worldY = (pivotY - panY) / zoom;
+  zoom = newZoom;
+  panX = pivotX - worldX * zoom;
+  panY = pivotY - worldY * zoom;
+  document.getElementById('zoom-lbl').textContent = Math.round(zoom * 100) + '%';
+  draw();
+}
+
+/** Reset zoom to 100% with a comfortable top-left origin. */
+function resetView() {
+  zoom = 1; panX = 60; panY = 60;
+  document.getElementById('zoom-lbl').textContent = '100%';
+  draw();
+}
+
+/** Zoom and pan so all nodes fill the canvas with generous padding. */
+function fitView() {
+  const b = nodeBounds(60);
+  if (!b) { resetView(); return; }
+  const boundsW = b.maxX - b.minX;
+  const boundsH = b.maxY - b.minY;
+  zoom = clamp(Math.min(canvasW() / boundsW, canvasH() / boundsH), 0.1, 4);
+  panX = canvasW() / 2 - ((b.minX + b.maxX) / 2) * zoom;
+  panY = canvasH() / 2 - ((b.minY + b.maxY) / 2) * zoom;
+  document.getElementById('zoom-lbl').textContent = Math.round(zoom * 100) + '%';
+  draw();
+}
+
+// =============================================================================
+// INTERACTION MODE
+// =============================================================================
+
+const HINTS = {
+  select: 'Click to select · Drag to move · Double-click canvas to add node · Scroll to zoom · Drag empty space to pan',
+  node:   'Click canvas to place a node · Esc to cancel',
+  edge:   'Click source node, then target node · Esc to cancel',
+};
+
+function setMode(m) {
+  mode = m; edgeSrc = null;
+  ['select', 'node', 'edge'].forEach(x =>
+    document.getElementById('btn-' + x).classList.toggle('on', x === m)
+  );
+  cv.style.cursor = m === 'node' ? 'crosshair' : m === 'edge' ? 'cell' : 'default';
+  document.getElementById('hint').textContent = HINTS[m];
+  draw();
+}
+
+// =============================================================================
+// CANVAS EVENTS
+// =============================================================================
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Extract the canvas-relative world position from a mouse event. */
+function worldFromEvent(e) {
+  const bounds = cv.getBoundingClientRect();
+  return toWorld(e.clientX - bounds.left, e.clientY - bounds.top);
+}
+
+/**
+ * Create a new node object centred on world point (wx, wy).
+ * Does not add it to the nodes array — caller does that.
+ */
+function makeNode(wx, wy) {
+  return {
+    id:    nid++,
+    x:     wx - 55,
+    y:     wy - 19,
+    w:     110,
+    h:     38,
+    label: 'Node ' + (nid - 1),
+    sub:   '',
+    desc:  '',
+    meta:  [],
+  };
+}
+
+// ── mousedown handlers, one per mode ─────────────────────────────────────────
+
+/**
+ * Node mode: clicking empty canvas places a new node.
+ * Clicking an existing node does nothing (avoids accidental stacking).
+ */
+function onMouseDownNodeMode(w) {
+  if (hitNode(w.x, w.y)) return;  // don't stack on top of an existing node
+  snapshot();
+  const n = makeNode(w.x, w.y);
+  nodes.push(n);
+  selectNode(n);
+  draw();
+}
+
+/**
+ * Edge mode: first click records the source, second click on a different
+ * node creates the edge.  Clicking the same node twice cancels.
+ */
+function onMouseDownEdgeMode(w) {
+  const hit = hitNode(w.x, w.y);
+  if (!hit) return;  // must click a node
+
+  if (!edgeSrc) {
+    edgeSrc = hit.id;   // waiting for second click
+  } else if (edgeSrc === hit.id) {
+    edgeSrc = null;     // same node clicked again — cancel
+  } else {
+    snapshot();
+    edges.push({ id: nid++, src: edgeSrc, tgt: hit.id, label: '' });
+    edgeSrc = null;     // edge created
+  }
+  draw();
+}
+
+/**
+ * Select mode: clicking a node selects it and begins a drag.
+ * Clicking an edge selects it.  Clicking empty space clears selection and
+ * starts panning.
+ */
+function onMouseDownSelectMode(w) {
+  const hitN = hitNode(w.x, w.y);
+  if (hitN) {
+    selectNode(hitN);
+    drag = hitN;
+    dragOffsetX = w.x - hitN.x;
+    dragOffsetY = w.y - hitN.y;
+    draw();
+    return;
+  }
+
+  const hitE = hitEdge(w.x, w.y);
+  if (hitE) {
+    selectEdge(hitE);
+    draw();
+    return;
+  }
+
+  // Empty canvas — clear selection and start panning
+  clearSelection();
+  isPanning = true;
+  cv.style.cursor = 'grabbing';
+  draw();
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const bounds = cv.getBoundingClientRect();
+  zoomBy(-e.deltaY * 0.001, e.clientX - bounds.left, e.clientY - bounds.top);
+}, { passive: false });
+
+cv.addEventListener('mousemove', e => {
+  const bounds = cv.getBoundingClientRect();
+  mouseWorld = toWorld(e.clientX - bounds.left, e.clientY - bounds.top);
+
+  if (drag) {
+    drag.x = mouseWorld.x - dragOffsetX;
+    drag.y = mouseWorld.y - dragOffsetY;
+    draw();
+    return;
+  }
+  if (isPanning) {
+    panX += e.movementX;
+    panY += e.movementY;
+    draw();
+    return;
+  }
+  if (mode === 'edge' && edgeSrc) { draw(); return; }  // redraw ghost edge
+  if (mode === 'select') cv.style.cursor = hitNode(mouseWorld.x, mouseWorld.y) ? 'grab' : 'default';
+});
+
+cv.addEventListener('mousedown', e => {
+  if (e.button === 2) return;  // ignore right-click
+
+  // Alt+click or middle-click → pan regardless of mode
+  if (e.altKey || e.button === 1) {
+    isPanning = true;
+    cv.style.cursor = 'grabbing';
+    return;
+  }
+
+  const w = worldFromEvent(e);
+  if (mode === 'node')   onMouseDownNodeMode(w);
+  if (mode === 'edge')   onMouseDownEdgeMode(w);
+  if (mode === 'select') onMouseDownSelectMode(w);
+});
+
+cv.addEventListener('mouseup', () => {
+  if (drag) snapshot();  // commit drag position to history
+  drag = null;
+  isPanning = false;
+  cv.style.cursor = mode === 'node' ? 'crosshair' : mode === 'edge' ? 'cell' : 'default';
+});
+
+cv.addEventListener('mouseleave', () => { drag = null; isPanning = false; });
+
+// Double-click on empty canvas in select mode → quick-add a node
+cv.addEventListener('dblclick', e => {
+  if (mode !== 'select') return;
+  const w = worldFromEvent(e);
+  if (hitNode(w.x, w.y)) return;  // don't trigger on a node
+  snapshot();
+  const n = makeNode(w.x, w.y);
+  nodes.push(n);
+  selectNode(n);
+  draw();
+});
+
+// =============================================================================
+// SELECTION HELPERS
+// =============================================================================
+
+const selectNode  = n => { sel = { type: 'node', id: n.id }; selNodeId = n.id; openNodePanel(n); };
+const selectEdge  = e => { sel = { type: 'edge', id: e.id }; selNodeId = null;  openEdgePanel(e); };
+const clearSelection = () => { sel = null; selNodeId = null; closePanel(); };
+
+// =============================================================================
+// DRAW  —  main render pass (background → edges → nodes → minimap)
+// =============================================================================
+
+/**
+ * Trace a rounded-rectangle path on context c.
+ * Does not stroke or fill — caller decides.
+ */
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y);      c.arcTo(x + w, y,     x + w, y + r,     r);
+  c.lineTo(x + w, y + h - r);  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h);      c.arcTo(x,     y + h, x,     y + h - r, r);
+  c.lineTo(x, y + r);          c.arcTo(x,     y,     x + r, y,         r);
+  c.closePath();
+}
+
+/**
+ * Return text clipped to fit within maxW pixels at the given font size,
+ * appending "…" if truncation is needed.
+ */
+function clipText(text, maxW, c, fs) {
+  c.font = `${fs}px monospace`;
+  if (c.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && c.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvasW(), canvasH());
+
+  // Background
+  ctx.fillStyle = '#0c0c0a';
+  ctx.fillRect(0, 0, canvasW(), canvasH());
+
+  // Dot grid  —  drawn in screen space so it tiles correctly during pan/zoom
+  const DOT_SPACING = 28 * zoom;
+  const dotSize     = Math.max(1, 1.3 * zoom);
+  const gridOffsetX = ((panX % DOT_SPACING) + DOT_SPACING) % DOT_SPACING;
+  const gridOffsetY = ((panY % DOT_SPACING) + DOT_SPACING) % DOT_SPACING;
+  ctx.fillStyle = '#151512';
+  for (let x = gridOffsetX - DOT_SPACING; x < canvasW(); x += DOT_SPACING)
+    for (let y = gridOffsetY - DOT_SPACING; y < canvasH(); y += DOT_SPACING)
+      ctx.fillRect(x, y, dotSize, dotSize);
+
+  // All world-space drawing below this point
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(zoom, zoom);
+
+  // — Edges
+  edges.forEach(e => {
+    const ep = edgeEP(e);
+    if (!ep) return;
+
+    // An edge is "lit" if directly selected, or connects to the selected node
+    const isSelected   = sel && sel.type === 'edge' && sel.id === e.id;
+    const isAdjacent   = selNodeId && (e.src === selNodeId || e.tgt === selNodeId);
+    const lit          = isSelected || isAdjacent;
+
+    // Curve
+    ctx.strokeStyle = lit ? '#c8a84a' : '#3a3428';
+    ctx.lineWidth   = (lit ? 1.8 : 1) / zoom;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(ep.x1, ep.y1);
+    ctx.quadraticCurveTo(ep.cpx, ep.cpy, ep.x2, ep.y2);
+    ctx.stroke();
+
+    // Arrowhead (small filled triangle at the tip)
+    const arrowAngle = Math.atan2(ep.y2 - ep.cpy, ep.x2 - ep.cpx);
+    const arrowSize  = 9 / zoom;
+    ctx.fillStyle = lit ? '#c8a84a' : '#3a3428';
+    ctx.beginPath();
+    ctx.moveTo(ep.x2, ep.y2);
+    ctx.lineTo(ep.x2 - arrowSize * Math.cos(arrowAngle - 0.4), ep.y2 - arrowSize * Math.sin(arrowAngle - 0.4));
+    ctx.lineTo(ep.x2 - arrowSize * Math.cos(arrowAngle + 0.4), ep.y2 - arrowSize * Math.sin(arrowAngle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // Optional edge label
+    if (e.label) {
+      ctx.font      = `${10 / zoom}px monospace`;
+      ctx.fillStyle = '#6a6040';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, ep.mx, ep.my - 10 / zoom);
+    }
+  });
+
+  // Ghost edge — dashed line from source node to cursor while drawing
+  if (mode === 'edge' && edgeSrc) {
+    const srcNode = nodes.find(n => n.id === edgeSrc);
+    if (srcNode) {
+      ctx.strokeStyle = '#8a7440';
+      ctx.lineWidth   = 1 / zoom;
+      ctx.setLineDash([4 / zoom, 3 / zoom]);
+      ctx.beginPath();
+      ctx.moveTo(nodeCentreX(srcNode), nodeCentreY(srcNode));
+      ctx.lineTo(mouseWorld.x, mouseWorld.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // — Nodes
+  nodes.forEach(n => {
+    const isSelected   = sel && sel.type === 'node' && sel.id === n.id;
+    const isEdgeSource = edgeSrc === n.id;  // highlighted as pending edge source
+
+    ctx.fillStyle   = isSelected ? '#1f1e10' : isEdgeSource ? '#1a1810' : '#161612';
+    ctx.strokeStyle = isSelected ? '#f0d060' : isEdgeSource ? '#c8a84a' : '#3a3428';
+    ctx.lineWidth   = (isSelected ? 1.6 : 1) / zoom;
+    roundRect(ctx, n.x, n.y, n.w, n.h, 5 / zoom);
+    ctx.fill();
+    ctx.stroke();
+
+    // Primary label (shifted up when a sublabel is present)
+    const fontSize  = 11 / zoom;
+    const labelMaxW = n.w - 14 / zoom;
+    const labelY    = n.sub ? n.y + n.h / 2 - 4 / zoom : n.y + n.h / 2;
+    ctx.font      = `500 ${fontSize}px monospace`;
+    ctx.fillStyle = isSelected ? '#f0e080' : '#c8c09a';
+    ctx.textAlign = 'center';
+    ctx.fillText(clipText(n.label, labelMaxW, ctx, fontSize), nodeCentreX(n), labelY);
+
+    // Sublabel
+    if (n.sub) {
+      const subFontSize = 9 / zoom;
+      ctx.font      = `${subFontSize}px monospace`;
+      ctx.fillStyle = '#5a5040';
+      ctx.fillText(clipText(n.sub, labelMaxW, ctx, subFontSize), nodeCentreX(n), n.y + n.h / 2 + 8 / zoom);
+    }
+  });
+
+  ctx.restore();
+  drawMinimap();
+}
+
+// =============================================================================
+// MINIMAP
+// =============================================================================
+
+function drawMinimap() {
+  const MM_W = 130, MM_H = 86;
+  mctx.fillStyle = '#111109';
+  mctx.fillRect(0, 0, MM_W, MM_H);
+  if (!nodes.length) return;
+
+  // Scale all nodes to fit the minimap with a small margin
+  const b        = nodeBounds(20);
+  const boundsW  = b.maxX - b.minX;
+  const boundsH  = b.maxY - b.minY;
+  const mmScale  = Math.min((MM_W - 4) / boundsW, (MM_H - 4) / boundsH);
+  const originX  = 2 + ((MM_W - 4) - boundsW * mmScale) / 2;
+  const originY  = 2 + ((MM_H - 4) - boundsH * mmScale) / 2;
+
+  // World → minimap pixel
+  const toMmX = worldX => originX + (worldX - b.minX) * mmScale;
+  const toMmY = worldY => originY + (worldY - b.minY) * mmScale;
+
+  // Edges (straight lines at minimap scale — curves aren't worth the cost)
+  mctx.strokeStyle = '#2a2820';
+  mctx.lineWidth   = 0.5;
+  edges.forEach(e => {
+    const ep = edgeEP(e);
+    if (!ep) return;
+    mctx.beginPath();
+    mctx.moveTo(toMmX(ep.x1), toMmY(ep.y1));
+    mctx.lineTo(toMmX(ep.x2), toMmY(ep.y2));
+    mctx.stroke();
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const isSelected = sel && sel.type === 'node' && sel.id === n.id;
+    mctx.fillStyle   = isSelected ? '#3a3018' : '#1e1e16';
+    mctx.strokeStyle = isSelected ? '#c8a84a' : '#3a3428';
+    mctx.lineWidth   = 0.5;
+    mctx.beginPath();
+    mctx.rect(toMmX(n.x), toMmY(n.y), n.w * mmScale, n.h * mmScale);
+    mctx.fill();
+    mctx.stroke();
+  });
+
+  // Viewport rectangle
+  mctx.strokeStyle = '#8a7440';
+  mctx.lineWidth   = 1;
+  mctx.strokeRect(
+    toMmX(-panX / zoom), toMmY(-panY / zoom),
+    (canvasW() / zoom) * mmScale, (canvasH() / zoom) * mmScale
+  );
+}
+
+// =============================================================================
+// GRAPH OPERATIONS  (add, delete, layout)
+// =============================================================================
+
+function deleteSelected() {
+  if (!sel) return;
+  snapshot();
+  if (sel.type === 'node') {
+    nodes = nodes.filter(n => n.id !== sel.id);
+    edges = edges.filter(e => e.src !== sel.id && e.tgt !== sel.id);
+  } else {
+    edges = edges.filter(e => e.id !== sel.id);
+  }
+  clearSelection();
+  draw();
+}
+
+function clearAll() {
+  if (!nodes.length && !edges.length) return;
+  snapshot();
+  nodes = []; edges = []; nid = 1;
+  clearSelection();
+  draw();
+}
+
+/**
+ * Assign nodes to columns by longest-path rank in the DAG, then
+ * position them on a grid and fit the viewport.
+ */
+function autoLayout() {
+  if (!nodes.length) return;
+  snapshot();
+
+  // Compute column ranks via iterative relaxation (longest path from any root)
+  const columnRank = {};
+  nodes.forEach(n => { columnRank[n.id] = 0; });
+  let changed = true;
+  while (changed) {
+    changed = false;
+    edges.forEach(e => {
+      const candidateRank = (columnRank[e.src] || 0) + 1;
+      if (candidateRank > (columnRank[e.tgt] || 0)) {
+        columnRank[e.tgt] = candidateRank;
+        changed = true;
+      }
+    });
+  }
+
+  // Group nodes by column and assign grid positions
+  const nodesByColumn = {};
+  nodes.forEach(n => {
+    const col = columnRank[n.id] || 0;
+    (nodesByColumn[col] = nodesByColumn[col] || []).push(n);
+  });
+  Object.entries(nodesByColumn).forEach(([col, colNodes]) => {
+    colNodes.forEach((n, row) => { n.x = 40 + col * 170; n.y = 40 + row * 75; });
+  });
+
+  fitView();
+}
+
+// =============================================================================
+// SIDE PANEL  (node & edge inspectors)
+// =============================================================================
+
+/** Escape HTML special characters for safe innerHTML injection. */
+const esc = s => (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+function openNodePanel(n) {
+  openPanel();
+  document.getElementById('pi').innerHTML = `
+<button class="pclose" onclick="clearSelection();draw()">✕ close</button>
+<div>
+  <div class="pl">label</div>
+  <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
+</div>
+<div>
+  <div class="pl">sublabel</div>
+  <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
+</div>
+<div>
+  <div class="pl">description</div>
+  <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
+</div>
+<div>
+  <div class="pl">metadata</div>
+  <div id="pmr"></div>
+  <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
+</div>
+<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+  renderMeta(n);
+}
+
+function renderMeta(n) {
+  const el = document.getElementById('pmr');
+  if (!el) return;
+  el.innerHTML = n.meta.map((m, i) => `
+<div class="meta-row">
+  <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
+  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
+</div>`).join('');
+}
+
+function openEdgePanel(e) {
+  openPanel();
+  document.getElementById('pi').innerHTML = `
+<button class="pclose" onclick="clearSelection();draw()">✕ close</button>
+<div>
+  <div class="pl">edge label</div>
+  <input class="inp" value="${esc(e.label)}" placeholder="optional" oninput="updateEdge(${e.id},'label',this.value)">
+</div>
+<button class="pdel" onclick="deleteSelected()">Delete edge</button>`;
+}
+
+const openPanel  = () => document.getElementById('panel').classList.add('open');
+const closePanel = () => document.getElementById('panel').classList.remove('open');
+
+// Panel field updaters — called from inline oninput handlers in the panel HTML
+const findNode = id => nodes.find(n => n.id === id);
+const findEdge = id => edges.find(e => e.id === id);
+
+function updateNode(id, key, value) { const n = findNode(id); if (n) { n[key] = value; draw(); } }
+function updateEdge(id, key, value) { const e = findEdge(id); if (e) { e[key] = value; draw(); } }
+function updateMeta(id, i, key, value) { const n = findNode(id); if (n) n.meta[i][key] = value; }
+function addMeta(id)       { const n = findNode(id); if (!n) return; snapshot(); n.meta.push(['', '']); renderMeta(n); }
+function removeMeta(id, i) { const n = findNode(id); if (!n) return; snapshot(); n.meta.splice(i, 1); renderMeta(n); }
+
+// =============================================================================
+// SELF-EXPORT  —  rewrite this HTML file with current data baked in, download it
+// =============================================================================
+
+function exportSelf() {
+  const title      = document.getElementById('title-bar').value || 'diagram';
+  const data       = { title, nodes, edges, nid };
+  const serialised = JSON.stringify(data);
+
+  // Splice the new data block and title into our own source HTML
+  const source  = document.documentElement.outerHTML;
+  const updated = source
+    .replace(/const DIAGRAM_DATA = \{.*?\};/s, `const DIAGRAM_DATA = ${serialised};`)
+    .replace(/<title>.*?<\/title>/,             `<title>${title}</title>`);
+
+  // Trigger a browser download
+  const blob     = new Blob([updated], { type: 'text/html' });
+  const anchor   = document.createElement('a');
+  const filename = title.replace(/[^a-z0-9_\-\s]/gi, '').trim().replace(/\s+/g, '-').toLowerCase() + '.html';
+  anchor.href     = URL.createObjectURL(blob);
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
+}
+
+// =============================================================================
+// INIT
+// =============================================================================
+
+(function init() {
+  nodes = DIAGRAM_DATA.nodes || [];
+  edges = DIAGRAM_DATA.edges || [];
+  nid   = DIAGRAM_DATA.nid   || 1;
+
+  const titleInput = document.getElementById('title-bar');
+  titleInput.value = DIAGRAM_DATA.title || 'untitled diagram';
+  document.title   = titleInput.value;
+  titleInput.addEventListener('input', () => { document.title = titleInput.value; });
+
+  resize();
+  setTimeout(fitView, 50);
+  setMode('select');
+})();
+</script>
+
+<style>
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
+  .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
+    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+  .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
+</style>
+<script>
+  const __openNodePanel = openNodePanel;
+  openNodePanel = function(n)
+  {
+    __openNodePanel(n);
+    if (!n.code) { return; }
+    const panel = document.getElementById('pi');
+    const loc = document.createElement('div');
+    loc.className = 'trace-loc';
+    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
+    const pre = document.createElement('pre');
+    pre.className = 'trace-code';
+    pre.textContent = n.code;
+    panel.appendChild(loc);
+    panel.appendChild(pre);
+  };
+</script></body>
+</html>

@@ -107,4 +107,25 @@ Checkbox (`scene.bjs_debug_build`) → manifest top-level `"debug"` →
 `level.debugEnabled` (missing = true) → gates **C**/**I** in `main.ts` and the
 `debugColliders` option.
 
+### 2D GUI (GUI Editor JSON)
+GUI component (`properties` → `export._copy_asset` to `gui/`) → manifest
+`{type:"GUI", file, mode, …}` → `ApplyComponents` queues `ApplyGui`
+(`ui/gui2d.ts`) → `SettleTasks` in `FinalizeLevel` →
+`entity.guiTextures`, `GetGui(stem)`. Trace: [trace-gui.html](trace-gui.html).
+
+### Particles (Particle Editor JSON)
+PARTICLE component → `_copy_asset` to `particles/` → manifest →
+`ApplyParticles` (`subsystems/particles.ts`, `ParticleHelper.ParseFromFileAsync`)
+→ `entity.particleSystems`, `GetParticles(stem)`. Trace:
+[trace-particles.html](trace-particles.html).
+
+### 3D GUI (buttons + panels)
+Nine `GUI3D_*` types → `_serialize_components` (layout fields, click events,
+button images via `_copy_asset`; click targets force-included) → registrations
+queued with `parentId` → `BuildGui3DControls` in `FinalizeLevel` (panels first,
+`blockLayout`, content after `addControl`) → `WireClickEvents` →
+`OnMessage` on target. Trace: [trace-gui3d.html](trace-gui3d.html) · Blender:
+[../blender/trace-gui3d.html](../blender/trace-gui3d.html). Full write-up:
+[10-UI.md](10-UI.md).
+
 [← Index](00-INDEX.md)
