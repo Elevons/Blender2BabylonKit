@@ -1,27 +1,46 @@
-"""Babylon Level Kit - a small Unity-style ECS / level-editor layer for Blender
+"""Babylon Level Kit — a small Unity-style ECS / level-editor layer for Blender
 that exports scenes to Babylon.js.
 
 Packaged as a Blender extension (blender_manifest.toml). Install via
-Preferences > Get Extensions > Install from Disk. A "Babylon" tab appears in the
-3D viewport N-panel (press N). Metadata (incl. version) lives in the manifest.
+Preferences > Get Extensions > Install from Disk. Metadata (incl. version)
+lives in the manifest.
+
+Where things are:
+    core/           GUIDs and TypeScript @exposed/@inputMap parsing
+    components/     the per-object component data model (Object.bjs_components)
+    scene/          scene-wide render settings (Scene.bjs_scene)
+    input_actions/  the Input Actions asset: data, defaults, JSON I/O, operators
+    export/         everything that writes the .glb + .scene.json (+ live link)
+    operators/      component / script / export operators
+    ui/             all panels and menus (viewport N-panel + Properties > Scene)
+    viewport/       GPU overlays (collider wireframe preview)
+
+Where the UI is:
+    3D viewport N-panel "Babylon" tab   -> the selected object (components,
+                                           light/camera/animation, quick export)
+    Properties > Scene > "Babylon"      -> the scene (rendering, fog,
+                                           post-processing, input actions, export)
 """
 
-# Re-import submodules cleanly on addon reload.
-if "properties" in locals():
+# Re-import every package submodule cleanly on addon reload (F8 / Reload
+# Scripts). Reload parents before children isn't required, but reloading
+# shallow modules first keeps `from . import x` references fresh.
+if "components" in locals():
     import importlib
-    for _m in (script_parse, properties, scene_properties, input_properties,  # noqa: F821
-               scene_export, anim_export, validate, live_link, operators,  # noqa: F821
-               input_ops, ui, scene_ui, input_ui, export, collider_preview):  # noqa: F821
-        importlib.reload(_m)
-else:
-    from . import (script_parse, properties, scene_properties, input_properties,
-                   scene_export, anim_export, validate, live_link, operators,
-                   input_ops, ui, scene_ui, input_ui, export, collider_preview)
+    import sys
 
-# Modules with register()/unregister(). scene_export is pure functions (no UI),
-# so it isn't registered. Order: properties before the panels that read them.
-_modules = (properties, scene_properties, input_properties, live_link,
-            operators, input_ops, ui, scene_ui, input_ui, collider_preview)
+    _names = sorted(
+        (name for name in sys.modules if name.startswith(__name__ + ".")),
+        key=lambda n: n.count("."),
+    )
+    for _name in _names:
+        importlib.reload(sys.modules[_name])
+
+from . import components, scene, input_actions, export, operators, ui, viewport
+
+# Registration order: data first (properties the UI reads), then behavior,
+# then presentation, then overlays. core/ is pure functions — nothing to register.
+_modules = (components, scene, input_actions, export, operators, ui, viewport)
 
 
 def register():

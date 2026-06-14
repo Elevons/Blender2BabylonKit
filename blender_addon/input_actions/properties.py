@@ -5,9 +5,9 @@ Hierarchy: Scene.bjs_input_maps (Action Maps) > actions > bindings. Composite
 bindings are stored Unity-style as a flat run of rows: a header row with
 `composite` set, followed by part rows (part != 'NONE') that belong to it.
 
-Object-level component data lives in properties.py; the Input Actions panel is
-input_ui.py and its operators are input_ops.py. Serialization to the manifest
-shape lives in scene_export.py.
+Object-level component data lives in the components package; the Input
+Actions panel is ui/input_panel.py and its operators are operators.py here.
+Serialization to/from the manifest shape lives in serialize.py.
 """
 
 import bpy
@@ -16,7 +16,7 @@ from bpy.props import (
 )
 from bpy.types import PropertyGroup, Scene
 
-from .input_defaults import DEFAULT_INPUT_MAP_NAME
+from .defaults import DEFAULT_INPUT_MAP_NAME
 
 
 INPUT_ACTION_TYPES = [

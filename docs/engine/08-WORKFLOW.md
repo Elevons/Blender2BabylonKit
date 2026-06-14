@@ -6,7 +6,7 @@
 
 The save-to-see loop. Export once (the operator remembers the path per-scene),
 tick **Live Link** in the Export panel, then every **Ctrl+S** re-exports
-(`live_link.py`, a `save_post` handler — no timers/sockets; failures never
+(`export/live_link.py`, a `save_post` handler — no timers/sockets; failures never
 break the save). On the runtime side, the Vite plugin `ReloadOnLevelExport`
 (`apps/<app>/vite.config.ts`) watches `public/levels/*.scene.json` and sends a
 full reload — the manifest is written *after* the glb, so both files are ready
@@ -14,7 +14,7 @@ when it fires.
 
 ## The validator <a name="validator"></a>
 
-`validate.py`, run by the **Validate** button, by Export, and by every Live
+`export/validate.py`, run by the **Validate** button, by Export, and by every Live
 Link export. Checks: missing/empty script files · entity references to
 render-disabled objects · MESH collider + DYNAMIC body · MESH-shaped triggers
 (never fire in Havok) · trigger events on non-trigger colliders / without a

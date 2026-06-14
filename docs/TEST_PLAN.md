@@ -235,7 +235,7 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
    `@babylonjs/inspector` dynamic import in `main.ts`.
 2. **§2.1** — browser autoplay policy differences (Safari is strictest).
 3. **§3.x** — constraint frame math: if a hinge rotates around the wrong axis,
-   the Blender→Babylon axis conversion in `export.py` is the first suspect.
+   the Blender→Babylon axis conversion in `export/components.py` is the first suspect.
    CUSTOM: wrong per-axis modes (e.g. spring on all rotation) welds bodies
    together — check `axes[]` in the manifest.
 4. **§6.x** — 3D GUI content must be applied after `addControl`; if buttons

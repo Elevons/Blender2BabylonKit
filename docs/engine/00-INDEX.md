@@ -1,49 +1,59 @@
-# Babylon Level Kit — Engine Documentation
+# Babylon Level Kit — Engine (Runtime) Documentation
 
-Interlinked documentation of the whole engine, current as of **v0.31.1**.
-Start here; every page links back. **The interactive version of this
-documentation is the HTML diagram set — open [index.html](index.html)** and
-navigate with the bottom bar: Overview · Blender add-on · Load pipeline ·
-Scripting · Physics · Rendering · Audio/Anim · **UI** · Workflow. Click any node for its
-description, file path, and key facts. The **Traces row** in the nav opens the
-per-feature trace diagrams (trace-physics.html, trace-input.html, …): each node
-is one step of the call chain — click it for the explanation AND the actual
-current source of that function, extracted from the repo at build time.
-Regenerate after code or template changes with `npm run docs:build` (or
-`npm run docs:trace` for the engine packet only). HTML pages are generated from
-`docs/_template/diagram-shell.html`; area diagram data lives in
-`scripts/docs/engine-areas.mjs`. These markdown pages
-are the prose companion.
+The runtime half of the kit, current as of **v0.32.0**. The interactive version
+is the HTML diagram set in this folder — open **[index.html](index.html)** and
+use the bottom nav (an area row for the subsystem diagrams + a **Traces** row
+for code walk-throughs; "Blender docs →" jumps to the editor packet).
 
-## The one-paragraph version
+> **Looking for something specific?** Open the searchable landing page at
+> **[../index.html](../index.html)** and type a term (e.g. *collision*,
+> *export*, *input*) to surface the relevant pages from both the engine and
+> Blender sides.
 
-Blender is the editor; a small Babylon.js 9 engine is the player. Exporting a
-scene produces **two artifacts**: `level.glb` (everything glTF can express:
-meshes, transforms, hierarchy, materials, lights, cameras, animation clips) and
-`level.scene.json` (everything it can't: components, tags, physics, script
-bindings + values, per-light/camera settings). Entities in the two files are
-matched by **GUID**. At runtime, `LevelLoader` appends the glb, walks the
-manifest, and hands each concern to a small subsystem module.
+## What the runtime does
 
-## Reading order
+`@bjs/engine` (`packages/engine/`) loads the two artifacts Blender exports —
+`level.glb` (everything glTF can express) and `level.scene.json` (everything it
+can't) — and turns them into a live `Level`. `LevelLoader.Load` appends the glb,
+indexes nodes by GUID, builds an `Entity` per manifest entry, applies components
+through small subsystems (physics, lights, cameras, audio, …), then runs your
+`Behavior` scripts. See [Architecture](01-ARCHITECTURE.md) for the two-artifact
+split and [Blender Add-on](02-BLENDER-ADDON.md) for the editor side.
 
-| Doc | Covers |
-|---|---|
-| [01 — Architecture](01-ARCHITECTURE.md) | the two artifacts, GUID identity, monorepo layout, end-to-end data flow |
-| [02 — Blender Add-on](02-BLENDER-ADDON.md) | every Python module, the export pipeline, validation, Live Link |
-| [03 — Load Pipeline](03-LOAD-PIPELINE.md) | `LevelLoader.Load` step by step, the two passes, `FinalizeLevel` |
-| [04 — Scripting](04-SCRIPTING.md) | Entity, Behavior lifecycle, the registry contract, `@exposed`, Input |
-| [05 — Physics](05-PHYSICS.md) | colliders/bodies, the owned-meshes rule, right-handed import, constraints, triggers |
-| [06 — Rendering](06-RENDERING.md) | lights, cameras (+ typed overrides), shadows, environment/fog/post |
-| [07 — Audio & Animation](07-AUDIO-ANIMATION.md) | audio engine v2, NLA clip scoping, the skinned-mesh rule |
-| [10 — UI](10-UI.md) | 2D GUI Editor JSON, particle systems, 3D GUI buttons/panels |
-| [08 — Workflow & Tooling](08-WORKFLOW.md) | Live Link, validator checks, Debug Build, debug keys, monorepo/scaffolder |
-| [09 — Feature Traces](09-FEATURE-TRACES.md) | per feature: the exact file/function chain from Blender to runtime |
+## The interactive pages
 
-Related, outside this folder: [README](../../README.md) (overview + authoring),
-[STYLE_GUIDE](../STYLE_GUIDE.md) (code conventions),
-[LLM_SCRIPTING_CONTEXT](../LLM_SCRIPTING_CONTEXT.md) (behavior codegen
-contract), [TEST_PLAN](../TEST_PLAN.md), [DEVELOPMENT_PLAN](../DEVELOPMENT_PLAN.md),
-[PREFAB_SPEC](../PREFAB_SPEC.md) (deferred design).
+Area diagrams (clickable node graphs): **[index.html](index.html)** (engine
+overview) · **[load-pipeline.html](load-pipeline.html)** ·
+**[scripting.html](scripting.html)** · **[physics.html](physics.html)** ·
+**[rendering.html](rendering.html)** ·
+**[audio-animation.html](audio-animation.html)** · **[ui.html](ui.html)** ·
+**[workflow.html](workflow.html)** · **[blender-addon.html](blender-addon.html)**
+(the editor, from the runtime's point of view).
 
-For the editor side, see the **[Blender add-on documentation](../blender/00-INDEX.md)** (parallel diagram + trace packet).
+Code traces (each node is a step; click for the explanation + the actual current
+TypeScript source): **Load** (manifest → `Level`) · **Physics** (collider →
+Havok body) · **@exposed** (field → Blender → instance) · **Triggers**
+(On-Enter → `OnMessage`) · **Constraints** (component → joint) · **Audio** ·
+**Input** (key → action → behavior) · **Live Link** · **2D GUI** · **Particles**
+· **3D GUI**.
+
+## The prose chapters
+
+1. [Architecture](01-ARCHITECTURE.md) — two artifacts, GUID identity, monorepo, data flow
+2. [Blender Add-on](02-BLENDER-ADDON.md) — the editor half + export pipeline
+3. [Load Pipeline](03-LOAD-PIPELINE.md) — `LevelLoader.Load`, the passes, `FinalizeLevel`
+4. [Scripting](04-SCRIPTING.md) — `Entity`, `Behavior`, `@exposed`, `@inputMap`, Input
+5. [Physics](05-PHYSICS.md) — bodies, constraints, triggers, right-handed import
+6. [Rendering](06-RENDERING.md) — lights, cameras, shadows, scene look
+7. [Audio & Animation](07-AUDIO-ANIMATION.md) — sounds, NLA clips, the skinned-mesh rule
+8. [Workflow](08-WORKFLOW.md) — Live Link, the validator, Debug Build, tooling
+9. [Feature Traces](09-FEATURE-TRACES.md) — every feature's Blender → runtime file/function chain
+10. [UI](10-UI.md) — 2D GUI, particles, 3D GUI
+
+## Regenerating
+
+`npm run docs:build` regenerates both packets from the shared shell template
+(`docs/_template/diagram-shell.html`) and rebuilds the searchable landing page.
+`npm run docs:trace` rebuilds only this folder; it re-extracts every trace's
+source from `packages/engine/`. A renamed/deleted symbol fails the build loudly
+— the anti-rot guard. (The Blender packet alone is `npm run docs:blender`.)

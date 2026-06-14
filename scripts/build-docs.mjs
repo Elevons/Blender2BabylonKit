@@ -7,10 +7,13 @@
  * Template:  docs/_template/diagram-shell.html  (viewer CSS/JS — edit once)
  * Engine data: scripts/docs/engine-areas.mjs + build-trace-docs.mjs traces
  * Blender data: build-blender-docs.mjs area + trace definitions
+ * Landing:  scripts/build-landing.mjs → docs/index.html (searchable index)
  */
 import { BuildEngineDocs } from "./build-trace-docs.mjs";
 import { BuildBlenderDocs } from "./build-blender-docs.mjs";
+import { BuildLandingPage } from "./build-landing.mjs";
 
 BuildEngineDocs();
 BuildBlenderDocs();
+BuildLandingPage();
 console.log("docs:build complete");

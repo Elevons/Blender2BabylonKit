@@ -15,6 +15,7 @@
     "docs:build": "node scripts/build-docs.mjs",
     "docs:trace": "node scripts/build-trace-docs.mjs",
     "docs:blender": "node scripts/build-blender-docs.mjs",
+    "docs:landing": "node scripts/build-landing.mjs",
     "input:gen": "node scripts/generate-input-constants.mjs"
   },
   "devDependencies": {

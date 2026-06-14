@@ -7,12 +7,15 @@ dev server sees the changed files and reloads the browser.
 
 Implementation: a bpy save_post handler. No timers, no sockets, no polling —
 saving is already the natural "I want to see this" gesture.
+
+This module also owns the export-related Scene properties (live link path,
+debug build flag).
 """
 
 import bpy
 from bpy.app.handlers import persistent
 
-from . import export as bjs_export
+from . import level as bjs_level
 from . import validate
 
 
@@ -25,7 +28,7 @@ def _do_live_export(scene):
 
     try:
         warnings = validate.validate_scene(bpy.context)
-        glb_path, json_path, n_entities = bjs_export.export_level(bpy.context, path)
+        glb_path, json_path, n_entities = bjs_level.export_level(bpy.context, path)
     except Exception as e:
         print(f"[bjs live-link] export failed: {e}")
         return

@@ -1,15 +1,16 @@
 """Pre-export validation. Catches authoring mistakes at export time instead of
 letting them fail silently in the browser.
 
-Pure functions over the scene — no Blender UI here. The export operator (and the
-live link) call validate_scene() and surface the returned warnings.
+Pure functions over the scene — no Blender UI here. The export operator (and
+the live link) call validate_scene() and surface the returned warnings.
 """
 
 import os
 
 import bpy
 
-from .properties import ID_KEY, GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED
+from ..core.ids import ID_KEY
+from ..components.constants import GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED
 
 
 def _is_renderable(obj):
@@ -156,7 +157,7 @@ def _has_physics(obj):
 
 def _check_constraints(obj, warnings):
     """Constraints need a physics body on BOTH ends to exist at runtime."""
-    from .properties import ensure_custom_constraint_axes
+    from ..components.component import ensure_custom_constraint_axes
     for comp in obj.bjs_components:
         if comp.comp_type != 'CONSTRAINT':
             continue
@@ -223,7 +224,7 @@ def _check_input_map(scene, warnings):
     """Input Actions sanity: duplicate map names, duplicate action names
     within a map, actions with no bindings, and @inputMap("Name") references
     in scripts that have no matching Action Map."""
-    from . import script_parse
+    from ..core import script_parse
 
     seen_maps = set()
     for m in scene.bjs_input_maps:
@@ -241,7 +242,7 @@ def _check_input_map(scene, warnings):
                 warnings.append(
                     f"Input Actions: action '{m.name}/{action.name}' has no bindings")
 
-    from .input_defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME
+    from ..input_actions.defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME
 
     # An empty panel exports the built-in default asset ("Player" map).
     if len(scene.bjs_input_maps) == 0:

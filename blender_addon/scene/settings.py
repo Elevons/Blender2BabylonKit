@@ -1,9 +1,7 @@
 """Scene-wide Babylon render settings, stored on `scene.bjs_scene`.
 
-Object-level component data lives in properties.py; this module is only the
-scene-global render block (environment, fog, post-processing). Kept separate so
-neither file grows into a catch-all.
-"""
+Object-level component data lives in the components package; this module is
+only the scene-global render block (environment, fog, post-processing)."""
 
 import bpy
 from bpy.props import (

@@ -13,11 +13,11 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Blender scene",
           "sub": "objects + components",
-          "desc": "Authoring: the Babylon N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint) to objects. GUIDs (bjs_id) make objects addressable entities.",
+          "desc": "Authoring: the viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, GUI3D_*) to objects. GUIDs (bjs_id) make objects addressable entities.",
           "meta": [
             [
               "Module",
-              "properties.py / ui.py"
+              "components/ · ui/view3d_panels"
             ],
             [
               "Identity",
@@ -37,7 +37,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Module",
-              "validate.py"
+              "export/validate.py"
             ],
             [
               "Runs",
@@ -57,7 +57,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Module",
-              "export.py (+scene/anim)"
+              "export/ (+ scene/ · animation/)"
             ],
             [
               "Schema",
@@ -77,7 +77,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Module",
-              "live_link.py"
+              "export/live_link.py"
             ],
             [
               "Runtime",
@@ -449,9 +449,9 @@ export const ENGINE_AREA_PAGES = {
           "y": 40,
           "w": 150,
           "h": 40,
-          "label": "N-panel UI",
-          "sub": "ui.py",
-          "desc": "Draws the Babylon panel: component list with per-type fields, the Animation box, and the Export panel (Export / Live Link / Debug Build / Validate). Input Actions has its own panel in input_ui.py.",
+          "label": "Object UI",
+          "sub": "ui/view3d_panels",
+          "desc": "Viewport N-panel 'Babylon': component list with per-type fields, light/camera/animation child panels, and a quick Export block (Export / Live Link / Debug Build / Validate). Scene-wide settings (rendering, fog, post, Input Actions) live under Properties › Scene › Babylon.",
           "meta": [
             [
               "Kind",
@@ -459,7 +459,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Entry",
-              "BJS_PT_* panels"
+              "BJS_PT_components · BJS_PT_export"
             ]
           ]
         },
@@ -470,8 +470,8 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Data model",
-          "sub": "properties.py",
-          "desc": "Component PropertyGroups: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint), exposed vars + list items, trigger events, light/shadow/animation settings. Input Actions data lives in input_properties.py (Scene.bjs_input_maps + default map). Owns ID_KEY + ensure_object_id().",
+          "sub": "components/",
+          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene).",
           "meta": [
             [
               "Identity",
@@ -490,8 +490,8 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Operators",
-          "sub": "operators.py",
-          "desc": "Add/remove/duplicate/move/copy/paste components, Assign GUID, script picker + Sync, list and trigger-event row editing, Validate, Export.",
+          "sub": "operators/",
+          "desc": "Component verbs (components.py), script pick + Sync (scripts.py), Validate + Export (export_ops.py). Input Actions operators live in input_actions/operators.py.",
           "meta": [
             [
               "Export op",
@@ -510,7 +510,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Script parser",
-          "sub": "script_parse.py",
+          "sub": "core/script_parse.py",
           "desc": "Regex-parses @exposed(...) and @inputMap(\"…\") out of behavior .ts source. THE cross-language contract: decorators must stay literally lowercase.",
           "meta": [
             [
@@ -530,7 +530,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Validator",
-          "sub": "validate.py",
+          "sub": "export/validate.py",
           "desc": "Pre-export checks: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).",
           "meta": [
             [
@@ -550,8 +550,8 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Exporter",
-          "sub": "export.py",
-          "desc": "Writes the glb (Blender glTF, +Y-up, GUIDs into node extras) and builds the schema-v4 manifest. Converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects so refs always resolve. Copies audio files.",
+          "sub": "export/level.py",
+          "desc": "export_level orchestrates the glb (Blender glTF, +Y-up, GUIDs in extras) and schema-v4 manifest. serialize_components (export/components.py) converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects. copy_asset (export/assets.py) copies audio, GUI, particle, and 3D button images.",
           "meta": [
             [
               "Schema",
@@ -559,7 +559,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Axis conv",
-              "at export"
+              "export/components.py"
             ]
           ]
         },
@@ -570,8 +570,8 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Scene block",
-          "sub": "scene_export.py",
-          "desc": "Clear/ambient color, environment texture (copied next to export), fog, post-processing, inputActions + defaultInputMap (built-in Player asset when the panel is empty).",
+          "sub": "export/scene.py",
+          "desc": "Clear/ambient color, environment texture (copied next to export), fog, post-processing, inputActions + defaultInputMap. Scene data edited via scene/settings.py; inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
           "meta": [
             [
               "Manifest key",
@@ -579,7 +579,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Input",
-              "input_defaults.py when empty"
+              "input_actions/defaults.py when empty"
             ]
           ]
         },
@@ -590,7 +590,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Animation block",
-          "sub": "anim_export.py",
+          "sub": "export/animation.py",
           "desc": "Per-object NLA strip names + autoplay clip/loop/speed. nla_clip_names() also feeds the validator.",
           "meta": [
             [
@@ -610,7 +610,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Live Link",
-          "sub": "live_link.py",
+          "sub": "export/live_link.py",
           "desc": "save_post handler: when the Scene checkbox is on, every Ctrl+S re-runs validate + export with the remembered path. Failures never break the save. Also owns the Debug Build scene property.",
           "meta": [
             [
@@ -671,7 +671,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Copied by",
-              "export._copy_audio_file"
+              "export/assets.copy_asset"
             ]
           ]
         },
@@ -682,7 +682,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Collider preview",
-          "sub": "collider_preview.py",
+          "sub": "viewport/collider_preview.py",
           "desc": "GPU wireframe of manual colliders drawn in the viewport, in Blender space — matches what export converts, so preview == runtime body.",
           "meta": [
             [
@@ -698,16 +698,16 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Input Actions",
-          "sub": "input_*.py",
-          "desc": "Scene-level Input Actions panel: Action Maps > Actions > Bindings editor, Scene Default picker, key capture, load/save .inputactions.json, sync @inputMap refs from scripts. First export seeds defaults when empty.",
+          "sub": "input_actions/",
+          "desc": "Scene-level Input Actions asset: data model (properties.py), JSON serialize/apply (serialize.py), built-in defaults (defaults.py), operators (operators.py). Edited in Properties › Scene › Babylon via ui/input_panel.py (BJS_PT_input_map). First export seeds defaults when empty.",
           "meta": [
             [
               "Modules",
-              "input_properties · input_ui · input_ops"
+              "properties · serialize · operators"
             ],
             [
               "Panel",
-              "BJS_PT_input_map"
+              "Properties › Scene › Babylon"
             ]
           ]
         }
@@ -1199,7 +1199,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "@exposed",
           "sub": "scripting/exposed.ts",
-          "desc": "Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (script_parse.py) → single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.",
+          "desc": "Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (core/script_parse.py) → single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.",
           "meta": [
             [
               "Types",
@@ -2106,7 +2106,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Blender",
-              "live_link.py"
+              "export/live_link.py"
             ],
             [
               "App",

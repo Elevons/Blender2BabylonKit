@@ -18,7 +18,7 @@ This file is the forward plan only; per-feature design notes live with each item
   single playback authority (states replace autoplay when present), built on
   AnimationGroup weight cross-fades. No Blender or runtime remnants exist.
 - **Constraint viewport preview** — pivot/axis gizmo in the Blender viewport
-  (extend `collider_preview.py`'s GPU-draw pattern). Deferred because joints
+  (extend `viewport/collider_preview.py`'s GPU-draw pattern). Deferred because joints
   pin the as-placed pose, which removes most of the guesswork the preview
   would solve. Medium effort, pure Blender-side.
 - **Camera key-scheme migration to Input** — Babylon cameras consume keycode

@@ -1,15 +1,15 @@
-"""Operators: add/remove components, manage script params, and trigger export."""
+"""Operators for the component stack: add/remove, reorder, duplicate,
+cut/copy/paste, collider fitting, trigger / click event rows, and LIST
+exposed-var items."""
 
 import bpy
-import os
-from bpy.props import EnumProperty, IntProperty, StringProperty, BoolProperty
+from bpy.props import EnumProperty, IntProperty, BoolProperty
 from bpy.types import Operator
-from bpy_extras.io_utils import ExportHelper
 
-from .properties import COMPONENT_TYPES, ensure_object_id, sync_exposed_vars, add_list_item, copy_component
-from . import export as bjs_export
-from . import validate as bjs_validate
-from . import script_parse
+from ..core.ids import ensure_object_id
+from ..components.constants import COMPONENT_TYPES
+from ..components.exposed_vars import add_list_item
+from ..components.clipboard import copy_component
 
 
 class BJS_OT_add_component(Operator):
@@ -48,74 +48,6 @@ class BJS_OT_assign_id(Operator):
                 ensure_object_id(obj)
                 n += 1
         self.report({'INFO'}, f"Assigned GUIDs to {n} object(s)")
-        return {'FINISHED'}
-
-
-class BJS_OT_pick_script(Operator):
-    """Open a file browser to select the behavior source file for a SCRIPT component."""
-    bl_idname = "bjs.pick_script"
-    bl_label = "Open Script"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    comp_index: IntProperty()
-    filepath: StringProperty(subtype='FILE_PATH')
-    # Show only script-like files in the browser.
-    filter_glob: StringProperty(
-        default="*.ts;*.tsx;*.js;*.jsx;*.mjs", options={'HIDDEN'})
-    use_relative: BoolProperty(
-        name="Relative Path", default=True,
-        description="Store the path relative to the .blend file when possible")
-
-    def invoke(self, context, event):
-        # Opens Blender's file browser; selection comes back in execute().
-        context.window_manager.fileselect_add(self)
-        return {'RUNNING_MODAL'}
-
-    def execute(self, context):
-        obj = context.object
-        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
-            self.report({'WARNING'}, "Invalid component")
-            return {'CANCELLED'}
-        comp = obj.bjs_components[self.comp_index]
-
-        path = self.filepath
-        if self.use_relative and bpy.data.filepath:
-            try:
-                path = bpy.path.relpath(path)
-            except ValueError:
-                pass  # e.g. a different drive on Windows; keep the absolute path
-
-        # Setting script_path triggers its update() which derives script_name.
-        comp.script_path = path
-        _sync_component_vars(comp)
-        self.report({'INFO'}, f"Script: {comp.script_name}")
-        return {'FINISHED'}
-
-
-def _sync_component_vars(comp):
-    fields = script_parse.parse_exposed(bpy.path.abspath(comp.script_path))
-    sync_exposed_vars(comp, fields)
-    return len(fields)
-
-
-class BJS_OT_sync_vars(Operator):
-    """Re-read @exposed variables from the script file (after editing it)."""
-    bl_idname = "bjs.sync_vars"
-    bl_label = "Sync Variables"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    comp_index: IntProperty()
-
-    def execute(self, context):
-        obj = context.object
-        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
-            return {'CANCELLED'}
-        comp = obj.bjs_components[self.comp_index]
-        if not comp.script_path:
-            self.report({'WARNING'}, "Pick a script first")
-            return {'CANCELLED'}
-        n = _sync_component_vars(comp)
-        self.report({'INFO'}, f"Synced {n} variable(s)")
         return {'FINISHED'}
 
 
@@ -339,59 +271,6 @@ class BJS_OT_gui3d_event_remove(Operator):
         return {'FINISHED'}
 
 
-# Input Actions operators (Action Maps > Actions > Bindings, load/save,
-# key capture, script sync) live in input_ops.py.
-
-
-class BJS_OT_validate(Operator):
-    """Check the scene for export problems without exporting."""
-    bl_idname = "bjs.validate_scene"
-    bl_label = "Validate Level"
-    bl_options = {'REGISTER'}
-
-    def execute(self, context):
-        warnings = bjs_validate.validate_scene(context)
-        if not warnings:
-            self.report({'INFO'}, "No problems found")
-            return {'FINISHED'}
-        for w in warnings:
-            self.report({'WARNING'}, w)
-        self.report({'INFO'}, f"{len(warnings)} warning{'s' if len(warnings) != 1 else ''} — open the Info log for details")
-        return {'FINISHED'}
-
-
-class BJS_OT_export(Operator, ExportHelper):
-    """Export the scene as a .glb mesh + a .scene.json ECS manifest."""
-    bl_idname = "bjs.export_scene"
-    bl_label = "Export Babylon Level"
-    bl_options = {'REGISTER'}
-
-    filename_ext = ".glb"
-    filter_glob: StringProperty(default="*.glb", options={'HIDDEN'})
-
-    def execute(self, context):
-        from .input_ops import ensure_scene_input_maps
-        if ensure_scene_input_maps(context.scene):
-            self.report({'INFO'}, "Seeded Input Actions with the default asset")
-        warnings = bjs_validate.validate_scene(context)
-        try:
-            glb_path, json_path, n_entities = bjs_export.export_level(context, self.filepath)
-        except Exception as e:  # surface errors in the Blender UI
-            self.report({'ERROR'}, f"Export failed: {e}")
-            return {'CANCELLED'}
-
-        # Remember the path so Live Link can re-export on save.
-        context.scene.bjs_live_link_path = self.filepath
-
-        for w in warnings:
-            self.report({'WARNING'}, w)
-        summary = f"Exported {n_entities} entities -> {json_path}"
-        if warnings:
-            summary += f" ({len(warnings)} warning{'s' if len(warnings) != 1 else ''} — see report)"
-        self.report({'INFO'}, summary)
-        return {'FINISHED'}
-
-
 class BJS_OT_list_add(Operator):
     """Add an item to a LIST exposed variable."""
     bl_idname = "bjs.list_add"
@@ -440,8 +319,6 @@ class BJS_OT_list_remove(Operator):
 classes = (
     BJS_OT_add_component,
     BJS_OT_assign_id,
-    BJS_OT_pick_script,
-    BJS_OT_sync_vars,
     BJS_OT_list_add,
     BJS_OT_list_remove,
     BJS_OT_duplicate_component,
@@ -456,16 +333,4 @@ classes = (
     BJS_OT_trigger_event_remove,
     BJS_OT_gui3d_event_add,
     BJS_OT_gui3d_event_remove,
-    BJS_OT_validate,
-    BJS_OT_export,
 )
-
-
-def register():
-    for c in classes:
-        bpy.utils.register_class(c)
-
-
-def unregister():
-    for c in reversed(classes):
-        bpy.utils.unregister_class(c)

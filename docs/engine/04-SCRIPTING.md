@@ -39,7 +39,7 @@ name + UI hints in a WeakMap; `ApplyExposedVars` writes the manifest's stored
 values onto the instance **before OnStart** (entity refs deferred to the
 loader's second pass; lists handled per element type). Types:
 `float int bool string vector3 color entity enum list` (+ `of` for list
-elements). Blender can't run TS — `script_parse.py` regex-parses the source —
+elements). Blender can't run TS — `core/script_parse.py` regex-parses the source —
 so: **single-line literal defaults only**, explicit `type:"entity"` hints,
 entity lists start `[]`, and the decorator name stays lowercase (the
 cross-language contract; the one PascalCase exception, see
@@ -57,7 +57,8 @@ callbacks; polling: `ReadValue()`, `ReadVector2()`, `IsPressed()`,
 `WasPressedThisFrame()`, `WasReleasedThisFrame()`, `WasPerformedThisFrame()`.
 
 The asset and **Scene Default** map are authored in Blender's **Input Actions**
-panel (`input_properties.py` / `input_ui.py` / `input_ops.py`) and exported as
+panel (the `input_actions/` package: `properties.py` / `serialize.py` /
+`operators.py`, drawn by `ui/input_panel.py`) and exported as
 `scene.inputActions` + `scene.defaultInputMap`. `LevelLoader` calls
 `InputManager.LoadAsset` before behaviors are built. Map injection
 (`core/loader/entityBuilder.ts` → `InjectInputMaps`):

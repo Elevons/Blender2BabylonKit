@@ -31,7 +31,7 @@ the code is written*.
 ### Exception: `@exposed` and `@inputMap` stay lowercase
 
 `@exposed` and `@inputMap` are **cross-language contracts**, not ordinary code.
-The Blender add-on's `script_parse.py` scans behavior `.ts` sources for the literal
+The Blender add-on's `core/script_parse.py` scans behavior `.ts` sources for the literal
 tokens `@exposed` and `@inputMap("…")` to build its UI and validate Input Actions
 references. Renaming them to `@Exposed` / `@InputMap` would silently break script
 authoring. They are deliberate violations of the PascalCase-function rule.

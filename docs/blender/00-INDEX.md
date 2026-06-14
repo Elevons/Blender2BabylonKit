@@ -1,14 +1,20 @@
 # Babylon Level Kit — Blender Add-on Documentation
 
-The editor half of the kit, current as of **v0.31.1**. The interactive version
+The editor half of the kit, current as of **v0.32.0**. The interactive version
 is the HTML diagram set in this folder — open **[index.html](index.html)** and
 use the bottom nav (a **Blender** row for the area diagrams + a **Traces** row
 for code walk-throughs; "Runtime docs →" jumps to the engine packet).
 
+> **Looking for something specific?** Open the searchable landing page at
+> **[../index.html](../index.html)** and type a term (e.g. *collision*,
+> *export*, *input*) to surface the relevant pages from both the engine and
+> Blender sides.
+
 ## What the add-on does
 
-Blender is the editor. The add-on adds the **Babylon** N-panel (components,
-GUIDs, per-object settings) and the export that produces the two artifacts the
+Blender is the editor. The add-on adds **Babylon** panels — viewport N-panel
+for the selected object, Properties › Scene › Babylon for scene-wide settings
+(Input Actions, rendering, export) — and writes the two artifacts the
 [runtime](../engine/00-INDEX.md) consumes: `level.glb` (what glTF can express)
 and `level.scene.json` (everything else). See
 [Architecture](../engine/01-ARCHITECTURE.md) for the two-artifact split and
@@ -16,10 +22,9 @@ and `level.scene.json` (everything else). See
 
 ## The pages
 
-Area diagrams: **[index.html](index.html)** (all modules + flow, including
-`input_*.py`) · **[data-model.html](data-model.html)** (properties.py —
-components, exposed vars, trigger events) · **[export.html](export.html)** (the
-export pipeline).
+Area diagrams: **[index.html](index.html)** (package layout + flow) ·
+**[data-model.html](data-model.html)** (`components/` + `core/ids.py`) ·
+**[export.html](export.html)** (the export pipeline).
 
 Code traces (each node is a step; click for the explanation + the actual
 current Python source): **Export** (operator → glb + manifest) · **GUID**

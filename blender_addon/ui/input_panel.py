@@ -1,27 +1,22 @@
-"""The "Input Actions" N-panel: a three-level editor for the scene's Input
+"""The "Input Actions" editor — a three-level editor for the scene's Input
 Actions asset (Action Maps > Actions > Bindings).
 
-The data model lives in input_properties.py and the operators in input_ops.py.
+It now lives in Properties > Scene > Babylon, next to the other scene-wide
+settings. The draw code is a mixin (BJSInputMapDrawMixin) so a viewport copy
+can be re-added with a few lines if you ever miss the N-panel version.
+
+The data model lives in input_actions/properties.py and the operators in
+input_actions/operators.py.
 """
 
 import bpy
 from bpy.types import Panel
 
-class BJS_PT_input_map(Panel):
-    """Scene-level Input Actions (Unity Input System style): Action Maps >
-    Actions > Bindings, edited once. Scripts with @inputMap("Name") get that
-    map; scripts without @inputMap receive the scene Default Map below."""
-    bl_label = "Input Actions"
-    bl_idname = "BJS_PT_input_map"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = "Babylon"
-    bl_options = {'DEFAULT_CLOSED'}
 
-    def draw(self, context):
-        layout = self.layout
-        scene = context.scene
+class BJSInputMapDrawMixin:
+    """All Input Actions draw logic, independent of where the panel lives."""
 
+    def draw_input_editor(self, layout, scene):
         if len(scene.bjs_input_maps) == 0:
             layout.label(text="No maps yet — load defaults or add a map", icon='INFO')
         row = layout.row(align=True)
@@ -138,16 +133,22 @@ class BJS_PT_input_map(Panel):
                 rem.action, rem.index = "remove", i
 
 
+class BJS_PT_input_map(BJSInputMapDrawMixin, Panel):
+    """Scene-level Input Actions (Unity Input System style): Action Maps >
+    Actions > Bindings, edited once. Scripts with @inputMap("Name") get that
+    map; scripts without @inputMap receive the scene Default Map."""
+    bl_label = "Input Actions"
+    bl_idname = "BJS_PT_input_map"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "scene"
+    bl_parent_id = "BJS_PT_scene"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw(self, context):
+        self.draw_input_editor(self.layout, context.scene)
+
+
 classes = (
     BJS_PT_input_map,
 )
-
-
-def register():
-    for c in classes:
-        bpy.utils.register_class(c)
-
-
-def unregister():
-    for c in reversed(classes):
-        bpy.utils.unregister_class(c)

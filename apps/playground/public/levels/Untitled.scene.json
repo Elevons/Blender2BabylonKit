@@ -637,7 +637,7 @@
       "components": [
         {
           "type": "GUI",
-          "file": "gui/guiTexture.json",
+          "file": "gui/guiTexture_3.json",
           "mode": "MESH",
           "foreground": true,
           "width": 1024,

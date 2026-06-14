@@ -29,13 +29,13 @@ const OUT_DIR = path.join(ROOT, "docs", "engine");
 // Trace chains — step = { file, symbol, note } or { title, code, note }.
 // ---------------------------------------------------------------------------
 
-const TRACES = [
+export const TRACES = [
   {
     id: "physics",
     title: "Physics: collider → Havok body",
     intro: "From the N-panel checkbox to a body on the node. Authored in Blender space, converted once at export, built at load.",
     steps: [
-      { file: "blender_addon/export.py", symbol: "_serialize_components",
+      { file: "blender_addon/export/components.py", symbol: "serialize_components",
         note: "EXPORT — every component becomes one dict. The COLLIDER case converts center (x,y,z)→(x,z,−y), swaps size axes, converts the rotation quaternion, and attaches trigger events. Output: the manifest's components array." },
       { title: "The manifest (data between the two halves)",
         code: `{ "type": "COLLIDER", "shape": "BOX", "isTrigger": false, "autoFit": true,\n  "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0],\n  "rotation": [0,0,0,1] },\n{ "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1,\n  "friction": 0.5, "restitution": 0.2,\n  "linearDamping": 0, "angularDamping": 0 }`,
@@ -61,9 +61,9 @@ const TRACES = [
     steps: [
       { file: "packages/engine/src/scripting/exposed.ts", symbol: "exposed",
         note: "RUNTIME DECLARATION — records field name + UI hints in a WeakMap at class-definition time. Lowercase on purpose: the regex below matches it literally." },
-      { file: "blender_addon/script_parse.py", symbol: "parse_exposed",
+      { file: "blender_addon/core/script_parse.py", symbol: "parse_exposed",
         note: "BLENDER — regex-parses the .ts source (no TS runtime in Blender). This is why defaults must be single-line literals. Output feeds the BJSExposedVar rows you edit in the panel." },
-      { file: "blender_addon/export.py", symbol: "_serialize_vars",
+      { file: "blender_addon/export/components.py", symbol: "_serialize_vars",
         note: "EXPORT — per-object edited values → the SCRIPT component's vars dict. Entity references serialize as the target's GUID (target force-included so it exists in the glb)." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "InstantiateScripts",
         note: "LOAD — registry.Create(name) → inject entity/scene → ApplyExposedVars. Entity refs come back as PendingRefs (the target may not exist yet)." },
@@ -78,7 +78,7 @@ const TRACES = [
     title: "Triggers: On-Enter event → OnMessage",
     intro: "Data-authored gameplay reactions with zero code on the sender side.",
     steps: [
-      { file: "blender_addon/properties.py", symbol: "BJSTriggerEvent",
+      { file: "blender_addon/components/component.py", symbol: "BJSTriggerEvent",
         note: "AUTHORING — one row: target object + message + optional tag filter, on a trigger collider." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — a trigger collider with events queues a TriggerRegistration {sourceEntity, events}; wiring waits for FinalizeLevel (the plugin observable needs physics live)." },
@@ -97,7 +97,7 @@ const TRACES = [
     title: "Constraints: component → Havok joint",
     intro: "Joints pin the as-placed pose — position things in Blender how they should rest.",
     steps: [
-      { file: "blender_addon/export.py", symbol: "_serialize_components",
+      { file: "blender_addon/export/components.py", symbol: "serialize_components",
         note: "EXPORT — the CONSTRAINT case: pivot/axis → Y-up, target GUID, preset limits/motor/spring. CUSTOM also exports axes[] (six rows: axis id, mode, min/max, stiffness/damping)." },
       { file: "packages/engine/src/subsystems/constraints.ts", symbol: "BuildConstraints",
         note: "FINALIZE — both bodies exist now. Per registration: resolve target, require body on both ends, compute the frame, create, addConstraint, optional motor. Out: level.constraints." },
@@ -116,8 +116,8 @@ const TRACES = [
     title: "Audio: component → positional sound",
     intro: "Audio engine v2; autoplay negotiates the browser gesture policy without blocking the load.",
     steps: [
-      { file: "blender_addon/export.py", symbol: "_copy_audio_file",
-        note: "EXPORT — the sound file is copied to audio/ next to the manifest; the component stores the relative path." },
+      { file: "blender_addon/export/assets.py", symbol: "copy_asset",
+        note: "EXPORT — the sound file is copied to audio/ next to the manifest via copy_asset(..., \"audio\"); the component stores the manifest-relative path." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — each AUDIO component queues an ApplyAudio promise (fetch+decode is async); the entity loop never blocks on sound I/O." },
       { file: "packages/engine/src/subsystems/audio.ts", symbol: "ApplyAudio",
@@ -152,12 +152,12 @@ const TRACES = [
     title: "Input: key press → action → behavior",
     intro: "Unity Input System style: the Blender Input Actions panel authors the scene asset (maps > actions > bindings) plus a Scene Default map; the manifest carries inputActions + defaultInputMap; InputManager evaluates every frame.",
     steps: [
-      { file: "blender_addon/scene_export.py", symbol: "_serialize_input_asset",
-        note: "BLENDER — maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty). serialize_scene also writes scene.defaultInputMap from the Scene Default picker." },
-      { file: "blender_addon/scene_export.py", symbol: "serialize_scene",
+      { file: "blender_addon/input_actions/serialize.py", symbol: "serialize_input_asset",
+        note: "BLENDER — maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty). Called from export/scene.py alongside defaultInputMap from the Scene Default picker." },
+      { file: "blender_addon/export/scene.py", symbol: "serialize_scene",
         note: "BLENDER — assembles the manifest scene block: clear/ambient, environment, fog, post, inputActions, and defaultInputMap (which map scripts without @inputMap receive on behavior.input)." },
       { file: "packages/engine/src/input/DefaultAsset.ts", symbol: "DEFAULT_INPUT_ASSET",
-        note: "Runtime fallback when a manifest omits inputActions — keep in sync with blender_addon/input_defaults.py." },
+        note: "Runtime fallback when a manifest omits inputActions — keep in sync with blender_addon/input_actions/defaults.py." },
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "Load",
         note: "LOAD — InputManager.LoadAsset(manifest.scene.inputActions ?? DEFAULT, defaultInputMap) runs before the glb append so maps exist when behaviors are built." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "InjectInputMaps",
@@ -177,7 +177,7 @@ const TRACES = [
     title: "Live Link: Ctrl+S → browser reload",
     intro: "The iteration loop.",
     steps: [
-      { file: "blender_addon/live_link.py", symbol: "_on_save_post",
+      { file: "blender_addon/export/live_link.py", symbol: "_on_save_post",
         note: "BLENDER — save_post handler: checkbox on + path remembered → validate + export. Failures log; the save never breaks." },
       { file: "apps/playground/vite.config.ts", symbol: "ReloadOnLevelExport",
         note: "APP — Vite plugin watches public/levels/*.scene.json (manifest written AFTER the glb, so both are ready) → ws full-reload." },
@@ -188,7 +188,7 @@ const TRACES = [
     title: "2D GUI: JSON layout → AdvancedDynamicTexture",
     intro: "File-backed HUDs and in-world mesh UI from Babylon's GUI Editor.",
     steps: [
-      { file: "blender_addon/export.py", symbol: "_copy_asset",
+      { file: "blender_addon/export/assets.py", symbol: "copy_asset",
         note: "EXPORT — the GUI .json is copied to gui/ next to the manifest; the component stores the manifest-relative path." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — each GUI component queues an ApplyGui promise (fetch+parse is async); the entity loop never blocks on UI I/O." },
@@ -205,7 +205,7 @@ const TRACES = [
     title: "Particles: JSON system → emitter",
     intro: "File-backed particle systems from Babylon's Particle Editor.",
     steps: [
-      { file: "blender_addon/export.py", symbol: "_copy_asset",
+      { file: "blender_addon/export/assets.py", symbol: "copy_asset",
         note: "EXPORT — the particle .json is copied to particles/; rootUrl for nested textures is derived from the manifest path." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — each PARTICLE component queues an ApplyParticles promise; GPU mode is requested when supported." },
@@ -222,8 +222,8 @@ const TRACES = [
     title: "3D GUI: components → GUI3DManager",
     intro: "In-scene buttons and panels authored as individual GUI3D_* components; Blender parenting defines panel hierarchy.",
     steps: [
-      { file: "blender_addon/export.py", symbol: "_serialize_components",
-        note: "EXPORT — GUI3D_* cases: text/image/tooltip/panel layout fields; button images via _copy_asset; click events as {target GUID, message}. Click targets force-included for GUID assignment." },
+      { file: "blender_addon/export/components.py", symbol: "serialize_components",
+        note: "EXPORT — GUI3D_* cases: text/image/tooltip/panel layout fields; button images via copy_asset; click events as {target GUID, message}. Click targets force-included via iter_referenced_objects for GUID assignment." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
         note: "LOAD — GUI3D components don't build yet; each registration carries parentId (manifest parent GUID) for panel lookup." },
       { file: "packages/engine/src/ui/gui3d/builder.ts", symbol: "BuildGui3DControls",

@@ -1,10 +1,13 @@
-"""Builds the manifest `scene` block (environment, fog, post-processing) and
-copies the World environment texture next to the export. Pure serialization —
-no UI, no registration."""
+"""Builds the manifest `scene` block (environment, fog, post-processing, input)
+and copies the World environment texture next to the export. Pure
+serialization — no UI, no registration."""
 
 import os
 import shutil
+
 import bpy
+
+from ..input_actions.serialize import serialize_input_asset
 
 
 def _round3(c):
@@ -89,69 +92,6 @@ def _serialize_environment(context, output_dir):
 
 # ── the scene block ──
 
-# Friendly aliases -> real JS KeyboardEvent.key values, applied to authored
-# key tokens at export so the runtime gets the real key ("space" -> " ").
-_KEY_ALIASES = {
-    "space": " ", "comma": ",", "period": ".", "semicolon": ";",
-    "quote": "'", "backquote": "`", "minus": "-", "equals": "=",
-    "slash": "/", "backslash": "\\", "bracketleft": "[", "bracketright": "]",
-}
-
-
-def _serialize_binding(row):
-    """One direct binding row -> manifest data (keyboard key or gamepad control)."""
-    if row.device == 'KEYBOARD':
-        key = row.key.strip().lower()
-        data = {"device": "KEYBOARD", "control": _KEY_ALIASES.get(key, key)}
-    else:
-        data = {"device": "GAMEPAD", "control": row.gp_control.lower(),
-                "index": row.index}
-    if row.scale != 1.0:
-        data["scale"] = row.scale
-    return data
-
-
-def _serialize_bindings(action):
-    """An action's flat binding rows -> manifest bindings. Composite headers
-    (composite != NONE) swallow the part rows (part != NONE) that follow them
-    into a `parts` dict, mirroring Unity's serialized composite layout."""
-    bindings = []
-    open_composite = None
-    for row in action.bindings:
-        if row.composite != 'NONE':
-            open_composite = {"composite": row.composite, "parts": {}}
-            bindings.append(open_composite)
-        elif row.part != 'NONE':
-            if open_composite is not None:
-                open_composite["parts"][row.part.lower()] = _serialize_binding(row)
-        else:
-            open_composite = None
-            bindings.append(_serialize_binding(row))
-    return bindings
-
-
-def _serialize_input_asset(scene):
-    """The scene's Input Actions asset (maps > actions > bindings) -> manifest
-    data. When the panel is empty, the built-in default asset is serialized so
-    the runtime always receives the scene-level input set."""
-    from .input_defaults import DEFAULT_INPUT_ASSET
-
-    if len(scene.bjs_input_maps) == 0:
-        return DEFAULT_INPUT_ASSET
-
-    return {
-        "maps": [{
-            "name": m.name,
-            "actions": [{
-                "name": a.name,
-                "type": a.action_type,
-                "controlType": a.control_type,
-                "bindings": _serialize_bindings(a),
-            } for a in m.actions],
-        } for m in scene.bjs_input_maps],
-    }
-
-
 def serialize_scene(context, output_dir):
     s = context.scene.bjs_scene
     data = {
@@ -180,7 +120,7 @@ def serialize_scene(context, output_dir):
             "exposure": s.exposure,
             "contrast": s.contrast,
         }
-    data["inputActions"] = _serialize_input_asset(context.scene)
+    data["inputActions"] = serialize_input_asset(context.scene)
     data["defaultInputMap"] = context.scene.bjs_input_default_map
 
     return data
