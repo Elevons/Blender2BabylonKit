@@ -97,7 +97,9 @@ Options object: `{ min?, max?, step?, label?, type?, options?, of? }`.
   `= [0,1,0]` / `= null` / `= []`). Computed or multi-line defaults are NOT parsed
   by Blender (the field keeps its code default at runtime).
 - Entity references need the explicit `type: "entity"` hint and an `Entity | null`
-  field type. Entity lists use `(Entity | null)[]` and **start empty**.
+  field type. Entity lists use `(Entity | null)[]` and **start empty** — the level
+  author fills them in Blender (type a count, or pin the inspector and use *Add
+  Selected* to add every selected object at once).
 - `vector3`/`color` values arrive as Babylon `Vector3`/`Color3` at runtime (coerced
   from arrays); plain arrays stay arrays.
 

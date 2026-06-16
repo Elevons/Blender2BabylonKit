@@ -1,4 +1,4 @@
-import { appendSceneAsync } from "@babylonjs/core";
+import { appendSceneAsync, SceneLoader } from "@babylonjs/core";
 import type { Scene } from "@babylonjs/core";
 // Registers the glTF loader so .glb files can be loaded. (In Babylon 9 the old
 // SceneLoader.AppendAsync statics are deprecated in favour of appendSceneAsync.)
@@ -41,6 +41,16 @@ export interface LevelLoaderOptions {
   shadows?: boolean;
   /** Shadow map resolution per light. Default 1024. */
   shadowMapSize?: number;
+  /**
+   * Render shadow maps once and freeze them (static-world optimization). When
+   * unset, the manifest's scene block decides (Blender "Freeze Shadows").
+   */
+  freezeShadows?: boolean;
+  /**
+   * Clean up imprecise skeleton bone weights on load, which can otherwise cause
+   * negative/garbled shadows on skinned meshes. Default false.
+   */
+  cleanBoneMatrixWeights?: boolean;
   /** Show collider wireframes on load (Babylon PhysicsViewer). Default false. */
   debugColliders?: boolean;
 }
@@ -70,6 +80,13 @@ export class LevelLoader
     const inputActions = manifest.scene?.inputActions ?? DEFAULT_INPUT_ASSET;
     const defaultInputMap = manifest.scene?.defaultInputMap ?? "Player";
     InputManager.LoadAsset(inputActions, defaultInputMap);
+
+    // Optionally scrub bad skeleton weights before parsing (fixes weird shadows
+    // on skinned meshes). It's a global static, so only touch it when asked.
+    if (this.options.cleanBoneMatrixWeights)
+    {
+      SceneLoader.CleanBoneMatrixWeights = true;
+    }
 
     // Import the glb right-handed so the loader skips the "__root__" handedness
     // mirror; that mirror would otherwise corrupt Havok collider placement.
@@ -106,8 +123,11 @@ export class LevelLoader
   {
     if (this.options.shadows !== false && context.shadowLights.length > 0)
     {
+      // Loader option wins; otherwise the Blender scene's "Freeze Shadows" flag.
+      const freeze = this.options.freezeShadows ?? manifest.scene?.freezeShadows ?? false;
       context.level.shadowGenerators = SetupShadows(this.scene, context.shadowLights, {
         mapSize: this.options.shadowMapSize,
+        freeze,
       });
     }
 

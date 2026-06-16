@@ -243,16 +243,36 @@ Color transfers exactly.
 **Shadows** follow the lamp's **Cast Shadows** toggle (Blender's `use_shadow`).
 When it's on, the Babylon tab reveals a **Shadow** subsection with per-light
 controls — filter (PCF / PCSS contact-hardening / Poisson / Blur ESM / hard),
-map size, bias, normal bias, darkness, and frustum clip start/end. These are
-Babylon shadow concepts (they don't map onto Blender's renderer-specific shadow
-settings), so they're authored here and serialized per light. On load, each
-shadow-casting light gets a `ShadowGenerator` configured from those values, and
-all geometry casts and receives by default. PointLight, Sun (Directional) and
-Spot can cast; anything else is skipped with a warning. Generators are exposed as
-`level.shadowGenerators`. A clip start/end of `0` means "let Babylon auto-fit the
-frustum", and a map size of `0` falls back to the loader default. To set the
-default resolution or disable the whole pass:
+map size, bias, normal bias, darkness, frustum clip start/end, **Edge Falloff**
+(directional/spot edge fade), and **Back Faces Only**. These are Babylon shadow
+concepts (they don't map onto Blender's
+renderer-specific shadow settings), so they're authored here and serialized per
+light. On load, each shadow-casting light gets a `ShadowGenerator` configured
+from those values, and all geometry casts and receives by default. PointLight,
+Sun (Directional) and Spot can cast; anything else is skipped with a warning.
+Generators are exposed as `level.shadowGenerators`. A clip start/end of `0` means
+"let Babylon auto-fit the frustum", and a map size of `0` falls back to the
+loader default. To set the default resolution or disable the whole pass:
 `new LevelLoader(scene, registry, { shadows: false })` or `{ shadowMapSize: 2048 }`.
+
+The loader fights **shadow acne** out of the box. Blender ships normal bias at
+`0`, which stripes flat planes under a sun and speckles point/spot edges, so when
+a light doesn't override it the loader applies a floor (0.02 for directional,
+0.03 for point/spot). It also tightens the shadow depth range, the usual culprit:
+directional suns get `autoCalcShadowZBounds` (the depth frustum re-fits to the
+casters every frame), and point/spot lights cap their far plane to the lamp's
+range — set a **Custom Range** on the lamp for the tightest result. **Back Faces
+Only** (`forceBackFacesOnly`) is the heavy-handed last resort for stubborn
+self-shadowing; it's off by default because it can leak light on thin or
+single-sided meshes. Any value you set explicitly always overrides these
+defaults.
+
+For a fully static level, enable **Freeze Shadows** (scene settings, or the
+`freezeShadows` loader option): each shadow map renders once and then freezes, a
+big performance win that lets you push `shadowMapSize` higher. Moving casters
+won't update afterward — call `level.RefreshShadows()` after relocating one to
+force a single re-render. If a skinned mesh shows garbled shadows, load with
+`{ cleanBoneMatrixWeights: true }` to scrub imprecise bone weights.
 
 ## Cameras
 

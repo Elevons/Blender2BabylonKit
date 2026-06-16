@@ -26,7 +26,20 @@ def _draw_var(layout, comp_index, var_index, v):
     if v.vtype == 'LIST':
         lbox = layout.box()
         hdr = lbox.row(align=True)
+        hdr.use_property_split = False
+        # Per-list collapse arrow — independent of the component's collapse.
+        hdr.prop(v, "show_expanded", text="",
+                 icon='TRIA_DOWN' if v.show_expanded else 'TRIA_RIGHT', emboss=False)
         hdr.label(text=f"{label}  ·  {v.elem_type.title()}[]")
+        if not v.show_expanded:
+            hdr.label(text=f"{len(v.list_items)} item(s)")
+            return
+        # Type a length directly instead of clicking + repeatedly.
+        hdr.prop(v, "list_count", text="")
+        if v.elem_type == 'ENTITY':
+            sel = hdr.operator("bjs.list_add_selected", text="", icon='RESTRICT_SELECT_OFF')
+            sel.comp_index = comp_index
+            sel.var_index = var_index
         add = hdr.operator("bjs.list_add", text="", icon='ADD')
         add.comp_index = comp_index
         add.var_index = var_index
@@ -309,6 +322,7 @@ def draw_component(layout, obj, index, comp):
         if t in {'FREE', 'UNIVERSAL'}:
             body.prop(comp, "cam_speed")
             body.prop(comp, "cam_inertia")
+            body.prop(comp, "cam_lock_roll")
         elif t == 'ARC':
             body.prop(comp, "cam_target", text="Orbit Target")
             body.prop(comp, "cam_radius")

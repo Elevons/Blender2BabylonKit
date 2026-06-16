@@ -47,6 +47,21 @@ def _enum_set(self, value):
         self.s_val = choices[value]
 
 
+def _list_count_get(self):
+    return len(self.list_items)
+
+
+def _list_count_set(self, value):
+    """Resize a LIST var to `value` items by adding/removing from the end —
+    lets the user type a length instead of repeatedly hitting +."""
+    value = max(0, value)
+    while len(self.list_items) > value:
+        self.list_items.remove(len(self.list_items) - 1)
+    while len(self.list_items) < value:
+        add_list_item(self)
+    self.list_index = max(0, len(self.list_items) - 1)
+
+
 class BJSListItem(PropertyGroup):
     """One element of a LIST exposed var. The slot used depends on the var's
     elem_type (see LIST_ELEM_SLOT)."""
@@ -82,6 +97,11 @@ class BJSExposedVar(PropertyGroup):
     elem_type:  StringProperty(default='FLOAT')
     list_items: CollectionProperty(type=BJSListItem)
     list_index: IntProperty(default=0)
+    # Per-list collapse, independent of the component's own show_expanded.
+    show_expanded: BoolProperty(default=True)
+    # Typed length: reading returns the current item count, writing resizes.
+    list_count: IntProperty(name="Count", description="Number of items in the list",
+                            min=0, get=_list_count_get, set=_list_count_set)
 
 
 def add_list_item(v, el=None):

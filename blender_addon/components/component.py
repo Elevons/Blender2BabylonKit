@@ -254,6 +254,10 @@ class BJSComponent(PropertyGroup):
         description="Start the follow camera where it sits in Blender, relative "
                     "to the target (derives distance/height/angle)")
     cam_follow_mode:    EnumProperty(name="Follow Mode", items=FOLLOW_MODES, default='OFFSET')
+    cam_lock_roll:      BoolProperty(
+        name="Keep Upright", default=False,
+        description="Lock roll (rotation around the view/Z axis) so the camera "
+                    "always stays level with the horizon")
     cam_speed:          FloatProperty(name="Speed", default=1.0, min=0.0)
     cam_inertia:        FloatProperty(name="Inertia", default=0.9, min=0.0, max=1.0)
     cam_radius:         FloatProperty(name="Orbit Distance", default=10.0, min=0.1)

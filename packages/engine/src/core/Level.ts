@@ -87,6 +87,20 @@ export class Level
     this.updaters.push(updater);
   }
 
+  /**
+   * Force every shadow map to re-render once on the next frame. Only meaningful
+   * when shadows were frozen (static-world optimization): call this after you've
+   * moved a shadow caster at runtime so its baked shadow updates. No-op cost on
+   * live (unfrozen) generators.
+   */
+  RefreshShadows(): void
+  {
+    for (const generator of this.shadowGenerators)
+    {
+      generator.getShadowMap()?.resetRefreshCounter();
+    }
+  }
+
   /** Return every entity carrying the given tag. */
   ByTag(tag: string): Entity[]
   {

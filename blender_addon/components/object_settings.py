@@ -20,8 +20,9 @@ class BJSLightShadow(PropertyGroup):
         name="Bias", default=0.00005, min=0.0, soft_max=0.01, precision=5,
         description="Depth bias to fight shadow acne (self-shadowing artifacts)")
     normal_bias: FloatProperty(
-        name="Normal Bias", default=0.0, min=0.0, soft_max=0.1, precision=4,
-        description="Offset along the surface normal; helps on steep angles")
+        name="Normal Bias", default=0.02, min=0.0, soft_max=0.1, precision=4,
+        description="Offset along the surface normal; helps on steep angles "
+                    "and is the main fix for sun/directional shadow acne")
     darkness: FloatProperty(
         name="Darkness", default=0.0, min=0.0, max=1.0,
         description="0 = fully black shadow, 1 = invisible")
@@ -32,6 +33,15 @@ class BJSLightShadow(PropertyGroup):
         name="Clip End", default=0.0, min=0.0,
         description="Far plane of the shadow frustum. 0 = let Babylon auto-fit")
     filter: EnumProperty(name="Filter", items=SHADOW_FILTERS, default='PCF')
+    frustum_edge_falloff: FloatProperty(
+        name="Edge Falloff", default=0.0, min=0.0, max=1.0,
+        description="Fade shadows out toward the edge of the frustum instead of "
+                    "clipping them hard. 0 = off, 1 = full fade (directional/spot only)")
+    force_back_faces: BoolProperty(
+        name="Back Faces Only", default=False,
+        description="Render only back faces into the shadow map. Strongly "
+                    "reduces self-shadowing acne, but can leak light "
+                    "(peter-panning) on thin or open/single-sided meshes")
 
 
 class BJSAnimationSettings(PropertyGroup):

@@ -12,11 +12,26 @@ Split by **object vs scene**:
 
 - **3D viewport N-panel, "Babylon" tab** (`ui/view3d_panels.py`) — the selected
   object: component stack, light/camera/animation child panels, compact Export
-  block.
+  block. The pin button in the Components header locks the inspector to one
+  object (`WindowManager.bjs_pinned_object`) so you can change the viewport
+  selection while editing — every component verb resolves its target through
+  `core/inspector.py:inspector_object()`, so they all act on the pinned object.
 - **Properties › Scene › "Babylon"** (`ui/scene_panels.py` + `ui/input_panel.py`)
   — scene-wide: rendering, fog, post-processing, **Input Actions**, and the same
   Export controls. Both export blocks call `ui/common.py:draw_export_controls()`
   so they cannot drift.
+
+### Exposed lists (`@exposed({ type: "list" })`)
+
+Each list field in a SCRIPT component renders as its own **collapsible box**
+(`BJSExposedVar.show_expanded`) — independent of the component's header
+collapse — with a triangle toggle and an `N item(s)` summary when folded. Grow
+a list three ways: the **+** button (`bjs.list_add`), a typed **count** field
+(the var's `list_count` get/set resizes the collection), and — for **entity**
+lists — an **Add Selected** button (`bjs.list_add_selected`) that drops every
+selected viewport object into the list at once, skipping the list's own object
+and any duplicates. Pin the inspector first so picking those objects doesn't
+switch the panel away.
 
 ## Package map
 

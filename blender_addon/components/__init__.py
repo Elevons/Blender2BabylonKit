@@ -40,9 +40,13 @@ def register():
     Object.bjs_animation = PointerProperty(type=BJSAnimationSettings)
     # Session clipboard for cut/copy/paste of components (holds 0 or 1).
     WindowManager.bjs_clipboard = CollectionProperty(type=BJSComponent)
+    # When set, the Components panel pins to this object instead of following
+    # the active selection (lets you pick other objects to batch-add to lists).
+    WindowManager.bjs_pinned_object = PointerProperty(type=Object)
 
 
 def unregister():
+    del WindowManager.bjs_pinned_object
     del WindowManager.bjs_clipboard
     del Object.bjs_animation
     del Object.bjs_shadow

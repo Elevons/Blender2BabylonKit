@@ -1,0 +1,1675 @@
+{
+  "version": 4,
+  "glb": "Train Scene.glb",
+  "scene": {
+    "clearColor": [
+      0.0096,
+      0.1704,
+      0.314,
+      1.0
+    ],
+    "ambientColor": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "environment": null,
+    "freezeShadows": false,
+    "fog": null,
+    "postProcessing": null,
+    "inputActions": {
+      "maps": [
+        {
+          "name": "Player",
+          "actions": [
+            {
+              "name": "Move",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "w"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "s"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "a"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "d"
+                    }
+                  }
+                },
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "arrowup"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "arrowdown"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "arrowleft"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "arrowright"
+                    }
+                  }
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Look",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Jump",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": " "
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Interact",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "e"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 2
+                }
+              ]
+            },
+            {
+              "name": "Sprint",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "shift"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 10
+                }
+              ]
+            },
+            {
+              "name": "Crouch",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "c"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Throttle Up",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "w"
+                }
+              ]
+            },
+            {
+              "name": "Throttle Down",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "s"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "defaultInputMap": "Player"
+  },
+  "entities": [
+    {
+      "id": "5abbfcb86c394b88a7b8ffa2a3654cd5",
+      "name": "Sun",
+      "parent": null,
+      "components": [],
+      "light": {
+        "type": "SUN",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 1.0,
+        "castShadows": true,
+        "shadow": {
+          "mapSize": 4096,
+          "bias": 0.004999999888241291,
+          "normalBias": 0.10000000149011612,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "PCF",
+          "forceBackFaces": true,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "63576202f6b845c3a193853a9aab8303",
+      "name": "WaypointBase.001",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "a88802c479dc4f98b6cb752471042d08",
+      "name": "WaypointBase.002",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "5290f40c4f0e4785b823d85caee897b6",
+      "name": "WaypointBase.003",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f54dfdc3920d4622aab576790f262f9e",
+      "name": "WaypointBase.004",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "83af637b25fe4ad4b2db960f51b3ebd8",
+      "name": "WaypointBase.005",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fb7be13eb4a14a2aa82d92fdffebfb21",
+      "name": "WaypointBase.006",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2a113fa52ef44fea93b476488c9075e7",
+      "name": "WaypointBase.007",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "09383f648e1447b49de7da60bdc3a56b",
+      "name": "WaypointBase.008",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c502b4ead6154b5a86c8afe8e0831f4c",
+      "name": "WaypointBase.009",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "cbe216cd3e2a4958ab3a90dbb9542c3c",
+      "name": "WaypointBase.010",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "dbb7f629cd354bd5a5e7b3b6375a477e",
+      "name": "WaypointBase.011",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9b71d3f77d81403dad3c0c41938aabbe",
+      "name": "WaypointBase.012",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4e47ae64a49146569aa3dad6fdc29d57",
+      "name": "WaypointBase.013",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4230b348c7cc4ba89f4e37a7df041b3f",
+      "name": "WaypointBase.014",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2a6b97d6a90e422eac138d2813fd1b24",
+      "name": "WaypointBase.015",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "42ba2843d9df4090b724080d3c41b22b",
+      "name": "WaypointBase.016",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "8f57647f646645e293f8deea5abcb8dd",
+      "name": "WaypointBase.017",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "352c9da742be4376a3aa2e28ea174734",
+      "name": "WaypointBase.018",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "008b0cf44b4043eba928bd6f0e562662",
+      "name": "WaypointBase.019",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "332c4f8738174ffc9566ab9ea8885410",
+      "name": "WaypointBase.020",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "8f4b55826cc746fc9c0b658d275fe348",
+      "name": "WaypointBase.021",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "ace4c85cd14647b28982b8b873ee3900",
+      "name": "WaypointBase.022",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fa4ca72105ac4014912be94e084d91b6",
+      "name": "WaypointBase.023",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "e52e49c4723d4b84be610cac3a5d9c09",
+      "name": "WaypointBase.024",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "251e858506054656bc4be4080e825ac2",
+      "name": "WaypointBase.025",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b5ae77c40f364074873b112a8c36382d",
+      "name": "WaypointBase.026",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "da5758f1f4a5497e84b036aa134f2841",
+      "name": "WaypointBase.027",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "7be9651850554adfbe32154060dde2f6",
+      "name": "WaypointBase.028",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4c3765e7cde24281ad231e8a7ed25c06",
+      "name": "WaypointBase.029",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "85c63a5958df4fc08b3c2a7c6d97df7e",
+      "name": "WaypointBase.030",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "29c99962a9bd4100802d705e758a66e8",
+      "name": "WaypointBase.031",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "a2b6e4c94b024a5cb4d84334ed58ae37",
+      "name": "WaypointBase.032",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "3fbf5d0edcc44765bf332c8855d9324b",
+      "name": "WaypointBase.033",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "3d35a5e68ad14bafa1f77a5801afc921",
+      "name": "WaypointBase.034",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f7579503c1204a65ab8d7a48b0f049a6",
+      "name": "WaypointBase.035",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "ab5c0923befa4836a8ce9a80534d30ef",
+      "name": "WaypointBase.036",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b40b1e4c0889492daa91a42ce11aae2f",
+      "name": "WaypointBase.037",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "958dba5df27c4e25a2599935181a22bb",
+      "name": "WaypointBase.038",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c540f6a41e2441a3bfd6197a475e4c2e",
+      "name": "WaypointBase.039",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "96983a4506d34f1d83957f06019aed16",
+      "name": "WaypointBase.040",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "1a61e0ed5cb54fa2890da23f4cd3586a",
+      "name": "WaypointBase.041",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "99c2128689b4434980a5465ecc9a4324",
+      "name": "WaypointBase.042",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "41f32ddade27403ab729b59907f47f5a",
+      "name": "WaypointBase.043",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4ac86880706c47e29eb4943d7a55c113",
+      "name": "WaypointBase.044",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "65708073c136462dae2d611fcb62aca5",
+      "name": "WaypointBase.045",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "95f1b25ef1fb46928b63130b6555fc17",
+      "name": "WaypointBase.046",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "50f180c5f01d42f9b686d48d7027474a",
+      "name": "WaypointBase.047",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "1a9a93f4a3a24656aaee67e0470a9b0c",
+      "name": "WaypointBase.048",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b1bd9a54528b4d869c0ec10968d2f52e",
+      "name": "WaypointBase.049",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "cf4d53f31fbb4f57b2d4f6546e67a273",
+      "name": "WaypointBase.050",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "3032195ea32c4ee7a572c5e6e216cf98",
+      "name": "WaypointBase.051",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4ca9baabc0934060aad9c3fa87632295",
+      "name": "WaypointBase.052",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "67f04d1db7ce434baeb17540134740f9",
+      "name": "WaypointBase.053",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9b246ad2120e432db89ecc7dd9057ac7",
+      "name": "WaypointBase.054",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "6663a5fccfff47868336dfde8ad35c98",
+      "name": "WaypointBase.055",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "cc430aa6cc094c0fa01a231fa8cdde38",
+      "name": "WaypointBase.056",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "af3d18d27f364846982c1d4f26ee9c67",
+      "name": "WaypointBase.057",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d42677f2ad3b4a798b4f605310c5669f",
+      "name": "WaypointBase.058",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c107a023c6ac4ce0bb052fd446510839",
+      "name": "WaypointBase.059",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f7dd827016c241d3b8af8e0723d54c2a",
+      "name": "WaypointBase.060",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b3eb439e71e6423d9de3fd241485f546",
+      "name": "WaypointBase.061",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "3b30bc53a99145ae97c93d09c8a3d79d",
+      "name": "WaypointBase.062",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "33fcfae6cd2d46029e50696ffe946e8d",
+      "name": "WaypointBase.063",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "bf12b713b6f246ae94b9025abd7d1635",
+      "name": "WaypointBase.064",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "813d044bd4d047f6957c2cd387aca7ff",
+      "name": "WaypointBase.065",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "8b794f1c4f0049a7b3ef578b1ce53889",
+      "name": "WaypointBase.066",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "3ac8f7e1e00e44f0b08d18c61cef5e79",
+      "name": "WaypointBase.067",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "6dd90171140d433583e078ebb8c74ec1",
+      "name": "WaypointBase.068",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fdf95d81d26247e6a32b414b920482fa",
+      "name": "WaypointBase.069",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "ed82a93beac1428ea156cab4bdaf9084",
+      "name": "WaypointBase.070",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "aa9650517d274194903204a0be7ea46b",
+      "name": "WaypointBase.071",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "3258282aae1f40ee9798b5401eb44a57",
+      "name": "WaypointBase.072",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "bcd522d224d9478c88ada55de18b9e71",
+      "name": "WaypointBase.073",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "02d9140bffe64152b75116a2ff17aff7",
+      "name": "WaypointBase.074",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "8f7fa6acf54e47bcb057a0d3ceec0f96",
+      "name": "WaypointBase.075",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "11d558ab55d74f80850d483b4631f5dd",
+      "name": "WaypointBase.076",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "7bbe9268da2e4fcf8e4ff251d102dd9b",
+      "name": "WaypointBase.077",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "ae9436919a5c4f7aa51538af55cfd40d",
+      "name": "WaypointBase.078",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "daa4dd79a29943b08668189351bde15e",
+      "name": "WaypointBase.079",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "bece3348d52b4259858e1fe984375212",
+      "name": "WaypointBase.080",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d4d26b0f68b04ee586c273cd90c98fe2",
+      "name": "WaypointBase.081",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "121d420180bb417082a207fc50132b6a",
+      "name": "WaypointBase.082",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f182c93736be484ab9f1d604e23141e6",
+      "name": "WaypointBase.083",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b571a8f7f8fb453086048ede6943155b",
+      "name": "WaypointBase.084",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "55dfe8e4b4814e96a5006e09bd98ee56",
+      "name": "WaypointBase.085",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "a1f4b0bbfa1f4e4fa586bd6e29626cd2",
+      "name": "WaypointBase.086",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f1f6ab57f4434a8886c0bf8e6f90b2ba",
+      "name": "WaypointBase.087",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "1ff1b33b46aa4da3a7c9958e812be89a",
+      "name": "WaypointBase.088",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "71d4c7f98fce48ce881a5d25ee88b2b4",
+      "name": "WaypointBase.089",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "ceb138a1f89a46889fbf6897804aecab",
+      "name": "WaypointBase.090",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fe9ac88726874771b5a0b4cf61026837",
+      "name": "WaypointBase.091",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "55574a3379cb4ab6b05ba2f085a340e6",
+      "name": "WaypointBase.092",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2626e473bfc74523a175bc1fcd19575f",
+      "name": "WaypointBase.093",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "e62c530050794bd8ba9b04f9411023d0",
+      "name": "WaypointBase.094",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b19b83d112914606b39abdc92f066941",
+      "name": "WaypointBase.095",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "93baed019673416aade1f7175f7bb8c2",
+      "name": "WaypointBase.096",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "95d406c3e9d04f6c84516faec0b9c6c4",
+      "name": "WaypointBase.097",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d70259f4f48a4e6c95eb5a616c129530",
+      "name": "WaypointBase.098",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "751c63cd28624b658d4939f08847d8dc",
+      "name": "WaypointBase.099",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d6453f6992a4478fb00c107a60025cfb",
+      "name": "WaypointBase.100",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "a40c41856b1a4bb2a138ac31a47acaad",
+      "name": "WaypointBase.101",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b74e3f6ae83b470d8ac23809b0b6a320",
+      "name": "WaypointBase.102",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "124c25b0b2f046bc8343bd83c1ed0a9f",
+      "name": "WaypointBase.103",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "895c0b1dd89b4dd78eae276f1c10c39b",
+      "name": "WaypointBase.104",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "0104b3d6ba754aef814fd0dba65bb06e",
+      "name": "WaypointBase.105",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "369cc95b9fdd4523a6a2f786ab012814",
+      "name": "WaypointBase.106",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "921e9693c0d14c7e8f08847d10809911",
+      "name": "WaypointBase.107",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4c783760962d418aacb9551d72cff375",
+      "name": "WaypointBase.108",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "face28c35ea547fab13ccab7f01d1199",
+      "name": "WaypointBase.109",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "31eef324651042d3ac028d1c56474c5f",
+      "name": "WaypointBase.110",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c6c7f41794784f9bacb5099de1752a52",
+      "name": "WaypointBase.111",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "94ca8b73e4944428b681c29c683086c9",
+      "name": "WaypointBase.112",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "803860ff8acd4477be87bba922e6d751",
+      "name": "WaypointBase.113",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "8248476f346340edb8424390a6cd18bf",
+      "name": "WaypointBase.114",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "5e99a87f50a741a6a3901f4cf1efb754",
+      "name": "WaypointBase.115",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2e61605d09ac4c5ba2cb0e0f9f7a8bd6",
+      "name": "WaypointBase.116",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9cde8aa35a834219826631a84fbab5ac",
+      "name": "WaypointBase.117",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "136e151686594e0883e98b46a193a1c8",
+      "name": "WaypointBase.118",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b9b08462bfde4241a66fd4f11a30f19a",
+      "name": "WaypointBase.119",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d96cbee783fb458294a14a88d77c16b3",
+      "name": "WaypointBase.120",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "03a5a010417a4c0ca8279a849412b436",
+      "name": "WaypointBase.121",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "6a2ae626128449ffa55e2575fcaa617d",
+      "name": "WaypointBase.122",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "941f5d40388f4152b069e7c6c61c9df5",
+      "name": "WaypointBase.123",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b595b572cc84489da98fba4341e6ffec",
+      "name": "WaypointBase.124",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "032aecb18a544dc6b0395414af5f3182",
+      "name": "WaypointBase.125",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "72256d748a3e44cdba6e7b334f569d2f",
+      "name": "WaypointBase.126",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2c3bf65f6e7a40f68441bfea13cb4717",
+      "name": "WaypointBase.127",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f892fb506c5b4e58a3e2ce9ba4758718",
+      "name": "WaypointBase.128",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "12c405f2d4ac470792e1e9c98c494631",
+      "name": "WaypointBase.129",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "1166db4a3c8c4d5f9cc0d229882b8439",
+      "name": "WaypointBase.130",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f949cf8018bc49dabfd79ada11451d9f",
+      "name": "WaypointBase.131",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "448354606b434da5badc82a2e6921d10",
+      "name": "WaypointBase.132",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fdbc9859408a45c1b430e0f7b9bf9cae",
+      "name": "WaypointBase.133",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "95a0aabb0a0c4ff98d09ec5699bff178",
+      "name": "WaypointBase.134",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "346544b060b14c11bd96b3a91a2985bb",
+      "name": "WaypointBase.135",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "35294aa24b1f4d338d325a9736475525",
+      "name": "WaypointBase.136",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b40d73abca574ed79a6ba1da55a3d985",
+      "name": "WaypointBase.137",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c0635dfd9f8e4f9485d4ff9f1adecd61",
+      "name": "WaypointBase.138",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "db4892089f2f4e838e90d94993588a05",
+      "name": "WaypointBase.139",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "16b142c5e24e473b83e794cf5ca0365f",
+      "name": "WaypointBase.140",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "78cfa6c9851f47369db3b44a5557c897",
+      "name": "WaypointBase.141",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "0a8635e27e624e9fba7801ce437d4de2",
+      "name": "WaypointBase.142",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fe4f055201d946019b9161baa0660048",
+      "name": "WaypointBase.143",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "bc40b7428dd147cdaded93e8722a6edd",
+      "name": "WaypointBase.144",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fe607088c79b40c08598e77eab8bf359",
+      "name": "WaypointBase.145",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "e8c3632a79eb4fd5b3f86e5e1c96f19d",
+      "name": "WaypointBase.146",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "28873def6bca415cb9e28a91094e761b",
+      "name": "WaypointBase.147",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "a0d06085b5da45cf902d82a73cc042b9",
+      "name": "WaypointBase.148",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "00917f86161d4d2fa26ad9402573bd84",
+      "name": "WaypointBase.149",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "bdba08e88aaa43afaf0981fe1e0a6b1b",
+      "name": "WaypointBase.150",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "be5936ca01f9489b90f6e232b40d19b8",
+      "name": "WaypointBase.151",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "73ed21026c454610b543b8cdf895478e",
+      "name": "WaypointBase.152",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9acc37c9328f456891edfae53a6cbd64",
+      "name": "WaypointBase.153",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "261194ba5dea41ff92fa13587d8703b0",
+      "name": "WaypointBase.154",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "da7ffa0063b047eca1bac1b72b648627",
+      "name": "WaypointBase.155",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "5951c7f798fd45188fed227497de464d",
+      "name": "WaypointBase.156",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4b8c280e0e95498b8717a2c1ab601281",
+      "name": "WaypointBase.157",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fc859546a1ee4f9ea6b5d1fd015b3675",
+      "name": "WaypointBase.158",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "332570c619874d3596f6adab9f7bdb81",
+      "name": "WaypointBase.159",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "f57c0ea83124421b8010e715b6364199",
+      "name": "WaypointBase.160",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b1fc19f56332468aa6924cce2d59ea22",
+      "name": "WaypointBase.161",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "1d396854bfb0433f9726269325f7ff3d",
+      "name": "WaypointBase.162",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d81910548e544d62a6e4e5cfeef9a6ce",
+      "name": "WaypointBase.163",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9fcb47725ba34b12ab7ffcc5b4efd3cb",
+      "name": "WaypointBase.164",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "fae9398c49d14326bd71fbf98c4f075a",
+      "name": "WaypointBase.165",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9ef2726c66f542a1a97a50c82796d884",
+      "name": "WaypointBase.166",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "6bdddeeb39504a099b4be4fb1897b38b",
+      "name": "WaypointBase.167",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2cd5e9aac9de44c9a5e2df65946d9f8b",
+      "name": "WaypointBase.168",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "b6ce438700d34736b97c28dc5f144c31",
+      "name": "WaypointBase.169",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "393e50fad7914208a4989c0862c8743b",
+      "name": "WaypointBase.170",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "88b9fc64a8f141ebbb8e24d619eee1e0",
+      "name": "WaypointBase.171",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "e3c25cfa329e4d279d1ce3765dddba1c",
+      "name": "WaypointBase.172",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9c1b3ae2cf794b53bc26d26d60ce9391",
+      "name": "WaypointBase.173",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "6fb382ed6ebc4cf9a76416df071ec485",
+      "name": "WaypointBase.174",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "a81676f554e548d193865fb528cef6f2",
+      "name": "WaypointBase.175",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "75f0235868064714817e4af1aca11394",
+      "name": "WaypointBase.176",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d042cc8b42864bf182cf6ce6a683e7e4",
+      "name": "WaypointBase.177",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "d276b4c77cd545b1a69c27c431618c40",
+      "name": "WaypointBase.178",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "178724c52adc43acaeecdda87f8d2e00",
+      "name": "WaypointBase.179",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "5fbc1b3ce21343fdbfb39958042aa101",
+      "name": "WaypointBase.180",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "71751634c2404d569592b8c7dc34fea0",
+      "name": "WaypointBase.181",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "91f1b2d27e074682a04e536afda0e72d",
+      "name": "WaypointBase.182",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2bcf0d24f9c54482b2420a8c9e341346",
+      "name": "WaypointBase.183",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "35816a74dfe24d9bb0aaa38719423cdd",
+      "name": "WaypointBase.184",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "9bb14148365542d7b5cb64a738a8c50f",
+      "name": "WaypointBase.185",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c1d7368d623b4b6e881ee1ae6815db98",
+      "name": "WaypointBase.186",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "603d0a4670724649a5747c51108a9e54",
+      "name": "WaypointBase.187",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "af3dff2e84074bac87c2a4641242a504",
+      "name": "WaypointBase.188",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "c1dab21cc3334ff4ad9e1aa3a4693af8",
+      "name": "WaypointBase.189",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "344e040a9cba4e8780193a5bc8d4c757",
+      "name": "WaypointBase.190",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "0748c172e42647969759341f18a23c34",
+      "name": "WaypointBase.191",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4aed7009d3984dcaa2df15a9ba9fbab1",
+      "name": "WaypointBase.192",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "74bb3e233f9546c5b08e506ddc3b361f",
+      "name": "WaypointBase.193",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4e1248871f6a4d7a8807a572bc1d72aa",
+      "name": "WaypointBase.194",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "2c965cfb551240c9ac4c4f533eca4993",
+      "name": "WaypointBase.195",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "ca53f65c23d8454e9f4562ef40cdc8c3",
+      "name": "WaypointBase.196",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4f586ff4bd874458ae266247b472e54e",
+      "name": "WaypointBase.197",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "65c155908c5349beaa522b5c00ef4aaf",
+      "name": "WaypointBase.198",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "700aa16d59024604bfd066faffa9dc95",
+      "name": "WaypointBase.199",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "4afc8bbbe9ef4a408af0d97d171df3e4",
+      "name": "WaypointBase.200",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "5f324beea12f41cba43bf8bce56d563f",
+      "name": "TrainParent",
+      "parent": null,
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "TrainBehavior",
+          "path": "//../src/behaviors/TrainBehavior.ts",
+          "vars": {
+            "easing": "easeInOut",
+            "targets": [
+              "63576202f6b845c3a193853a9aab8303",
+              "a88802c479dc4f98b6cb752471042d08",
+              "5290f40c4f0e4785b823d85caee897b6",
+              "f54dfdc3920d4622aab576790f262f9e",
+              "83af637b25fe4ad4b2db960f51b3ebd8",
+              "fb7be13eb4a14a2aa82d92fdffebfb21",
+              "2a113fa52ef44fea93b476488c9075e7",
+              "09383f648e1447b49de7da60bdc3a56b",
+              "c502b4ead6154b5a86c8afe8e0831f4c",
+              "cbe216cd3e2a4958ab3a90dbb9542c3c",
+              "dbb7f629cd354bd5a5e7b3b6375a477e",
+              "9b71d3f77d81403dad3c0c41938aabbe",
+              "4e47ae64a49146569aa3dad6fdc29d57",
+              "4230b348c7cc4ba89f4e37a7df041b3f",
+              "2a6b97d6a90e422eac138d2813fd1b24",
+              "42ba2843d9df4090b724080d3c41b22b",
+              "8f57647f646645e293f8deea5abcb8dd",
+              "352c9da742be4376a3aa2e28ea174734",
+              "008b0cf44b4043eba928bd6f0e562662",
+              "332c4f8738174ffc9566ab9ea8885410",
+              "8f4b55826cc746fc9c0b658d275fe348",
+              "ace4c85cd14647b28982b8b873ee3900",
+              "fa4ca72105ac4014912be94e084d91b6",
+              "e52e49c4723d4b84be610cac3a5d9c09",
+              "251e858506054656bc4be4080e825ac2",
+              "b5ae77c40f364074873b112a8c36382d",
+              "da5758f1f4a5497e84b036aa134f2841",
+              "7be9651850554adfbe32154060dde2f6",
+              "4c3765e7cde24281ad231e8a7ed25c06",
+              "85c63a5958df4fc08b3c2a7c6d97df7e",
+              "29c99962a9bd4100802d705e758a66e8",
+              "a2b6e4c94b024a5cb4d84334ed58ae37",
+              "3fbf5d0edcc44765bf332c8855d9324b",
+              "3d35a5e68ad14bafa1f77a5801afc921",
+              "f7579503c1204a65ab8d7a48b0f049a6",
+              "ab5c0923befa4836a8ce9a80534d30ef",
+              "b40b1e4c0889492daa91a42ce11aae2f",
+              "958dba5df27c4e25a2599935181a22bb",
+              "c540f6a41e2441a3bfd6197a475e4c2e",
+              "96983a4506d34f1d83957f06019aed16",
+              "1a61e0ed5cb54fa2890da23f4cd3586a",
+              "99c2128689b4434980a5465ecc9a4324",
+              "41f32ddade27403ab729b59907f47f5a",
+              "4ac86880706c47e29eb4943d7a55c113",
+              "65708073c136462dae2d611fcb62aca5",
+              "95f1b25ef1fb46928b63130b6555fc17",
+              "50f180c5f01d42f9b686d48d7027474a",
+              "1a9a93f4a3a24656aaee67e0470a9b0c",
+              "b1bd9a54528b4d869c0ec10968d2f52e",
+              "cf4d53f31fbb4f57b2d4f6546e67a273",
+              "3032195ea32c4ee7a572c5e6e216cf98",
+              "4ca9baabc0934060aad9c3fa87632295",
+              "67f04d1db7ce434baeb17540134740f9",
+              "9b246ad2120e432db89ecc7dd9057ac7",
+              "6663a5fccfff47868336dfde8ad35c98",
+              "cc430aa6cc094c0fa01a231fa8cdde38",
+              "af3d18d27f364846982c1d4f26ee9c67",
+              "d42677f2ad3b4a798b4f605310c5669f",
+              "c107a023c6ac4ce0bb052fd446510839",
+              "f7dd827016c241d3b8af8e0723d54c2a",
+              "b3eb439e71e6423d9de3fd241485f546",
+              "3b30bc53a99145ae97c93d09c8a3d79d",
+              "33fcfae6cd2d46029e50696ffe946e8d",
+              "bf12b713b6f246ae94b9025abd7d1635",
+              "813d044bd4d047f6957c2cd387aca7ff",
+              "8b794f1c4f0049a7b3ef578b1ce53889",
+              "3ac8f7e1e00e44f0b08d18c61cef5e79",
+              "6dd90171140d433583e078ebb8c74ec1",
+              "fdf95d81d26247e6a32b414b920482fa",
+              "ed82a93beac1428ea156cab4bdaf9084",
+              "aa9650517d274194903204a0be7ea46b",
+              "3258282aae1f40ee9798b5401eb44a57",
+              "bcd522d224d9478c88ada55de18b9e71",
+              "02d9140bffe64152b75116a2ff17aff7",
+              "8f7fa6acf54e47bcb057a0d3ceec0f96",
+              "11d558ab55d74f80850d483b4631f5dd",
+              "7bbe9268da2e4fcf8e4ff251d102dd9b",
+              "ae9436919a5c4f7aa51538af55cfd40d",
+              "daa4dd79a29943b08668189351bde15e",
+              "bece3348d52b4259858e1fe984375212",
+              "d4d26b0f68b04ee586c273cd90c98fe2",
+              "121d420180bb417082a207fc50132b6a",
+              "f182c93736be484ab9f1d604e23141e6",
+              "b571a8f7f8fb453086048ede6943155b",
+              "55dfe8e4b4814e96a5006e09bd98ee56",
+              "a1f4b0bbfa1f4e4fa586bd6e29626cd2",
+              "f1f6ab57f4434a8886c0bf8e6f90b2ba",
+              "1ff1b33b46aa4da3a7c9958e812be89a",
+              "71d4c7f98fce48ce881a5d25ee88b2b4",
+              "ceb138a1f89a46889fbf6897804aecab",
+              "fe9ac88726874771b5a0b4cf61026837",
+              "55574a3379cb4ab6b05ba2f085a340e6",
+              "2626e473bfc74523a175bc1fcd19575f",
+              "e62c530050794bd8ba9b04f9411023d0",
+              "b19b83d112914606b39abdc92f066941",
+              "93baed019673416aade1f7175f7bb8c2",
+              "95d406c3e9d04f6c84516faec0b9c6c4",
+              "d70259f4f48a4e6c95eb5a616c129530",
+              "751c63cd28624b658d4939f08847d8dc",
+              "d6453f6992a4478fb00c107a60025cfb",
+              "a40c41856b1a4bb2a138ac31a47acaad",
+              "b74e3f6ae83b470d8ac23809b0b6a320",
+              "124c25b0b2f046bc8343bd83c1ed0a9f",
+              "895c0b1dd89b4dd78eae276f1c10c39b",
+              "0104b3d6ba754aef814fd0dba65bb06e",
+              "369cc95b9fdd4523a6a2f786ab012814",
+              "921e9693c0d14c7e8f08847d10809911",
+              "4c783760962d418aacb9551d72cff375",
+              "face28c35ea547fab13ccab7f01d1199",
+              "31eef324651042d3ac028d1c56474c5f",
+              "c6c7f41794784f9bacb5099de1752a52",
+              "94ca8b73e4944428b681c29c683086c9",
+              "803860ff8acd4477be87bba922e6d751",
+              "8248476f346340edb8424390a6cd18bf",
+              "5e99a87f50a741a6a3901f4cf1efb754",
+              "2e61605d09ac4c5ba2cb0e0f9f7a8bd6",
+              "9cde8aa35a834219826631a84fbab5ac",
+              "136e151686594e0883e98b46a193a1c8",
+              "b9b08462bfde4241a66fd4f11a30f19a",
+              "d96cbee783fb458294a14a88d77c16b3",
+              "03a5a010417a4c0ca8279a849412b436",
+              "6a2ae626128449ffa55e2575fcaa617d",
+              "941f5d40388f4152b069e7c6c61c9df5",
+              "b595b572cc84489da98fba4341e6ffec",
+              "032aecb18a544dc6b0395414af5f3182",
+              "72256d748a3e44cdba6e7b334f569d2f",
+              "2c3bf65f6e7a40f68441bfea13cb4717",
+              "f892fb506c5b4e58a3e2ce9ba4758718",
+              "12c405f2d4ac470792e1e9c98c494631",
+              "1166db4a3c8c4d5f9cc0d229882b8439",
+              "f949cf8018bc49dabfd79ada11451d9f",
+              "448354606b434da5badc82a2e6921d10",
+              "fdbc9859408a45c1b430e0f7b9bf9cae",
+              "95a0aabb0a0c4ff98d09ec5699bff178",
+              "346544b060b14c11bd96b3a91a2985bb",
+              "35294aa24b1f4d338d325a9736475525",
+              "b40d73abca574ed79a6ba1da55a3d985",
+              "c0635dfd9f8e4f9485d4ff9f1adecd61",
+              "db4892089f2f4e838e90d94993588a05",
+              "16b142c5e24e473b83e794cf5ca0365f",
+              "78cfa6c9851f47369db3b44a5557c897",
+              "0a8635e27e624e9fba7801ce437d4de2",
+              "fe4f055201d946019b9161baa0660048",
+              "bc40b7428dd147cdaded93e8722a6edd",
+              "fe607088c79b40c08598e77eab8bf359",
+              "e8c3632a79eb4fd5b3f86e5e1c96f19d",
+              "28873def6bca415cb9e28a91094e761b",
+              "a0d06085b5da45cf902d82a73cc042b9",
+              "00917f86161d4d2fa26ad9402573bd84",
+              "bdba08e88aaa43afaf0981fe1e0a6b1b",
+              "be5936ca01f9489b90f6e232b40d19b8",
+              "73ed21026c454610b543b8cdf895478e",
+              "9acc37c9328f456891edfae53a6cbd64",
+              "261194ba5dea41ff92fa13587d8703b0",
+              "da7ffa0063b047eca1bac1b72b648627",
+              "5951c7f798fd45188fed227497de464d",
+              "4b8c280e0e95498b8717a2c1ab601281",
+              "fc859546a1ee4f9ea6b5d1fd015b3675",
+              "332570c619874d3596f6adab9f7bdb81",
+              "f57c0ea83124421b8010e715b6364199",
+              "b1fc19f56332468aa6924cce2d59ea22",
+              "1d396854bfb0433f9726269325f7ff3d",
+              "d81910548e544d62a6e4e5cfeef9a6ce",
+              "9fcb47725ba34b12ab7ffcc5b4efd3cb",
+              "fae9398c49d14326bd71fbf98c4f075a",
+              "9ef2726c66f542a1a97a50c82796d884",
+              "6bdddeeb39504a099b4be4fb1897b38b",
+              "2cd5e9aac9de44c9a5e2df65946d9f8b",
+              "b6ce438700d34736b97c28dc5f144c31",
+              "393e50fad7914208a4989c0862c8743b",
+              "88b9fc64a8f141ebbb8e24d619eee1e0",
+              "e3c25cfa329e4d279d1ce3765dddba1c",
+              "9c1b3ae2cf794b53bc26d26d60ce9391",
+              "6fb382ed6ebc4cf9a76416df071ec485",
+              "a81676f554e548d193865fb528cef6f2",
+              "75f0235868064714817e4af1aca11394",
+              "d042cc8b42864bf182cf6ce6a683e7e4",
+              "d276b4c77cd545b1a69c27c431618c40",
+              "178724c52adc43acaeecdda87f8d2e00",
+              "5fbc1b3ce21343fdbfb39958042aa101",
+              "71751634c2404d569592b8c7dc34fea0",
+              "91f1b2d27e074682a04e536afda0e72d",
+              "2bcf0d24f9c54482b2420a8c9e341346",
+              "35816a74dfe24d9bb0aaa38719423cdd",
+              "9bb14148365542d7b5cb64a738a8c50f",
+              "c1d7368d623b4b6e881ee1ae6815db98",
+              "603d0a4670724649a5747c51108a9e54",
+              "af3dff2e84074bac87c2a4641242a504",
+              "c1dab21cc3334ff4ad9e1aa3a4693af8",
+              "344e040a9cba4e8780193a5bc8d4c757",
+              "0748c172e42647969759341f18a23c34",
+              "4aed7009d3984dcaa2df15a9ba9fbab1",
+              "74bb3e233f9546c5b08e506ddc3b361f",
+              "4e1248871f6a4d7a8807a572bc1d72aa",
+              "2c965cfb551240c9ac4c4f533eca4993",
+              "ca53f65c23d8454e9f4562ef40cdc8c3",
+              "4f586ff4bd874458ae266247b472e54e",
+              "65c155908c5349beaa522b5c00ef4aaf",
+              "700aa16d59024604bfd066faffa9dc95",
+              "4afc8bbbe9ef4a408af0d97d171df3e4"
+            ],
+            "throttleSpeed": 26.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "a42d279e6753470a9176b7e4cb361d48",
+      "name": "Cube",
+      "parent": "5f324beea12f41cba43bf8bce56d563f",
+      "components": []
+    },
+    {
+      "id": "822d77a3cdc1455bbf92a6869804df71",
+      "name": "Camera",
+      "parent": null,
+      "components": [
+        {
+          "type": "CAMERA",
+          "cameraType": "FOLLOW",
+          "attachControl": true,
+          "keys": {
+            "scheme": "WASD",
+            "up": "W",
+            "down": "S",
+            "left": "A",
+            "right": "D"
+          },
+          "useBlenderTransform": true,
+          "followMode": "OFFSET",
+          "lockRoll": true,
+          "speed": 1.0,
+          "inertia": 0.8999999761581421,
+          "radius": 10.0,
+          "lowerRadius": 0.0,
+          "upperRadius": 0.0,
+          "target": "a42d279e6753470a9176b7e4cb361d48",
+          "distance": 10.0,
+          "height": 4.0,
+          "rotationOffset": 0.0
+        }
+      ],
+      "camera": {
+        "type": "PERSP",
+        "clipStart": 0.10000000149011612,
+        "clipEnd": 100.0,
+        "active": true,
+        "fov": 0.4710899591445923
+      }
+    }
+  ],
+  "debug": true
+}

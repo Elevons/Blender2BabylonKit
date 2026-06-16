@@ -7,9 +7,29 @@ from bpy.props import EnumProperty, IntProperty, BoolProperty
 from bpy.types import Operator
 
 from ..core.ids import ensure_object_id
+from ..core.inspector import inspector_object
 from ..components.constants import COMPONENT_TYPES
 from ..components.exposed_vars import add_list_item
 from ..components.clipboard import copy_component
+
+
+class BJS_OT_toggle_pin(Operator):
+    """Pin the Components panel to the active object so it stays put while you
+    change the viewport selection (toggle off to follow selection again)."""
+    bl_idname = "bjs.toggle_pin"
+    bl_label = "Pin Inspector"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        wm = context.window_manager
+        if wm.bjs_pinned_object is not None:
+            wm.bjs_pinned_object = None
+        else:
+            if context.object is None:
+                self.report({'WARNING'}, "No active object to pin")
+                return {'CANCELLED'}
+            wm.bjs_pinned_object = context.object
+        return {'FINISHED'}
 
 
 class BJS_OT_add_component(Operator):
@@ -20,7 +40,7 @@ class BJS_OT_add_component(Operator):
     comp_type: EnumProperty(items=COMPONENT_TYPES, name="Type")
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if obj is None:
             self.report({'WARNING'}, "No active object")
             return {'CANCELLED'}
@@ -40,8 +60,9 @@ class BJS_OT_assign_id(Operator):
     selected_only: BoolProperty(default=False)
 
     def execute(self, context):
+        single = inspector_object(context)
         targets = context.selected_objects if self.selected_only else (
-            [context.object] if context.object else [])
+            [single] if single else [])
         n = 0
         for obj in targets:
             if obj:
@@ -59,7 +80,7 @@ class BJS_OT_duplicate_component(Operator):
     index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
         new = obj.bjs_components.add()                 # appended at the end
@@ -78,7 +99,7 @@ class BJS_OT_move_component(Operator):
     direction: EnumProperty(items=[('UP', "Up", ""), ('DOWN', "Down", "")])
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not obj:
             return {'CANCELLED'}
         comps = obj.bjs_components
@@ -97,7 +118,7 @@ class BJS_OT_copy_component(Operator):
     index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
         clip = context.window_manager.bjs_clipboard
@@ -115,7 +136,7 @@ class BJS_OT_cut_component(Operator):
     index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
         clip = context.window_manager.bjs_clipboard
@@ -134,11 +155,11 @@ class BJS_OT_paste_component(Operator):
 
     @classmethod
     def poll(cls, context):
-        return (context.object is not None
+        return (inspector_object(context) is not None
                 and len(context.window_manager.bjs_clipboard) > 0)
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         clip = context.window_manager.bjs_clipboard
         if not (obj and len(clip) > 0):
             return {'CANCELLED'}
@@ -158,7 +179,7 @@ class BJS_OT_fit_collider(Operator):
     index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
         comp = obj.bjs_components[self.index]
@@ -184,8 +205,9 @@ class BJS_OT_component_menu(Operator):
     index: IntProperty()
 
     def execute(self, context):
-        if context.object:
-            context.object.bjs_components_index = self.index
+        obj = inspector_object(context)
+        if obj:
+            obj.bjs_components_index = self.index
         bpy.ops.wm.call_menu(name="BJS_MT_component_menu")
         return {'FINISHED'}
 
@@ -198,7 +220,7 @@ class BJS_OT_remove_component(Operator):
     index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if obj and 0 <= self.index < len(obj.bjs_components):
             obj.bjs_components.remove(self.index)
             obj.bjs_components_index = min(self.index, len(obj.bjs_components) - 1)
@@ -214,7 +236,10 @@ class BJS_OT_trigger_event_add(Operator):
     comp_index: IntProperty()
 
     def execute(self, context):
-        comps = context.object.bjs_components
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             comps[self.comp_index].trigger_events.add()
         return {'FINISHED'}
@@ -230,7 +255,10 @@ class BJS_OT_trigger_event_remove(Operator):
     event_index: IntProperty()
 
     def execute(self, context):
-        comps = context.object.bjs_components
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             events = comps[self.comp_index].trigger_events
             if 0 <= self.event_index < len(events):
@@ -247,7 +275,10 @@ class BJS_OT_gui3d_event_add(Operator):
     comp_index: IntProperty()
 
     def execute(self, context):
-        comps = context.object.bjs_components
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             comps[self.comp_index].gui3d_events.add()
         return {'FINISHED'}
@@ -263,7 +294,10 @@ class BJS_OT_gui3d_event_remove(Operator):
     event_index: IntProperty()
 
     def execute(self, context):
-        comps = context.object.bjs_components
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             events = comps[self.comp_index].gui3d_events
             if 0 <= self.event_index < len(events):
@@ -281,7 +315,7 @@ class BJS_OT_list_add(Operator):
     var_index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
             return {'CANCELLED'}
         comp = obj.bjs_components[self.comp_index]
@@ -290,6 +324,46 @@ class BJS_OT_list_add(Operator):
         v = comp.exposed_vars[self.var_index]
         add_list_item(v)
         v.list_index = len(v.list_items) - 1
+        return {'FINISHED'}
+
+
+class BJS_OT_list_add_selected(Operator):
+    """Add every selected object to an ENTITY list var (skips ones already in it)."""
+    bl_idname = "bjs.list_add_selected"
+    bl_label = "Add Selected Objects"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+    var_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+        comp = obj.bjs_components[self.comp_index]
+        if not (0 <= self.var_index < len(comp.exposed_vars)):
+            return {'CANCELLED'}
+        v = comp.exposed_vars[self.var_index]
+        if v.elem_type != 'ENTITY':
+            self.report({'WARNING'}, "Not an entity list")
+            return {'CANCELLED'}
+
+        existing = {item.obj_val for item in v.list_items if item.obj_val is not None}
+        added = 0
+        for picked in context.selected_objects:
+            # Don't add the list's own object to itself, and skip duplicates.
+            if picked is obj or picked in existing:
+                continue
+            item = add_list_item(v)
+            item.obj_val = picked
+            existing.add(picked)
+            added += 1
+
+        if added == 0:
+            self.report({'INFO'}, "No new objects to add")
+            return {'CANCELLED'}
+        v.list_index = len(v.list_items) - 1
+        self.report({'INFO'}, f"Added {added} object(s)")
         return {'FINISHED'}
 
 
@@ -304,7 +378,7 @@ class BJS_OT_list_remove(Operator):
     item_index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
             return {'CANCELLED'}
         comp = obj.bjs_components[self.comp_index]
@@ -317,9 +391,11 @@ class BJS_OT_list_remove(Operator):
 
 
 classes = (
+    BJS_OT_toggle_pin,
     BJS_OT_add_component,
     BJS_OT_assign_id,
     BJS_OT_list_add,
+    BJS_OT_list_add_selected,
     BJS_OT_list_remove,
     BJS_OT_duplicate_component,
     BJS_OT_move_component,

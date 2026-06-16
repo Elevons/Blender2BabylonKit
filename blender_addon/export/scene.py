@@ -98,6 +98,7 @@ def serialize_scene(context, output_dir):
         "clearColor": _round3(s.clear_color) + [1.0],
         "ambientColor": _round3(s.ambient_color),
         "environment": _serialize_environment(context, output_dir),
+        "freezeShadows": bool(s.freeze_shadows),
         "fog": None,
         "postProcessing": None,
     }

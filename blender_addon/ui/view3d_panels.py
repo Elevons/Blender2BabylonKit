@@ -16,6 +16,7 @@ from bpy.types import Panel
 
 from .common import draw_export_controls
 from .component_draw import draw_component
+from ..core.inspector import inspector_object
 
 
 def _nla_strips(obj):
@@ -38,12 +39,23 @@ class BJS_PT_components(Panel):
 
     def draw(self, context):
         layout = self.layout
-        obj = context.object
+        wm = context.window_manager
+        pinned = wm.bjs_pinned_object is not None
+        obj = inspector_object(context)
         if obj is None:
-            layout.label(text="Select an object", icon='INFO')
+            row = layout.row(align=True)
+            row.label(text="Select an object", icon='INFO')
+            row.operator("bjs.toggle_pin", text="",
+                         icon='PINNED' if pinned else 'UNPINNED', depress=pinned)
             return
 
-        layout.label(text=obj.name, icon='OBJECT_DATA')
+        title = layout.row(align=True)
+        title.label(text=obj.name, icon='OBJECT_DATA')
+        title.operator("bjs.toggle_pin", text="",
+                       icon='PINNED' if pinned else 'UNPINNED', depress=pinned)
+        if pinned:
+            layout.label(text="Pinned — select objects, then Add Selected",
+                         icon='PINNED')
 
         obj_id = obj.get("bjs_id")
         id_row = layout.row(align=True)
@@ -74,11 +86,12 @@ class BJS_PT_light_info(Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None and context.object.type == 'LIGHT'
+        obj = inspector_object(context)
+        return obj is not None and obj.type == 'LIGHT'
 
     def draw(self, context):
         layout = self.layout
-        obj = context.object
+        obj = inspector_object(context)
         lamp = obj.data
         layout.label(text=f"Babylon Light · {lamp.type.title()}", icon='LIGHT')
 
@@ -112,6 +125,9 @@ class BJS_PT_light_info(Panel):
             sc.prop(sh, "darkness")
             sc.prop(sh, "min_z")
             sc.prop(sh, "max_z")
+            if lamp.type in {'SUN', 'SPOT'}:
+                sc.prop(sh, "frustum_edge_falloff")
+            sc.prop(sh, "force_back_faces")
         layout.label(text="Exported automatically — no component needed", icon='INFO')
 
 
@@ -126,11 +142,12 @@ class BJS_PT_camera_info(Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None and context.object.type == 'CAMERA'
+        obj = inspector_object(context)
+        return obj is not None and obj.type == 'CAMERA'
 
     def draw(self, context):
         layout = self.layout
-        obj = context.object
+        obj = inspector_object(context)
         cam = obj.data
         layout.label(text=f"Babylon Camera · {cam.type.title()}", icon='CAMERA_DATA')
         if obj == context.scene.camera:
@@ -157,11 +174,12 @@ class BJS_PT_animation_info(Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.object is not None and len(_nla_strips(context.object)) > 0
+        obj = inspector_object(context)
+        return obj is not None and len(_nla_strips(obj)) > 0
 
     def draw(self, context):
         layout = self.layout
-        obj = context.object
+        obj = inspector_object(context)
         a = obj.bjs_animation
         col = layout.column()
         col.use_property_split = True

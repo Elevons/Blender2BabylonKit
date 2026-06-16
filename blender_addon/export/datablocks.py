@@ -27,6 +27,8 @@ def serialize_light(obj):
             "minZ": sh.min_z,            # 0 = auto
             "maxZ": sh.max_z,            # 0 = auto
             "filter": sh.filter,         # PCF / PCSS / POISSON / BLUR_ESM / NONE
+            "forceBackFaces": bool(sh.force_back_faces),
+            "frustumEdgeFalloff": sh.frustum_edge_falloff,
         }
     return info
 

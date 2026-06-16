@@ -4,6 +4,8 @@ Delete), opened from each component header in the inspector."""
 import bpy
 from bpy.types import Menu
 
+from ..core.inspector import inspector_object
+
 
 class BJS_MT_component_menu(Menu):
     """Per-component actions (opened from the header dropdown)."""
@@ -12,7 +14,7 @@ class BJS_MT_component_menu(Menu):
 
     def draw(self, context):
         layout = self.layout
-        obj = context.object
+        obj = inspector_object(context)
         idx = obj.bjs_components_index if obj else 0
         n = len(obj.bjs_components) if obj else 0
 

@@ -100,7 +100,7 @@ async function Main(): Promise<void>
 
   const registry = RegisterBehaviors();
   const loader = new LevelLoader(scene, registry);
-  const level = await loader.Load("/levels/Untitled.scene.json");
+  const level = await loader.Load("/levels/Train Scene/Train Scene.scene.json");
 
   CreateFallbackCameraIfNeeded(scene, canvas);
   BindDebugKeys(scene, level);

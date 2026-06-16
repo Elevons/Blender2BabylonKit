@@ -1609,11 +1609,15 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "BuildTypedCamera",
           "sub": "CAMERA component",
-          "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset).",
+          "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset). Free-fly cameras honor a Keep Upright toggle (lockRoll): LockCameraRoll bakes the world pose, detaches the orientation-correction parent, and pins look-at to world up so yaw/pitch stay level.",
           "meta": [
             [
               "Targets",
               "resolve in second pass"
+            ],
+            [
+              "Keep Upright",
+              "lockRoll → world-axis rotation"
             ]
           ]
         },
@@ -1625,11 +1629,11 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Shadows",
           "sub": "subsystems/shadows.ts",
-          "desc": "One ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light: filter (PCF/PCSS/Poisson/BlurESM/hard), bias, normalBias, darkness, mapSize, frustum minZ/maxZ on the light.",
+          "desc": "One ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light: filter (PCF/PCSS/Poisson/BlurESM/hard), bias, normalBias, darkness, mapSize, frustum minZ/maxZ on the light, frustumEdgeFalloff, forceBackFaces. Anti-acne defaults: normalBias floor (0.02 sun / 0.03 point-spot) + auto-tightened depth range (autoCalcShadowZBounds on suns, shadowMaxZ = range on point/spot) when not overridden. Static-world freeze (scene flag / freezeShadows) bakes maps once (RENDER_ONCE); level.RefreshShadows() re-arms.",
           "meta": [
             [
               "Options",
-              "{ shadows?, shadowMapSize? }"
+              "{ shadows?, shadowMapSize?, freezeShadows?, cleanBoneMatrixWeights? }"
             ],
             [
               "Exposed",

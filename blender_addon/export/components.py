@@ -144,6 +144,7 @@ def serialize_components(obj, output_dir):
                 },
                 "useBlenderTransform": bool(c.cam_use_blender_transform),
                 "followMode": c.cam_follow_mode,
+                "lockRoll": bool(c.cam_lock_roll),
                 "speed": c.cam_speed,
                 "inertia": c.cam_inertia,
                 "radius": c.cam_radius,

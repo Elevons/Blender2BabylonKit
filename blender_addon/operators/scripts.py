@@ -6,6 +6,7 @@ from bpy.props import IntProperty, StringProperty, BoolProperty
 from bpy.types import Operator
 
 from ..core import script_parse
+from ..core.inspector import inspector_object
 from ..components.exposed_vars import sync_exposed_vars
 
 
@@ -36,7 +37,7 @@ class BJS_OT_pick_script(Operator):
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
             self.report({'WARNING'}, "Invalid component")
             return {'CANCELLED'}
@@ -65,7 +66,7 @@ class BJS_OT_sync_vars(Operator):
     comp_index: IntProperty()
 
     def execute(self, context):
-        obj = context.object
+        obj = inspector_object(context)
         if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):
             return {'CANCELLED'}
         comp = obj.bjs_components[self.comp_index]

@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "tools/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace apps/playground",
@@ -16,7 +17,9 @@
     "docs:trace": "node scripts/build-trace-docs.mjs",
     "docs:blender": "node scripts/build-blender-docs.mjs",
     "docs:landing": "node scripts/build-landing.mjs",
-    "input:gen": "node scripts/generate-input-constants.mjs"
+    "input:gen": "node scripts/generate-input-constants.mjs",
+    "mcp:build": "npm run build --workspace @bjs/mcp",
+    "mcp:start": "npm run start --workspace @bjs/mcp"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

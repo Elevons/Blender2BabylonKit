@@ -24,6 +24,13 @@ class BJSSceneSettings(PropertyGroup):
         name="Create Skybox", default=True,
         description="Build a skybox from the World environment texture")
 
+    # Shadows
+    freeze_shadows: BoolProperty(
+        name="Freeze Shadows", default=False,
+        description="Render each shadow map once and freeze it. Big performance "
+                    "win for a fully static level, but moving objects won't update "
+                    "their shadows (call level.RefreshShadows() after moving one)")
+
     # Fog
     use_fog: BoolProperty(name="Enable Fog", default=False)
     fog_mode: EnumProperty(name="Mode", items=[

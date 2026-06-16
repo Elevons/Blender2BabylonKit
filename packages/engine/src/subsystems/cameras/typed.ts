@@ -44,6 +44,38 @@ function CopyLens(source: Camera, destination: Camera): void
   }
 }
 
+/**
+ * Keep a free-look camera level with the horizon. A free camera only stays
+ * upright when it rotates in WORLD space: Babylon builds an upright local view
+ * but then re-multiplies it by the parent's world matrix, so the glb camera's
+ * orientation-correction parent tilts every yaw/pitch. We bake the current
+ * world pose, detach from that parent, and pin look-at to world up; a per-frame
+ * guard drops any residual roll (e.g. from gamepad/touch input).
+ */
+function LockCameraRoll(camera: FreeCamera): void
+{
+  if (camera.parent !== null)
+  {
+    const worldPosition = camera.getWorldMatrix().getTranslation();
+    const worldForward = camera.getForwardRay().direction.normalize();
+    camera.parent = null;
+    camera.position.copyFrom(worldPosition);
+    camera.rotationQuaternion = null;
+    camera.setTarget(worldPosition.add(worldForward));
+  }
+  else if (camera.rotationQuaternion !== null && camera.rotationQuaternion !== undefined)
+  {
+    camera.rotationQuaternion.toEulerAnglesToRef(camera.rotation);
+    camera.rotationQuaternion = null;
+  }
+
+  camera.upVector.set(0, 1, 0);
+  camera.onAfterCheckInputsObservable.add(() =>
+  {
+    camera.rotation.z = 0;
+  });
+}
+
 /** Apply speed/inertia/keys/attach to a free-fly camera from the component. */
 function ConfigureFreeCamera(camera: FreeCamera, cameraComponent: CameraComponent): void
 {
@@ -57,6 +89,11 @@ function ConfigureFreeCamera(camera: FreeCamera, cameraComponent: CameraComponen
   }
 
   ApplyCameraKeys(camera, cameraComponent.keys);
+
+  if (cameraComponent.lockRoll)
+  {
+    LockCameraRoll(camera);
+  }
 
   if (cameraComponent.attachControl)
   {
@@ -194,12 +231,14 @@ export function BuildTypedCamera(
   }
 
   // Derive world position + forward from the faithful camera, then replace it.
-  // (Camera.computeWorldMatrix takes no "force" arg; ray length is irrelevant
-  // since only the origin and normalized direction are used.)
-  sourceCamera.computeWorldMatrix();
-  const forwardRay = sourceCamera.getForwardRay();
-  const eyePosition = forwardRay.origin.clone();
-  const forwardDirection = forwardRay.direction.normalize();
+  // Blender parents the glb camera under an orientation-correction node, so its
+  // transform lives on the parent chain and camera.position is the (≈origin)
+  // LOCAL offset. getForwardRay's origin is that local position, so we take the
+  // eye from the world matrix translation instead; only the ray's (world-space)
+  // direction is reliable.
+  const worldMatrix = sourceCamera.computeWorldMatrix();
+  const eyePosition = worldMatrix.getTranslation();
+  const forwardDirection = sourceCamera.getForwardRay().direction.normalize();
   const cameraName = sourceCamera.name + "_" + cameraComponent.cameraType.toLowerCase();
 
   let result: TypedCameraResult;

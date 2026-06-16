@@ -19,17 +19,7 @@
       "rotationY": 0.0,
       "createSkybox": true
     },
-    "fog": {
-      "mode": "EXP2",
-      "color": [
-        0.0603,
-        0.071,
-        0.0816
-      ],
-      "density": 0.0010000000474974513,
-      "start": 10.0,
-      "end": 100.0
-    },
+    "fog": null,
     "postProcessing": null,
     "inputActions": {
       "maps": [
@@ -165,6 +155,28 @@
                   "index": 1
                 }
               ]
+            },
+            {
+              "name": "Throttle Up",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "w"
+                }
+              ]
+            },
+            {
+              "name": "Throttle Down",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "s"
+                }
+              ]
             }
           ]
         }
@@ -188,9 +200,9 @@
         "energy": 2.0,
         "castShadows": true,
         "shadow": {
-          "mapSize": 0,
-          "bias": 4.999999873689376e-05,
-          "normalBias": 0.0,
+          "mapSize": 3,
+          "bias": 0.0010000000474974513,
+          "normalBias": 0.10000000149011612,
           "darkness": 0.0,
           "minZ": 0.0,
           "maxZ": 0.0,
@@ -236,7 +248,7 @@
       "components": [
         {
           "type": "CAMERA",
-          "cameraType": "FREE",
+          "cameraType": "ARC",
           "attachControl": true,
           "keys": {
             "scheme": "ARROWS",
@@ -249,10 +261,10 @@
           "followMode": "OFFSET",
           "speed": 1.0,
           "inertia": 0.8999999761581421,
-          "radius": 10.0,
-          "lowerRadius": 0.0,
-          "upperRadius": 0.0,
-          "target": null,
+          "radius": 140.0,
+          "lowerRadius": 10.0,
+          "upperRadius": 100.0,
+          "target": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
           "distance": 10.0,
           "height": 4.0,
           "rotationOffset": 0.0
@@ -261,9 +273,9 @@
       "camera": {
         "type": "PERSP",
         "clipStart": 0.10000000149011612,
-        "clipEnd": 1000.0,
-        "active": false,
-        "fov": 0.4710899591445923
+        "clipEnd": 10000.0,
+        "active": true,
+        "fov": 0.38236892223358154
       }
     },
     {
@@ -474,30 +486,18 @@
         },
         {
           "type": "SCRIPT",
-          "script": "CarController",
-          "path": "//../Projects/Blender2BabylonKit/apps/playground/src/behaviors/CarController.ts",
+          "script": "TrainBehavior",
+          "path": "//../Projects/Blender2BabylonKit/apps/playground/src/behaviors/TrainBehavior.ts",
           "vars": {
-            "chassis": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
-            "frontWheels": [
-              "4741bcd5208c4f8d87fdf5da1d80c83d",
-              "48157102c73940d9a160244686189272"
+            "easing": "easeInOut",
+            "targets": [
+              "7b8676d150c548069ea40beca5730235",
+              "186679b9e2dd4bf2a6152c57e04ef12f",
+              "7b8676d150c548069ea40beca5730235",
+              "613f6d5af0d547569f54e437b13232fc",
+              "6a12231127d3413e8f1f0d0006c326ae"
             ],
-            "rearWheels": [
-              "ecbf5216cfdd4b41a7a1ea1f20e7fbdc",
-              "217e0c1f17cf45659567913d638d89c6"
-            ],
-            "topSpeed": 18.0,
-            "acceleration": 14.0,
-            "turnRate": 2.200000047683716,
-            "boostMultiplier": 1.600000023841858,
-            "padBoostSeconds": 2.0,
-            "handling": "normal",
-            "forwardAxis": [
-              0.0,
-              0.0,
-              -1.0
-            ],
-            "wheelRollSign": 1.0
+            "throttleSpeed": 200.0
           }
         }
       ]
@@ -631,19 +631,34 @@
       ]
     },
     {
-      "id": "ce48d96956944461b0763a8382a26411",
-      "name": "Plane.001",
+      "id": "186679b9e2dd4bf2a6152c57e04ef12f",
+      "name": "Empty",
       "parent": null,
-      "components": [
-        {
-          "type": "GUI",
-          "file": "gui/guiTexture_3.json",
-          "mode": "MESH",
-          "foreground": true,
-          "width": 1024,
-          "height": 1024
-        }
-      ]
+      "components": []
+    },
+    {
+      "id": "7b8676d150c548069ea40beca5730235",
+      "name": "Empty.001",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "613f6d5af0d547569f54e437b13232fc",
+      "name": "Empty.002",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "382d8d9ada074a63974c8b8f4a15e086",
+      "name": "Empty.003",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "6a12231127d3413e8f1f0d0006c326ae",
+      "name": "Empty.004",
+      "parent": null,
+      "components": []
     }
   ],
   "debug": true

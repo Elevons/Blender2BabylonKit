@@ -54,6 +54,10 @@ class BJS_PT_scene_rendering(Panel):
         else:
             box.label(text="No World environment texture", icon='ERROR')
 
+        sbox = layout.box()
+        sbox.label(text="Shadows", icon='MOD_OPACITY')
+        sbox.prop(s, "freeze_shadows")
+
 
 class BJS_PT_scene_fog(Panel):
     bl_label = "Fog"

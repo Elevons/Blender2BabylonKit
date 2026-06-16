@@ -71,6 +71,7 @@ export interface CameraComponent {
   keys: CameraKeys;       // key bindings when controls are attached (not FOLLOW)
   useBlenderTransform: boolean; // FOLLOW/ORBIT: derive radius/height/angle from the exported camera
   followMode: "ORBIT" | "OFFSET"; // FOLLOW: orbit with target yaw, or keep a fixed world offset
+  lockRoll: boolean;     // FREE/UNIVERSAL: lock roll (Z axis) so the camera stays upright
   speed: number;
   inertia: number;
   radius: number;        // ARC: orbit distance
@@ -286,6 +287,8 @@ export interface ShadowSettings {
   minZ?: number;       // light.shadowMinZ; 0 = auto
   maxZ?: number;       // light.shadowMaxZ; 0 = auto
   filter?: "PCF" | "PCSS" | "POISSON" | "BLUR_ESM" | "NONE";
+  forceBackFaces?: boolean;      // render only back faces into the shadow map (acne fix)
+  frustumEdgeFalloff?: number;   // 0 = hard frustum edge, 1 = full fade (dir/spot only)
 }
 
 export interface LightInfo {
@@ -357,6 +360,8 @@ export interface SceneInfo {
   environment?: EnvironmentInfo | null;
   fog?: FogInfo | null;
   postProcessing?: PostProcessingInfo | null;
+  /** Freeze shadow maps after the first render (static-world optimization). */
+  freezeShadows?: boolean;
   /** The scene's Input Actions asset (Blender "Input Actions" panel). */
   inputActions?: InputActionAssetData | null;
   /** Map name injected when a script has no @inputMap (default "Player"). */
