@@ -73,7 +73,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Live Link",
           "sub": "save_post hook",
-          "desc": "Ctrl+S re-exports using the remembered path; the app's Vite plugin watches *.scene.json and full-reloads the browser. Save in Blender, see it in Babylon.",
+          "desc": "Ctrl+S re-exports using the remembered path; the app's Vite plugin watches all files under public/levels/ (path.resolve matching; 50ms debounce) and full-reloads the browser — not only .scene.json, so replaced env HDRs still refresh.",
           "meta": [
             [
               "Module",
@@ -153,7 +153,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Physics",
           "sub": "bodies + owned meshes",
-          "desc": "COLLIDER/RIGIDBODY become one Havok V2 body per node. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.",
+          "desc": "COLLIDER/RIGIDBODY become one Havok V2 body per node. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.",
           "meta": [
             [
               "File",
@@ -173,7 +173,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Constraints",
           "sub": "joints",
-          "desc": "Fixed/Ball/Hinge/Slider/Spring/Custom 6DoF. Frame from live world transforms (pins as-placed pose); hinge/slider motors; CUSTOM = per-axis free/locked/limited/spring on one joint.",
+          "desc": "Fixed/Ball/Hinge/Slider/Spring/Custom 6DoF. Frame from live world transforms (pins as-placed pose); hinge/slider motors; CUSTOM = per-axis free/locked/limited/spring on one joint. Bodies Collide (collision, default off) → Havok isCollisionsEnabled for that body pair only.",
           "meta": [
             [
               "File",
@@ -471,7 +471,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Data model",
           "sub": "components/",
-          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene).",
+          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene): clear/ambient, Default Environment, Show Skybox, Skybox Ignores Fog, fog, freeze shadows.",
           "meta": [
             [
               "Identity",
@@ -571,7 +571,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene block",
           "sub": "export/scene.py",
-          "desc": "Clear/ambient color, environment texture (copied next to export), fog, post-processing, inputActions + defaultInputMap. Scene data edited via scene/settings.py; inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
+          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/, or useDefault when Default Environment is enabled; createSkybox; skyboxIgnoreFog when skybox on), fog, post-processing (via export/post_processing.py), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
           "meta": [
             [
               "Manifest key",
@@ -989,7 +989,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "SetupShadows → ApplyScene (env/fog/post) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls (panels first, then controls + click wiring) → Level.Begin → debugColliders (gated by Debug Build).",
+          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1349,7 +1349,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "BuildPhysics",
           "sub": "dispatch",
-          "desc": "One COLLIDER and/or RIGIDBODY → one node-attached PhysicsBody. collider-only=static/trigger; body-only=dynamic+auto box; both=shape from collider, dynamics from body. KINEMATIC→ANIMATED.",
+          "desc": "One COLLIDER and/or RIGIDBODY → one node-attached PhysicsBody. collider-only=static/trigger; body-only=dynamic+auto box; both=shape from collider, dynamics from body. bodyType ANIMATED→PhysicsMotionType.ANIMATED; startAsleep on DYNAMIC.",
           "meta": [
             [
               "File",
@@ -1453,7 +1453,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Constraints",
           "sub": "subsystems/constraints.ts",
-          "desc": "CONSTRAINT components → joints in FinalizeLevel (both bodies exist). FIXED→Lock, BALL→BallAndSocket, HINGE/SLIDER/SPRING/CUSTOM→6DoF (frame X = authored axis). CUSTOM: manifest axes[] → BuildCustomAxisLimits (free/locked/limited/spring per DOF).",
+          "desc": "CONSTRAINT components → joints in FinalizeLevel (both bodies exist). FIXED→Lock, BALL→BallAndSocket, HINGE/SLIDER/SPRING/CUSTOM→6DoF (frame X = authored axis). collision (Bodies Collide) → isCollisionsEnabled on every joint type. CUSTOM: manifest axes[] → BuildCustomAxisLimits (free/locked/limited/spring per DOF).",
           "meta": [
             [
               "Frame",
@@ -1649,11 +1649,15 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene look",
           "sub": "environment / fog / postprocess",
-          "desc": "From the manifest scene block in FinalizeLevel: clear/ambient color; env texture → IBL (+skybox; .env best, .exr impossible); fog LINEAR/EXP/EXP2; BuildDefaultPipeline (FXAA/bloom/tone) + separate SSAO2 → level.post.",
+          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; waits for texture before skybox; .env / useDefault skybox uses EnvironmentHelper with large size + infiniteDistance; createSkybox off = IBL only; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
           "meta": [
             [
               "Attach",
-              "active camera"
+              "active camera after Begin"
+            ],
+            [
+              "Blender",
+              "Properties › Scene › Post-Processing"
             ]
           ]
         },
@@ -2106,7 +2110,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Live Link loop",
           "sub": "save → see",
-          "desc": "Export once (path remembered per scene) → tick Live Link → Ctrl+S re-exports (save_post) → Vite plugin watches public/levels/*.scene.json → full reload. Manifest written after glb so both are ready.",
+          "desc": "Export once (path remembered per scene) → tick Live Link → Ctrl+S re-exports (save_post) → Vite plugin watches all files under public/levels/ (path.resolve; 50ms debounce) → full reload. Manifest written after glb so both are ready.",
           "meta": [
             [
               "Blender",

@@ -14,7 +14,9 @@ Per-object settings live in the 3D viewport N-panel — see view3d_panels.py.
 import bpy
 from bpy.types import Panel
 
+from ..scene.environment import find_world_env_node
 from .common import draw_export_controls
+from .post_panels import classes as post_panel_classes
 
 
 class BJS_PT_scene(Panel):
@@ -48,11 +50,23 @@ class BJS_PT_scene_rendering(Panel):
 
         box = layout.box()
         box.label(text="Environment", icon='WORLD')
-        box.prop(s, "create_skybox")
-        if context.scene.world and context.scene.world.use_nodes:
-            box.label(text="Texture read from World nodes", icon='INFO')
+        ecol = box.column()
+        ecol.use_property_split = True
+        ecol.prop(s, "use_default_environment")
+        ecol.prop(s, "create_skybox")
+        fog_row = ecol.row()
+        fog_row.enabled = s.create_skybox
+        fog_row.prop(s, "skybox_ignore_fog")
+        world = context.scene.world
+        has_world_env = world and world.use_nodes and find_world_env_node(world)
+        if has_world_env:
+            box.label(text="IBL texture from World Output surface", icon='INFO')
+        elif s.use_default_environment:
+            box.label(text="Built-in studio environment at runtime", icon='INFO')
         else:
-            box.label(text="No World environment texture", icon='ERROR')
+            box.label(
+                text="No environment — enable Default Environment or add a World texture",
+                icon='ERROR')
 
         sbox = layout.box()
         sbox.label(text="Shadows", icon='MOD_OPACITY')
@@ -87,40 +101,6 @@ class BJS_PT_scene_fog(Panel):
             c.prop(s, "fog_density")
 
 
-class BJS_PT_scene_post(Panel):
-    bl_label = "Post-Processing"
-    bl_idname = "BJS_PT_scene_post"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
-    bl_parent_id = "BJS_PT_scene"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    def draw_header(self, context):
-        self.layout.prop(context.scene.bjs_scene, "use_pipeline", text="")
-
-    def draw(self, context):
-        layout = self.layout
-        s = context.scene.bjs_scene
-        layout.active = s.use_pipeline
-
-        c = layout.column()
-        c.prop(s, "use_fxaa")
-        c.prop(s, "use_ssao")
-        c.prop(s, "use_bloom")
-        if s.use_bloom:
-            sub = c.column()
-            sub.use_property_split = True
-            sub.prop(s, "bloom_threshold")
-            sub.prop(s, "bloom_intensity")
-        c.prop(s, "use_tone_mapping")
-        if s.use_tone_mapping:
-            sub = c.column()
-            sub.use_property_split = True
-            sub.prop(s, "exposure")
-            sub.prop(s, "contrast")
-
-
 class BJS_PT_scene_export(Panel):
     bl_label = "Export"
     bl_idname = "BJS_PT_scene_export"
@@ -137,6 +117,6 @@ classes = (
     BJS_PT_scene,
     BJS_PT_scene_rendering,
     BJS_PT_scene_fog,
-    BJS_PT_scene_post,
+    *post_panel_classes,
     BJS_PT_scene_export,
 )

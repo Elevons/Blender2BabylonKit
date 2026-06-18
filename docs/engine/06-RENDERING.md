@@ -68,11 +68,154 @@ over these defaults.
 
 ## Scene look (`environment.ts`, `fog.ts`, `postprocess.ts`)
 
-From the manifest's `scene` block, applied in `FinalizeLevel`: clear/ambient
-color; environment texture → IBL (+ optional skybox; `.env` preferred, `.hdr`
-supported, `.exr` impossible in-browser); fog (LINEAR/EXP/EXP2);
-post-processing — `BuildDefaultPipeline` (FXAA, bloom, tone mapping / exposure
-/ contrast) plus a separate SSAO2 pipeline, attached to the active camera,
-handles on `level.post`.
+From the manifest's `scene` block: clear/ambient color, environment texture →
+IBL, fog (LINEAR/EXP/EXP2), and post-processing are applied in
+`await ApplySceneSettings` during `FinalizeLevel` (environment loads
+asynchronously — the skybox is created only after the env texture is ready).
+Post-processing is applied **after**
+`level.Begin()` so behaviors that create a runtime camera in `OnStart` (e.g. a
+script-built `UniversalCamera`) receive the stack on the camera that is actually
+active.
+
+### Environment / IBL (`subsystems/environment.ts`)
+
+Image-based lighting comes from `scene.environmentTexture`. Without an
+`environment` block in the manifest, PBR materials get no cubemap — only direct
+lamps and the optional `ambientColor` fill.
+
+**Authoring (Properties › Scene › Babylon › Rendering › Environment):**
+
+| Blender setting | Manifest | Runtime |
+|---|---|---|
+| World environment texture | `environment.file` | Copied to `env/` when wired to **World Output → Surface** (Background → env/image texture); orphaned textures in the node editor are ignored |
+| **Default Environment** | `environment.useDefault: true` | Loads Babylon's built-in studio HDR from the CDN at runtime (no file exported) |
+| **Show Skybox** | `environment.createSkybox` | When `true`, shows the background; when `false`, IBL only. `.env` / `useDefault` use Babylon's DDS skybox via `EnvironmentHelper` (large size + `infiniteDistance`); HDR/equirect use `createDefaultSkybox` |
+| **Skybox Ignores Fog** | `environment.skyboxIgnoreFog` | When `true` (and skybox is on), sets `mesh.applyFog = false` so scene fog does not wash out the background |
+
+A World texture always wins over **Default Environment**. Export copies World
+textures through `copy_asset` / `save_image_asset` with
+`sanitize_asset_filename()` (spaces and unsafe characters → URL-safe names under
+`env/`). World texture discovery is shared by export and the scene UI in
+`scene/environment.py` (`find_world_env_node` traces **World Output → Surface →
+Background → env/image** only — orphan nodes in the node editor are ignored).
+
+`useDefault` loads Babylon's built-in studio `.env` from the CDN at runtime — the
+player needs network access. Format handling at load: `.env` (Babylon prefiltered
+cube — recommended) → `CubeTexture`; `.hdr` → `HDRCubeTexture`; anything else →
+equirectangular. `.exr` is not loadable in-browser.
+
+`ApplyEnvironment` is async: it awaits `WhenTextureReady` (30s timeout) before
+creating a skybox so `createDefaultSkybox` does not clone an empty cube map on
+the first Live Link reload.
+
+#### Manifest example
+
+```json
+"environment": {
+  "useDefault": true,
+  "intensity": 1,
+  "rotationY": 0,
+  "createSkybox": false
+}
+```
+
+With skybox and fog (exports `skyboxIgnoreFog` when **Show Skybox** is on):
+
+```json
+"environment": {
+  "useDefault": true,
+  "intensity": 1,
+  "rotationY": 0,
+  "createSkybox": true,
+  "skyboxIgnoreFog": true
+}
+```
+
+Or with an authored World texture:
+
+```json
+"environment": {
+  "file": "env/sky.env",
+  "intensity": 1,
+  "rotationY": 0,
+  "createSkybox": false
+}
+```
+
+Omit `"environment"` (or set it to `null`) when neither a World texture nor
+**Default Environment** is configured. `skyboxIgnoreFog` is only exported when
+`createSkybox` is `true`; older manifests without it keep Babylon's default
+(skybox is fogged).
+
+### Post-processing (`subsystems/postprocess.ts`)
+
+Handles land on `level.post` (`PostProcessingHandles`: `pipeline?`,
+`ssao?`). Use `RetargetPostProcessing(handles, camera)` if gameplay swaps the
+active camera later.
+
+When `scene.postProcessing.defaultPipeline` is true, the runtime builds Babylon's
+`DefaultRenderingPipeline` (HDR on). Supported effects:
+
+| Effect | Manifest keys | Notes |
+|---|---|---|
+| MSAA | `msaaSamples` (1–8) | WebGL 2 only; 1 = off |
+| FXAA | `fxaa` | Fast approximate AA on the pipeline texture |
+| Bloom | `bloom.{enabled,threshold,intensity,kernel?,scale?}` | Tone mapping auto-enabled when bloom is on (HDR) |
+| Sharpen | `sharpen.{enabled,edgeAmount?,colorAmount?}` | |
+| Depth of field | `depthOfField.{enabled,blurLevel?,focusDistance?,focalLength?,fStop?}` | `blurLevel`: LOW / MEDIUM / HIGH |
+| Chromatic aberration | `chromaticAberration.{enabled,aberrationAmount?,radialIntensity?,directionX?,directionY?}` | direction 0,0 → radial |
+| Grain | `grain.{enabled,intensity?,animated?}` | |
+| Glow layer | `glow.{enabled,blurKernelSize?,intensity?}` | Emissive-material glow |
+| Tone mapping | `toneMapping`, `toneMappingType?` | STANDARD / ACES (default) / KHR_PBR_NEUTRAL |
+| Exposure / contrast | `exposure`, `contrast` | Image-processing pass |
+| Vignette | `vignette.{enabled,weight?,stretch?,centerX?,centerY?}` | |
+| Color grading LUT | `colorGrading.{enabled,file}` | `.3dl` or `.png` under `post/` |
+| Color curves | `colorCurves.{enabled,globalHue?,…}` | Global / highlights / midtones / shadows |
+| SSAO | `ssao`, `ssaoSettings?` | Separate `SSAO2RenderingPipeline` (`radius`, `totalStrength`, `samples`, `maxZ`) |
+
+**Not yet implemented** (separate Babylon pipelines, not part of the default
+stack): SSR, TAA, motion blur, IBL shadows.
+
+#### Manifest example
+
+```json
+"postProcessing": {
+  "defaultPipeline": true,
+  "fxaa": true,
+  "msaaSamples": 4,
+  "bloom": { "enabled": true, "threshold": 0.9, "intensity": 0.5, "kernel": 64, "scale": 0.5 },
+  "ssao": true,
+  "ssaoSettings": { "radius": 2, "totalStrength": 1, "samples": 8 },
+  "toneMapping": true,
+  "toneMappingType": "ACES",
+  "exposure": 1,
+  "contrast": 1,
+  "sharpen": { "enabled": false, "edgeAmount": 0.3, "colorAmount": 1 },
+  "depthOfField": { "enabled": false, "blurLevel": "LOW", "focusDistance": 2000, "focalLength": 50, "fStop": 1.4 },
+  "chromaticAberration": { "enabled": false, "aberrationAmount": 30 },
+  "grain": { "enabled": false, "intensity": 30, "animated": false },
+  "glow": { "enabled": false, "blurKernelSize": 16, "intensity": 1 },
+  "vignette": { "enabled": false, "weight": 1.5 },
+  "colorGrading": { "enabled": false, "file": "post/LateSunset.3dl" },
+  "colorCurves": { "enabled": false, "globalHue": 30 }
+}
+```
+
+Omit optional effect blocks when disabled; older manifests with only
+`fxaa` / `bloom` / `toneMapping` / `exposure` / `contrast` still load.
+
+### Blender UI
+
+**Properties › Scene › Babylon › Rendering › Environment** (`ui/scene_panels.py`).
+**Default Environment** (IBL without a World texture), **Show Skybox**
+(IBL-only background when off), and **Skybox Ignores Fog** (disabled when Show
+Skybox is off). The panel previews the texture on the active World Output chain
+via `scene/environment.py`.
+
+**Properties › Scene › Babylon › Post-Processing** (`ui/post_panels.py`).
+Settings live on `scene.bjs_scene.post` (`scene/post_processing.py`). Export
+serialization is in `export/post_processing.py` (LUT files copied via
+`copy_asset` → `post/`). Exposure/contrast export as `1.0` when tone mapping
+is off so stale panel values do not crush the image.
 
 Continue: [Audio & Animation →](07-AUDIO-ANIMATION.md)

@@ -3,9 +3,9 @@
   "glb": "Train Scene.glb",
   "scene": {
     "clearColor": [
-      0.0096,
-      0.1704,
-      0.314,
+      0.0055,
+      0.076,
+      0.1364,
       1.0
     ],
     "ambientColor": [
@@ -13,10 +13,54 @@
       0.0,
       0.0
     ],
-    "environment": null,
+    "environment": {
+      "file": "env/UNDERWATER-04SN_28.hdr",
+      "intensity": 0.10000000149011612,
+      "rotationY": 0.0,
+      "createSkybox": true,
+      "skyboxIgnoreFog": true
+    },
     "freezeShadows": false,
-    "fog": null,
-    "postProcessing": null,
+    "fog": {
+      "mode": "LINEAR",
+      "color": [
+        0.0097,
+        0.1714,
+        0.314
+      ],
+      "density": 0.009999999776482582,
+      "start": 20.0,
+      "end": 75.0
+    },
+    "postProcessing": {
+      "defaultPipeline": true,
+      "fxaa": true,
+      "msaaSamples": 3,
+      "bloom": {
+        "enabled": false,
+        "threshold": 0.8999999761581421,
+        "intensity": 0.5,
+        "kernel": 64,
+        "scale": 0.5
+      },
+      "ssao": false,
+      "toneMapping": true,
+      "exposure": 1.0,
+      "contrast": 1.5,
+      "toneMappingType": "STANDARD",
+      "sharpen": {
+        "enabled": true,
+        "edgeAmount": 0.30000001192092896,
+        "colorAmount": 1.0
+      },
+      "vignette": {
+        "enabled": true,
+        "weight": 1.5,
+        "stretch": 0.0,
+        "centerX": 0.0,
+        "centerY": 0.0
+      }
+    },
     "inputActions": {
       "maps": [
         {
@@ -182,6 +226,37 @@
   },
   "entities": [
     {
+      "id": "ade68f5e583043019fc6d40e5c62768b",
+      "name": "Plane",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
       "id": "5abbfcb86c394b88a7b8ffa2a3654cd5",
       "name": "Sun",
       "parent": null,
@@ -196,15 +271,15 @@
         "energy": 1.0,
         "castShadows": true,
         "shadow": {
-          "mapSize": 4096,
+          "mapSize": 8092,
           "bias": 0.004999999888241291,
-          "normalBias": 0.10000000149011612,
+          "normalBias": 0.05000000074505806,
           "darkness": 0.0,
           "minZ": 0.0,
           "maxZ": 0.0,
           "filter": "PCF",
-          "forceBackFaces": true,
-          "frustumEdgeFalloff": 0.0
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 1.0
         }
       }
     },
@@ -1409,8 +1484,33 @@
       "components": []
     },
     {
-      "id": "5f324beea12f41cba43bf8bce56d563f",
-      "name": "TrainParent",
+      "id": "822d77a3cdc1455bbf92a6869804df71",
+      "name": "Camera",
+      "parent": null,
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "TrainCamera",
+          "path": "//../src/behaviors/TrainCamera.ts",
+          "vars": {
+            "target": "ed674ceae6ab4b15bb5c886e44ed6125",
+            "orbitSpeed": 10.0,
+            "radius": 30.0,
+            "heightOffset": 10.0
+          }
+        }
+      ],
+      "camera": {
+        "type": "PERSP",
+        "clipStart": 0.10000000149011612,
+        "clipEnd": 10000.0,
+        "active": true,
+        "fov": 0.4710899591445923
+      }
+    },
+    {
+      "id": "ed674ceae6ab4b15bb5c886e44ed6125",
+      "name": "Train Parent",
       "parent": null,
       "components": [
         {
@@ -1621,54 +1721,406 @@
               "700aa16d59024604bfd066faffa9dc95",
               "4afc8bbbe9ef4a408af0d97d171df3e4"
             ],
-            "throttleSpeed": 26.0
+            "throttleSpeed": 25.0,
+            "acceleration": 5.0,
+            "deceleration": 8.0
           }
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "ANIMATED",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
         }
       ]
     },
     {
-      "id": "a42d279e6753470a9176b7e4cb361d48",
+      "id": "1da4a8d739514a288f074355e1b96a02",
       "name": "Cube",
-      "parent": "5f324beea12f41cba43bf8bce56d563f",
-      "components": []
-    },
-    {
-      "id": "822d77a3cdc1455bbf92a6869804df71",
-      "name": "Camera",
-      "parent": null,
+      "parent": "ed674ceae6ab4b15bb5c886e44ed6125",
       "components": [
         {
-          "type": "CAMERA",
-          "cameraType": "FOLLOW",
-          "attachControl": true,
-          "keys": {
-            "scheme": "WASD",
-            "up": "W",
-            "down": "S",
-            "left": "A",
-            "right": "D"
-          },
-          "useBlenderTransform": true,
-          "followMode": "OFFSET",
-          "lockRoll": true,
-          "speed": 1.0,
-          "inertia": 0.8999999761581421,
-          "radius": 10.0,
-          "lowerRadius": 0.0,
-          "upperRadius": 0.0,
-          "target": "a42d279e6753470a9176b7e4cb361d48",
-          "distance": 10.0,
-          "height": 4.0,
-          "rotationOffset": 0.0
+          "type": "SCRIPT",
+          "script": "",
+          "path": "",
+          "vars": {}
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "SPRING",
+          "target": "ed674ceae6ab4b15bb5c886e44ed6125",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 5.0,
+          "stiffness": 1000.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
         }
-      ],
-      "camera": {
-        "type": "PERSP",
-        "clipStart": 0.10000000149011612,
-        "clipEnd": 100.0,
-        "active": true,
-        "fov": 0.4710899591445923
-      }
+      ]
+    },
+    {
+      "id": "4e2cb905350743b6a509969f0edb1eb4",
+      "name": "Cube.001",
+      "parent": "ed674ceae6ab4b15bb5c886e44ed6125",
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "",
+          "path": "",
+          "vars": {}
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "SPRING",
+          "target": "1da4a8d739514a288f074355e1b96a02",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 10.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        }
+      ]
+    },
+    {
+      "id": "fb1d46697d304e06bb3ae454fc606c7d",
+      "name": "Cube.002",
+      "parent": "ed674ceae6ab4b15bb5c886e44ed6125",
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "",
+          "path": "",
+          "vars": {}
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "SPRING",
+          "target": "4e2cb905350743b6a509969f0edb1eb4",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 10.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        }
+      ]
+    },
+    {
+      "id": "182e3d9d0982403db76e7021cf418627",
+      "name": "Cube.003",
+      "parent": "ed674ceae6ab4b15bb5c886e44ed6125",
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "",
+          "path": "",
+          "vars": {}
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "SPRING",
+          "target": "fb1d46697d304e06bb3ae454fc606c7d",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 10.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        }
+      ]
+    },
+    {
+      "id": "52c9522259664e50a832b3b5c12547f3",
+      "name": "Cube.004",
+      "parent": "ed674ceae6ab4b15bb5c886e44ed6125",
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "",
+          "path": "",
+          "vars": {}
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "SPRING",
+          "target": "182e3d9d0982403db76e7021cf418627",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 10.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        }
+      ]
     }
   ],
   "debug": true

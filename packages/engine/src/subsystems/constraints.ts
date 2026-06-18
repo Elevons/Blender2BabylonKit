@@ -231,6 +231,12 @@ function BuildAxisLimits(component: ConstraintComponent): Physics6DoFLimit[]
   return limits;
 }
 
+/** Map manifest "Bodies Collide" to Havok's constraint collision flag. */
+function AllowConstraintCollisions(component: ConstraintComponent): boolean
+{
+  return component.collision === true;
+}
+
 /** Build the Babylon constraint object for one registration. */
 function CreateConstraint(
   frame: ConstraintFrame,
@@ -238,14 +244,24 @@ function CreateConstraint(
   scene: Scene
 ): PhysicsConstraint
 {
+  const allowCollision = AllowConstraintCollisions(component);
+
   if (component.constraintType === "FIXED")
   {
-    return new LockConstraint(frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene);
+    const constraint = new LockConstraint(
+      frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene
+    );
+    constraint.options.collision = allowCollision;
+    return constraint;
   }
 
   if (component.constraintType === "BALL")
   {
-    return new BallAndSocketConstraint(frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene);
+    const constraint = new BallAndSocketConstraint(
+      frame.pivotA, frame.pivotB, frame.axisA, frame.axisB, scene
+    );
+    constraint.options.collision = allowCollision;
+    return constraint;
   }
 
   if (component.constraintType === "CUSTOM" || component.constraintType === "HINGE"
@@ -259,7 +275,7 @@ function CreateConstraint(
         axisB: frame.axisB,
         perpAxisA: frame.perpAxisA,
         perpAxisB: frame.perpAxisB,
-        collision: component.collision,
+        collision: allowCollision,
       },
       BuildAxisLimits(component),
       scene
@@ -275,7 +291,7 @@ function CreateConstraint(
       axisB: frame.axisB,
       perpAxisA: frame.perpAxisA,
       perpAxisB: frame.perpAxisB,
-      collision: component.collision,
+      collision: allowCollision,
     },
     [],
     scene
@@ -337,6 +353,9 @@ export function BuildConstraints(
     const frame = ComputeConstraintFrame(ownerEntity.node, targetEntity.node, component);
     const constraint = CreateConstraint(frame, component, scene);
     ownerEntity.body.addConstraint(targetEntity.body, constraint);
+    // Havok reads options.collision during addConstraint; re-apply so FIXED/BALL
+    // and any plugin init quirks can't leave the wrong pairwise-collision state.
+    constraint.isCollisionsEnabled = AllowConstraintCollisions(component);
 
     if (component.motor && constraint instanceof Physics6DoFConstraint)
     {

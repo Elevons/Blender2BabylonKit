@@ -19,10 +19,12 @@ query `level.ByTag("Enemy")`.
 
 ### Collider / RigidBody
 N-panel fields (+ `viewport/collider_preview.py` wireframe, Blender space) →
-`serialize_components` converts center/size/rotation to Y-up → manifest
+`serialize_components` converts center/size/rotation to Y-up; DYNAMIC rigid
+bodies also export `centerOfMassAutoFit` and optional `centerOfMass` → manifest
 COLLIDER/RIGIDBODY → `physics.BuildPhysics`: shape path chosen
 (auto-fit aggregate | wrapper fit | convex/mesh merge | manual), all geometry
-gathered via `OwnedColliderMeshes` (excludes child entities by GUID) → one
+gathered via `OwnedColliderMeshes` (excludes child entities by GUID) →
+`ApplyMassProperties` (`ResolveCenterOfMass` + `setMassProperties`) → one
 `PhysicsBody` on the node → `entity.body`. Sound because of right-handed
 import ([why](05-PHYSICS.md#right-handed)). Debug view: **C** →
 `Level.ShowColliders` → PhysicsViewer.
@@ -55,6 +57,15 @@ Camera object → `camera` block (clip/FOV/active) →
 target bindings via `QueueCameraTargets` → second pass
 `ResolveCameraTargets` (FOLLOW lockedTarget / ARC re-pivot / OFFSET
 `AddUpdater`).
+
+### Post-processing
+Properties › Scene › Post-Processing (`ui/post_panels.py`) edits
+`scene.bjs_scene.post` (`scene/post_processing.py`) →
+`export/post_processing.serialize_post_processing` (LUTs via `copy_asset` →
+`post/`) → manifest `scene.postProcessing` → `LevelLoader.FinalizeLevel`:
+`ApplySceneSettings` (clear/ambient, env, fog) → … → `Level.Begin` (runtime
+cameras) → `ApplyPostProcessing` (`subsystems/postprocess.ts`, on `scene.activeCamera`) →
+`level.post`. See [Rendering — Scene look](06-RENDERING.md).
 
 ### Animation autoplay
 NLA strips → `export/animation.serialize_animation` → `animation` block →
@@ -100,7 +111,8 @@ started/performed/canceled fire) → behaviors poll
 ### Live Link
 Export remembers path (`scene.bjs_live_link_path`) → Ctrl+S →
 `export/live_link._on_save_post` → `validate` + `export_level` → manifest write →
-Vite `ReloadOnLevelExport` watcher → full page reload.
+Vite `ReloadOnLevelExport` watches all of `public/levels/` (`path.resolve` path
+matching; 50ms debounce) → full page reload.
 
 ### Debug Build
 Checkbox (`scene.bjs_debug_build`) → manifest top-level `"debug"` →

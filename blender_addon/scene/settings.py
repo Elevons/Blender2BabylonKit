@@ -5,9 +5,11 @@ only the scene-global render block (environment, fog, post-processing)."""
 
 import bpy
 from bpy.props import (
-    BoolProperty, FloatProperty, EnumProperty, FloatVectorProperty,
+    BoolProperty, FloatProperty, EnumProperty, FloatVectorProperty, PointerProperty,
 )
 from bpy.types import PropertyGroup, Scene
+
+from .post_processing import BJSPostProcessingSettings
 
 
 class BJSSceneSettings(PropertyGroup):
@@ -19,10 +21,21 @@ class BJSSceneSettings(PropertyGroup):
         name="Ambient Color", subtype='COLOR', size=3,
         default=(0.0, 0.0, 0.0), min=0.0, max=1.0)
 
-    # Environment / skybox (the texture itself is read from the World nodes).
+    # Environment (texture from World nodes, or bundled default when enabled).
+    use_default_environment: BoolProperty(
+        name="Default Environment", default=False,
+        description="Use Babylon's built-in studio environment for IBL at runtime "
+                    "(loaded from the Babylon CDN when the level loads). Used when "
+                    "the World has no environment texture. Ignored when a World "
+                    "texture is present")
     create_skybox: BoolProperty(
-        name="Create Skybox", default=True,
-        description="Build a skybox from the World environment texture")
+        name="Show Skybox", default=True,
+        description="Display the environment as a visible skybox. Turn off to keep "
+                    "IBL lighting on materials without showing the background image")
+    skybox_ignore_fog: BoolProperty(
+        name="Skybox Ignores Fog", default=True,
+        description="Keep the skybox visible when scene fog is enabled "
+                    "(Babylon mesh.applyFog = false)")
 
     # Shadows
     freeze_shadows: BoolProperty(
@@ -43,19 +56,13 @@ class BJSSceneSettings(PropertyGroup):
     fog_start: FloatProperty(name="Start", default=10.0, min=0.0)
     fog_end: FloatProperty(name="End", default=100.0, min=0.0)
 
-    # Post-processing (default rendering pipeline + SSAO)
-    use_pipeline: BoolProperty(name="Default Pipeline", default=False)
-    use_fxaa: BoolProperty(name="FXAA", default=True)
-    use_bloom: BoolProperty(name="Bloom", default=False)
-    bloom_threshold: FloatProperty(name="Bloom Threshold", default=0.9, min=0.0, max=2.0)
-    bloom_intensity: FloatProperty(name="Bloom Intensity", default=0.5, min=0.0, max=5.0)
-    use_ssao: BoolProperty(name="SSAO", default=False)
-    use_tone_mapping: BoolProperty(name="Tone Mapping", default=True)
-    exposure: FloatProperty(name="Exposure", default=1.0, min=0.0, max=10.0)
-    contrast: FloatProperty(name="Contrast", default=1.0, min=0.0, max=5.0)
+    # Default rendering pipeline + SSAO (see post_processing.py for fields).
+    post: PointerProperty(type=BJSPostProcessingSettings)
 
 
 def register():
+    from . import post_processing
+    post_processing.register()
     bpy.utils.register_class(BJSSceneSettings)
     Scene.bjs_scene = bpy.props.PointerProperty(type=BJSSceneSettings)
 
@@ -63,3 +70,5 @@ def register():
 def unregister():
     del Scene.bjs_scene
     bpy.utils.unregister_class(BJSSceneSettings)
+    from . import post_processing
+    post_processing.unregister()

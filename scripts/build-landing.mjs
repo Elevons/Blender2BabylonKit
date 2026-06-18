@@ -73,9 +73,10 @@ const SYNONYMS = {
   validate: ["validation", "validator", "warning", "checks"],
   validation: ["validate", "validator", "checks"],
   tag: ["tag", "bytag"],
-  fog: ["scene", "environment", "rendering"],
-  environment: ["skybox", "ibl", "rendering"],
-  skybox: ["environment", "rendering"],
+  fog: ["scene", "environment", "rendering", "skybox"],
+  environment: ["skybox", "ibl", "rendering", "default environment", "skyboxignorefog"],
+  skybox: ["environment", "rendering", "ibl", "fog"],
+  ibl: ["environment", "skybox", "rendering", "default environment"],
 };
 
 // Suggested chips shown under the search box (term + what it surfaces).

@@ -13,6 +13,8 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Euler
 
+from ..core.bounds import compute_local_bounds
+
 _handle = None
 _COLOR = (0.3, 0.9, 1.0, 0.9)   # cyan
 _SEGMENTS = 24                  # circle resolution
@@ -107,17 +109,14 @@ def _capsule(center, radius, height):
     return pts
 
 
-def _local_geometry(obj, comp):
+def _local_geometry(obj, comp, depsgraph=None):
     """Local-space line segments for a collider, or None if the mesh is the shape."""
     shape = comp.collider_shape
     if shape in {'CONVEX', 'MESH'}:
         return None  # the mesh itself is the collider; no separate wireframe
 
     if comp.auto_fit:
-        bb = [Vector(c) for c in obj.bound_box]
-        mn = Vector((min(v.x for v in bb), min(v.y for v in bb), min(v.z for v in bb)))
-        mx = Vector((max(v.x for v in bb), max(v.y for v in bb), max(v.z for v in bb)))
-        center, size = (mn + mx) / 2, (mx - mn)
+        center, size = compute_local_bounds(obj, depsgraph)
         if shape == 'SPHERE':
             return _sphere(center, max(size) / 2)
         if shape == 'CYLINDER':
@@ -148,15 +147,17 @@ def _draw():
     if not selected:
         return
 
+    depsgraph = bpy.context.evaluated_depsgraph_get()
     points = []
     for obj in selected:
+        eval_obj = obj.evaluated_get(depsgraph)
+        mw = eval_obj.matrix_world
         for comp in obj.bjs_components:
             if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:
                 continue
-            local = _local_geometry(obj, comp)
+            local = _local_geometry(obj, comp, depsgraph)
             if not local:
                 continue
-            mw = obj.matrix_world
             points.extend(mw @ p for p in local)
 
     if not points:

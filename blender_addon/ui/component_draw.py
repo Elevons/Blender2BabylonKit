@@ -180,6 +180,16 @@ def draw_component(layout, obj, index, comp):
         body.prop(comp, "restitution")
         body.prop(comp, "linear_damping")
         body.prop(comp, "angular_damping")
+        row = body.row()
+        row.enabled = comp.body_type == 'DYNAMIC'
+        row.prop(comp, "start_asleep")
+        dyn = body.column()
+        dyn.enabled = comp.body_type == 'DYNAMIC'
+        dyn.prop(comp, "cog_auto_fit")
+        fit_cog = dyn.operator("bjs.fit_cog", text="Fit CoM to Bounds", icon='SHADING_BBOX')
+        fit_cog.index = index
+        if not comp.cog_auto_fit:
+            dyn.prop(comp, "cog_center")
 
     elif comp.comp_type == 'AUDIO':
         body.prop(comp, "audio_file")

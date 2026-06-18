@@ -126,7 +126,13 @@ def serialize_components(obj, output_dir):
                 "restitution": c.restitution,
                 "linearDamping": c.linear_damping,
                 "angularDamping": c.angular_damping,
+                "startAsleep": c.start_asleep,
             })
+            if c.body_type == 'DYNAMIC':
+                d["centerOfMassAutoFit"] = bool(c.cog_auto_fit)
+                if not c.cog_auto_fit:
+                    cx, cy, cz = c.cog_center
+                    d["centerOfMass"] = [cx, cz, -cy]  # Blender Z-up -> Babylon Y-up
 
         elif c.comp_type == 'SCRIPT':
             d["script"] = c.script_name

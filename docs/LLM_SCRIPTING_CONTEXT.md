@@ -120,10 +120,20 @@ entity.body?.setAngularVelocity(v);  entity.body?.getAngularVelocityToRef(out);
 entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylonjs/core
 ```
 
-- To move/rotate a body by hand each frame, set it to `ANIMATED` (kinematic) first,
-  or drive it via velocity. Don't fight the solver by writing `node.position` on a
+- To move/rotate a body by hand each frame, author **Animated** on the Rigid Body
+  (or call `setMotionType(PhysicsMotionType.ANIMATED)` in `OnStart`), or drive it
+  via velocity. Don't fight the solver by writing `node.position` on a
   DYNAMIC body (`disablePreStep` defaults to true, but sync still wins after the
   physics step).
+- For dynamic props at rest on load, enable **Start Asleep** in Blender
+  (`startAsleep` in the manifest). Treat it as a performance hint only — do
+  not rely on a body staying asleep.
+- **Center of mass** is authored on the Rigid Body component (Dynamic only):
+  **Auto-Fit Center of Mass** (default) → manifest `centerOfMassAutoFit: true`
+  (runtime uses owned-mesh bounds center); custom offset →
+  `centerOfMassAutoFit: false` + `centerOfMass` in Babylon Y-up. CoM is
+  independent of collider placement — shift it low on a car chassis for stable
+  tipping without resizing the collider.
 - MESH-shaped colliders can't be DYNAMIC (Havok limitation) — author CONVEX for
   moving bodies.
 - **Joints are authored in Blender, not in behavior scripts.** There is no

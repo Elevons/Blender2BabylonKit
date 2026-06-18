@@ -22,6 +22,7 @@ import { NeutralizeGltfRoot } from "./loader/nodeResolution";
 import { CreateLoadContext, type LoadContext } from "./loader/context";
 import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
+import { ApplyPostProcessing } from "../subsystems/postprocess";
 
 /** Await a batch of asset-load promises, logging any that rejected. */
 async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
@@ -133,7 +134,7 @@ export class LevelLoader
 
     if (manifest.scene !== undefined)
     {
-      ApplySceneSettings(this.scene, manifest.scene, context.baseUrl, context.level);
+      await ApplySceneSettings(this.scene, manifest.scene, context.baseUrl, context.level);
     }
 
     ApplyAutoPlayAnimations(this.scene, context.animatedEntities);
@@ -156,6 +157,19 @@ export class LevelLoader
     );
 
     context.level.Begin();
+
+    // Post-processing attaches to cameras; apply after Begin() so behaviors that
+    // create a runtime camera in OnStart (e.g. TrainCamera) receive the stack.
+    const postProcessing = manifest.scene?.postProcessing;
+    if (postProcessing !== undefined && postProcessing !== null)
+    {
+      context.level.post = ApplyPostProcessing(
+        this.scene,
+        this.scene.activeCamera,
+        postProcessing,
+        context.baseUrl
+      );
+    }
 
     // debugColliders is a dev convenience; a non-debug ("release") export wins.
     if (this.options.debugColliders && context.level.debugEnabled)

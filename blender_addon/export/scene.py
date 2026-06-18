@@ -3,33 +3,17 @@ and copies the World environment texture next to the export. Pure
 serialization — no UI, no registration."""
 
 import os
-import shutil
 
 import bpy
 
 from ..input_actions.serialize import serialize_input_asset
+from ..scene.environment import find_world_env_node, world_background_strength
+from .assets import copy_asset, save_image_asset
+from .post_processing import serialize_post_processing
 
 
 def _round3(c):
     return [round(c[0], 4), round(c[1], 4), round(c[2], 4)]
-
-
-# ── environment texture discovery (from the World node tree) ──
-
-def _find_env_node(world):
-    if not world or not world.use_nodes:
-        return None
-    nodes = world.node_tree.nodes
-    for n in nodes:
-        if n.type in ('TEX_ENVIRONMENT', 'TEX_IMAGE') and n.image:
-            return n
-    for n in nodes:
-        if n.type == 'BACKGROUND':
-            for link in n.inputs['Color'].links:
-                src = link.from_node
-                if src.type in ('TEX_ENVIRONMENT', 'TEX_IMAGE') and src.image:
-                    return src
-    return None
 
 
 def _image_ext(image):
@@ -46,48 +30,45 @@ def _env_rotation_y(node):
     return 0.0
 
 
-def _env_intensity(node):
-    for out in node.outputs:
-        for link in out.links:
-            if link.to_node.type == 'BACKGROUND':
-                return link.to_node.inputs['Strength'].default_value
-    return 1.0
-
-
 def _copy_environment(node, output_dir):
-    """Copy/save the env image into <output_dir>/env/ and return its filename."""
+    """Copy/save the World env image into env/ with a URL-safe name. Returns manifest path."""
     image = node.image
-    env_dir = os.path.join(output_dir, "env")
-    os.makedirs(env_dir, exist_ok=True)
+    src = bpy.path.abspath(image.filepath) if image.filepath else ""
+    if src and os.path.isfile(src):
+        return copy_asset(image.filepath, output_dir, "env")
+    return save_image_asset(image, output_dir, "env", _image_ext(image))
 
-    src = bpy.path.abspath(image.filepath)
-    if src and os.path.exists(src):
-        name = os.path.basename(src)
-        dest = os.path.join(env_dir, name)
-        if os.path.normpath(src) != os.path.normpath(dest):
-            shutil.copy2(src, dest)
-        return name
-    # Packed / generated image: save it out.
-    name = bpy.path.clean_name(image.name) + _image_ext(image)
-    orig = image.filepath_raw
-    image.filepath_raw = os.path.join(env_dir, name)
-    image.save()
-    image.filepath_raw = orig
-    return name
+
+def _environment_skybox_flags(s):
+    """Manifest keys shared by World-texture and useDefault environment blocks."""
+    flags = {"createSkybox": s.create_skybox}
+    if s.create_skybox:
+        flags["skyboxIgnoreFog"] = s.skybox_ignore_fog
+    return flags
 
 
 def _serialize_environment(context, output_dir):
     s = context.scene.bjs_scene
-    node = _find_env_node(context.scene.world)
-    if not node:
-        return None
-    filename = _copy_environment(node, output_dir)
-    return {
-        "file": "env/" + filename,
-        "intensity": _env_intensity(node),
-        "rotationY": _env_rotation_y(node),
-        "createSkybox": s.create_skybox,
-    }
+    skybox_flags = _environment_skybox_flags(s)
+    node = find_world_env_node(context.scene.world)
+    if node:
+        env_path = _copy_environment(node, output_dir)
+        if not env_path:
+            return None
+        return {
+            "file": env_path,
+            "intensity": world_background_strength(context.scene.world),
+            "rotationY": _env_rotation_y(node),
+            **skybox_flags,
+        }
+    if s.use_default_environment:
+        return {
+            "useDefault": True,
+            "intensity": 1.0,
+            "rotationY": 0.0,
+            **skybox_flags,
+        }
+    return None
 
 
 # ── the scene block ──
@@ -109,18 +90,7 @@ def serialize_scene(context, output_dir):
             "density": s.fog_density, "start": s.fog_start, "end": s.fog_end,
         }
 
-    if s.use_pipeline:
-        data["postProcessing"] = {
-            "defaultPipeline": True,
-            "fxaa": s.use_fxaa,
-            "bloom": {"enabled": s.use_bloom,
-                      "threshold": s.bloom_threshold,
-                      "intensity": s.bloom_intensity},
-            "ssao": s.use_ssao,
-            "toneMapping": s.use_tone_mapping,
-            "exposure": s.exposure,
-            "contrast": s.contrast,
-        }
+    data["postProcessing"] = serialize_post_processing(s, output_dir)
     data["inputActions"] = serialize_input_asset(context.scene)
     data["defaultInputMap"] = context.scene.bjs_input_default_map
 

@@ -9,7 +9,40 @@ All in `subsystems/physics.ts`, `constraints.ts`, `triggers.ts`. Havok **V2**.
 
 One COLLIDER and/or RIGIDBODY → one node-attached `PhysicsBody`:
 collider-only = static/trigger; rigidbody-only = dynamic + auto-fit box; both =
-shape from collider, dynamics from body. KINEMATIC maps to Havok `ANIMATED`.
+shape from collider, dynamics from body.
+
+### Motion types
+
+| Manifest `bodyType` | Havok `PhysicsMotionType` | Role |
+|---|---|---|
+| `STATIC` | `STATIC` | Never moves; still collides (terrain, walls). |
+| `DYNAMIC` | `DYNAMIC` | Fully simulated — forces, collisions, mass. |
+| `ANIMATED` | `ANIMATED` | Driven by animation or code; pushes dynamic bodies and constraints but is not pushed by collisions. Use for elevators, moving platforms, or behaviors that set `node` transforms each frame. |
+
+Mass applies only to `DYNAMIC` bodies. Dynamic bodies may also enable **Start Asleep**.
+
+### Center of mass
+
+For **Dynamic** rigid bodies only. The collision shape defines contact; center of
+mass defines how the body tips under gravity and impulses. After the shape is
+built, `ApplyMassProperties` calls Havok `setMassProperties` with the authored
+mass and an optional `centerOfMass` override in the entity's local space.
+
+| Blender | Manifest | Runtime |
+|---|---|---|
+| **Auto-Fit Center of Mass** (default on) | `centerOfMassAutoFit: true` | `ComputeLocalBounds(node).center` — same owned-mesh AABB rule as collider auto-fit |
+| **Center of Mass** (when auto-fit off) | `centerOfMassAutoFit: false`, `centerOfMass: [x,z,−y]` | Custom offset, axis-converted at export like collider `center` |
+| *(field omitted — older levels)* | — | Mass only; Havok derives CoM from the collision shape geometry |
+
+**Fit CoM to Bounds** snapshots the mesh AABB center into the custom field and
+turns off auto-fit (same workflow as **Fit to Bounds** on colliders). Auto-fit
+CoM tracks visible mesh geometry, which can differ from a hand-tuned collider —
+useful when tipping behavior should follow visuals, not collider volume.
+
+### Start asleep
+
+Dynamic rigid bodies may set `startAsleep: true` (**Start Asleep** in Blender). The loader passes this to `PhysicsBody`'s `startsAsleep` constructor argument (and `PhysicsAggregate.startAsleep` on auto-fit mesh paths). Bodies begin with physics calculations skipped until a collision or applied force wakes them — a **performance hint** for scenes where bodies are at rest on load, not a guarantee (nearby awake bodies can wake them). The engine also puts resting bodies to sleep automatically when appropriate.
+
 Three shape paths (each its own builder):
 
 - **Auto-fit primitive** (`BuildAutoFitBody`): real mesh → `PhysicsAggregate`
@@ -73,7 +106,12 @@ from a perpendicular pair (`ComputeConstraintFrame`). Preset mapping:
 `ComputeConstraintFrame` derives the target-side pivot/axes from **live world
 transforms**, pinning the as-placed relative pose — nothing snaps on load.
 Motors (`setAxisMotorType(VELOCITY)` + target + max force) apply to HINGE/SLIDER
-presets only. Joints land in `level.constraints`, disposed with the level.
+presets only. **`collision`** (Blender **Bodies Collide**, default off) maps to
+Havok's pairwise `isCollisionsEnabled` on the joint — when off, the two
+connected bodies should not generate contact impulses against each other
+(overlap can still cause constraint solver fighting; keep colliders separated or
+use auto-fit sizes that don't intersect). Joints land in `level.constraints`,
+disposed with the level.
 
 ## Trigger messaging (`WireTriggerEvents`) <a name="triggers"></a>
 

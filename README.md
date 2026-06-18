@@ -136,9 +136,11 @@ as `new LevelLoader(scene, registry, { debugColliders: true })`.
 
 The Export panel has a **Live Link** checkbox. Export once by hand to set the
 path, tick the box, and from then on every **Ctrl+S** in Blender re-exports the
-level automatically; the dev server watches `public/levels/*.scene.json` and
-reloads the browser. Save in Blender → see it in Babylon. Warnings from the
-validator are printed to Blender's console on each live export.
+level automatically; the dev server's `ReloadOnLevelExport` plugin watches
+**all files** under `public/levels/` (glb, `env/`, manifest, … — not only
+`.scene.json`) and sends a debounced full reload, so replaced HDRs still refresh
+even when the manifest bytes are unchanged. Save in Blender → see it in Babylon.
+Warnings from the validator are printed to Blender's console on each live export.
 
 The **Validate** button runs the same checks without exporting: missing script
 files, references to render-disabled objects, MESH colliders on DYNAMIC bodies,
@@ -309,11 +311,23 @@ settings, serialized into a top-level `scene` block in the manifest and applied
 at load:
 
 - **Clear / ambient color** — `scene.clearColor` / `ambientColor`.
-- **Environment** — if the World has an environment-texture node, it's copied
-  next to the export (into `env/`) and used for image-based lighting, with an
-  optional skybox. `.env` (Babylon's prefiltered cube) is recommended; `.hdr`
-  works; `.exr` can't load in-browser, so export `.env`. Intensity and Y-rotation
-  are read from the World's Background/Mapping nodes.
+- **Environment** — image-based lighting from the manifest `environment` block
+  (omit it for lamps + ambient only). In **Properties → Scene → Babylon →
+  Rendering → Environment**:
+  - **Default Environment** — IBL without a World texture; exports
+    `useDefault: true` and loads Babylon's built-in studio `.env` from the CDN at
+    runtime (player needs network access).
+  - **Show Skybox** — when on, draws the background; when off, IBL only.
+  - **Skybox Ignores Fog** — when on (and Show Skybox is on), the skybox stays
+    visible through scene fog (`mesh.applyFog = false` at runtime).
+  - A World texture on the active **World Output → Surface → Background** chain
+    wins over Default Environment; it's copied into `env/` with a URL-safe filename
+    (`sanitize_asset_filename`). Orphan textures elsewhere in the node editor are
+    ignored. `.env` (Babylon's prefiltered cube) is recommended; `.hdr` works;
+    `.exr` can't load in-browser. Intensity and Y-rotation come from the World's
+    Background/Mapping nodes. At load, `ApplyEnvironment` waits for the texture
+    before creating a skybox so the first Live Link reload doesn't show a blank
+    background.
 - **Fog** — linear/exp/exp² with color and range/density.
 - **Post-processing** — Babylon's `DefaultRenderingPipeline` (FXAA, bloom, tone
   mapping/exposure/contrast). SSAO is wired as a *separate* `SSAO2RenderingPipeline`
@@ -759,6 +773,9 @@ a guard that warns if a negative-determinant `__root__` ever reappears.
 
 ### Manifest schema (reference)
 
+`environment` uses either `file` (exported World texture under `env/`) or
+`useDefault: true` (built-in studio IBL). `createSkybox` toggles the visible
+background (`true` = show skybox, `false` = IBL only).
 
 ```json
 {

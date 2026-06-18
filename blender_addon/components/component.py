@@ -134,6 +134,15 @@ class BJSComponent(PropertyGroup):
     restitution:     FloatProperty(name="Restitution (Bounce)", default=0.2, min=0.0, max=1.0)
     linear_damping:  FloatProperty(name="Linear Damping", default=0.0, min=0.0)
     angular_damping: FloatProperty(name="Angular Damping", default=0.0, min=0.0)
+    start_asleep:    BoolProperty(name="Start Asleep", default=False,
+                                 description="Begin in sleep mode for bodies at rest "
+                                             "(performance hint; not guaranteed to stay asleep)")
+    cog_auto_fit:    BoolProperty(name="Auto-Fit Center of Mass",
+                                  description="Compute center of mass from the mesh bounding box at runtime",
+                                  default=True)
+    cog_center:      FloatVectorProperty(name="Center of Mass", size=3, default=(0.0, 0.0, 0.0),
+                                         subtype='XYZ',
+                                         description="Custom center of mass offset, in Blender axes")
 
     # --- COLLIDER: trigger events (shown when Is Trigger is on) ---
     trigger_events: CollectionProperty(type=BJSTriggerEvent)

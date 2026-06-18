@@ -1,0 +1,22 @@
+{
+  "name": "@bjs/mcp",
+  "private": true,
+  "version": "1.1.0",
+  "type": "module",
+  "bin": {
+    "bjs-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.4.0"
+  }
+}

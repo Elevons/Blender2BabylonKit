@@ -8,9 +8,11 @@ The save-to-see loop. Export once (the operator remembers the path per-scene),
 tick **Live Link** in the Export panel, then every **Ctrl+S** re-exports
 (`export/live_link.py`, a `save_post` handler — no timers/sockets; failures never
 break the save). On the runtime side, the Vite plugin `ReloadOnLevelExport`
-(`apps/<app>/vite.config.ts`) watches `public/levels/*.scene.json` and sends a
-full reload — the manifest is written *after* the glb, so both files are ready
-when it fires.
+(`apps/<app>/vite.config.ts`) watches **all files** under `public/levels/` (glb,
+`env/`, audio, manifest, …) and sends a 50ms debounced full reload — not only
+`.scene.json`, so a replaced environment image still refreshes when the manifest
+bytes are unchanged. `IsLevelAsset` resolves paths with `path.resolve` because
+chokidar may report relative paths (`public/levels/...`) without a leading slash.
 
 ## The validator <a name="validator"></a>
 

@@ -6,6 +6,7 @@ import bpy
 from bpy.props import EnumProperty, IntProperty, BoolProperty
 from bpy.types import Operator
 
+from ..core.bounds import compute_local_bounds
 from ..core.ids import ensure_object_id
 from ..core.inspector import inspector_object
 from ..components.constants import COMPONENT_TYPES
@@ -183,17 +184,37 @@ class BJS_OT_fit_collider(Operator):
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
         comp = obj.bjs_components[self.index]
-        bb = [tuple(c) for c in obj.bound_box]          # 8 local-space corners
-        mn = (min(c[0] for c in bb), min(c[1] for c in bb), min(c[2] for c in bb))
-        mx = (max(c[0] for c in bb), max(c[1] for c in bb), max(c[2] for c in bb))
-        center = tuple((mn[i] + mx[i]) / 2 for i in range(3))
-        size = tuple(mx[i] - mn[i] for i in range(3))
+        center, size = compute_local_bounds(obj)
         comp.collider_center = center
         comp.collider_size = size
-        comp.collider_radius = max(size) / 2            # sphere
-        comp.collider_height = size[2]                  # capsule/cylinder run along Z
+        comp.collider_radius = max(size[0], size[1]) / 2   # cylinder/capsule: XY in Z-up
+        comp.collider_height = size[2]                       # runs along Blender Z
+        if comp.collider_shape == 'SPHERE':
+            comp.collider_radius = max(size) / 2
         comp.collider_rotation = (0.0, 0.0, 0.0)        # bounds are axis-aligned
         comp.auto_fit = False
+        return {'FINISHED'}
+
+
+class BJS_OT_fit_cog(Operator):
+    """Snapshot the mesh bounding box center into the rigid body's custom CoM,
+    then switch off Auto-Fit so it can be hand-tweaked."""
+    bl_idname = "bjs.fit_cog"
+    bl_label = "Fit Center of Mass to Bounds"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if not (obj and 0 <= self.index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+        comp = obj.bjs_components[self.index]
+        if comp.comp_type != 'RIGIDBODY':
+            return {'CANCELLED'}
+        center, _size = compute_local_bounds(obj)
+        comp.cog_center = center
+        comp.cog_auto_fit = False
         return {'FINISHED'}
 
 
@@ -400,6 +421,7 @@ classes = (
     BJS_OT_duplicate_component,
     BJS_OT_move_component,
     BJS_OT_fit_collider,
+    BJS_OT_fit_cog,
     BJS_OT_copy_component,
     BJS_OT_cut_component,
     BJS_OT_paste_component,

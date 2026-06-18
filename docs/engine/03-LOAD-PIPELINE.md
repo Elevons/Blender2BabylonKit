@@ -37,15 +37,17 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    (entity-typed `@exposed` fields + list slots) and `ResolveCameraTargets`
    (FOLLOW lockedTarget / ARC re-pivot / OFFSET per-frame updater).
 7. **`FinalizeLevel`** — shadows (`SetupShadows`), scene block
-   (`loader/sceneSettings.ts` → environment/fog/post), `ApplyAutoPlayAnimations`
-   (stop the glTF loader's auto-started groups, start the chosen clips),
-   `SettleTasks` for audio/GUI/particle promises (`Promise.allSettled` so one
-   bad file logs instead of rejecting the load), wire trigger events
-   (`WireTriggerEvents` → `level.triggerObserver`), build constraints
-   (`BuildConstraints` → `level.constraints`), build 3D GUI
-   (`BuildGui3DControls` → `level.gui3DManager`), then **`level.Begin()`** and,
-   if `debugColliders` *and* the export's Debug Build flag allow, show collider
-   wireframes.
+   (`await ApplySceneSettings` → clear/ambient, async `ApplyEnvironment` + fog),
+   `ApplyAutoPlayAnimations` (stop the glTF loader's auto-started groups, start
+   the chosen clips), `SettleTasks` for audio/GUI/particle promises
+   (`Promise.allSettled` so one bad file logs instead of rejecting the load),
+   wire trigger events (`WireTriggerEvents` → `level.triggerObserver`), build
+   constraints (`BuildConstraints` → `level.constraints`), build 3D GUI
+   (`BuildGui3DControls` → `level.gui3DManager`), then **`level.Begin()`**
+   (behaviors' `OnStart`, including any runtime camera creation), then
+   **`ApplyPostProcessing`** (default pipeline + SSAO on `scene.activeCamera`),
+   and if `debugColliders` *and* the export's Debug Build flag allow, show
+   collider wireframes.
 
 See [10 — UI](10-UI.md) for the 2D GUI, particle, and 3D GUI pipelines.
 

@@ -17,7 +17,8 @@ Split by **object vs scene**:
   selection while editing — every component verb resolves its target through
   `core/inspector.py:inspector_object()`, so they all act on the pinned object.
 - **Properties › Scene › "Babylon"** (`ui/scene_panels.py` + `ui/input_panel.py`)
-  — scene-wide: rendering, fog, post-processing, **Input Actions**, and the same
+  — scene-wide: rendering (clear/ambient, **Default Environment**, **Show
+  Skybox**, freeze shadows), fog, post-processing, **Input Actions**, and the same
   Export controls. Both export blocks call `ui/common.py:draw_export_controls()`
   so they cannot drift.
 
@@ -40,11 +41,11 @@ switch the panel away.
 | `__init__.py` | extension registration order + dev-reload of submodules |
 | `core/` | pure helpers, nothing registered: `ids.py` (GUIDs), `script_parse.py` (`@exposed` / `@inputMap` regex parsing) |
 | `components/` | per-object data model: `component.py` (`BJSComponent`, trigger/click events), `exposed_vars.py`, `object_settings.py`, `clipboard.py`, `constants.py` (all enums) |
-| `scene/` | scene-wide render settings on `Scene.bjs_scene` (`settings.py`) |
+| `scene/` | scene-wide render settings on `Scene.bjs_scene` (`settings.py`, `environment.py` for World Output texture discovery, `post_processing.py` for the nested `post` block) |
 | `input_actions/` | the Input Actions asset end-to-end: `properties.py`, `defaults.py`, `serialize.py`, `operators.py` |
-| `export/` | everything that writes files: `level.py` (orchestrator), `components.py` (component stack → manifest, axis conversion here), `datablocks.py`, `animation.py`, `scene.py`, `assets.py` (`copy_asset`), `validate.py`, `live_link.py` |
+| `export/` | everything that writes files: `level.py` (orchestrator), `components.py` (component stack → manifest, axis conversion here), `datablocks.py`, `animation.py`, `scene.py`, `post_processing.py`, `assets.py` (`copy_asset`), `validate.py`, `live_link.py` |
 | `operators/` | component verbs (`components.py`), script pick + Sync (`scripts.py`), Validate + Export (`export_ops.py`) |
-| `ui/` | all panels and menus: `view3d_panels.py`, `scene_panels.py`, `input_panel.py`, `component_draw.py`, `common.py`, `menus.py` |
+| `ui/` | all panels and menus: `view3d_panels.py`, `scene_panels.py`, `post_panels.py`, `input_panel.py`, `component_draw.py`, `common.py`, `menus.py` |
 | `viewport/` | GPU overlays: `collider_preview.py` (manual collider wireframe) |
 
 Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
@@ -63,9 +64,13 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
    `light` / `camera` / `animation` blocks; plus the scene block
    (`export/scene.py`); plus the top-level `"debug"` flag (Debug Build checkbox,
    owned by `export/live_link.py`). Schema `"version": 4`.
-5. **Copy side files** — `copy_asset` (`export/assets.py`): environment texture,
-   audio → `audio/`, GUI layouts → `gui/`, particle systems → `particles/`, 3D
-   button images → `gui/`.
+5. **Copy side files** — `copy_asset` / `save_image_asset` (`export/assets.py`):
+   World environment texture when `find_world_env_node` (`scene/environment.py`)
+   finds one on the active World Output chain (sanitized filename under `env/`);
+   **Default Environment** sets `useDefault` in the manifest instead of a file;
+   **Show Skybox** / **Skybox Ignores Fog** → `createSkybox` / `skyboxIgnoreFog`;
+   color-grading LUTs → `post/`, audio → `audio/`, GUI layouts → `gui/`,
+   particle systems → `particles/`, 3D button images → `gui/`.
 6. Remember the path for [Live Link](08-WORKFLOW.md#live-link).
 
 ### Axis conversions (Blender Z-up → Babylon Y-up)

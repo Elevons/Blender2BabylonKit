@@ -65,8 +65,18 @@ testing. v0.29 restructured the repo into npm workspaces (`packages/engine` +
 - **Expect:** Blender's console prints `[bjs live-link] exported …`; the
   browser reloads by itself within ~a second and the cube is in its new spot.
   Untick Live Link, move + save again → no re-export, no reload.
+- **Optional (environment):** with a World HDR wired to World Output, replace
+  the image file on disk under `levels/.../env/` without changing
+  `.scene.json` — the browser should still full-reload (Vite watches the whole
+  level folder, not only the manifest).
 
-### 1.5 Debug Build flag (v0.25.1)
+### 1.5 Skybox ignores fog
+- **Steps:** enable **Fog** on the scene. Enable **Show Skybox** and tick
+  **Skybox Ignores Fog** under Environment. Export and reload.
+- **Expect:** level geometry is fogged; the skybox/background stays visible.
+  Untick **Skybox Ignores Fog**, re-export → sky washes out with fog again.
+
+### 1.6 Debug Build flag (v0.25.1)
 - **Steps:** untick **Debug Build** in the Export panel, export, reload.
   Press **C** and **I**.
 - **Expect:** neither key does anything. The manifest contains `"debug": false`.
@@ -146,7 +156,7 @@ joints are visible before they settle.
 ## 4. v0.28 — input action map
 
 ### 4.1 Keyboard axes + actions
-- **Steps:** attach `InputMover.ts` (Script component) to a kinematic or
+- **Steps:** attach `InputMover.ts` (Script component) to an animated or
   physics-free object. Export, reload, click the viewport.
 - **Expect:** WASD *and* the arrow keys move it on the ground plane; holding
   **Shift** moves it ~2× faster; tapping **Space** makes it hop exactly once
@@ -191,6 +201,13 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
   sounds stop, constraints release, GUI textures and particle systems dispose,
   the 3D GUI manager disposes, and the trigger observer detaches (no
   console errors on a second load).
+- **5.6 Center of mass:** on a tall thin dynamic box (Collider + Dynamic Rigid
+  Body), turn off **Auto-Fit Center of Mass** and set **Center of Mass** well
+  below the mesh origin (or use **Fit CoM to Bounds** then nudge Z down).
+  Export, reload.
+  **Expect:** the box tips and lands on its side more readily than with
+  default auto-fit CoM at the mesh center. Re-enable auto-fit → tipping
+  matches the visual bounding-box center again.
 
 ## 6. v0.32 — GUI, particles, 3D GUI
 

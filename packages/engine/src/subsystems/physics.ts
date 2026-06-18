@@ -65,7 +65,7 @@ function MotionTypeFor(body?: RigidBodyComponent): PhysicsMotionType
   switch (body.bodyType)
   {
     case "DYNAMIC": return PhysicsMotionType.DYNAMIC;
-    case "KINEMATIC": return PhysicsMotionType.ANIMATED;
+    case "ANIMATED": return PhysicsMotionType.ANIMATED;
     default: return PhysicsMotionType.STATIC;
   }
 }
@@ -350,6 +350,7 @@ interface BodyBuildInput {
   isTrigger: boolean;
   isMesh: boolean;
   hasGeometry: boolean;
+  startAsleep: boolean;
 }
 
 /** Apply shared material/trigger settings to a freshly built shape. */
@@ -367,10 +368,53 @@ function AttachShape(shape: PhysicsShape, input: BodyBuildInput): PhysicsBody
 {
   ConfigureShape(shape, input);
 
-  const physicsBody = new PhysicsBody(input.node, input.motion, false, input.scene);
+  const physicsBody = new PhysicsBody(input.node, input.motion, input.startAsleep, input.scene);
   physicsBody.shape = shape;
-  physicsBody.setMassProperties({ mass: input.mass });
   return physicsBody;
+}
+
+/** Resolve center of mass for a dynamic rigidbody, or undefined to let Havok derive it from the shape. */
+function ResolveCenterOfMass(
+  node: TransformNode,
+  body: RigidBodyComponent | undefined
+): Vector3 | undefined
+{
+  if (body === undefined || body.bodyType !== "DYNAMIC")
+  {
+    return undefined;
+  }
+
+  if (body.centerOfMassAutoFit === true)
+  {
+    return ComputeLocalBounds(node).center;
+  }
+
+  if (body.centerOfMassAutoFit === false && body.centerOfMass !== undefined)
+  {
+    return new Vector3(...body.centerOfMass);
+  }
+
+  return undefined;
+}
+
+/** Apply mass and optional center-of-mass override after the collision shape is attached. */
+function ApplyMassProperties(
+  physicsBody: PhysicsBody,
+  node: TransformNode,
+  body: RigidBodyComponent | undefined
+): void
+{
+  const mass = body !== undefined && body.bodyType === "DYNAMIC" ? body.mass : 0;
+  const centerOfMass = ResolveCenterOfMass(node, body);
+
+  if (centerOfMass !== undefined)
+  {
+    physicsBody.setMassProperties({ mass, centerOfMass });
+  }
+  else
+  {
+    physicsBody.setMassProperties({ mass });
+  }
 }
 
 /** Gather the shared per-body inputs (dynamics, material, geometry facts) once. */
@@ -394,6 +438,7 @@ function BuildBodyInput(
     isTrigger: collider !== undefined && collider.isTrigger,
     isMesh,
     hasGeometry: isMesh || OwnedColliderMeshes(node).length > 0,
+    startAsleep: body?.startAsleep === true,
   };
 }
 
@@ -445,7 +490,12 @@ function BuildAutoFitBody(input: BodyBuildInput, shapeKind: ColliderComponent["s
     const aggregate = new PhysicsAggregate(
       input.node,
       MapShapeType(shapeKind),
-      { mass: input.mass, friction: input.friction, restitution: input.restitution },
+      {
+        mass: input.mass,
+        friction: input.friction,
+        restitution: input.restitution,
+        startAsleep: input.startAsleep,
+      },
       input.scene
     );
 
@@ -528,6 +578,7 @@ export function BuildPhysics(
     return undefined;
   }
 
+  ApplyMassProperties(physicsBody, node, body);
   ApplyBodyDynamics(physicsBody, input.motion, body);
   return physicsBody;
 }

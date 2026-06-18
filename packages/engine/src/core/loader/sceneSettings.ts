@@ -5,22 +5,22 @@ import type { Level } from "../Level";
 import type { Entity } from "../Entity";
 import { ApplyEnvironment } from "../../subsystems/environment";
 import { ApplyFog } from "../../subsystems/fog";
-import { ApplyPostProcessing } from "../../subsystems/postprocess";
 import { ApplyAnimation } from "../../subsystems/animation";
 
 /**
  * Scene-wide settings from the manifest's optional `scene` block (clear /
- * ambient color, environment, fog, post-processing) plus the animation
- * autoplay pass — everything applied once, after the entity loop.
+ * ambient color, environment, fog) plus the animation autoplay pass — everything
+ * applied once, after the entity loop. Post-processing is applied later in
+ * LevelLoader, after Begin(), so runtime cameras exist first.
  */
 
 /** Apply the optional scene-wide render block from the manifest. */
-export function ApplySceneSettings(
+export async function ApplySceneSettings(
   scene: Scene,
   sceneInfo: SceneInfo,
   baseUrl: string,
   level: Level
-): void
+): Promise<void>
 {
   if (sceneInfo.clearColor !== undefined)
   {
@@ -32,15 +32,11 @@ export function ApplySceneSettings(
   }
   if (sceneInfo.environment !== undefined && sceneInfo.environment !== null)
   {
-    ApplyEnvironment(scene, sceneInfo.environment, baseUrl);
+    await ApplyEnvironment(scene, sceneInfo.environment, baseUrl);
   }
   if (sceneInfo.fog !== undefined && sceneInfo.fog !== null)
   {
     ApplyFog(scene, sceneInfo.fog);
-  }
-  if (sceneInfo.postProcessing !== undefined && sceneInfo.postProcessing !== null)
-  {
-    level.post = ApplyPostProcessing(scene, scene.activeCamera, sceneInfo.postProcessing);
   }
 }
 

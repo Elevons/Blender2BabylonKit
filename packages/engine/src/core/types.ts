@@ -41,12 +41,18 @@ export interface TriggerEventData {
 
 export interface RigidBodyComponent {
   type: "RIGIDBODY";
-  bodyType: "DYNAMIC" | "STATIC" | "KINEMATIC";
+  bodyType: "DYNAMIC" | "STATIC" | "ANIMATED";
   mass: number;
   friction: number;
   restitution: number;
   linearDamping: number;
   angularDamping: number;
+  /** Request sleep mode at creation (DYNAMIC bodies at rest; not guaranteed). */
+  startAsleep?: boolean;
+  /** When true, center of mass is computed from owned mesh bounds at load time. */
+  centerOfMassAutoFit?: boolean;
+  /** Custom center of mass in entity local space (Babylon Y-up); used when centerOfMassAutoFit is false. */
+  centerOfMass?: [number, number, number];
 }
 
 export interface ScriptComponent {
@@ -330,10 +336,15 @@ export interface EntityData {
 }
 
 export interface EnvironmentInfo {
-  file: string;        // path relative to the manifest (e.g. "env/sky.env")
+  /** Path relative to the manifest (e.g. "env/sky.env"). Omit when useDefault is true. */
+  file?: string;
+  /** Load Babylon's built-in studio environment from the CDN (no file copy at export). */
+  useDefault?: boolean;
   intensity: number;
   rotationY: number;   // radians
   createSkybox: boolean;
+  /** When true, the skybox mesh sets applyFog = false so scene fog does not wash out the background. */
+  skyboxIgnoreFog?: boolean;
 }
 
 export interface FogInfo {
@@ -344,14 +355,109 @@ export interface FogInfo {
   end: number;
 }
 
+export interface BloomInfo {
+  enabled: boolean;
+  threshold: number;
+  intensity: number;
+  kernel?: number;
+  scale?: number;
+}
+
+export interface SharpenInfo {
+  enabled: boolean;
+  edgeAmount?: number;
+  colorAmount?: number;
+}
+
+export interface DepthOfFieldInfo {
+  enabled: boolean;
+  blurLevel?: "LOW" | "MEDIUM" | "HIGH";
+  focusDistance?: number;
+  focalLength?: number;
+  fStop?: number;
+}
+
+export interface ChromaticAberrationInfo {
+  enabled: boolean;
+  aberrationAmount?: number;
+  radialIntensity?: number;
+  directionX?: number;
+  directionY?: number;
+}
+
+export interface GrainInfo {
+  enabled: boolean;
+  intensity?: number;
+  animated?: boolean;
+}
+
+export interface GlowInfo {
+  enabled: boolean;
+  blurKernelSize?: number;
+  intensity?: number;
+}
+
+export interface VignetteInfo {
+  enabled: boolean;
+  weight?: number;
+  stretch?: number;
+  centerX?: number;
+  centerY?: number;
+}
+
+export interface ColorGradingInfo {
+  enabled: boolean;
+  /** Manifest-relative LUT path (.3dl or .png). */
+  file?: string;
+}
+
+export interface ColorCurvesInfo {
+  enabled: boolean;
+  globalHue?: number;
+  globalDensity?: number;
+  globalSaturation?: number;
+  globalExposure?: number;
+  highlightsHue?: number;
+  highlightsDensity?: number;
+  highlightsSaturation?: number;
+  highlightsExposure?: number;
+  midtonesHue?: number;
+  midtonesDensity?: number;
+  midtonesSaturation?: number;
+  midtonesExposure?: number;
+  shadowsHue?: number;
+  shadowsDensity?: number;
+  shadowsSaturation?: number;
+  shadowsExposure?: number;
+}
+
+export interface SsaoInfo {
+  enabled: boolean;
+  radius?: number;
+  totalStrength?: number;
+  samples?: number;
+  maxZ?: number;
+}
+
 export interface PostProcessingInfo {
   defaultPipeline: boolean;
   fxaa: boolean;
-  bloom: { enabled: boolean; threshold: number; intensity: number };
+  msaaSamples?: number;
+  bloom: BloomInfo;
   ssao: boolean;
+  ssaoSettings?: Omit<SsaoInfo, "enabled">;
   toneMapping: boolean;
+  toneMappingType?: "STANDARD" | "ACES" | "KHR_PBR_NEUTRAL";
   exposure: number;
   contrast: number;
+  sharpen?: SharpenInfo;
+  depthOfField?: DepthOfFieldInfo;
+  chromaticAberration?: ChromaticAberrationInfo;
+  grain?: GrainInfo;
+  glow?: GlowInfo;
+  vignette?: VignetteInfo;
+  colorGrading?: ColorGradingInfo;
+  colorCurves?: ColorCurvesInfo;
 }
 
 export interface SceneInfo {

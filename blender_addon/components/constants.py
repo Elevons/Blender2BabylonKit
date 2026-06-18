@@ -1,25 +1,35 @@
 """Enum item lists and lookup tables shared by the component data model, the
 UI, and the exporter. Pure data — importing this never touches bpy state."""
 
+# Separator entries ("", "Section", "") render as labeled headers in enum menus.
 COMPONENT_TYPES = [
-    ('TAG',       "Tag",        "Assign a tag / layer name to this entity"),
-    ('COLLIDER',  "Collider",   "Physics collision shape"),
-    ('RIGIDBODY', "Rigid Body", "Physics body (mass, dynamics)"),
-    ('SCRIPT',    "Script",     "Attach a named behavior script with parameters"),
-    ('CAMERA',    "Camera",     "Override the camera type (ArcRotate / Follow / ...)"),
-    ('AUDIO',     "Audio",      "Attach a sound to this entity (ambient or 3D-positioned)"),
+    ("", "General", ""),
+    ('TAG',    "Tag",    "Assign a tag / layer name to this entity"),
+    ('SCRIPT', "Script", "Attach a named behavior script with parameters"),
+
+    ("", "Physics", ""),
+    ('COLLIDER',   "Collider",   "Physics collision shape"),
+    ('RIGIDBODY',  "Rigid Body", "Physics body (mass, dynamics)"),
     ('CONSTRAINT', "Constraint", "Physics joint to another body (hinge, slider, spring...)"),
-    ('GUI',       "GUI",        "Attach a Babylon GUI (.json from the GUI Editor) as a HUD or on this mesh"),
-    ('PARTICLE',  "Particles",  "Attach a Babylon particle system (.json from the Particle Editor)"),
-    ('GUI3D_BUTTON',     "3D Button",                    "A 3D button plate rendering text or an image (Button3D)"),
-    ('GUI3D_HOLO',       "3D Holographic Button",        "MRTK-style holographic button with text/image/tooltip"),
-    ('GUI3D_TOUCH_HOLO', "3D Touch Holographic Button",  "Holographic button with XR near-touch support"),
-    ('GUI3D_MESH',       "3D Mesh Button",               "Make this object's own mesh a clickable 3D control"),
-    ('GUI3D_STACK',      "3D Stack Panel",               "Stack child 3D buttons in a row or column"),
-    ('GUI3D_SPHERE',     "3D Sphere Panel",              "Arrange child 3D buttons on a sphere surface"),
-    ('GUI3D_CYLINDER',   "3D Cylinder Panel",            "Arrange child 3D buttons on a cylinder surface"),
-    ('GUI3D_PLANE',      "3D Plane Panel",               "Arrange child 3D buttons on a plane"),
-    ('GUI3D_SCATTER',    "3D Scatter Panel",             "Scatter child 3D buttons with randomized placement"),
+
+    ("", "Media & UI", ""),
+    ('CAMERA',   "Camera",   "Override the camera type (ArcRotate / Follow / ...)"),
+    ('AUDIO',    "Audio",    "Attach a sound to this entity (ambient or 3D-positioned)"),
+    ('GUI',      "GUI",      "Attach a Babylon GUI (.json from the GUI Editor) as a HUD or on this mesh"),
+    ('PARTICLE', "Particles", "Attach a Babylon particle system (.json from the Particle Editor)"),
+
+    ("", "3D GUI — Controls", ""),
+    ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),
+    ('GUI3D_HOLO',       "3D Holographic Button",       "MRTK-style holographic button with text/image/tooltip"),
+    ('GUI3D_TOUCH_HOLO', "3D Touch Holographic Button", "Holographic button with XR near-touch support"),
+    ('GUI3D_MESH',       "3D Mesh Button",              "Make this object's own mesh a clickable 3D control"),
+
+    ("", "3D GUI — Layout", ""),
+    ('GUI3D_STACK',    "3D Stack Panel",    "Stack child 3D buttons in a row or column"),
+    ('GUI3D_SPHERE',   "3D Sphere Panel",   "Arrange child 3D buttons on a sphere surface"),
+    ('GUI3D_CYLINDER', "3D Cylinder Panel", "Arrange child 3D buttons on a cylinder surface"),
+    ('GUI3D_PLANE',    "3D Plane Panel",    "Arrange child 3D buttons on a plane"),
+    ('GUI3D_SCATTER',  "3D Scatter Panel",  "Scatter child 3D buttons with randomized placement"),
 ]
 
 # Membership sets for the 3D GUI family: interactive controls carry On Click
@@ -110,7 +120,7 @@ COLLIDER_SHAPES = [
 BODY_TYPES = [
     ('DYNAMIC',   "Dynamic",   "Moved by the physics simulation"),
     ('STATIC',    "Static",    "Immovable (mass 0)"),
-    ('KINEMATIC', "Kinematic", "Moved by code or animation, not by forces"),
+    ('ANIMATED', "Animated", "Driven by animation or code; pushes others but is not pushed by collisions"),
 ]
 
 SHADOW_FILTERS = [

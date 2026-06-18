@@ -1,9 +1,9 @@
 import { Behavior, exposed, type Entity } from "@bjs/engine";
-import { Vector3, Curve3 } from "@babylonjs/core";
+import { Path3D, Quaternion, Vector3, PhysicsMotionType } from "@babylonjs/core";
 
 /**
- * Demonstrates the enum and list @exposed types. Moves the node through a set of
- * waypoints; the easing mode is chosen from a dropdown in Blender.
+ * Moves the node along a Path3D built from waypoint entities.
+ * The easing mode is chosen from a dropdown in Blender.
  */
 export default class TrainBehavior extends Behavior
 {
@@ -18,58 +18,95 @@ export default class TrainBehavior extends Behavior
   @exposed({ min: 0.1, label: "Speed (units/s)" })
   throttleSpeed = 1;
 
-  private createSpline(nbPoints: number = 10, closed: boolean = false): Curve3
-  {
-    return Curve3.CreateCatmullRomSpline(this.points, nbPoints, closed);
-  }
+  @exposed({ min: 0.1, label: "Acceleration (units/s²)" })
+  acceleration = 5;
 
-  private points: Vector3[] = [];
-  private splinePoints: Vector3[] = [];
+  @exposed({ min: 0.1, label: "Deceleration (units/s²)" })
+  deceleration = 8;
+
+  private path: Path3D | null = null;
   private currentProgress = 0;
   private maxDuration = 0;
+  private currentThrottle = 0;
 
+  // Current quaternion used as the source for SmoothToRef each frame.
+  private _currentQuat = new Quaternion();
+
+  /** Build the Path3D and ensure any attached physics body is kinematic. */
   OnStart(): void
   {
-    this.points = [];
+    const points: Vector3[] = [];
     for (const target of this.targets)
     {
       if (target !== null)
       {
-        this.points.push(target.node.getAbsolutePosition());
+        points.push(target.node.getAbsolutePosition());
       }
     }
 
-    if (this.points.length >= 2)
+    if (points.length >= 2)
     {
-      // Target approx 100 points total for higher visual smoothness.
-      // nbPoints is points per segment. Segments = points.length - 1.
-      const nbPoints = Math.max(1, Math.floor(100 / Math.max(1, this.points.length - 1)));
-      const spline = this.createSpline(nbPoints);
-      this.splinePoints = spline.getPoints();
-      this.maxDuration = spline.length();
+      this.path = new Path3D(points);
+      this.maxDuration = this.path.length();
+
+      // Snap to the path start immediately so the train doesn't jump on the
+      // first OnUpdate / first Havok solve step.
+      this.node.position = this.path.getPointAt(0);
+      const forward = this.path.getTangentAt(0, true);
+      this._currentQuat = Quaternion.FromLookDirectionRH(forward, Vector3.Up());
+      this.node.rotationQuaternion = this._currentQuat;
+    }
+
+    // Havok ANIMATED bodies read their transform from the node each frame
+    // (pre-step). KINEMATIC bodies do NOT read from the node and will
+    // snap back to their internal rest state when you stop driving them.
+    // disablePreStep lets the physics plugin copy node -> body on every
+    // solve step, so the Havok internal state stays in sync with our path
+    // animation.
+    if (this.entity.body !== undefined)
+    {
+      this.entity.body.setMotionType(PhysicsMotionType.ANIMATED);
+      this.entity.body.disablePreStep = false;
     }
   }
 
-  /** Interpolate along the current leg using the chosen easing. */
+  /** Interpolate along the Path3D using the chosen easing. */
   OnUpdate(deltaSeconds: number): void
   {
-    if (this.splinePoints.length < 2)
+    if (!this.path)
     {
       return;
     }
 
     // Handle Throttle using the scene default input map (this.input)
-    let throttle = 0;
-    if (this.input.FindAction("Throttle Up")?.IsPressed() && this.currentProgress < this.maxDuration)
+    let targetThrottle = 0;
+    if (this.input?.FindAction("Throttle Up")?.IsPressed() && this.currentProgress < this.maxDuration)
     {
-      throttle += 1;
+      targetThrottle += 1;
     }
-    if (this.input.FindAction("Throttle Down")?.IsPressed() && this.currentProgress > 0)
+    if (this.input?.FindAction("Throttle Down")?.IsPressed() && this.currentProgress > 0)
     {
-      throttle -= 1;
+      targetThrottle -= 1;
     }
 
-    this.currentProgress += throttle * this.throttleSpeed * deltaSeconds;
+    // Smoothly ramp currentThrottle toward targetThrottle
+    const accelerating = targetThrottle > this.currentThrottle;
+    const rate = accelerating ? this.acceleration : this.deceleration;
+    const step = rate * deltaSeconds;
+    if (Math.abs(targetThrottle - this.currentThrottle) <= step)
+    {
+      this.currentThrottle = targetThrottle;
+    }
+    else if (accelerating)
+    {
+      this.currentThrottle += step;
+    }
+    else
+    {
+      this.currentThrottle -= step;
+    }
+
+    this.currentProgress += this.currentThrottle * this.throttleSpeed * deltaSeconds;
 
     // Clamp progress to [0, maxDuration]
     if (this.currentProgress < 0)
@@ -89,7 +126,7 @@ export default class TrainBehavior extends Behavior
     let t = this.currentProgress / this.maxDuration;
     t = Math.max(0, Math.min(1, t));
 
-    // Apply easing to the global progress rather than the local segment blend
+    // Apply easing to the global progress
     if (this.easing === "snap")
     {
       t = t < 0.5 ? 0 : 1;
@@ -99,22 +136,14 @@ export default class TrainBehavior extends Behavior
       t = t * t * (3 - 2 * t);
     }
 
-    const rawIndex = t * (this.splinePoints.length - 1);
-    const index = Math.floor(rawIndex);
-    const blend = rawIndex - index;
+    // Position: Path3D gives an interpolated point at the given [0..1] progress.
+    this.node.position = this.path.getPointAt(t);
 
-    if (index >= this.splinePoints.length - 1)
-    {
-      this.node.position = this.splinePoints[this.splinePoints.length - 1];
-      return;
-    }
-
-    const p0 = this.splinePoints[index];
-    const p1 = this.splinePoints[index + 1];
-
-    this.node.position = Vector3.Lerp(p0, p1, blend);
-
-    // Look at the next point on the spline to align orientation
-    this.node.lookAt(p1);
+    // Orientation: use the interpolated tangent for smooth rotation.
+    const forward = this.path.getTangentAt(t, true);
+    Quaternion.FromRotationMatrixToRef(this.node.getWorldMatrix(), this._currentQuat);
+    const targetQuat = Quaternion.FromLookDirectionRH(forward, Vector3.Up());
+    Quaternion.SmoothToRef(this._currentQuat, targetQuat, deltaSeconds, 0.1, this._currentQuat);
+    this.node.rotationQuaternion = this._currentQuat;
   }
 }
