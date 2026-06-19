@@ -38,7 +38,7 @@ export const AREA_PAGES = {
       N(5, 40, 420, "input_actions/", "Input Actions asset", "The asset end-to-end: data model (maps/actions/bindings), the built-in Player defaults, JSON serialize/apply (+ friendly-key aliases), and every bjs.input_* operator.", [["Export keys", "inputActions + defaultInputMap"]]),
       N(6, 300, 200, "operators/", "the verbs", "Component verbs (add/remove/duplicate/move/copy/cut/paste, Assign GUID, Fit Collider, Pin Inspector), exposed-list items (add, resize-to-count, add-selected for entity lists), script pick + Sync, and Validate / Export. Pure behavior — every UI button routes here, and the stack verbs resolve their target through core/inspector.py so they honor the pin.", [["Export op", "BJS_OT_export"]]),
       N(7, 300, 340, "ui/", "panels + menus", "All presentation. Viewport 'Babylon' N-panel = the selected object — or a PINNED object — with components + light/camera/animation child panels + quick export. Properties › Scene 'Babylon' = scene-wide (rendering, fog, post-processing sub-panels via post_panels.py, Input Actions, export). Both export blocks share draw_export_controls().", [["Object", "N-panel"], ["Scene", "Properties › Scene"]]),
-      N(8, 560, 110, "export/", "the pipeline", "The output half. level.py orchestrates the glb + schema-v4 manifest; components / datablocks / animation / scene serialize each block (Blender→Babylon axis swap happens here); assets.py copies media; validate.py pre-flights; live_link.py re-exports on Ctrl+S.", [["Output", "glb + scene.json"], ["Schema", "v4"]]),
+      N(8, 560, 110, "export/", "the pipeline", "The output half. level.py orchestrates the glb + schema-v4 manifest (begin_asset_export resets copy reservations each pass); components / datablocks / animation / scene serialize each block (Blender→Babylon axis swap happens here); assets.py copies media with stable sanitized names (re-export overwrites; _2 only on same-pass collision); validate.py pre-flights; live_link.py re-exports on Ctrl+S.", [["Output", "glb + scene.json"], ["Schema", "v4"]]),
       N(9, 560, 320, "viewport/", "viewport gizmo", "GPU overlays. collider_preview.py draws manual colliders in the 3D view in Blender space, so the preview matches the body export produces.", [["Draw", "POST_VIEW handler"]]),
     ],
     edges: [
@@ -69,7 +69,7 @@ export const AREA_PAGES = {
   "export.html": {
     title: "Export pipeline",
     nodes: [
-      N(1, 40, 200, "export_level", "orchestrator", "The entry the Export operator and Live Link both call. Dedupe GUIDs → ensure GUIDs → write glb → build manifest → attach debug flag → write .scene.json. Returns (glb, json, entity count).", [["File", "export/level.py"]]),
+      N(1, 40, 200, "export_level", "orchestrator", "The entry the Export operator and Live Link both call. begin_asset_export → dedupe GUIDs → ensure GUIDs → write glb → build manifest → attach debug flag → write .scene.json. Returns (glb, json, entity count).", [["File", "export/level.py"]]),
       N(2, 300, 60, "_dedupe_entity_ids", "step 1", "Copy-pasted objects share a GUID; this re-issues fresh ones so identity stays unique.", [["File", "export/level.py"]]),
       N(3, 300, 170, "_ensure_entity_ids", "step 2", "Assign GUIDs to everything addressable (components, lights, cameras) AND every referenced object, so refs always resolve. Must run before the glb so extras carry the IDs.", [["File", "export/level.py"]]),
       N(4, 300, 280, "_export_glb", "step 3", "Invokes Blender's glTF exporter (+Y-up, GUIDs in node extras, cameras/lights/animation included).", [["File", "export/level.py"]]),
@@ -97,7 +97,7 @@ export const TRACES = [
     intro: "What Export Level (and every Live Link save) actually runs, top to bottom.",
     steps: [
       { file: "blender_addon/operators/export_ops.py", symbol: "BJS_OT_export", note: "The operator behind the Export button (an ExportHelper, so it shows a file dialog). execute() runs the validator for warnings, then calls export_level with the chosen path." },
-      { file: "blender_addon/export/level.py", symbol: "export_level", note: "The orchestrator. Dedupe + ensure GUIDs (before the glb so extras carry them), write the glb, build the manifest, attach the Debug Build flag, write .scene.json. Returns (glb, json, count)." },
+      { file: "blender_addon/export/level.py", symbol: "export_level", note: "The orchestrator. begin_asset_export (stable side-file paths) → dedupe + ensure GUIDs (before the glb so extras carry them) → write the glb → build the manifest → attach the Debug Build flag → write .scene.json. Returns (glb, json, count)." },
       { file: "blender_addon/export/level.py", symbol: "_ensure_entity_ids", note: "GUIDs for everything addressable AND everything referenced (so an entity/constraint/trigger target always exists in the glb to point at)." },
       { file: "blender_addon/export/level.py", symbol: "_build_manifest", note: "Walks renderable objects; per object emits components + light + camera + animation blocks, plus the scene block. The schema-v4 dict." },
       { file: "blender_addon/export/components.py", symbol: "serialize_components", note: "The core converter: one dict per component, with all Blender→Babylon axis conversion (collider center/size/rotation, constraint pivot/axis) happening HERE, once." },

@@ -1,8 +1,14 @@
 # Babylon Level Kit — Behavior Authoring Context
 
-Context for an LLM **generating a behavior script** for this engine. Each behavior
-is one self-contained `.ts` file the runtime loads and runs per-frame. This file
-is the full contract; you do not need the engine internals to write one.
+Context for an LLM **generating a behavior script** for this engine (runtime
+**v0.32.0**). Each behavior is one self-contained `.ts` file the runtime loads
+and runs per-frame. This file is the **behavior authoring contract** — you do
+not need engine internals to write one. Deeper docs: `docs/engine/04-SCRIPTING.md`,
+`docs/STYLE_GUIDE.md`, and the full packet at `docs/engine/00-INDEX.md`.
+
+**Terminology:** a **component** is authored *data* on an entity (TAG, COLLIDER,
+SCRIPT, …) serialized from Blender; a **behavior** is a runtime *script class*
+(`extends Behavior`) instantiated from a `SCRIPT` component.
 
 ## File contract (every behavior)
 
@@ -11,6 +17,11 @@ is the full contract; you do not need the engine internals to write one.
 - Lives in `src/behaviors/`.
 - Import the engine package: `from "@bjs/engine"` (the workspace package).
 - Import Babylon types from `@babylonjs/core`.
+- `main.ts` auto-registers every file in `behaviors/` **by filename stem** via
+  `import.meta.glob` + `BehaviorRegistry` — exactly the key Blender's "Open
+  Script…" picker stores.
+- After changing `@exposed` fields in code, press **Sync** on the Script
+  component in Blender so the inspector picks up new fields.
 
 ```ts
 import { Behavior, exposed, type Entity } from "@bjs/engine";
@@ -37,6 +48,9 @@ OnMessage(message: string, source: Entity): void  // a message arrived (trigger 
 - Scale continuous motion by `deltaSeconds`. (Setting a Babylon *velocity* is
   already per-second — don't multiply those by `deltaSeconds`.)
 - Cross-entity `OnStart` order is unspecified; guard references for `null`.
+- Input is processed **before** `OnUpdate` each frame; `WasPressedThisFrame` /
+  `WasReleasedThisFrame` edges last one full frame (`InputManager.EndFrame` runs
+  after all behaviors).
 
 ## Members available on `this`
 
@@ -47,20 +61,33 @@ this.node   : TransformNode   // shortcut === this.entity.node
 this.input? : InputActionMap  // scene default map — injected when you have no @inputMap fields
 ```
 
+Behaviors do **not** receive a `Level` handle. Look up other objects via
+`@exposed({ type: "entity" })` fields (preferred), `entity.GetAttachment("SCRIPT")`
+/ `entity.GetBehavior` on the same entity, or `node.metadata.bjsEntity` from a
+Babylon node.
+
 ## Entity API
+
+Types for attachments live in `core/attachments.ts` (`EntityAttachment`,
+`ComponentType`, `AttachmentOfType<T>` — exported from `@bjs/engine`).
 
 ```ts
 entity.id: string                 // Blender GUID (readonly)
 entity.name: string               // Blender object name (readonly)
 entity.node: TransformNode        // its Babylon node (readonly)
 entity.tag: string                // from a TAG component ("Untagged" default)
+entity.attachments: EntityAttachment[]  // live registry — one row per applied component
 entity.body?: PhysicsBody         // Havok V2 body — present iff a COLLIDER/RIGIDBODY was authored
 entity.animations: AnimationGroup[]               // glTF clips targeting this entity
 entity.sounds: StaticSound[]                      // sounds from AUDIO components (audio engine v2)
 entity.guiTextures: AdvancedDynamicTexture[]      // from GUI components (@babylonjs/gui)
 entity.particleSystems: IParticleSystem[]         // from PARTICLE components
 entity.controls3D: Control3D[]                    // from GUI3D_* components (buttons + panels)
-entity.GetBehavior<T>(Ctor): T | undefined        // another behavior on the same entity
+entity.GetAttachments(): readonly EntityAttachment[]
+entity.GetAttachment(type): AttachmentOfType | undefined   // first row of that type
+entity.GetAttachmentsOfType(type): AttachmentOfType[]      // every row of that type
+entity.HasAttachment(type): boolean
+entity.GetBehavior<T>(Ctor): T | undefined        // another behavior on the same entity (by class)
 entity.GetAnimation(name): AnimationGroup | undefined  // exact match, then contains
 entity.GetSound(name): StaticSound | undefined         // exact match, then contains
 entity.GetGui(name): AdvancedDynamicTexture | undefined      // exact match, then contains
@@ -68,6 +95,47 @@ entity.GetParticles(name): IParticleSystem | undefined       // exact match, the
 entity.GetControl3D(name): Control3D | undefined             // exact match, then contains
 entity.SendMessage(message, source): void              // deliver to all its behaviors' OnMessage
 ```
+
+### Component queries (`attachments`)
+
+At load time each successfully applied **component** becomes one row on
+`entity.attachments`. Each row pairs the authored manifest `data` with its
+runtime object when one exists (`behavior`, `body`, `sound`, `texture`, …).
+There is no frozen manifest copy on `Entity` — query attachments, not JSON.
+
+```ts
+import { type EntityAttachment, type AttachmentOfType } from "@bjs/engine";
+
+// First SCRIPT row (typed) — same as entity.behaviors[0] when one script is authored
+const script = entity.GetAttachment("SCRIPT");
+const patrol = script?.behavior;
+
+// Physics — COLLIDER and RIGIDBODY are separate rows when both are authored (same body ref)
+const collider = entity.GetAttachment("COLLIDER");  // { type, data, body }
+if (entity.HasAttachment("RIGIDBODY")) { /* … */ }
+
+// Every AUDIO component (entities can have more than one)
+for (const row of entity.GetAttachmentsOfType("AUDIO"))
+{
+  row.sound.setVolume(0.5);
+}
+```
+
+| `GetAttachment` type | Runtime field on the row |
+|---|---|
+| `"TAG"` | `data` only |
+| `"COLLIDER"` / `"RIGIDBODY"` | `data` + `body` |
+| `"SCRIPT"` | `data` + `behavior` |
+| `"AUDIO"` | `data` + `sound` |
+| `"GUI"` | `data` + `texture` |
+| `"PARTICLE"` | `data` + `system` |
+| `"CONSTRAINT"` | `data` + `constraint` |
+| `"GUI3D_*"` | `data` + `control` |
+
+Use `GetBehavior(MyClass)` when you know the behavior **class**; use
+`GetAttachment("SCRIPT")` when you care about the component row or manifest
+`data`. Failed async loads (missing audio/GUI/particle file) produce no row.
+Convenience arrays (`sounds`, `guiTextures`, …) stay in sync for now.
 
 ## `@exposed` — fields editable per-object in Blender
 
@@ -106,8 +174,12 @@ Options object: `{ min?, max?, step?, label?, type?, options?, of? }`.
 ## Reaching other objects
 
 Prefer an `@exposed({ type: "entity" })` field (the author picks the target in
-Blender; it resolves to an `Entity` before `OnStart`). If you only have a node:
-`node.metadata.bjsEntity` is the back-reference to its `Entity`.
+Blender; it resolves to an `Entity` before `OnStart`). On the same entity, use
+`entity.GetBehavior(OtherBehavior)` or `entity.GetAttachment("SCRIPT")?.behavior`.
+If you only have a node:
+`node.metadata.bjsEntity` is the back-reference to its `Entity`. For tag-based
+grouping, author a TAG component and read `entity.tag` (or filter in your own
+`@exposed` entity list).
 
 ## Physics quick reference
 
@@ -119,6 +191,14 @@ entity.body?.setLinearVelocity(v);   entity.body?.getLinearVelocityToRef(out);
 entity.body?.setAngularVelocity(v);  entity.body?.getAngularVelocityToRef(out);
 entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylonjs/core
 ```
+
+### Motion types (author on Rigid Body in Blender)
+
+| `bodyType` | Role |
+|---|---|
+| `STATIC` | Never moves; still collides (terrain, walls). |
+| `DYNAMIC` | Fully simulated — forces, collisions, mass. |
+| `ANIMATED` | Driven by animation or code; pushes dynamic bodies and constraints but is not pushed by collisions. Use for elevators, moving platforms, or behaviors that set `node` transforms each frame. |
 
 - To move/rotate a body by hand each frame, author **Animated** on the Rigid Body
   (or call `setMotionType(PhysicsMotionType.ANIMATED)` in `OnStart`), or drive it
@@ -158,6 +238,10 @@ pivot at hitch; **Angular X** = Free (relative pitch), **Linear Y** = Spring
 (±0.15 m), everything else Locked. Do **not** stack Hinge + Spring on the same two
 bodies (Spring welds rotation; you get both pitching the same way).
 
+**Bodies Collide** (manifest `collision`, default off) controls whether the two
+connected bodies generate contact impulses against each other — turn off when
+colliders overlap at rest.
+
 **Authoring pitfalls (mention in comments if the behavior drives a constrained rig):**
 - Constrained bodies work best as **siblings**, not parented to each other.
 - Don't overwrite `node.rotation` every frame on entities that have hinge-driven
@@ -167,6 +251,12 @@ bodies (Spring welds rotation; you get both pitching the same way).
 
 Hand-built `Physics6DoFConstraint` in code is still possible — reuse
 `ComputeConstraintFrame` / limit patterns from `subsystems/constraints.ts`.
+
+### Triggers
+
+Trigger colliders can be authored in Blender with **On Enter Events** (target
+GUID, message, optional **filter tag**). **MESH-shaped triggers never fire** in
+Havok — use box/sphere/capsule/convex. Receive events via `OnMessage`.
 
 ## Input
 
@@ -241,6 +331,9 @@ For rigged characters, the behavior must be attached to the **armature**
 entity (components on a skinned mesh do nothing — glTF skinning ignores the
 mesh node's transform, and clips target the joints under the armature).
 
+Animation groups are scoped to an entity **by membership**: a clip belongs to an
+entity if any targeted animation hits the entity's node or a descendant.
+
 ```ts
 this.entity.GetAnimation("Walk")?.start(true);  // loop
 for (const group of this.entity.animations) { group.stop(); }
@@ -253,10 +346,14 @@ this.entity.GetSound("door")?.play();           // sound names = file stem ("aud
 otherEntity.SendMessage("open", this.entity);   // their behaviors get OnMessage("open", source)
 ```
 
-Trigger colliders can be authored in Blender to send a message on enter — receive
-it by overriding `OnMessage`. Sounds with Auto Play start after the browser's
-first user gesture (autoplay policy); calling `.play()` from input handlers is
-always safe.
+AUDIO components support volume, loop, spatial 3D (`spatial` + `maxDistance`),
+and playback rate — spatial sounds follow `entity.node` automatically. Sounds with
+Auto Play start after the browser's first user gesture (autoplay policy); calling
+`.play()` from input handlers is always safe.
+
+Trigger colliders and 3D GUI buttons can send messages on enter/click — receive
+them by overriding `OnMessage`. Optional **filter tag** on trigger events
+drops enterers whose `entity.tag` doesn't match.
 
 ## GUI & particles
 
@@ -264,22 +361,40 @@ GUI layouts and particle systems are authored in Blender as **GUI** / **Particle
 components pointing at a Babylon-editor `.json`; the runtime loads them, so a
 behavior just drives the already-built objects:
 
+| GUI mode | Babylon API | Requirement |
+|---|---|---|
+| **FULLSCREEN** | `AdvancedDynamicTexture.CreateFullscreenUI` | Any entity node (typically an empty) |
+| **MESH** | `AdvancedDynamicTexture.CreateForMesh` | Entity node must be a mesh |
+
 ```ts
 this.entity.GetGui("hud")?.getControlByName("Score");   // names = file stem ("gui/hud.json" -> "hud")
 this.entity.GetParticles("fire")?.start();              // or .stop(); also this.entity.particleSystems
 ```
 
-`AdvancedDynamicTexture` / GUI control types import from `@babylonjs/gui`;
-`IParticleSystem` imports from `@babylonjs/core`.
+Particle **autoStart** and **attachToEntity** are authored in Blender (mesh
+emitter or empty position). `AdvancedDynamicTexture` / GUI control types import
+from `@babylonjs/gui`; `IParticleSystem` imports from `@babylonjs/core`.
 
 ## 3D GUI
 
 3D buttons and panels are authored as **GUI3D_*** components (one per Babylon
-control type — `Button3D`, `HolographicButton`, `TouchHolographicButton`,
-`MeshButton3D`, plus stack/sphere/cylinder/plane/scatter panels). Panels lay
-out the controls on their Blender *child* objects. The runtime builds them all
-on a shared `GUI3DManager` after entities exist, so behaviors only drive the
-finished controls:
+control type). Panels lay out the controls on their Blender *child* objects.
+Parent button empties under a panel empty (Ctrl+P); child transforms express
+**membership only** — the panel arranges controls at runtime. The runtime builds
+them all on a shared `GUI3DManager` after entities exist, so behaviors only
+drive the finished controls:
+
+| Component | Babylon class |
+|---|---|
+| `GUI3D_BUTTON` | `Button3D` |
+| `GUI3D_HOLO` | `HolographicButton` |
+| `GUI3D_TOUCH_HOLO` | `TouchHolographicButton` |
+| `GUI3D_MESH` | `MeshButton3D` |
+| `GUI3D_STACK` | `StackPanel3D` |
+| `GUI3D_SPHERE` | `SpherePanel` |
+| `GUI3D_CYLINDER` | `CylinderPanel` |
+| `GUI3D_PLANE` | `PlanePanel` |
+| `GUI3D_SCATTER` | `ScatterPanel` |
 
 ```ts
 this.entity.GetControl3D("StartButton");          // named after the Blender object
@@ -296,7 +411,7 @@ PascalCase methods/functions; camelCase, fully-descriptive fields & locals (no
 `i`/`dt`/`tmp`); Allman braces (opening brace on its own line) for methods, `if`,
 `for`; braces on every `if`; explicit `: void`; explicit null checks
 (`if (x !== null)`), except real booleans. The `@exposed` and `@inputMap`
-decorators stay lowercase. Full rules: `STYLE_GUIDE.md`.
+decorators stay lowercase. Full rules: `docs/STYLE_GUIDE.md`.
 
 ## Complete example
 
@@ -339,3 +454,15 @@ export default class HoverBob extends Behavior
   }
 }
 ```
+
+## Related documentation
+
+| Topic | Doc |
+|---|---|
+| Full scripting chapter | `docs/engine/04-SCRIPTING.md` |
+| Physics (bodies, triggers, constraints) | `docs/engine/05-PHYSICS.md` |
+| Load order / when `OnStart` runs | `docs/engine/03-LOAD-PIPELINE.md` |
+| Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.md` |
+| 2D GUI, particles, 3D GUI | `docs/engine/10-UI.md` |
+| Code style | `docs/STYLE_GUIDE.md` |
+| Prefabs + `level.Spawn()` (planned) | `docs/PREFAB_SPEC.md` |

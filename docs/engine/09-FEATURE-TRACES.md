@@ -14,8 +14,9 @@ manifest `entities[].id` → the loader's `BuildIdIndex` (`core/loader/nodeResol
 
 ### Tag
 TAG component (`components/` → `export/components.serialize_components`) → manifest
-`{type:"TAG", tag}` → `entityBuilder.ClassifyComponents` sets `entity.tag` →
-query `level.ByTag("Enemy")`.
+`{type:"TAG", tag}` → `entityBuilder.ClassifyComponents` sets `entity.tag` and
+`RegisterAttachment({type:"TAG", data})` → query `level.ByTag("Enemy")` or
+`entity.HasAttachment("TAG")`.
 
 ### Collider / RigidBody
 N-panel fields (+ `viewport/collider_preview.py` wireframe, Blender space) →
@@ -25,7 +26,8 @@ COLLIDER/RIGIDBODY → `physics.BuildPhysics`: shape path chosen
 (auto-fit aggregate | wrapper fit | convex/mesh merge | manual), all geometry
 gathered via `OwnedColliderMeshes` (excludes child entities by GUID) →
 `ApplyMassProperties` (`ResolveCenterOfMass` + `setMassProperties`) → one
-`PhysicsBody` on the node → `entity.body`. Sound because of right-handed
+`PhysicsBody` on the node → `entity.body` + `RegisterAttachment` per COLLIDER
+and/or RIGIDBODY row (same `body` ref when both). Sound because of right-handed
 import ([why](05-PHYSICS.md#right-handed)). Debug view: **C** →
 `Level.ShowColliders` → PhysicsViewer.
 
@@ -35,7 +37,8 @@ import ([why](05-PHYSICS.md#right-handed)). Debug view: **C** →
 serialize into `vars` → manifest SCRIPT → `InstantiateScripts` (`core/loader/entityBuilder.ts`) →
 `BehaviorRegistry.Create(stem)` (registered by `AutoRegisterBehaviors` from
 `import.meta.glob`) → inject `entity`/`scene` → `ApplyExposedVars` (coerce
-vector3/color; entity refs → `PendingRef`) → second pass
+vector3/color; entity refs → `PendingRef`) → `RegisterAttachment({type:"SCRIPT",
+data, behavior})` → second pass
 `ResolveObjectReferences` → `Level.Begin` calls `OnStart`.
 
 ### Entity reference field
@@ -77,7 +80,7 @@ Skinned characters: author on the **armature** ([rule](07-AUDIO-ANIMATION.md)).
 AUDIO component → `export/assets.copy_asset` → `audio/<file>` + manifest →
 `audio.ApplyAudio` (engine v2 `CreateSoundAsync`, spatial attach) → promises
 settled in `FinalizeLevel`; autoplay waits `unlockAsync` → `entity.sounds`,
-`GetSound(stem)`.
+`RegisterAttachment({type:"AUDIO", data, sound})`, `GetSound(stem)`.
 
 ### Trigger event → OnMessage
 Is Trigger + **On Enter Events** rows (`BJSTriggerEvent`) → manifest
@@ -93,7 +96,8 @@ force-included; CUSTOM also exports `axes[]` per 6DoF row) →
 `ComputeConstraintFrame` from live world transforms (pins as-placed pose) →
 Lock/BallAndSocket or 6DoF with `BuildAxisLimits` (presets) or
 `BuildCustomAxisLimits` (CUSTOM) → optional `ApplyMotor` (HINGE/SLIDER only) →
-`ownerBody.addConstraint` → `level.constraints`.
+`ownerBody.addConstraint` → `level.constraints` +
+`RegisterAttachment` on owner (`{type:"CONSTRAINT", data, constraint}`).
 
 ### Input action
 Blender **Input Actions** panel (maps > actions > bindings + **Scene Default**
@@ -110,9 +114,10 @@ started/performed/canceled fire) → behaviors poll
 
 ### Live Link
 Export remembers path (`scene.bjs_live_link_path`) → Ctrl+S →
-`export/live_link._on_save_post` → `validate` + `export_level` → manifest write →
-Vite `ReloadOnLevelExport` watches all of `public/levels/` (`path.resolve` path
-matching; 50ms debounce) → full page reload.
+`export/live_link._on_save_post` → `validate` + `export_level` (side files
+overwrite stable paths via `begin_asset_export` / `unique_asset_path`) →
+manifest write → Vite `ReloadOnLevelExport` watches all of `public/levels/`
+(`path.resolve` path matching; 50ms debounce) → full page reload.
 
 ### Debug Build
 Checkbox (`scene.bjs_debug_build`) → manifest top-level `"debug"` →
@@ -123,20 +128,22 @@ Checkbox (`scene.bjs_debug_build`) → manifest top-level `"debug"` →
 GUI component (`components/` → `export/assets.copy_asset` to `gui/`) → manifest
 `{type:"GUI", file, mode, …}` → `ApplyComponents` queues `ApplyGui`
 (`ui/gui2d.ts`) → `SettleTasks` in `FinalizeLevel` →
-`entity.guiTextures`, `GetGui(stem)`. Trace: [trace-gui.html](trace-gui.html).
+`entity.guiTextures`, `RegisterAttachment({type:"GUI", data, texture})`,
+`GetGui(stem)`. Trace: [trace-gui.html](trace-gui.html).
 
 ### Particles (Particle Editor JSON)
 PARTICLE component → `copy_asset` to `particles/` → manifest →
 `ApplyParticles` (`subsystems/particles.ts`, `ParticleHelper.ParseFromFileAsync`)
-→ `entity.particleSystems`, `GetParticles(stem)`. Trace:
+→ `entity.particleSystems`, `RegisterAttachment({type:"PARTICLE", data, system})`,
+`GetParticles(stem)`. Trace:
 [trace-particles.html](trace-particles.html).
 
 ### 3D GUI (buttons + panels)
 Nine `GUI3D_*` types → `serialize_components` (layout fields, click events,
 button images via `copy_asset`; click targets force-included) → registrations
 queued with `parentId` → `BuildGui3DControls` in `FinalizeLevel` (panels first,
-`blockLayout`, content after `addControl`) → `WireClickEvents` →
-`OnMessage` on target. Trace: [trace-gui3d.html](trace-gui3d.html) · Blender:
+`blockLayout`, content after `addControl`) → `RegisterAttachment` per panel/control
+→ `WireClickEvents` → `OnMessage` on target. Trace: [trace-gui3d.html](trace-gui3d.html) · Blender:
 [../blender/trace-gui3d.html](../blender/trace-gui3d.html). Full write-up:
 [10-UI.md](10-UI.md).
 

@@ -39,10 +39,12 @@ export function FindRepoRoot(): string
 export const REPO_ROOT = FindRepoRoot();
 
 export const DOCS = {
+  kernel: join(REPO_ROOT, "docs/LLM_KERNEL.md"),
   scriptingContext: join(REPO_ROOT, "docs/LLM_SCRIPTING_CONTEXT.md"),
   styleGuide: join(REPO_ROOT, "docs/STYLE_GUIDE.md"),
 } as const;
 
 export const PLAYGROUND_BEHAVIORS = join(REPO_ROOT, "apps/playground/src/behaviors");
+export const PLAYGROUND_LEVELS = join(REPO_ROOT, "apps/playground/public/levels");
 export const INPUT_ACTIONS_TS = join(REPO_ROOT, "apps/playground/src/InputActions.ts");
 export const INPUT_ACTIONS_JSON = join(REPO_ROOT, "apps/playground/input.inputactions.json");

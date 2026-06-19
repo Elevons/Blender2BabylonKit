@@ -13,6 +13,7 @@ import bpy
 
 from ..core.ids import ID_KEY, ensure_object_id
 from .animation import serialize_animation, nla_clip_names
+from .assets import begin_asset_export
 from .components import serialize_components, iter_referenced_objects
 from .datablocks import serialize_light, serialize_camera
 from .scene import serialize_scene
@@ -143,6 +144,7 @@ def export_level(context, filepath):
     glb_filename = os.path.basename(glb_path)
     json_path = os.path.splitext(glb_path)[0] + ".scene.json"
 
+    begin_asset_export()
     _dedupe_entity_ids(context)   # duplicated objects get fresh GUIDs
     _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
     _export_glb(glb_path)

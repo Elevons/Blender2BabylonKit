@@ -1,5 +1,6 @@
 // Core: manifest schema, runtime container, and the load pipeline.
 export * from "./core/types";
+export * from "./core/attachments";
 export * from "./core/Entity";
 export * from "./core/Level";
 export * from "./core/LevelLoader";

@@ -6,6 +6,7 @@ import {
 } from "@babylonjs/core";
 import type { Entity } from "../core/Entity";
 import type { AudioComponent } from "../core/types";
+import { RegisterAttachment } from "../core/attachments";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
 /**
@@ -69,6 +70,7 @@ export async function ApplyAudio(
   }
 
   entity.sounds.push(sound);
+  RegisterAttachment(entity, { type: "AUDIO", data: audioComponent, sound });
 
   // Autoplay must wait for the browser's gesture unlock; don't block loading on it.
   if (audioComponent.autoPlay)

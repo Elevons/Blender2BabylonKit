@@ -2,6 +2,7 @@ import type { Scene } from "@babylonjs/core";
 import { GUI3DManager, type Container3D } from "@babylonjs/gui";
 import type { Entity } from "../../core/Entity";
 import type { Level } from "../../core/Level";
+import { RegisterAttachment } from "../../core/attachments";
 import type {
   Gui3DComponent,
   Gui3DControlComponent,
@@ -67,6 +68,11 @@ function BuildPanels(
     panel.linkToTransformNode(registration.entity.node);
 
     registration.entity.controls3D.push(panel);
+    RegisterAttachment(registration.entity, {
+      type: registration.component.type,
+      data: registration.component,
+      control: panel,
+    });
     panelsByEntity.set(EntityKey(registration.entity), panel);
   }
 
@@ -115,6 +121,11 @@ function BuildControl(
   WireClickEvents(control, controlComponent.events, registration.entity, level);
 
   registration.entity.controls3D.push(control);
+  RegisterAttachment(registration.entity, {
+    type: controlComponent.type,
+    data: controlComponent,
+    control,
+  });
 }
 
 /**

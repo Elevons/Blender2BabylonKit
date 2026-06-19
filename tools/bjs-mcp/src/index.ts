@@ -12,6 +12,7 @@ import {
   ListInputActions,
   ReadBehaviorFile,
 } from "./io.js";
+import { FormatBehaviorPlan, PlanBehavior } from "./plan.js";
 import { DOCS } from "./paths.js";
 import {
   FindRecipesByIntent,
@@ -20,13 +21,32 @@ import {
   RECIPES,
 } from "./recipes.js";
 import { FormatValidationResult, ValidateBehavior } from "./validate.js";
+import { FormatSceneSummary, ListLevels, LoadSceneSummary } from "./scene.js";
 
 const server = new McpServer({
   name: "bjs-level-kit",
-  version: "1.1.0",
+  version: "1.2.0",
 });
 
 // --- Resources -------------------------------------------------------------
+
+server.resource(
+  "kernel",
+  "bjs://docs/kernel",
+  {
+    description: "Minimal behavior authoring kernel (LLM_KERNEL.md) — start here for small models",
+    mimeType: "text/markdown",
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "bjs://docs/kernel",
+        mimeType: "text/markdown",
+        text: readFileSync(DOCS.kernel, "utf-8"),
+      },
+    ],
+  })
+);
 
 server.resource(
   "scripting-context",
@@ -87,6 +107,118 @@ for (const behaviorName of ListBehaviorFiles().map((file) => file.replace(/\.ts$
 }
 
 // --- Tools -----------------------------------------------------------------
+
+server.tool(
+  "get_kernel",
+  "Return docs/LLM_KERNEL.md — minimal behavior contract (~80 lines). Call first before writing any behavior.",
+  {},
+  async () => ({
+    content: [{ type: "text", text: ReadDoc(DOCS.kernel) }],
+  })
+);
+
+server.tool(
+  "plan_behavior",
+  "Build a structured implementation plan for a behavior intent: recipes, doc sections, fragments, reference behavior, pitfalls, and ordered steps. Call this before writing complex scripts.",
+  {
+    intent: z.string().describe("Plain-English description of what the behavior should do"),
+    className: z
+      .string()
+      .optional()
+      .describe("Planned class/filename stem (e.g. TrainDriver). Defaults to MyBehavior."),
+  },
+  async ({ intent, className }) => ({
+    content: [
+      {
+        type: "text",
+        text: FormatBehaviorPlan(PlanBehavior(intent, className ?? "MyBehavior")),
+      },
+    ],
+  })
+);
+
+server.tool(
+  "get_behavior",
+  "Return the full source of a playground example behavior by class/filename stem.",
+  {
+    name: z.string().describe("Behavior stem, e.g. CarController or CarController.ts"),
+  },
+  async ({ name }) =>
+  {
+    const stem = name.replace(/\.tsx?$/i, "");
+    const source = ReadBehaviorFile(stem);
+
+    if (source === undefined)
+    {
+      const available = ListBehaviorFiles().map((file) => file.replace(/\.ts$/, "")).join(", ");
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Behavior "${stem}" not found. Available: ${available}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: "text", text: `// ${stem}.ts\n\n${source}` }],
+    };
+  }
+);
+
+server.tool(
+  "list_scene_entities",
+  "List entities from a level scene.json manifest — names, tags, component types, scripts. Ground @exposed entity picks.",
+  {
+    level: z
+      .string()
+      .optional()
+      .describe('Level folder name (e.g. "Train Scene"). Omit to list available levels.'),
+    filter: z
+      .string()
+      .optional()
+      .describe("Optional substring filter on name, tag, component type, or script"),
+  },
+  async ({ level, filter }) =>
+  {
+    if (level === undefined || level.trim().length === 0)
+    {
+      const levels = ListLevels();
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              levels.length > 0
+                ? `Available levels:\n${levels.map((entry) => `- ${entry}`).join("\n")}\n\nCall again with level="…" for entities.`
+                : "No levels found under apps/playground/public/levels/.",
+          },
+        ],
+      };
+    }
+
+    const summary = LoadSceneSummary(level, filter);
+    if (summary === undefined)
+    {
+      const levels = ListLevels();
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Level "${level}" not found. Available: ${levels.join(", ") || "(none)"}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: "text", text: FormatSceneSummary(summary) }],
+    };
+  }
+);
 
 server.tool(
   "get_style_guide",

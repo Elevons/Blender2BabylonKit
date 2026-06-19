@@ -1,0 +1,35 @@
+---
+description: Babylon Level Kit behavior authoring — MCP workflow and silent-failure contracts
+globs: "**/behaviors/**/*.ts"
+alwaysApply: false
+---
+
+# Behavior authoring (Babylon Level Kit)
+
+When creating or editing files under `src/behaviors/`, use the **bjs-level-kit** MCP server.
+
+## Before writing code
+
+1. `get_kernel` or read `docs/LLM_KERNEL.md`
+2. `plan_behavior(intent, className)` — follow the returned steps
+3. `get_recipe_template` for the primary recipe — edit the skeleton, do not blank-page
+
+## Non-negotiable contracts
+
+- `export default class Name extends Behavior` — **class name === filename stem**
+- Lifecycle: `OnStart`, `OnUpdate`, `OnDestroy`, `OnMessage` (PascalCase)
+- Decorators: `@exposed`, `@inputMap("MapName")` — lowercase literals
+- `@exposed({ type: "entity" }) target: Entity | null = null`; entity lists start `[]`
+- Scale continuous motion by `deltaSeconds`; no `Level` handle on behaviors
+- `setMotionType(PhysicsMotionType.ANIMATED)` before driving `node.position` each frame when a body exists
+
+## Grounding (never guess)
+
+- `list_input_actions` — real action names
+- `list_scene_entities` — real entity names for `@exposed` picks
+- `get_behavior` / `find_similar_behavior(includeSource=true)` — copy proven patterns
+
+## Before saving
+
+`validate_behavior(source, "ClassName.ts")` — fix all errors; revalidate until clean.
+Use `get_style_guide` for Allman braces and `: void` on lifecycle methods.

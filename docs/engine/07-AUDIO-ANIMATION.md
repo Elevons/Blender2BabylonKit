@@ -10,8 +10,8 @@ class is deprecated. One engine, created lazily (`CreateAudioEngineAsync`);
 sounds via `CreateSoundAsync` with `spatialEnabled` set at creation (avoids
 first-use latency), then `sound.spatial.attach(entity.node)` so 3D sounds
 follow their entity. Sound names = file stem (`audio/door.mp3` → `"door"`),
-reachable via `entity.GetSound`. Browser autoplay policy: auto-play sounds
-await `audioEngine.unlockAsync()` (resolves on the first user gesture) without
+reachable via `entity.GetSound` or `entity.GetAttachment("AUDIO")?.sound`.
+Browser autoplay policy: auto-play sounds await `audioEngine.unlockAsync()` (resolves on the first user gesture) without
 blocking the load — creation promises are collected during the entity pass and
 settled in `FinalizeLevel` so a bad file logs instead of failing the level.
 The exporter copies sound files into `audio/` next to the manifest. Sounds are

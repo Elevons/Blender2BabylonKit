@@ -14,8 +14,12 @@ from .ids import ID_KEY
 
 
 def _belongs_to_child_entity(descendant, root):
-    """True when ``descendant`` is (or sits under) its own exported entity."""
-    ancestor = descendant.parent
+    """True when ``descendant`` is (or sits under) its own exported entity.
+
+    Mirrors ``OwnedColliderMeshes`` in physics.ts: walk from the descendant up
+    to (but not including) ``root`` and exclude if any node carries ``bjs_id``.
+    """
+    ancestor = descendant
     while ancestor is not None and ancestor != root:
         if ancestor.get(ID_KEY):
             return True

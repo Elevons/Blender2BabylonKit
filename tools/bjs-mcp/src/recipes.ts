@@ -138,6 +138,100 @@ export const RECIPES: Recipe[] = [
     pitfalls: ["Requires entity.body and setCollisionCallbackEnabled(true)."],
     exposedFields: ['@exposed({ label: "Message" }) message = ""'],
   },
+  {
+    name: "constraint-hinge-motor",
+    description:
+      "Drive hinge constraint motors from input — wheels authored as HINGE constraints in Blender.",
+    keywords: [
+      "car",
+      "wheel",
+      "hinge",
+      "motor",
+      "constraint",
+      "vehicle",
+      "drive",
+      "tank",
+      "steer",
+    ],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "CarController.ts",
+    pitfalls: [
+      "Joints are authored in Blender — resolve via GetAttachmentsOfType(\"CONSTRAINT\").",
+      "Do not overwrite wheel node.rotation when hinge motors drive physics.",
+      "Use list_input_actions for real action names (Forward/Backward/Left/Right vs Move).",
+      "Constrained bodies work best as siblings, not parented to each other.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "entity", label: "Wheel" }) wheel: Entity | null = null',
+      '@exposed({ min: 0, max: 100, label: "Motor Speed" }) speed = 10',
+      '@exposed({ min: 0, max: 1000, label: "Motor Force" }) force = 100',
+      '@inputMap("Player") player!: InputActionMap',
+    ],
+  },
+  {
+    name: "path-follow-advanced",
+    description:
+      "Follow a Path3D through entity waypoints with throttle, acceleration, and tangent facing.",
+    keywords: [
+      "train",
+      "path",
+      "path3d",
+      "waypoint",
+      "spline",
+      "tangent",
+      "throttle",
+      "acceleration",
+      "rail",
+    ],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "TrainBehavior.ts",
+    pitfalls: [
+      "Set PhysicsMotionType.ANIMATED and disablePreStep = false when a body exists.",
+      "Entity waypoint list starts empty — author picks targets in Blender.",
+      "Snap to path start in OnStart to avoid first-frame jump.",
+      "Attach to the entity that should move (train body), not the camera.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "list", of: "entity", label: "Waypoints" }) targets: (Entity | null)[] = []',
+      '@exposed({ min: 0.1, label: "Speed (units/s)" }) throttleSpeed = 1',
+      '@exposed({ min: 0.1, label: "Acceleration (units/s²)" }) acceleration = 5',
+      '@exposed({ type: "enum", options: ["linear", "easeInOut", "snap"] }) easing = "easeInOut"',
+    ],
+  },
+  {
+    name: "camera-follow",
+    description: "Create a UniversalCamera that orbits a moving target entity.",
+    keywords: ["camera", "orbit", "follow", "track", "cinematic", "spectator"],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "TrainCamera.ts",
+    pitfalls: [
+      "Guard target !== null and camera !== null in OnUpdate.",
+      "Convert orbit speed from degrees to radians in OnStart.",
+      "Sets scene.activeCamera — only one active camera per scene.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "entity", label: "Target" }) target: Entity | null = null',
+      '@exposed({ min: 0, max: 360, label: "Orbit Speed (deg/s)" }) orbitSpeed = 45',
+      '@exposed({ min: 0.1, max: 100, label: "Radius" }) radius = 10',
+      '@exposed({ min: -10, max: 10, label: "Height Offset" }) heightOffset = 2',
+    ],
+  },
+  {
+    name: "message-state-handler",
+    description: "OnMessage-driven state machine — triggers and SendMessage change behavior mode.",
+    keywords: ["message", "state", "fsm", "sequence", "door", "phase", "event"],
+    hooks: ["OnMessage", "OnUpdate"],
+    referenceBehavior: "MessageLogger.ts",
+    pitfalls: [
+      "Filter by message string when multiple events target this entity.",
+      "Trigger enter events arrive via OnMessage, not OnStart.",
+      "Optional filter tag on triggers checks entity.tag.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "enum", options: ["idle", "active", "done"] }) state = "idle"',
+      '@exposed({ label: "Activate on message" }) activateMessage = "start"',
+    ],
+  },
 ];
 
 export function FindRecipesByIntent(intent: string): Recipe[]
@@ -476,6 +570,310 @@ export default class ${className} extends Behavior
     {
       console.log(\`[trigger] \${this.message.length > 0 ? this.message : this.entity.name}\`, collisionEvent.type);
     });
+  }
+}
+`,
+
+  "constraint-hinge-motor": (className) => `import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
+import type { InputActionMap } from "@bjs/engine";
+import {
+  Physics6DoFConstraint,
+  PhysicsConstraintAxis,
+  PhysicsConstraintMotorType,
+} from "@babylonjs/core";
+
+/** Drives a hinge constraint motor from input. HINGE must be authored in Blender on the wheel entity. */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "entity", label: "Wheel" })
+  wheel: Entity | null = null;
+
+  @exposed({ min: 0, max: 100, label: "Motor Speed" })
+  speed = 10;
+
+  @exposed({ min: 0, max: 1000, label: "Motor Force" })
+  force = 100;
+
+  @inputMap("Player") player!: InputActionMap;
+
+  private hinge?: Physics6DoFConstraint;
+
+  /** Resolve the hinge constraint attachment on the wheel. */
+  OnStart(): void
+  {
+    this.hinge = this.ResolveWheelHinge(this.wheel);
+  }
+
+  /** Poll input and drive the hinge motor. */
+  OnUpdate(_deltaSeconds: number): void
+  {
+    const forward = this.player.FindAction("Forward")?.IsPressed() === true;
+    const backward = this.player.FindAction("Backward")?.IsPressed() === true;
+
+    let motorSpeed = 0;
+    if (forward)
+    {
+      motorSpeed = this.speed;
+    }
+    else if (backward)
+    {
+      motorSpeed = -this.speed;
+    }
+
+    this.SetWheelMotor(this.hinge, motorSpeed);
+  }
+
+  /** Find the HINGE constraint attachment on a wheel entity (built at load time). */
+  private ResolveWheelHinge(wheelEntity: Entity | null): Physics6DoFConstraint | undefined
+  {
+    if (wheelEntity === null)
+    {
+      return undefined;
+    }
+
+    for (const row of wheelEntity.GetAttachmentsOfType("CONSTRAINT"))
+    {
+      if (row.data.constraintType !== "HINGE")
+      {
+        continue;
+      }
+
+      if (row.constraint instanceof Physics6DoFConstraint)
+      {
+        return row.constraint;
+      }
+    }
+
+    console.warn(\`[\${this.entity.name}] "\${wheelEntity.name}" has no HINGE constraint\`);
+    return undefined;
+  }
+
+  /** Drive a hinge motor at the given speed (degrees per second). */
+  private SetWheelMotor(
+    hinge: Physics6DoFConstraint | undefined,
+    speedDegreesPerSecond: number
+  ): void
+  {
+    if (hinge === undefined)
+    {
+      return;
+    }
+
+    const motorAxis = PhysicsConstraintAxis.ANGULAR_X;
+
+    if (speedDegreesPerSecond === 0)
+    {
+      hinge.setAxisMotorTarget(motorAxis, 0);
+      return;
+    }
+
+    hinge.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
+    hinge.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
+    hinge.setAxisMotorMaxForce(motorAxis, this.force);
+  }
+}
+`,
+
+  "path-follow-advanced": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Path3D, Quaternion, Vector3, PhysicsMotionType } from "@babylonjs/core";
+
+/** Moves along a Path3D built from waypoint entities with throttle and tangent facing. */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "enum", options: ["linear", "easeInOut", "snap"] })
+  easing = "easeInOut";
+
+  @exposed({ type: "list", of: "entity", label: "Waypoints" })
+  targets: (Entity | null)[] = [];
+
+  @exposed({ min: 0.1, label: "Speed (units/s)" })
+  throttleSpeed = 1;
+
+  @exposed({ min: 0.1, label: "Acceleration (units/s²)" })
+  acceleration = 5;
+
+  @exposed({ min: 0.1, label: "Deceleration (units/s²)" })
+  deceleration = 8;
+
+  private path: Path3D | null = null;
+  private currentProgress = 0;
+  private maxDuration = 0;
+  private currentThrottle = 0;
+  private currentQuaternion = new Quaternion();
+
+  /** Build Path3D from waypoint entities and configure any physics body. */
+  OnStart(): void
+  {
+    const points: Vector3[] = [];
+    for (const target of this.targets)
+    {
+      if (target !== null)
+      {
+        points.push(target.node.getAbsolutePosition());
+      }
+    }
+
+    if (points.length >= 2)
+    {
+      this.path = new Path3D(points);
+      this.maxDuration = this.path.length();
+      this.node.position = this.path.getPointAt(0);
+      const forward = this.path.getTangentAt(0, true);
+      this.currentQuaternion = Quaternion.FromLookDirectionRH(forward, Vector3.Up());
+      this.node.rotationQuaternion = this.currentQuaternion;
+    }
+
+    if (this.entity.body !== undefined)
+    {
+      this.entity.body.setMotionType(PhysicsMotionType.ANIMATED);
+      this.entity.body.disablePreStep = false;
+    }
+  }
+
+  /** Advance along the path with smoothed throttle input. */
+  OnUpdate(deltaSeconds: number): void
+  {
+    if (this.path === null || this.maxDuration <= 0)
+    {
+      return;
+    }
+
+    let targetThrottle = 0;
+    if (this.input?.FindAction("Throttle Up")?.IsPressed() === true && this.currentProgress < this.maxDuration)
+    {
+      targetThrottle += 1;
+    }
+    if (this.input?.FindAction("Throttle Down")?.IsPressed() === true && this.currentProgress > 0)
+    {
+      targetThrottle -= 1;
+    }
+
+    const accelerating = targetThrottle > this.currentThrottle;
+    const rate = accelerating ? this.acceleration : this.deceleration;
+    const throttleStep = rate * deltaSeconds;
+    if (Math.abs(targetThrottle - this.currentThrottle) <= throttleStep)
+    {
+      this.currentThrottle = targetThrottle;
+    }
+    else if (accelerating)
+    {
+      this.currentThrottle += throttleStep;
+    }
+    else
+    {
+      this.currentThrottle -= throttleStep;
+    }
+
+    this.currentProgress += this.currentThrottle * this.throttleSpeed * deltaSeconds;
+    this.currentProgress = Math.max(0, Math.min(this.maxDuration, this.currentProgress));
+
+    let normalizedProgress = this.currentProgress / this.maxDuration;
+    if (this.easing === "snap")
+    {
+      normalizedProgress = normalizedProgress < 0.5 ? 0 : 1;
+    }
+    else if (this.easing === "easeInOut")
+    {
+      normalizedProgress = normalizedProgress * normalizedProgress * (3 - 2 * normalizedProgress);
+    }
+
+    this.node.position = this.path.getPointAt(normalizedProgress);
+    const forward = this.path.getTangentAt(normalizedProgress, true);
+    Quaternion.FromRotationMatrixToRef(this.node.getWorldMatrix(), this.currentQuaternion);
+    const targetQuaternion = Quaternion.FromLookDirectionRH(forward, Vector3.Up());
+    Quaternion.SmoothToRef(this.currentQuaternion, targetQuaternion, deltaSeconds, 0.1, this.currentQuaternion);
+    this.node.rotationQuaternion = this.currentQuaternion;
+  }
+}
+`,
+
+  "camera-follow": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Vector3, UniversalCamera, Tools } from "@babylonjs/core";
+
+/** Orbits a UniversalCamera around a target entity. */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "entity", label: "Target" })
+  target: Entity | null = null;
+
+  @exposed({ min: 0, max: 360, label: "Orbit Speed (deg/s)" })
+  orbitSpeed = 45;
+
+  @exposed({ min: 0.1, max: 100, label: "Radius" })
+  radius = 10;
+
+  @exposed({ min: -10, max: 10, label: "Height Offset" })
+  heightOffset = 2;
+
+  private camera: UniversalCamera | null = null;
+  private angle = 0;
+  private orbitSpeedRadians = 0;
+
+  /** Create the camera and make it active. */
+  OnStart(): void
+  {
+    this.orbitSpeedRadians = Tools.ToRadians(this.orbitSpeed);
+    const position = this.node.getAbsolutePosition();
+    this.camera = new UniversalCamera(this.node.name, position, this.scene);
+    this.scene.activeCamera = this.camera;
+  }
+
+  /** Orbit around the target each frame. */
+  OnUpdate(deltaSeconds: number): void
+  {
+    if (this.target === null || this.camera === null)
+    {
+      return;
+    }
+
+    this.angle += this.orbitSpeedRadians * deltaSeconds;
+    const targetPosition = this.target.node.getAbsolutePosition();
+    const offsetX = Math.cos(this.angle) * this.radius;
+    const offsetZ = Math.sin(this.angle) * this.radius;
+
+    this.camera.position = new Vector3(
+      targetPosition.x + offsetX,
+      targetPosition.y + this.heightOffset,
+      targetPosition.z + offsetZ
+    );
+    this.camera.setTarget(targetPosition);
+  }
+}
+`,
+
+  "message-state-handler": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+
+/** Simple message-driven state machine — customize OnUpdate for each state. */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "enum", options: ["idle", "active", "done"] })
+  state = "idle";
+
+  @exposed({ label: "Activate on message" })
+  activateMessage = "start";
+
+  /** React to incoming messages and transition state. */
+  OnMessage(message: string, source: Entity): void
+  {
+    if (message === this.activateMessage && this.state === "idle")
+    {
+      this.state = "active";
+      console.log(\`[\${this.entity.name}] activated by "\${source.name}"\`);
+    }
+  }
+
+  /** Run logic for the current state each frame. */
+  OnUpdate(deltaSeconds: number): void
+  {
+    if (this.state === "idle")
+    {
+      return;
+    }
+
+    if (this.state === "active")
+    {
+      // {{CUSTOM_LOGIC}}
+    }
   }
 }
 `,

@@ -82,6 +82,81 @@ if (this.keyboardObserver !== undefined)
     description: "Send a message to another entity's behaviors.",
     code: `otherEntity.SendMessage("open", this.entity);`,
   },
+  {
+    name: "resolve-hinge-constraint",
+    description:
+      "Find the first HINGE constraint attachment on a wheel entity (authored in Blender).",
+    code: `for (const row of wheelEntity.GetAttachmentsOfType("CONSTRAINT"))
+{
+  if (row.data.constraintType !== "HINGE")
+  {
+    continue;
+  }
+
+  if (row.constraint instanceof Physics6DoFConstraint)
+  {
+    return row.constraint;
+  }
+}`,
+  },
+  {
+    name: "set-hinge-motor-velocity",
+    description: "Drive a hinge motor at speed (degrees per second) with max force.",
+    code: `const motorAxis = PhysicsConstraintAxis.ANGULAR_X;
+
+if (speedDegreesPerSecond === 0)
+{
+  hinge.setAxisMotorTarget(motorAxis, 0);
+  return;
+}
+
+hinge.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
+hinge.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
+hinge.setAxisMotorMaxForce(motorAxis, maxForce);`,
+  },
+  {
+    name: "path3d-from-entities",
+    description: "Build a Path3D from @exposed entity waypoints in OnStart.",
+    code: `const points: Vector3[] = [];
+for (const target of this.targets)
+{
+  if (target !== null)
+  {
+    points.push(target.node.getAbsolutePosition());
+  }
+}
+
+if (points.length >= 2)
+{
+  this.path = new Path3D(points);
+  this.maxDuration = this.path.length();
+}`,
+  },
+  {
+    name: "orbit-camera-around-target",
+    description: "Orbit a UniversalCamera around a target each frame (XZ plane).",
+    code: `this.angle += this.orbitSpeedRad * deltaSeconds;
+const targetPosition = this.target.node.getAbsolutePosition();
+const offsetX = Math.cos(this.angle) * this.radius;
+const offsetZ = Math.sin(this.angle) * this.radius;
+
+this.camera.position = new Vector3(
+  targetPosition.x + offsetX,
+  targetPosition.y + this.heightOffset,
+  targetPosition.z + offsetZ
+);
+this.camera.setTarget(targetPosition);`,
+  },
+  {
+    name: "animated-body-sync",
+    description:
+      "ANIMATED body + disablePreStep for Path3D / per-frame node driving (see TrainBehavior).",
+    code: `if (this.entity.body !== undefined)
+{
+  this.entity.body.setMotionType(PhysicsMotionType.ANIMATED);
+  this.entity.body.disablePreStep = false;
+}`,
+  },
 ];
 
 export function GetFragment(name: string): Fragment | undefined

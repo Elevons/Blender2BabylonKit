@@ -256,6 +256,7 @@ export class Level
 
       // The controls themselves were disposed with the manager above.
       entity.controls3D.length = 0;
+      entity.attachments.length = 0;
     }
   }
 }

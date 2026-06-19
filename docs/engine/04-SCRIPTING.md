@@ -5,10 +5,21 @@
 ## Entity (`core/Entity.ts`)
 
 The runtime wrapper around one Blender object: `id` (GUID), `name`, `node`
-(the glb TransformNode), `tag`, `behaviors`, `body?` (Havok), `animations`
-(its AnimationGroups), `sounds` (its StaticSounds). Methods:
-`GetBehavior(Ctor)`, `GetAnimation(name)`, `GetSound(name)` (exact match then
-contains), and `SendMessage(message, source)` → every behavior's `OnMessage`.
+(the glb TransformNode), `tag`, `attachments` (live registry — one row per
+successfully applied component; types in `core/attachments.ts`), `behaviors`,
+`body?` (Havok), `animations` (its AnimationGroups), `sounds` (its
+StaticSounds).
+
+**Component vs behavior:** a *component* is authored data (TAG, COLLIDER,
+SCRIPT, …); a *behavior* is a runtime script class from a SCRIPT component.
+`attachments` is the single source of truth for "what components does this
+entity have?" — each row pairs manifest `data` with its runtime object when one
+exists (`behavior`, `body`, `sound`, `texture`, `system`, `constraint`,
+`control`). Query via `GetAttachment(type)` (first row), `GetAttachmentsOfType(type)`,
+or `HasAttachment(type)` — e.g. `GetAttachment("SCRIPT")?.behavior`. Convenience
+lookups: `GetBehavior(Ctor)` (by class), `GetAnimation(name)`, `GetSound(name)`
+(exact match then contains), and `SendMessage(message, source)` → every
+behavior's `OnMessage`. There is no `entity.manifest` or `GetComponent`.
 
 Three ways to reach another entity: an `@exposed({type:"entity"})` field
 (cleanest), `node.metadata.bjsEntity` from a node, or `level.ById`/`ByTag`.

@@ -570,6 +570,7 @@ packages/
       index.ts          # barrel — apps import the engine via "@bjs/engine"
       core/             # schema + runtime container + load pipeline
         types.ts          #   manifest schema (mirrors the exporter) + ID_KEY
+        attachments.ts    #   EntityAttachment rows + RegisterAttachment (load-time)
         Entity.ts         #   the runtime entity class
         Level.ts          #   runtime container: entities, update loop, debug view
         LevelLoader.ts    #   load-pipeline orchestrator (sequences the stages)
@@ -640,8 +641,11 @@ Docs:
    - Resolve its glb node: **GUID first**, then a name-match fallback.
    - Create an `Entity(id, name, node)` and register it in `level.entities`.
    - Stash a back-reference: `node.metadata.bjsEntity = entity`.
-   - **Apply components** (`ApplyComponents`, see section 5) — this may return deferred
-     object references (`PendingRef[]`).
+   - **Apply components** (`ApplyComponents`, see section 5) — materializes each
+     component into the world and records a row on `entity.attachments` via
+     `RegisterAttachment` (TAG/COLLIDER/RIGIDBODY/SCRIPT during this pass; AUDIO,
+     GUI, PARTICLE after async settle; CONSTRAINT and GUI3D_* in FinalizeLevel).
+     May return deferred object references (`PendingRef[]`).
    - If the entity has `light`, call `ApplyBlenderLight` (`ProcessLightForEntity`);
      if it casts shadows, remember it for step 6.
    - If the entity has `camera`, call `ApplyBlenderCamera` (`ProcessCameraForEntity`);
@@ -671,20 +675,34 @@ class Entity
   readonly name: string;        // Blender object name
   readonly node: TransformNode; // the Babylon node from the glb
   tag = "Untagged";             // from a TAG component
+  attachments: EntityAttachment[]; // live registry of applied components
   behaviors: Behavior[];
   body?: PhysicsBody;           // present if it has a Collider/RigidBody
   sounds: StaticSound[];                  // from AUDIO components
   guiTextures: AdvancedDynamicTexture[];  // from GUI components
   particleSystems: IParticleSystem[];     // from PARTICLE components
   controls3D: Control3D[];                // from GUI3D_* components
+  GetAttachments(): readonly EntityAttachment[];
+  GetAttachment<T extends ComponentType>(type: T): AttachmentOfType<T> | undefined;
+  GetAttachmentsOfType<T extends ComponentType>(type: T): AttachmentOfType<T>[];
+  HasAttachment(type: ComponentType): boolean;
   GetBehavior<T extends Behavior>(behaviorConstructor: new () => T): T | undefined;
   GetAnimation(clipName: string): AnimationGroup | undefined;
   GetSound(soundName: string): StaticSound | undefined;
   GetGui(guiName: string): AdvancedDynamicTexture | undefined;
   GetParticles(systemName: string): IParticleSystem | undefined;
   GetControl3D(controlName: string): Control3D | undefined;
+  SendMessage(message, source): void;
 }
 ```
+
+Each successfully applied component becomes one `EntityAttachment` row on
+`entity.attachments` (types in `core/attachments.ts`). Query components with
+`GetAttachment` / `GetAttachmentsOfType` / `HasAttachment` — each row pairs manifest
+`data` with its runtime object (`behavior`, `body`, `sound`, …). There is no
+`entity.manifest` or `GetComponent`; convenience fields (`behaviors`, `body`,
+`sounds`, …) mirror attachments for now. Use `GetBehavior(MyClass)` when you know
+the behavior class; use `GetAttachment("SCRIPT")` for the component row.
 
 #### Level (`core/Level.ts`)
 

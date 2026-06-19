@@ -69,6 +69,10 @@ testing. v0.29 restructured the repo into npm workspaces (`packages/engine` +
   the image file on disk under `levels/.../env/` without changing
   `.scene.json` — the browser should still full-reload (Vite watches the whole
   level folder, not only the manifest).
+- **Optional (idempotent assets):** with a World HDR and Live Link on, save
+  several times — `env/` should keep a single `*.hdr` at the stable sanitized
+  name (no `_2`, `_3`, … clutter); the manifest `environment.file` path stays
+  the same.
 
 ### 1.5 Skybox ignores fog
 - **Steps:** enable **Fog** on the scene. Enable **Show Skybox** and tick

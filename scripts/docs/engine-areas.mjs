@@ -551,7 +551,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Exporter",
           "sub": "export/level.py",
-          "desc": "export_level orchestrates the glb (Blender glTF, +Y-up, GUIDs in extras) and schema-v4 manifest. serialize_components (export/components.py) converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects. copy_asset (export/assets.py) copies audio, GUI, particle, and 3D button images.",
+          "desc": "export_level orchestrates the glb (Blender glTF, +Y-up, GUIDs in extras) and schema-v4 manifest. begin_asset_export + copy_asset (export/assets.py): sanitized names, re-export overwrites stable paths; _2 suffix only when two different sources collide in one pass. serialize_components converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects.",
           "meta": [
             [
               "Schema",
@@ -941,7 +941,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyComponents",
           "sub": "per entity",
-          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → queue trigger registrations → queue async audio/GUI/particle tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations → queue async audio/GUI/particle tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
           "meta": [
             [
               "Helpers",
@@ -1231,7 +1231,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Entity",
           "sub": "core/Entity.ts",
-          "desc": "id/name/node/tag, behaviors, body?, animations, sounds. GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage → every behavior's OnMessage.",
+          "desc": "id/name/node/tag, attachments (live component registry), behaviors, body?, animations, sounds. GetAttachment / GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage → every behavior's OnMessage.",
           "meta": [
             [
               "Back-ref",
@@ -1493,7 +1493,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Behaviors",
           "sub": "consume it",
-          "desc": "entity.body for impulses/velocity; OnMessage receives trigger messages; level.constraints for tuning; ShowColliders / C key for debug wireframes.",
+          "desc": "entity.body / GetAttachment(\"COLLIDER\") for impulses/velocity; OnMessage receives trigger messages; level.constraints for tuning; ShowColliders / C key for debug wireframes.",
           "meta": [
             [
               "See",
@@ -2110,7 +2110,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Live Link loop",
           "sub": "save → see",
-          "desc": "Export once (path remembered per scene) → tick Live Link → Ctrl+S re-exports (save_post) → Vite plugin watches all files under public/levels/ (path.resolve; 50ms debounce) → full reload. Manifest written after glb so both are ready.",
+          "desc": "Export once (path remembered per scene) → tick Live Link → Ctrl+S re-exports (save_post; begin_asset_export overwrites stable env/audio/gui paths) → Vite plugin watches all files under public/levels/ (path.resolve; 50ms debounce) → full reload. Manifest written after glb so both are ready.",
           "meta": [
             [
               "Blender",

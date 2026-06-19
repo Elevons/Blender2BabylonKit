@@ -40,7 +40,7 @@ bjs-level-kit/
   packages/engine/        # "@bjs/engine" — the runtime, shared by every app
     src/
       index.ts            #   public barrel (apps import "@bjs/engine")
-      core/               #   types.ts (schema) · Entity.ts · Level.ts · LevelLoader.ts
+      core/               #   types.ts (schema) · attachments.ts · Entity.ts · Level.ts · LevelLoader.ts
                           #   loader/ (manifest · nodeResolution · entityBuilder · sceneSettings)
       scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts
       input/              #   InputManager · maps/actions/bindings · @inputMap

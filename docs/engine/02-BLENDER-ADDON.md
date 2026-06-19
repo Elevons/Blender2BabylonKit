@@ -64,13 +64,17 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
    `light` / `camera` / `animation` blocks; plus the scene block
    (`export/scene.py`); plus the top-level `"debug"` flag (Debug Build checkbox,
    owned by `export/live_link.py`). Schema `"version": 4`.
-5. **Copy side files** — `copy_asset` / `save_image_asset` (`export/assets.py`):
-   World environment texture when `find_world_env_node` (`scene/environment.py`)
-   finds one on the active World Output chain (sanitized filename under `env/`);
-   **Default Environment** sets `useDefault` in the manifest instead of a file;
-   **Show Skybox** / **Skybox Ignores Fog** → `createSkybox` / `skyboxIgnoreFog`;
-   color-grading LUTs → `post/`, audio → `audio/`, GUI layouts → `gui/`,
-   particle systems → `particles/`, 3D button images → `gui/`.
+5. **Copy side files** — `begin_asset_export()` then `copy_asset` /
+   `save_image_asset` (`export/assets.py`): World environment texture when
+   `find_world_env_node` (`scene/environment.py`) finds one on the active World
+   Output chain (sanitized filename under `env/`); **Default Environment** sets
+   `useDefault` in the manifest instead of a file; **Show Skybox** /
+   **Skybox Ignores Fog** → `createSkybox` / `skyboxIgnoreFog`; color-grading
+   LUTs → `post/`, audio → `audio/`, GUI layouts → `gui/`, particle systems →
+   `particles/`, 3D button images → `gui/`. Each export pass resets path
+   reservations so **re-exports overwrite** the same sanitized name (Live Link
+   safe). `_2`, `_3`, … suffixes apply only when two *different* sources
+   collide on the same sanitized name in a single export.
 6. Remember the path for [Live Link](08-WORKFLOW.md#live-link).
 
 ### Axis conversions (Blender Z-up → Babylon Y-up)

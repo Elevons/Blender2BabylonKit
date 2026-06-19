@@ -1,5 +1,6 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
 import { Entity } from "../Entity";
+import { RegisterAttachment } from "../attachments";
 import type {
   EntityData,
   Component,
@@ -63,7 +64,8 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
     switch (component.type)
     {
       case "TAG":
-        entity.tag = component.tag; // tags are one field; applied right here
+        entity.tag = component.tag;
+        RegisterAttachment(entity, { type: "TAG", data: component });
         break;
       case "COLLIDER":
         collider = component;
@@ -176,6 +178,7 @@ function InstantiateScripts(
     pendingReferences.push(...ApplyExposedVars(behavior, scriptComponent.vars));
     InjectInputMaps(behavior, scriptComponent.script, sceneDefaultMap);
     entity.behaviors.push(behavior);
+    RegisterAttachment(entity, { type: "SCRIPT", data: scriptComponent, behavior });
   }
 
   return pendingReferences;
@@ -202,7 +205,20 @@ function ApplyComponents(
 
   if (collider !== undefined || body !== undefined)
   {
-    entity.body = BuildPhysics(entity.node, collider, body, scene);
+    const physicsBody = BuildPhysics(entity.node, collider, body, scene);
+    entity.body = physicsBody;
+
+    if (physicsBody !== undefined)
+    {
+      if (collider !== undefined)
+      {
+        RegisterAttachment(entity, { type: "COLLIDER", data: collider, body: physicsBody });
+      }
+      if (body !== undefined)
+      {
+        RegisterAttachment(entity, { type: "RIGIDBODY", data: body, body: physicsBody });
+      }
+    }
   }
 
   // Authored trigger reactions need the plugin observable; wired in a post-pass.

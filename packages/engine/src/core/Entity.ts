@@ -9,12 +9,19 @@ import type { AdvancedDynamicTexture, Control3D } from "@babylonjs/gui";
 // Type-only import: Entity references Behavior, Behavior references Entity.
 // `import type` erases at compile time, so the cycle is harmless at runtime.
 import type { Behavior } from "../scripting/Behavior";
+import type {
+  AttachmentOfType,
+  ComponentType,
+  EntityAttachment,
+} from "./attachments";
 
 export class Entity
 {
   readonly id: string;
   readonly name: string;
   readonly node: TransformNode;
+  /** Live registry of successfully applied components (populated during load). */
+  attachments: EntityAttachment[] = [];
   tag = "Untagged";
   behaviors: Behavior[] = [];
   body?: PhysicsBody;
@@ -34,6 +41,32 @@ export class Entity
     this.id = id;
     this.name = name;
     this.node = node;
+  }
+
+  /** Every attachment row on this entity (read-only view). */
+  GetAttachments(): readonly EntityAttachment[]
+  {
+    return this.attachments;
+  }
+
+  /** The first attachment of the given component type, if any. */
+  GetAttachment<T extends ComponentType>(type: T): AttachmentOfType<T> | undefined
+  {
+    return this.attachments.find((attachment) => attachment.type === type) as
+      AttachmentOfType<T> | undefined;
+  }
+
+  /** Every attachment of the given component type. */
+  GetAttachmentsOfType<T extends ComponentType>(type: T): AttachmentOfType<T>[]
+  {
+    return this.attachments.filter((attachment) => attachment.type === type) as
+      AttachmentOfType<T>[];
+  }
+
+  /** Whether this entity has at least one attachment of the given type. */
+  HasAttachment(type: ComponentType): boolean
+  {
+    return this.attachments.some((attachment) => attachment.type === type);
   }
 
   /** Return the first attached behavior of the given class, if present. */

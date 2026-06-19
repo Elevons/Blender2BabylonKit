@@ -2,7 +2,7 @@
 
 All TypeScript in this project follows C#-inspired conventions for readability.
 Follow these rules when writing or modifying engine code or behaviors. The engine
-guide (`LLM_ENGINE_GUIDE.md`) covers *how the engine works*; this file covers *how
+guide (`docs/engine/00-INDEX.md`) covers *how the engine works*; this file covers *how
 the code is written*.
 
 ---
@@ -117,3 +117,9 @@ Data vs code. This differs from Unity, where a script *is* a `Component` — her
 they're deliberately separate. Accordingly, `BehaviorRegistry` registers
 *behaviors*, not components: `TAG` / `COLLIDER` / `RIGIDBODY` / `CAMERA` are applied
 directly by the loader.
+
+At runtime, successfully applied components are recorded on
+`entity.attachments` (`core/attachments.ts`) — one row per component, each pairing
+manifest `data` with its runtime object (`body`, `behavior`, `sound`, …). Query
+with `GetAttachment` / `GetAttachmentsOfType` / `HasAttachment`; convenience
+fields (`entity.body`, `entity.behaviors`, …) mirror attachments for now.

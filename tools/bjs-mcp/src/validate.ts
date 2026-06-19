@@ -1,3 +1,5 @@
+import { ListInputActions } from "./io.js";
+
 export interface ValidationIssue
 {
   code: string;
@@ -17,6 +19,12 @@ const LOWERCASE_HOOK_PATTERN = /\b(onStart|onUpdate|onDestroy|onMessage)\s*\(/g;
 const WRONG_EXPOSED_PATTERN = /@Exposed\b/g;
 const WRONG_INPUT_MAP_PATTERN = /@InputMap\b/g;
 const EXPORT_DEFAULT_CLASS = /export\s+default\s+class\s+([A-Za-z_]\w*)/;
+const FIND_ACTION_PATTERN = /FindAction\s*\(\s*["']([^"']+)["']\s*\)/g;
+const NODE_POSITION_WRITE_PATTERN =
+  /this\.node\.position\s*=|this\.node\.position\.addInPlace|this\.node\.position\.addInPlaceFromFloats/;
+const K_AND_R_BRACE_PATTERN = /\b(if|for|while)\s*\([^)]*\)\s*\{/g;
+const RAW_KEY_PATTERN =
+  /\b(KeyW|KeyA|KeyS|KeyD|KeyQ|KeyE|KeyboardEventTypes|onKeyDown|onKeyUp|window\.addEventListener)\b/;
 
 /**
  * Validate a behavior draft against Blender-parse rules and project conventions.
@@ -107,6 +115,11 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   CheckEntityFields(source, issues);
   CheckEntityLists(source, issues);
   CheckVoidReturnTypes(source, issues);
+  CheckPhysicsAntiPattern(source, issues);
+  CheckInputActionNames(source, issues);
+  CheckRawInput(source, issues);
+  CheckBraceStyle(source, issues);
+  CheckKeyboardObserverCleanup(source, issues);
 
   return {
     valid: issues.filter((issue) => issue.severity === "error").length === 0,
@@ -202,6 +215,124 @@ function CheckVoidReturnTypes(source: string, issues: ValidationIssue[]): void
         severity: "warning",
       });
     }
+  }
+}
+
+function CheckPhysicsAntiPattern(source: string, issues: ValidationIssue[]): void
+{
+  if (!source.includes("OnUpdate"))
+  {
+    return;
+  }
+
+  const writesNodePosition = NODE_POSITION_WRITE_PATTERN.test(source);
+  const referencesBody = source.includes("entity.body") || source.includes("this.entity.body");
+  const setsAnimated =
+    source.includes("PhysicsMotionType.ANIMATED") || source.includes("setMotionType(PhysicsMotionType.ANIMATED)");
+
+  if (writesNodePosition && referencesBody && !setsAnimated)
+  {
+    issues.push({
+      code: "dynamic-body-position-fight",
+      message:
+        "OnUpdate writes this.node.position while a physics body exists — call setMotionType(PhysicsMotionType.ANIMATED) in OnStart first, or use velocity/impulse on DYNAMIC bodies.",
+      severity: "warning",
+    });
+  }
+
+  if (writesNodePosition && !referencesBody && source.includes("RIGIDBODY"))
+  {
+    issues.push({
+      code: "possible-physics-fight",
+      message:
+        "OnUpdate writes this.node.position — if this entity has a Rigid Body, set PhysicsMotionType.ANIMATED in OnStart before driving the node.",
+      severity: "warning",
+    });
+  }
+}
+
+function CheckInputActionNames(source: string, issues: ValidationIssue[]): void
+{
+  const catalog = ListInputActions();
+  const knownActions = new Set<string>();
+
+  for (const map of catalog.maps)
+  {
+    for (const action of map.actions)
+    {
+      knownActions.add(action.name);
+    }
+  }
+
+  if (knownActions.size === 0)
+  {
+    return;
+  }
+
+  const usedActions = new Set<string>();
+  let match: RegExpExecArray | null;
+  const pattern = new RegExp(FIND_ACTION_PATTERN.source, FIND_ACTION_PATTERN.flags);
+
+  while ((match = pattern.exec(source)) !== null)
+  {
+    usedActions.add(match[1]);
+  }
+
+  for (const actionName of usedActions)
+  {
+    if (!knownActions.has(actionName))
+    {
+      issues.push({
+        code: "unknown-input-action",
+        message: `FindAction("${actionName}") — not in scene input actions. Call list_input_actions for valid names.`,
+        severity: "warning",
+      });
+    }
+  }
+}
+
+function CheckRawInput(source: string, issues: ValidationIssue[]): void
+{
+  if (!RAW_KEY_PATTERN.test(source))
+  {
+    return;
+  }
+
+  const usesInputMap = source.includes("@inputMap") || source.includes("this.input") || source.includes("InputActionMap");
+
+  issues.push({
+    code: "raw-key-input",
+    message: usesInputMap
+      ? "Prefer Input Actions (FindAction) over raw key codes / window listeners when a map is available."
+      : "Raw key codes or window listeners detected — prefer @inputMap + FindAction, or scene observables with OnDestroy cleanup.",
+    severity: "warning",
+  });
+}
+
+function CheckBraceStyle(source: string, issues: ValidationIssue[]): void
+{
+  if (K_AND_R_BRACE_PATTERN.test(source))
+  {
+    issues.push({
+      code: "brace-style",
+      message: "Use Allman braces — opening brace on its own line after if/for/while (see get_style_guide).",
+      severity: "warning",
+    });
+  }
+}
+
+function CheckKeyboardObserverCleanup(source: string, issues: ValidationIssue[]): void
+{
+  const subscribesKeyboard =
+    source.includes("onKeyboardObservable.add") || source.includes("onPointerObservable.add");
+
+  if (subscribesKeyboard && !source.includes("OnDestroy"))
+  {
+    issues.push({
+      code: "missing-observer-cleanup",
+      message: "Scene observable subscription without OnDestroy — store the observer and remove it on dispose.",
+      severity: "warning",
+    });
   }
 }
 

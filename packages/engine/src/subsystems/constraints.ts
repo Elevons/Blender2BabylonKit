@@ -14,6 +14,7 @@ import {
 import type { Entity } from "../core/Entity";
 import type { ConstraintAxisName, ConstraintComponent } from "../core/types";
 import type { Level } from "../core/Level";
+import { RegisterAttachment } from "../core/attachments";
 
 /**
  * Constraints subsystem: turns CONSTRAINT components into Havok V2 joints in a
@@ -363,6 +364,7 @@ export function BuildConstraints(
     }
 
     constraints.push(constraint);
+    RegisterAttachment(ownerEntity, { type: "CONSTRAINT", data: component, constraint });
   }
 
   return constraints;

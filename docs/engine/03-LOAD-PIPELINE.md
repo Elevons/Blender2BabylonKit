@@ -26,11 +26,13 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    - resolve node (GUID first, name fallback), create `Entity`, register in
      `level.entities`, back-reference `node.metadata.bjsEntity = entity`;
    - **`ApplyComponents`** → `ClassifyComponents` sorts the component array,
-     then: physics body from COLLIDER/RIGIDBODY (`BuildPhysics`), trigger-event
+     then: physics body from COLLIDER/RIGIDBODY (`BuildPhysics` →
+     `RegisterAttachment` per collider/rigidbody row), trigger-event
      registrations queued, AUDIO/GUI/PARTICLE async tasks queued, GUI3D
      registrations queued (with manifest `parent` GUID for panel nesting),
-     `InstantiateScripts` builds behaviors, applies `@exposed` values, and
-     `InjectInputMaps` (entity refs deferred as `PendingRef`s);
+     `InstantiateScripts` builds behaviors (`RegisterAttachment` per SCRIPT),
+     applies `@exposed` values, and `InjectInputMaps` (entity refs deferred as
+     `PendingRef`s); TAG rows register during classification;
    - `ProcessLightForEntity` / `ProcessCameraForEntity` (typed camera override
      via `BuildTypedCamera`; target bindings queued by `QueueCameraTargets`).
 6. **Second pass** — now every entity exists: `ResolveObjectReferences`
@@ -42,8 +44,9 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    the chosen clips), `SettleTasks` for audio/GUI/particle promises
    (`Promise.allSettled` so one bad file logs instead of rejecting the load),
    wire trigger events (`WireTriggerEvents` → `level.triggerObserver`), build
-   constraints (`BuildConstraints` → `level.constraints`), build 3D GUI
-   (`BuildGui3DControls` → `level.gui3DManager`), then **`level.Begin()`**
+   constraints (`BuildConstraints` → `level.constraints` + CONSTRAINT rows on
+   owner entities), build 3D GUI (`BuildGui3DControls` → `level.gui3DManager` +
+   GUI3D_* rows on owning entities), then **`level.Begin()`**
    (behaviors' `OnStart`, including any runtime camera creation), then
    **`ApplyPostProcessing`** (default pipeline + SSAO on `scene.activeCamera`),
    and if `debugColliders` *and* the export's Debug Build flag allow, show
@@ -60,6 +63,6 @@ See [10 — UI](10-UI.md) for the 2D GUI, particle, and 3D GUI pipelines.
 each render: `InputManager.Process` first, all `OnUpdate(deltaSeconds)`,
 registered updaters, then `InputManager.EndFrame` last (so `WasPressed` edges
 last one full frame). `Dispose` detaches input, removes observers, disposes
-constraints and sounds, runs `OnDestroy`.
+constraints and sounds, clears `entity.attachments`, runs `OnDestroy`.
 
 Continue: [Scripting →](04-SCRIPTING.md)

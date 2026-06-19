@@ -6,6 +6,7 @@ import {
 } from "@babylonjs/core";
 import type { Entity } from "../core/Entity";
 import type { ParticleComponent } from "../core/types";
+import { RegisterAttachment } from "../core/attachments";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
 /**
@@ -63,6 +64,7 @@ export async function ApplyParticles(
   }
 
   entity.particleSystems.push(system);
+  RegisterAttachment(entity, { type: "PARTICLE", data: particleComponent, system });
 
   if (particleComponent.autoStart)
   {

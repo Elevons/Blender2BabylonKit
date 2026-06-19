@@ -2,6 +2,7 @@ import { AbstractMesh } from "@babylonjs/core";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import type { Entity } from "../core/Entity";
 import type { GuiComponent } from "../core/types";
+import { RegisterAttachment } from "../core/attachments";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
 /**
@@ -59,6 +60,7 @@ export async function ApplyGui(
 
   await texture.parseFromURLAsync(url);
   entity.guiTextures.push(texture);
+  RegisterAttachment(entity, { type: "GUI", data: guiComponent, texture });
 
   return texture;
 }

@@ -14,6 +14,11 @@ break the save). On the runtime side, the Vite plugin `ReloadOnLevelExport`
 bytes are unchanged. `IsLevelAsset` resolves paths with `path.resolve` because
 chokidar may report relative paths (`public/levels/...`) without a leading slash.
 
+Re-exports are **idempotent for side files**: `export_level` calls
+`begin_asset_export()` (`export/assets.py`) so each save overwrites
+`env/<name>.hdr`, `audio/…`, etc. instead of accumulating `_2`, `_3`, … copies
+when the manifest path is unchanged.
+
 ## The validator <a name="validator"></a>
 
 `export/validate.py`, run by the **Validate** button, by Export, and by every Live

@@ -95,7 +95,9 @@ lamps and the optional `ambientColor` fill.
 A World texture always wins over **Default Environment**. Export copies World
 textures through `copy_asset` / `save_image_asset` with
 `sanitize_asset_filename()` (spaces and unsafe characters → URL-safe names under
-`env/`). World texture discovery is shared by export and the scene UI in
+`env/`). The same source file always maps to the same export path; Live Link
+re-exports **overwrite** that file rather than suffixing `_2`, `_3`, … World
+texture discovery is shared by export and the scene UI in
 `scene/environment.py` (`find_world_env_node` traces **World Output → Surface →
 Background → env/image** only — orphan nodes in the node editor are ignored).
 
