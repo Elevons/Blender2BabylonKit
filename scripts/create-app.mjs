@@ -17,6 +17,14 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = path.resolve(fileURLToPath(import.meta.url), "../..");
 const TEMPLATE = path.join(REPO_ROOT, "apps", "playground");
 const SKIP = new Set(["node_modules", "dist", ".vite"]);
+const DEFAULT_ASSET_FOLDERS = [
+  "gui",
+  "particles",
+  "materials",
+  "geometry",
+  "filters",
+  "render-graphs",
+];
 
 function ParseArgs(argv)
 {
@@ -94,6 +102,27 @@ if (args.level)
   main = main.replace(/\/levels\/[^"]+\.scene\.json/, `/levels/${args.level}.scene.json`);
   fs.writeFileSync(mainPath, main);
 }
+
+// Workspace staging folder for pre-export editor assets.
+fs.mkdirSync(path.join(destination, "public", "workspace"), { recursive: true });
+for (const folder of DEFAULT_ASSET_FOLDERS)
+{
+  fs.mkdirSync(path.join(destination, "public", "workspace", folder), { recursive: true });
+}
+
+// Project manifest consumed by the Babylon Editor Launcher.
+const manifest = {
+  name: appName,
+  title: args.title ?? appName,
+  defaultLevel: args.level ?? undefined,
+  assetFolders: DEFAULT_ASSET_FOLDERS,
+  dev: { port: 5173 },
+  blenderExportPath: `apps/${appName}/public/levels/`,
+};
+fs.writeFileSync(
+  path.join(destination, "babylon-project.json"),
+  JSON.stringify(manifest, null, 2) + "\n",
+);
 
 console.log(`Created apps/${appName}`);
 console.log(`  1. npm install          (links @bjs/engine into the new app)`);

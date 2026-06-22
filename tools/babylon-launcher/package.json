@@ -6,6 +6,9 @@
   "description": "Self-hosted Babylon.js editor hub for Blender2BabylonKit",
   "scripts": {
     "dev": "tsx server/dev.ts",
+    "launcher:dev": "npm run dev",
+    "launcher:build": "npm run build",
+    "launcher:start": "npm run start",
     "build": "tsc -p tsconfig.server.json && vite build",
     "start": "NODE_ENV=production node dist/server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json"

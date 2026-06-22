@@ -22,6 +22,12 @@ import {
 } from "./recipes.js";
 import { FormatValidationResult, ValidateBehavior } from "./validate.js";
 import { FormatSceneSummary, ListLevels, LoadSceneSummary } from "./scene.js";
+import {
+  FormatMovementMode,
+  FormatMovementOverview,
+  GetMovementMode,
+  MOVEMENT_MODES,
+} from "./physics.js";
 
 const server = new McpServer({
   name: "bjs-level-kit",
@@ -513,6 +519,42 @@ server.tool(
         },
       ],
     };
+  }
+);
+
+server.tool(
+  "get_physics_movement",
+  "How to move an entity correctly based on its physics body. Returns a decision tree (no body / DYNAMIC / ANIMATED teleport / ANIMATED continuous / toggle) with copy-in patterns and the disablePreStep + setTargetTransform pitfalls. Call before writing any behavior that moves a body, or when a mesh \"won't move\" or \"moves forever\".",
+  {
+    mode: z
+      .enum([
+        "no-body",
+        "dynamic",
+        "animated-teleport",
+        "animated-continuous",
+        "toggle-dynamic-animated",
+      ])
+      .optional()
+      .describe("Movement mode to return. Omit for the decision tree + mode list."),
+  },
+  async ({ mode }) =>
+  {
+    if (mode === undefined)
+    {
+      return { content: [{ type: "text", text: FormatMovementOverview() }] };
+    }
+
+    const found = GetMovementMode(mode);
+    if (found === undefined)
+    {
+      const available = MOVEMENT_MODES.map((entry) => entry.name).join(", ");
+      return {
+        content: [{ type: "text", text: `Unknown mode "${mode}". Available: ${available}` }],
+        isError: true,
+      };
+    }
+
+    return { content: [{ type: "text", text: FormatMovementMode(found) }] };
   }
 );
 

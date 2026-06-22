@@ -3,9 +3,9 @@ Input Actions operators register from the input_actions package."""
 
 import bpy
 
-from . import components, scripts, export_ops
+from . import components, scripts, export_ops, launcher_ops
 
-_all_classes = components.classes + scripts.classes + export_ops.classes
+_all_classes = components.classes + scripts.classes + export_ops.classes + launcher_ops.classes
 
 
 def register():

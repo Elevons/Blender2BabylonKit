@@ -1,0 +1,17 @@
+{
+  "name": "playground",
+  "title": "Playground",
+  "defaultLevel": "Train Scene",
+  "assetFolders": [
+    "gui",
+    "particles",
+    "materials",
+    "geometry",
+    "filters",
+    "render-graphs"
+  ],
+  "dev": {
+    "port": 5173
+  },
+  "blenderExportPath": "apps/playground/public/levels/"
+}

@@ -206,6 +206,26 @@ await activeCamera.flyToAsync(
   this.entity.body.disablePreStep = false;
 }`,
   },
+{
+    name: "move-animated-body",
+    description:
+      "Teleport an ANIMATED (kinematic) body and have it hold position. disablePreStep = false lets the node transform reach the body; zero velocity after the write so it does not drift.",
+    code: `const body = this.entity.body;
+if (body === undefined)
+{
+  return;
+}
+
+const target = this.node.position.add(new Vector3(0, 10, 0));
+
+body.setMotionType(PhysicsMotionType.ANIMATED);
+body.disablePreStep = false;
+
+this.node.position.copyFrom(target);
+
+body.setLinearVelocity(Vector3.Zero());
+body.setAngularVelocity(Vector3.Zero());`,
+  },
 ];
 
 export function GetFragment(name: string): Fragment | undefined

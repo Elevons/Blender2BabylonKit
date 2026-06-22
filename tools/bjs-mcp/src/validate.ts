@@ -123,6 +123,7 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   CheckBraceStyle(source, issues);
   CheckKeyboardObserverCleanup(source, issues);
   CheckScenePostProcessInBehavior(source, issues);
+    CheckTargetTransformLoop(source, issues);
 
   return {
     valid: issues.filter((issue) => issue.severity === "error").length === 0,
@@ -130,6 +131,55 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   };
 }
 
+function ExtractMethodBody(source: string, methodName: string): string | undefined
+{
+  const signature = new RegExp(`\\b${methodName}\\s*\\([^)]*\\)\\s*(?::\\s*[A-Za-z<>\\[\\] |]+)?\\s*\\{`);
+  const match = signature.exec(source);
+  if (match === null)
+  {
+    return undefined;
+  }
+
+  let depth = 1;
+  let index = match.index + match[0].length;
+
+  while (index < source.length && depth > 0)
+  {
+    const char = source[index];
+    if (char === "{")
+    {
+      depth++;
+    }
+    else if (char === "}")
+    {
+      depth--;
+    }
+    index++;
+  }
+
+  return source.slice(match.index + match[0].length, index - 1);
+}
+
+function CheckTargetTransformLoop(source: string, issues: ValidationIssue[]): void
+{
+  if (!source.includes("setTargetTransform"))
+  {
+    return;
+  }
+
+  const updateBody = ExtractMethodBody(source, "OnUpdate");
+  const calledEveryFrame = updateBody !== undefined && updateBody.includes("setTargetTransform");
+
+  if (!calledEveryFrame)
+  {
+    issues.push({
+      code: "target-transform-once",
+      message:
+        "setTargetTransform sets a velocity to reach the target, so it must be called every frame from OnUpdate. Called once (from OnStart or a toggle/one-shot handler), a kinematic body keeps that velocity and drifts forever. For a one-shot move, set disablePreStep = false and write this.node.position instead.",
+      severity: "warning",
+    });
+  }
+}
 function CheckExposedDefaults(source: string, issues: ValidationIssue[]): void
 {
   const decoratorPattern = /@exposed\s*\([^)]*\)[^;{]*=\s*([^;\n]+)/g;

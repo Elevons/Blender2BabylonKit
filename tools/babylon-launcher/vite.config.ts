@@ -6,20 +6,22 @@ export default defineConfig({
   plugins: [react()],
   root: path.resolve(__dirname),
   server: {
-    port: 3100,
-    strictPort: true,
+    middlewareMode: true,
   },
   build: {
     outDir: "dist/client",
     emptyOutDir: true,
   },
   optimizeDeps: {
-    exclude: [
+    include: [
       "@babylonjs/gui-editor",
       "@babylonjs/node-editor",
       "@babylonjs/node-geometry-editor",
       "@babylonjs/node-particle-editor",
       "@babylonjs/node-render-graph-editor",
+      "@babylonjs/core",
+      "@babylonjs/gui",
+      "@babylonjs/loaders",
     ],
   },
 });

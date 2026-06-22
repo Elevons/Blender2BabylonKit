@@ -56,6 +56,7 @@ const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
   { keywords: ["path", "waypoint", "train", "tangent"], fragment: "path3d-from-entities" },
   { keywords: ["camera", "orbit", "follow"], fragment: "orbit-camera-around-target" },
   { keywords: ["geospatial", "globe", "planet", "map", "earth", "flyto", "fly to"], fragment: "geospatial-camera-flyto-point" },
+{ keywords: ["teleport", "lift", "snap", "checkpoint", "respawn", "reset"], fragment: "move-animated-body" },
 ];
 
 const RECIPE_ROLES: Record<string, string> = {

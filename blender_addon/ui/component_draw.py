@@ -206,6 +206,9 @@ def draw_component(layout, obj, index, comp):
 
     elif comp.comp_type == 'GUI':
         body.prop(comp, "gui_file")
+        row = body.row(align=True)
+        op = row.operator("bjs.open_launcher_gui", text="Open in Launcher", icon='WORLD')
+        op.comp_index = index
         body.prop(comp, "gui_mode")
         if comp.gui_mode == 'FULLSCREEN':
             body.prop(comp, "gui_foreground")
@@ -217,6 +220,9 @@ def draw_component(layout, obj, index, comp):
 
     elif comp.comp_type == 'PARTICLE':
         body.prop(comp, "particle_file")
+        row = body.row(align=True)
+        op = row.operator("bjs.open_launcher_particle", text="Open in Launcher", icon='WORLD')
+        op.comp_index = index
         body.prop(comp, "particle_attach")
         body.prop(comp, "particle_autostart")
         body.prop(comp, "particle_gpu")

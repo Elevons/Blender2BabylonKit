@@ -19,7 +19,11 @@
     "docs:landing": "node scripts/build-landing.mjs",
     "input:gen": "node scripts/generate-input-constants.mjs",
     "mcp:build": "npm run build --workspace @bjs/mcp",
-    "mcp:start": "npm run start --workspace @bjs/mcp"
+    "mcp:start": "npm run start --workspace @bjs/mcp",
+    "launcher:dev": "npm run dev --workspace @bjs/babylon-launcher",
+    "launcher:build": "npm run build --workspace @bjs/babylon-launcher",
+    "launcher:start": "npm run start --workspace @bjs/babylon-launcher",
+    "launcher:update-editors": "node scripts/update-editors.mjs"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

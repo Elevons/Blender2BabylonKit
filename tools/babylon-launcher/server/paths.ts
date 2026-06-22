@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const LAUNCHER_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const REPO_ROOT = path.resolve(LAUNCHER_DIR, "../..");
 export const APPS_DIR = path.join(REPO_ROOT, "apps");
-export const LAUNCHER_PORT = 3100;
+export const LAUNCHER_PORT = Number(process.env.LAUNCHER_PORT ?? 3200);
 
 export const ASSET_FOLDERS = [
   "gui",

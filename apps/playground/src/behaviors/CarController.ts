@@ -5,6 +5,7 @@ import {
   PhysicsConstraintAxis,
   PhysicsConstraintMotorType,
   PhysicsMotionType,
+  Quaternion,
   Vector3,
 } from "@babylonjs/core";
 
@@ -38,8 +39,9 @@ export default class CarController extends Behavior
   @inputMap("Player") player!: InputActionMap;
 
   private isActive = false;
+  private liftApplied = false;
   private hinges: Physics6DoFConstraint[] = [];
-  private lastResetTime = Date.now();
+  private debounceTime = Date.now();
 
   OnStart(): void
   {
@@ -61,22 +63,10 @@ export default class CarController extends Behavior
     const reset = this.player.FindAction("Reset")?.IsPressed() === true;
 
     // Toggle between DYNAMIC and ANIMATED body mode on reset press (debounced to 1s).
-    if (reset && Date.now() - this.lastResetTime >= 1000)
+    if (reset && Date.now() - this.debounceTime >= 1000)
     {
-      this.lastResetTime = Date.now();
-      this.isActive = !this.isActive;
-      if (this.body)
-      {
-        const body = this.body.body;
-        if (body)
-        {
-          const motionType = this.isActive ? PhysicsMotionType.ANIMATED : PhysicsMotionType.DYNAMIC;
-          body.setMotionType(motionType);
-          body.setLinearVelocity(Vector3.Zero());
-          body.setAngularVelocity(Vector3.Zero());
-          console.log(`[${this.entity.name}] Body mode: ${motionType}, isActive=${this.isActive}`);
-        }
-      }
+      this.debounceTime = Date.now();
+      this.ToggleBodyMode();
     }
 
     // Speeds per wheel: [FL, FR, RL, RR]
@@ -137,4 +127,50 @@ export default class CarController extends Behavior
     hinge.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
     hinge.setAxisMotorMaxForce(motorAxis, this.force);
   }
+
+  /**
+   * Toggles the body between Dynamic and Animated physics modes and resets velocity.
+   * Converts Euler rotations to quaternions since the Babylon physics engine
+   * only updates from node.rotationQuaternion internally.
+   */
+   private ToggleBodyMode(): void
+   {
+     this.isActive = !this.isActive;
+
+     const body = this.body?.body;
+     if (!body || !this.body) return;
+
+     if (this.isActive)
+     {
+       // Switch to ANIMATED and lift straight up by 10 units as a one-shot teleport.
+       const target = this.body.node.position.add(new Vector3(0, 10, 0));
+
+       const rotation = this.body.node.rotationQuaternion ?? new Quaternion();
+       if (this.body.node.rotationQuaternion === null)
+       {
+         Quaternion.FromEulerVectorToRef(this.body.node.rotation, rotation);
+       }
+
+       body.setMotionType(PhysicsMotionType.ANIMATED);
+
+       // Let the next pre-step copy the node transform into the physics body,
+       // then write the target directly. This is a teleport — no velocity is set.
+       body.disablePreStep = false;
+       this.body.node.position.copyFrom(target);
+       this.body.node.rotationQuaternion = rotation;
+
+       // Kinematic bodies keep velocity forever, so make sure there is none.
+       body.setLinearVelocity(Vector3.Zero());
+       body.setAngularVelocity(Vector3.Zero());
+       body.setMotionType(PhysicsMotionType.DYNAMIC);
+     }
+     else
+     {
+       // Back to DYNAMIC: physics drives the node again.
+       body.setMotionType(PhysicsMotionType.DYNAMIC);
+       body.disablePreStep = true;
+       body.setLinearVelocity(Vector3.Zero());
+       body.setAngularVelocity(Vector3.Zero());
+     }
+   }
 }
