@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Self-hosted Babylon.js editor hub for Blender2BabylonKit",
+  "description": "Self-hosted Babylon.js project hub for Blender2BabylonKit",
   "scripts": {
     "dev": "tsx server/dev.ts",
     "launcher:dev": "npm run dev",
@@ -14,20 +14,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json"
   },
   "dependencies": {
-    "@babylonjs/core": "^9.0.0",
-    "@babylonjs/gui": "^9.0.0",
-    "@babylonjs/gui-editor": "^9.0.0",
-    "@babylonjs/loaders": "^9.0.0",
-    "@babylonjs/node-editor": "^9.0.0",
-    "@babylonjs/node-geometry-editor": "^9.0.0",
-    "@babylonjs/node-particle-editor": "^9.0.0",
-    "@babylonjs/node-render-graph-editor": "^9.0.0",
-    "@babylonjs/smart-filters": "^9.0.0",
-    "@babylonjs/smart-filters-blocks": "^9.0.0",
     "express": "^4.21.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

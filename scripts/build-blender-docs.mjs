@@ -74,7 +74,7 @@ export const AREA_PAGES = {
       N(3, 300, 170, "_ensure_entity_ids", "step 2", "Assign GUIDs to everything addressable (components, lights, cameras) AND every referenced object, so refs always resolve. Must run before the glb so extras carry the IDs.", [["File", "export/level.py"]]),
       N(4, 300, 280, "_export_glb", "step 3", "Invokes Blender's glTF exporter (+Y-up, GUIDs in node extras, cameras/lights/animation included).", [["File", "export/level.py"]]),
       N(5, 300, 390, "_build_manifest", "step 4", "Per renderable object: serialize components, light, camera, animation. Plus the scene block. The schema-v4 dict that becomes .scene.json.", [["File", "export/level.py"]]),
-      N(6, 560, 300, "serialize_components", "per object", "One dict per component. Converts collider center/size/rotation and constraint pivot/axis to Babylon Y-up; attaches trigger events; copies GUI/particle JSON and 3D button images via copy_asset; serializes GUI3D_* layout and click events.", [["Axis conv", "here"], ["File", "export/components.py"]]),
+      N(6, 560, 300, "serialize_components", "per object", "One dict per component. Converts collider center/size/rotation and constraint pivot/axis to Babylon Y-up; attaches trigger events; copies GUI JSON via copy_asset; particle JSON + texture overrides via export_particle_system; 3D button images via copy_asset; serializes GUI3D_* layout and click events.", [["Axis conv", "here"], ["File", "export/components.py"]]),
       N(7, 560, 410, "_serialize_vars", "per script", "Exposed values → vars dict; entity refs become target GUIDs.", [["Refs", "GUID strings"], ["File", "export/components.py"]]),
       N(8, 800, 250, "serialize_light / serialize_camera", "auto blocks", "Derived from the lamp/camera datablock (no component needed); the active camera is flagged.", [["No component", "auto"], ["File", "export/datablocks.py"]]),
       N(9, 800, 380, "serialize_scene", "scene block", "Clear/ambient, environment (World Output chain → env/ via scene/environment.py, or useDefault when Default Environment is on; createSkybox forced off when Atmosphere on; skyboxIgnoreFog), fog, atmosphere (export/atmosphere.py), post (export/post_processing.py; LUTs → post/), inputActions + defaultInputMap.", [["File", "export/scene.py"]]),
@@ -176,7 +176,18 @@ export const TRACES = [
       { file: "blender_addon/ui/component_draw.py", symbol: "_draw_click_events", note: "The On Click Events box for 3D controls — same target+message UI as trigger colliders, wired to bjs.gui3d_event_add/remove operators." },
       { file: "blender_addon/export/components.py", symbol: "serialize_components", note: "GUI3D_* cases emit type-specific fields; button images copied via copy_asset to gui/; click-event targets yielded by iter_referenced_objects for GUID assignment." },
       { file: "blender_addon/export/validate.py", symbol: "_check_gui3d", note: "Mesh button on non-mesh, panel without button children, click events without targets, missing button image files." },
-      { file: "blender_addon/export/validate.py", symbol: "_check_media", note: "GUI (missing JSON, MESH mode on non-mesh) and PARTICLE (missing JSON) checks run alongside 3D GUI validation." },
+      { file: "blender_addon/export/validate.py", symbol: "_check_media", note: "GUI (missing JSON, MESH mode on non-mesh), PARTICLE (missing JSON, missing particle texture images), alongside 3D GUI validation." },
+    ],
+  },
+  {
+    id: "particles",
+    title: "Particles: authoring → patched JSON",
+    intro: "Particle JSON plus optional Particle Textures copied and patched on export.",
+    steps: [
+      { file: "blender_addon/components/component.py", symbol: "BJSParticleTexture", note: "AUTHORING — particle_textures rows: image_file, json_url (filename in particle JSON), match_url (optional block filter)." },
+      { file: "blender_addon/ui/component_draw.py", symbol: "_draw_particle_textures", note: "Particle Textures box on the PARTICLE component; bjs.particle_texture_add/remove operators." },
+      { file: "blender_addon/export/particles.py", symbol: "export_particle_system", note: "EXPORT — copy JSON; copy_particle_texture per row; patch_particle_json_textures on the exported file under particles/." },
+      { file: "blender_addon/export/validate.py", symbol: "_check_media", note: "Warns when particle JSON or a Particle Textures image file is missing." },
     ],
   },
 ];

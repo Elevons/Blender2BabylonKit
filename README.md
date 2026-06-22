@@ -382,10 +382,13 @@ Add a **Particles** component and pick the `.json` exported from the
 [online Particle Editor](https://particles.babylonjs.com/) (copied into
 `particles/` next to the export). Options: **Use GPU** (creates a
 `GPUParticleSystem` when supported, else CPU), **Auto Start** (emit on load),
-**Attach to Object** (emit from this entity — a mesh follows it; an empty uses its
-position), and **Max Particles** (override the JSON's capacity; 0 keeps it). Any
-texture the JSON names is loaded from beside the `.json`, so drop it in
-`particles/` too. Scripts reach the system via `entity.GetParticles("name")` (named
+**Attach to Object** (emit from this entity — meshes and empties follow it at
+runtime), and **Max Particles** (override the JSON's capacity; 0 keeps it).
+Use **Particle Textures** on the component to copy image files into
+`particles/` on export and patch the particle JSON's texture URL (set **URL in
+JSON** to the filename the Node Particle Editor references, e.g. `bubble.png`).
+Any texture path in the JSON is loaded from beside the `.json` at runtime.
+Scripts reach the system via `entity.GetParticles("name")` (named
 by file stem) or `entity.particleSystems` to `.start()` / `.stop()` it.
 
 ## MSDF Text

@@ -46,7 +46,7 @@ Havok body) · **@exposed** (field → Blender → instance) · **Triggers**
 5. [Physics](05-PHYSICS.md) — bodies, constraints, triggers, right-handed import
 6. [Rendering](06-RENDERING.md) — lights, cameras, shadows, environment, atmosphere, scene look
 7. [Audio & Animation](07-AUDIO-ANIMATION.md) — sounds, NLA clips, the skinned-mesh rule
-8. [Workflow](08-WORKFLOW.md) — Live Link, the validator, Debug Build, tooling
+8. [Workflow](08-WORKFLOW.md) — Live Link, the validator, Debug Build, tooling, [Babylon Launcher](../launcher/00-INDEX.md)
 9. [Feature Traces](09-FEATURE-TRACES.md) — every feature's Blender → runtime file/function chain
 10. [UI](10-UI.md) — 2D GUI, particles, MSDF text, 3D GUI
 

@@ -1,20 +1,201 @@
 import {
-  ParticleHelper,
   GPUParticleSystem,
+  ParticleSystem,
   AbstractMesh,
+  Vector3,
   type IParticleSystem,
+  type Scene,
 } from "@babylonjs/core";
+import { NodeParticleSystemSet } from "@babylonjs/core/Particles/Node/nodeParticleSystemSet";
 import type { Entity } from "../core/Entity";
 import type { ParticleComponent } from "../core/types";
 import { RegisterAttachment } from "../core/attachments";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
+function IsLevelManifest(data: unknown): boolean
+{
+  const record = data as Record<string, unknown> | null;
+  return record !== null
+    && typeof record.version === "number"
+    && typeof record.glb === "string"
+    && record.scene !== undefined;
+}
+
+function IsNodeParticleSystemSet(data: unknown): boolean
+{
+  const record = data as Record<string, unknown> | null;
+  return record?.customType === "BABYLON.NodeParticleSystemSet"
+    || (Array.isArray(record?.blocks)
+      && record.blocks.some((block) =>
+        typeof block === "object"
+        && block !== null
+        && String((block as Record<string, unknown>).customType).startsWith("BABYLON.")));
+}
+
+function IsAbsoluteAssetUrl(url: string): boolean
+{
+  return /^https?:\/\//i.test(url) || url.startsWith("data:") || url.startsWith("/");
+}
+
+/** Node Particle Editor stores bare filenames; resolve them beside the JSON (rootUrl). */
+function ResolveNodeParticleSetTextureUrls(data: unknown, rootUrl: string): void
+{
+  const blocks = (data as { blocks?: unknown[] } | null)?.blocks;
+  if (!Array.isArray(blocks))
+  {
+    return;
+  }
+
+  for (const block of blocks)
+  {
+    if (typeof block !== "object" || block === null)
+    {
+      continue;
+    }
+
+    const record = block as Record<string, unknown>;
+    if (record.customType !== "BABYLON.ParticleTextureSourceBlock")
+    {
+      continue;
+    }
+
+    const url = record.url;
+    if (typeof url !== "string" || url.length === 0 || IsAbsoluteAssetUrl(url))
+    {
+      continue;
+    }
+
+    record.url = ResolveManifestAssetUrl(rootUrl, url.replace(/^\.\//, ""));
+  }
+}
+
+type ResolvedEmitter =
+  | { kind: "mesh"; emitter: AbstractMesh }
+  | { kind: "empty"; emitter: Vector3 };
+
+function ResolveEmitter(entity: Entity): ResolvedEmitter
+{
+  if (entity.node instanceof AbstractMesh)
+  {
+    return { kind: "mesh", emitter: entity.node };
+  }
+
+  // Babylon only accepts a mesh or Vector3 as an emitter. Empties use a owned
+  // Vector3 that WireParticleEmitterTracking keeps in sync each frame.
+  return { kind: "empty", emitter: entity.node.getAbsolutePosition().clone() };
+}
+
+export interface EmptyParticleEmitterTracker
+{
+  entity: Entity;
+  position: Vector3;
+}
+
+/** Hooks empty-node particle emitters into the scene's before-render pass. */
+export interface ParticleEmitterManager
+{
+  dispose(): void;
+}
+
+/** Gather every empty-backed particle emitter that needs per-frame sync. */
+export function CollectEmptyParticleEmitters(
+  entities: Iterable<Entity>
+): EmptyParticleEmitterTracker[]
+{
+  const seen = new Set<Vector3>();
+  const trackers: EmptyParticleEmitterTracker[] = [];
+
+  for (const entity of entities)
+  {
+    for (const attachment of entity.attachments)
+    {
+      const emptyEmitter = attachment.type === "PARTICLE" ? attachment.emptyEmitter : undefined;
+      if (emptyEmitter === undefined || seen.has(emptyEmitter))
+      {
+        continue;
+      }
+
+      seen.add(emptyEmitter);
+      trackers.push({ entity, position: emptyEmitter });
+    }
+  }
+
+  return trackers;
+}
+
+/** Keep empty-node particle emitters aligned with their entity's world position. */
+export function WireParticleEmitterTracking(
+  scene: Scene,
+  trackers: readonly EmptyParticleEmitterTracker[]
+): ParticleEmitterManager | undefined
+{
+  if (trackers.length === 0)
+  {
+    return undefined;
+  }
+
+  const observer = scene.onBeforeRenderObservable.add(() =>
+  {
+    for (const { entity, position } of trackers)
+    {
+      position.copyFrom(entity.node.getAbsolutePosition());
+    }
+  }, undefined, true);
+
+  return {
+    dispose(): void
+    {
+      scene.onBeforeRenderObservable.remove(observer);
+    },
+  };
+}
+
+async function LoadParticleSystems(
+  url: string,
+  scene: ReturnType<Entity["node"]["getScene"]>,
+  systemName: string,
+  rootUrl: string,
+  useGpu: boolean,
+  capacity: number | undefined,
+): Promise<IParticleSystem[]>
+{
+  const response = await fetch(url);
+  if (!response.ok)
+  {
+    throw new Error(`Unable to load particle system: ${url}`);
+  }
+
+  const data: unknown = await response.json();
+
+  if (IsLevelManifest(data))
+  {
+    throw new Error(
+      "Particle file looks like a level manifest (.scene.json), not a particle system export",
+    );
+  }
+
+  if (IsNodeParticleSystemSet(data))
+  {
+    ResolveNodeParticleSetTextureUrls(data, rootUrl);
+    const nodeSet = NodeParticleSystemSet.Parse(data);
+    const built = await nodeSet.buildAsync(scene);
+    return built.systems;
+  }
+
+  const system = useGpu
+    ? GPUParticleSystem.Parse(data, scene, rootUrl, false, capacity)
+    : ParticleSystem.Parse(data, scene, rootUrl, false, capacity);
+  system.name = systemName;
+  return [system];
+}
+
 /**
- * Particle subsystem: instantiate a Babylon particle system from the JSON saved
- * by the online Particle Editor and attach it to an entity. Parsing is async
- * (the file is fetched), so callers queue the returned promise and await it in
- * FinalizeLevel. Textures referenced by name in the JSON resolve relative to
- * the JSON's own folder (rootUrl), so dropping them next to the file works.
+ * Particle subsystem: instantiate a Babylon particle system from JSON saved by
+ * the Node Particle Editor or the legacy Particle Editor and attach it to an
+ * entity. Parsing is async (the file is fetched), so callers queue the
+ * returned promise and await it in FinalizeLevel. Texture paths resolve
+ * relative to the JSON's own folder (rootUrl) — legacy JSON names and Node
+ * Particle Editor `ParticleTextureSourceBlock.url` values alike.
  *
  * The system is named after its file stem, so `entity.GetParticles("fire")`
  * finds "particles/fire.json".
@@ -41,35 +222,58 @@ export async function ApplyParticles(
     ? ResolveManifestAssetUrl(baseUrl, particleComponent.file.slice(0, lastSlash + 1))
     : baseUrl;
 
+  const scene = entity.node.getScene();
   const useGpu = particleComponent.gpu && GPUParticleSystem.IsSupported;
   const capacity = particleComponent.capacity > 0 ? particleComponent.capacity : undefined;
 
-  const system = await ParticleHelper.ParseFromFileAsync(
-    systemName,
-    url,
-    entity.node.getScene(),
-    useGpu,
-    rootUrl,
-    capacity
-  );
-
-  if (particleComponent.attachToEntity)
+  let systems: IParticleSystem[];
+  try
   {
-    // A mesh emitter tracks the node every frame; a plain TransformNode (e.g. a
-    // Blender empty) isn't a valid emitter, so pin to a snapshot of its world
-    // position (clone so we don't hand out the node's internal vector).
-    system.emitter = entity.node instanceof AbstractMesh
-      ? entity.node
-      : entity.node.getAbsolutePosition().clone();
+    systems = await LoadParticleSystems(url, scene, systemName, rootUrl, useGpu, capacity);
+  }
+  catch (error)
+  {
+    console.warn(
+      `[bjs] "${entity.name}" failed to load particle system "${particleComponent.file}": ${(error as Error).message}`,
+    );
+    return undefined;
   }
 
-  entity.particleSystems.push(system);
-  RegisterAttachment(entity, { type: "PARTICLE", data: particleComponent, system });
-
-  if (particleComponent.autoStart)
+  if (systems.length === 0)
   {
-    system.start();
+    console.warn(`[bjs] "${entity.name}" particle file "${particleComponent.file}" produced no systems`);
+    return undefined;
   }
 
-  return system;
+  const resolvedEmitter = particleComponent.attachToEntity ? ResolveEmitter(entity) : undefined;
+  let primary: IParticleSystem | undefined;
+
+  for (const system of systems)
+  {
+    if (!primary)
+    {
+      system.name = systemName;
+      primary = system;
+    }
+
+    if (resolvedEmitter !== undefined)
+    {
+      system.emitter = resolvedEmitter.emitter;
+    }
+
+    entity.particleSystems.push(system);
+    RegisterAttachment(entity, {
+      type: "PARTICLE",
+      data: particleComponent,
+      system,
+      ...(resolvedEmitter?.kind === "empty" ? { emptyEmitter: resolvedEmitter.emitter } : {}),
+    });
+
+    if (particleComponent.autoStart)
+    {
+      system.start();
+    }
+  }
+
+  return primary;
 }

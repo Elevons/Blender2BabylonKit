@@ -12,12 +12,17 @@ const app = express();
 app.use(CreateApiApp());
 app.use(express.static(clientDir));
 
-app.get("*", (_req, res) =>
+app.get("*", (req, res) =>
 {
+  if (req.path.startsWith("/api") || req.path.startsWith("/docs"))
+  {
+    res.status(404).send("Not found");
+    return;
+  }
   res.sendFile(path.join(clientDir, "index.html"));
 });
 
 app.listen(LAUNCHER_PORT, () =>
 {
-  console.log(`Babylon Editor Launcher (production): http://localhost:${LAUNCHER_PORT}`);
+  console.log(`Babylon Launcher (production): http://localhost:${LAUNCHER_PORT}`);
 });

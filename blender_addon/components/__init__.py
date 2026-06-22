@@ -12,7 +12,12 @@ from bpy.props import CollectionProperty, IntProperty, PointerProperty
 from bpy.types import Object, WindowManager
 
 from .exposed_vars import BJSListItem, BJSExposedVar
-from .component import BJSConstraintAxisDoF, BJSTriggerEvent, BJSComponent
+from .component import (
+    BJSConstraintAxisDoF,
+    BJSParticleTexture,
+    BJSTriggerEvent,
+    BJSComponent,
+)
 
 from .object_settings import BJSLightShadow, BJSAnimationSettings
 
@@ -20,6 +25,7 @@ classes = (
     BJSListItem,
     BJSExposedVar,
     BJSConstraintAxisDoF,
+    BJSParticleTexture,
     BJSTriggerEvent,
     BJSComponent,
     BJSLightShadow,

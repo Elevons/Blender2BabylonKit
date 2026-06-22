@@ -35,7 +35,10 @@ This file is the forward plan only; per-feature design notes live with each item
    **GUI** and **Particles** components reference the `.json` saved by Babylon's
    online GUI/Particle editors (copied next to the export), loaded at runtime in
    `ui/gui2d.ts` (`AdvancedDynamicTexture`, `@babylonjs/gui` peer dep) and
-   `subsystems/particles.ts` (`ParticleHelper.ParseFromFileAsync`). This replaces
+   `subsystems/particles.ts` (`LoadParticleSystems`, `ResolveNodeParticleSetTextureUrls`,
+   `WireParticleEmitterTracking` for empty emitters). Blender **Particle Textures**
+   copy images and patch the exported JSON on export (`export/particles.py`).
+   This replaces
    the originally-planned preset-based particle component — the external editors
    already cover authoring far more thoroughly. A preset/quick-emit component
    could still be layered on later if in-Blender authoring is wanted.

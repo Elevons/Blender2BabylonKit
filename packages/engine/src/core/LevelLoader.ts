@@ -18,6 +18,10 @@ import { WireTriggerEvents } from "../subsystems/triggers";
 import { BuildConstraints } from "../subsystems/constraints";
 import { BuildGui3DControls } from "../ui/gui3d/builder";
 import { CollectTextRenderers, WireMsdfTextRendering } from "../ui/msdfText";
+import {
+  CollectEmptyParticleEmitters,
+  WireParticleEmitterTracking,
+} from "../subsystems/particles";
 import { FetchAndValidateManifest, GetDirectory } from "./loader/manifest";
 import { NeutralizeGltfRoot } from "./loader/nodeResolution";
 import { CreateLoadContext, type LoadContext } from "./loader/context";
@@ -165,6 +169,11 @@ export class LevelLoader
     await SettleTasks(context.guiTasks, "GUI");
     await SettleTasks(context.particleTasks, "particle system");
     await SettleTasks(context.msdfTextTasks, "MSDF text");
+
+    context.level.particleEmitterManager = WireParticleEmitterTracking(
+      this.scene,
+      CollectEmptyParticleEmitters(context.level.entities.values())
+    );
 
     context.level.msdfTextManager = WireMsdfTextRendering(
       this.scene,

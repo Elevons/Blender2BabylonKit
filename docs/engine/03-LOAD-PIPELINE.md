@@ -44,9 +44,12 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    **`ApplyAtmosphere`** when the manifest includes `scene.atmosphere` (SUN lamp
    → `@babylonjs/addons/atmosphere`; sets `level.atmosphere`),
    `ApplyAutoPlayAnimations` (stop the glTF loader's auto-started groups, start
-   the chosen clips), `SettleTasks` for audio/GUI/particle promises
+   the chosen clips), `SettleTasks` for audio/GUI/particle/MSDF text promises
    (`Promise.allSettled` so one bad file logs instead of rejecting the load),
-   wire trigger events (`WireTriggerEvents` → `level.triggerObserver`), build
+   `WireParticleEmitterTracking` (empty-node particle emitters →
+   `level.particleEmitterManager`), `WireMsdfTextRendering` (when any MSDF
+   labels exist), wire trigger events (`WireTriggerEvents` →
+   `level.triggerObserver`), build
    constraints (`BuildConstraints` → `level.constraints` + CONSTRAINT rows on
    owner entities), build 3D GUI (`BuildGui3DControls` → `level.gui3DManager` +
    GUI3D_* rows on owning entities), then **`level.Begin()`**
@@ -62,7 +65,8 @@ See [10 — UI](10-UI.md) for the 2D GUI, particle, and 3D GUI pipelines.
 
 **`Level`** (`core/Level.ts`) is the runtime container: `entities` map,
 `ById`/`ByTag`, `activeCamera`, `shadowGenerators`, `constraints`, `post`,
-`atmosphere`, `debugEnabled`, `ShowColliders`, `AddUpdater`. `Begin` attaches
+`atmosphere`, `particleEmitterManager`, `msdfTextManager`, `debugEnabled`,
+`ShowColliders`, `AddUpdater`. `Begin` attaches
 [Input](04-SCRIPTING.md#input), runs every `OnStart`, then drives `RunFrame`
 each render: `InputManager.Process` first, all `OnUpdate(deltaSeconds)`,
 registered updaters, then `InputManager.EndFrame` last (so `WasPressed` edges

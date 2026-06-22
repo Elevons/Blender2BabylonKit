@@ -241,11 +241,29 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
 - **Expect:** UI texture projected on the mesh. Validator warns if GUI MESH mode
   is on a non-mesh object.
 
-### 6.3 Particles
+### 6.3 Particles (mesh)
 - **Steps:** add **Particles** to the cube: pick a Particle Editor `.json`, Auto
   Start ON, Attach to Entity ON. Export, reload.
 - **Expect:** particles emit from the cube; file in `levels/particles/`.
   `entity.GetParticles("<stem>")?.stop()` works from a script.
+
+### 6.3b Particles (empty, moving parent)
+- **Steps:** add an empty child under a moving body (e.g. the car **Body**),
+  add **Particles** to the empty (Attach to Entity ON). Export, reload, drive or
+  move the parent at runtime.
+- **Expect:** the emission point follows the empty as the parent moves (not
+  frozen at the load-time world position). World-space particles already in
+  flight may still drift behind unless the particle file uses local space
+  (`isLocal: true`).
+
+### 6.3c Particles (texture override)
+- **Steps:** add **Particles** with a Node Particle Editor `.json` whose texture
+  block references `bubble.png` (or leave URL empty for a single block). Under
+  **Particle Textures**, add a row: **Image** = your PNG, **URL in JSON** =
+  `bubble.png`. Export, reload.
+- **Expect:** `particles/bubble.png` and `particles/<stem>.json` with the texture
+  URL patched; particles render (no load hang from a wrong site-root path).
+  Validator warns if the image file is missing.
 
 ### 6.4 3D GUI — cylinder menu
 - **Steps:** create an empty with **3D Cylinder Panel** (margin ~0.02, columns

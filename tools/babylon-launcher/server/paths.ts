@@ -18,15 +18,6 @@ export const ASSET_FOLDERS = [
 
 export type AssetFolder = (typeof ASSET_FOLDERS)[number];
 
-export const EDITOR_ASSET_FOLDER: Record<string, AssetFolder> = {
-  gui: "gui",
-  npe: "particles",
-  nme: "materials",
-  nge: "geometry",
-  sfe: "filters",
-  nrge: "render-graphs",
-};
-
 export const DEFAULT_PROJECT_MANIFEST = {
   assetFolders: [...ASSET_FOLDERS],
   dev: { port: 5173 },

@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 
-import { api, EditorUrl, type EditorInfo, type ProjectSummary } from "../api/client";
+import { api, type ProjectSummary } from "../api/client";
 import { AssetBrowser } from "./AssetBrowser";
+import { BabylonEditorsPanel } from "./BabylonEditorsPanel";
 import { CreateProjectWizard } from "./CreateProjectWizard";
+import { DocsPanel } from "./DocsPanel";
 import { ServicesPanel } from "./ServicesPanel";
 
 export function App(): JSX.Element
 {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [editors, setEditors] = useState<EditorInfo[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [selectedLevel, setSelectedLevel] = useState<string>("_workspace");
   const [levels, setLevels] = useState<string[]>([]);
   const [showWizard, setShowWizard] = useState(false);
-  const [versions, setVersions] = useState<string>("");
   const [error, setError] = useState<string | undefined>();
 
   const activeProject = useMemo(
@@ -24,17 +23,8 @@ export function App(): JSX.Element
 
   const refresh = useCallback(async () =>
   {
-    const [projectList, editorList, versionInfo] = await Promise.all([
-      api.getProjects(),
-      api.getEditors(),
-      api.getEditorVersions(),
-    ]);
+    const projectList = await api.getProjects();
     setProjects(projectList);
-    setEditors(editorList.editors);
-    const compat = versionInfo.compatibility;
-    setVersions(
-      `Engine ${compat.engineCore} · Editors ${compat.editors.map((e) => `${e.editorId}@${e.version}`).join(", ")}`,
-    );
     if (!selectedProject && projectList.length > 0)
     {
       setSelectedProject(projectList[0].name);
@@ -69,54 +59,46 @@ export function App(): JSX.Element
     }).catch((e: Error) => setError(e.message));
   }, [selectedProject, projects]);
 
-  async function HandleUpdateEditors(): Promise<void>
-  {
-    await api.updateEditors("latest");
-    await refresh();
-  }
-
   return (
     <div className="hub-shell">
       <header className="hub-header">
-        <h1>Babylon Editor Launcher</h1>
-        <span className="muted">{versions}</span>
+        <h1>Babylon Launcher</h1>
       </header>
 
       <main className="hub-main">
         {error && <p className="status-warn">{error}</p>}
 
-        <section className="panel">
-          <h2>Project</h2>
-          <div className="row">
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              aria-label="Project"
-            >
-              {projects.map((project) => (
-                <option key={project.name} value={project.name}>{project.title}</option>
-              ))}
-            </select>
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              aria-label="Level"
-            >
-              <option value="_workspace">Workspace (pre-export staging)</option>
-              {levels.map((level) => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
-            <button type="button" className="secondary" onClick={() => setShowWizard(true)}>
-              Create Project
-            </button>
-            <button type="button" className="secondary" onClick={() => { HandleUpdateEditors().catch((e: Error) => setError(e.message)); }}>
-              Update Editors
-            </button>
+        <section className="panel panel-compact">
+          <div className="panel-head">
+            <h2>Project</h2>
+            <div className="panel-actions panel-actions-grow">
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                aria-label="Project"
+              >
+                {projects.map((project) => (
+                  <option key={project.name} value={project.name}>{project.title}</option>
+                ))}
+              </select>
+              <select
+                value={selectedLevel}
+                onChange={(e) => setSelectedLevel(e.target.value)}
+                aria-label="Level"
+              >
+                <option value="_workspace">Workspace</option>
+                {levels.map((level) => (
+                  <option key={level} value={level}>{level}</option>
+                ))}
+              </select>
+              <button type="button" className="secondary" onClick={() => setShowWizard(true)}>
+                New
+              </button>
+            </div>
           </div>
           {activeProject && (
-            <p className="muted" style={{ marginTop: "0.75rem" }}>
-              Blender Live Link export path: <code>{activeProject.blenderExportPath}</code>
+            <p className="muted panel-foot">
+              Live Link path: <code>{activeProject.blenderExportPath}</code>
             </p>
           )}
         </section>
@@ -133,6 +115,10 @@ export function App(): JSX.Element
           />
         )}
 
+        <DocsPanel onError={(message) => setError(message)} />
+
+        <BabylonEditorsPanel />
+
         {selectedProject && (
           <ServicesPanel
             project={selectedProject}
@@ -140,30 +126,10 @@ export function App(): JSX.Element
           />
         )}
 
-        <section className="panel">
-          <h2>Editors</h2>
-          <div className="editor-grid">
-            {editors.map((editor) => (
-              <Link
-                key={editor.id}
-                className="editor-tile"
-                to={selectedProject
-                  ? EditorUrl(editor.id, selectedProject, selectedLevel)
-                  : "#"}
-                onClick={(e) => { if (!selectedProject) { e.preventDefault(); } }}
-              >
-                <strong>{editor.name}</strong>
-                <span>{editor.folder}/</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
         {selectedProject && (
           <AssetBrowser
             project={selectedProject}
             level={selectedLevel}
-            editors={editors}
           />
         )}
       </main>

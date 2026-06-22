@@ -118,6 +118,13 @@ def _check_media(obj, warnings):
             elif not os.path.isfile(bpy.path.abspath(comp.particle_file)):
                 warnings.append(
                     f"{obj.name}: particle file not found: {comp.particle_file}")
+            for tex_i, tex in enumerate(comp.particle_textures):
+                if not tex.image_file:
+                    warnings.append(
+                        f"{obj.name}: particle texture {tex_i + 1} has no image file")
+                elif not os.path.isfile(bpy.path.abspath(tex.image_file)):
+                    warnings.append(
+                        f"{obj.name}: particle texture not found: {tex.image_file}")
         elif comp.comp_type == 'MSDF_TEXT':
             if not comp.msdf_text:
                 warnings.append(f"{obj.name}: MSDF Text component has no text")

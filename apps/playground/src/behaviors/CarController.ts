@@ -10,8 +10,10 @@ import {
 } from "@babylonjs/core";
 
 /**
- * CarController applies motor speeds to wheels based on input.
- * Finds the HINGE constraint attachment on each wheel entity and drives its motor.
+ * CarController drives the wheel hinge motors from input, and provides a
+ * one-shot "recover" maneuver on the Reset action: it lifts the body,
+ * straightens it to zero rotation, holds briefly, then automatically hands
+ * control back to physics so the car drops upright from rest.
  */
 export default class CarController extends Behavior
 {
@@ -33,13 +35,16 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 1000, label: "Motor Force" })
   force = 100;
 
+  @exposed({ min: 0, max: 5, label: "Place Hold (s)" })
+  holdSeconds = 0.5;
+
   @exposed({ label: "Body", type: "entity" })
   body: Entity | null = null;
 
   @inputMap("Player") player!: InputActionMap;
 
-  private isActive = false;
-  private liftApplied = false;
+  private isPlacing = false;
+  private placeTimer = 0;
   private hinges: Physics6DoFConstraint[] = [];
   private debounceTime = Date.now();
 
@@ -54,20 +59,30 @@ export default class CarController extends Behavior
     }
   }
 
-  OnUpdate(_deltaSeconds: number): void
+  OnUpdate(deltaSeconds: number): void
   {
+    const reset = this.player.FindAction("Reset")?.IsPressed() === true;
+
+    // Reset starts the recover sequence (debounced, and ignored while already placing).
+    if (reset && !this.isPlacing && Date.now() - this.debounceTime >= 1000)
+    {
+      this.debounceTime = Date.now();
+      this.BeginPlacement();
+    }
+    // Hold for holdSeconds (always at least one physics step), then switch back to DYNAMIC.
+    else if (this.isPlacing)
+    {
+      this.placeTimer += deltaSeconds;
+      if (this.placeTimer >= this.holdSeconds)
+      {
+        this.EndPlacement();
+      }
+    }
+
     const forward = this.player.FindAction("Forward")?.IsPressed() === true;
     const backward = this.player.FindAction("Backward")?.IsPressed() === true;
     const left = this.player.FindAction("Left")?.IsPressed() === true;
     const right = this.player.FindAction("Right")?.IsPressed() === true;
-    const reset = this.player.FindAction("Reset")?.IsPressed() === true;
-
-    // Toggle between DYNAMIC and ANIMATED body mode on reset press (debounced to 1s).
-    if (reset && Date.now() - this.debounceTime >= 1000)
-    {
-      this.debounceTime = Date.now();
-      this.ToggleBodyMode();
-    }
 
     // Speeds per wheel: [FL, FR, RL, RR]
     // Each active input contributes its direction vector, then we average.
@@ -80,9 +95,12 @@ export default class CarController extends Behavior
     if (left)     { contributions[1] += backward ? -s : s; contributions[3] += backward ? -s : s; active++; }
     if (right)    { contributions[0] += backward ? -s : s; contributions[2] += backward ? -s : s; active++; }
 
-    const speeds = active > 0
-      ? contributions.map(v => Math.round(v / active * 100) / 100)
-      : [0, 0, 0, 0];
+    // Wheels are held still while placing so they don't spin mid-air.
+    const speeds = this.isPlacing
+      ? [0, 0, 0, 0]
+      : active > 0
+        ? contributions.map(v => Math.round(v / active * 100) / 100)
+        : [0, 0, 0, 0];
 
     // Apply each wheel's speed
     for (let i = 0; i < this.hinges.length; i++)
@@ -129,48 +147,49 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Toggles the body between Dynamic and Animated physics modes and resets velocity.
-   * Converts Euler rotations to quaternions since the Babylon physics engine
-   * only updates from node.rotationQuaternion internally.
+   * Begin the recover maneuver: switch the body to ANIMATED (kinematic), lift it
+   * 10 units, and reset all rotations to zero so it will drop upright. Kinematic
+   * bodies ignore gravity, so it holds in place until EndPlacement runs.
    */
-   private ToggleBodyMode(): void
-   {
-     this.isActive = !this.isActive;
+  private BeginPlacement(): void
+  {
+    const body = this.body?.body;
+    if (body === undefined || this.body === null) return;
 
-     const body = this.body?.body;
-     if (!body || !this.body) return;
+    this.isPlacing = true;
+    this.placeTimer = 0;
 
-     if (this.isActive)
-     {
-       // Switch to ANIMATED and lift straight up by 10 units as a one-shot teleport.
-       const target = this.body.node.position.add(new Vector3(0, 10, 0));
+    const target = this.body.node.position.add(new Vector3(0, 3, 0));
 
-       const rotation = this.body.node.rotationQuaternion ?? new Quaternion();
-       if (this.body.node.rotationQuaternion === null)
-       {
-         Quaternion.FromEulerVectorToRef(this.body.node.rotation, rotation);
-       }
+    body.setMotionType(PhysicsMotionType.ANIMATED);
+    // disablePreStep = false lets the next pre-step copy the node transform into the body.
+    body.disablePreStep = false;
 
-       body.setMotionType(PhysicsMotionType.ANIMATED);
+    // Lift, and zero all rotations (identity quaternion = no rotation).
+    // rotationQuaternion overrides Euler rotation for both the renderer and physics.
+    this.body.node.position.copyFrom(target);
+    this.body.node.rotationQuaternion = Quaternion.Identity();
 
-       // Let the next pre-step copy the node transform into the physics body,
-       // then write the target directly. This is a teleport — no velocity is set.
-       body.disablePreStep = false;
-       this.body.node.position.copyFrom(target);
-       this.body.node.rotationQuaternion = rotation;
+    body.setLinearVelocity(Vector3.Zero());
+    body.setAngularVelocity(Vector3.Zero());
+  }
 
-       // Kinematic bodies keep velocity forever, so make sure there is none.
-       body.setLinearVelocity(Vector3.Zero());
-       body.setAngularVelocity(Vector3.Zero());
-       body.setMotionType(PhysicsMotionType.DYNAMIC);
-     }
-     else
-     {
-       // Back to DYNAMIC: physics drives the node again.
-       body.setMotionType(PhysicsMotionType.DYNAMIC);
-       body.disablePreStep = true;
-       body.setLinearVelocity(Vector3.Zero());
-       body.setAngularVelocity(Vector3.Zero());
-     }
-   }
+  /**
+   * End the recover maneuver: hand control back to physics from rest. The order
+   * matters — re-enable disablePreStep FIRST so the pre-step stops deriving a
+   * velocity from the teleport, then switch to DYNAMIC, then zero velocity last
+   * so the car falls from rest instead of slamming.
+   */
+  private EndPlacement(): void
+  {
+    const body = this.body?.body;
+    if (body === undefined || this.body === null) return;
+
+    this.isPlacing = false;
+
+    body.disablePreStep = true;
+    body.setMotionType(PhysicsMotionType.DYNAMIC);
+    body.setLinearVelocity(Vector3.Zero());
+    body.setAngularVelocity(Vector3.Zero());
+  }
 }

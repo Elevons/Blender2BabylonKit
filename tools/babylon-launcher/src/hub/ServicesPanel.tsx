@@ -18,6 +18,27 @@ function StatusDot({ on }: { on: boolean }): JSX.Element
   );
 }
 
+function DevStatusText(dev: ServicesStatus["dev"] | undefined): string
+{
+  if (!dev) { return "…"; }
+  if (dev.running)
+  {
+    return `port ${dev.port}${dev.pid ? ` · pid ${dev.pid}` : ""}`;
+  }
+  return `stopped · port ${dev.port}`;
+}
+
+function McpStatusText(mcp: ServicesStatus["mcp"] | undefined): string
+{
+  if (!mcp) { return "…"; }
+  if (mcp.running)
+  {
+    return `running${mcp.pid ? ` · pid ${mcp.pid}` : ""}`;
+  }
+  if (!mcp.built) { return "not built"; }
+  return "built, stopped";
+}
+
 export function ServicesPanel({ project, onError }: Props): JSX.Element
 {
   const [services, setServices] = useState<ServicesStatus | null>(null);
@@ -71,20 +92,38 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
   const mcp = services?.mcp;
 
   return (
-    <section className="panel">
-      <h2>Services</h2>
+    <section className="panel panel-compact">
+      <div className="panel-head">
+        <h2>Services</h2>
+        <div className="panel-actions">
+          <button
+            type="button"
+            disabled={busy || !project}
+            onClick={() => { Run(() => api.startAllServices(project)); }}
+          >
+            Start All
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy || !project}
+            onClick={() => { Run(() => api.stopAllServices(project)); }}
+          >
+            Stop All
+          </button>
+        </div>
+      </div>
+
       <div className="services-grid">
         <div className="service-card">
-          <div className="service-header">
-            <StatusDot on={Boolean(dev?.running)} />
-            <strong>Game Dev Server (Vite)</strong>
+          <div className="service-top">
+            <div className="service-title">
+              <StatusDot on={Boolean(dev?.running)} />
+              <strong>Vite Dev Server</strong>
+            </div>
+            <span className="muted service-meta">{DevStatusText(dev)}</span>
           </div>
-          <p className="muted">
-            {dev?.running
-              ? `Running on port ${dev.port}${dev.pid ? ` (pid ${dev.pid})` : ""}`
-              : `Stopped · port ${dev?.port ?? 5173}`}
-          </p>
-          <div className="row">
+          <div className="service-actions">
             <button
               type="button"
               disabled={busy || !project}
@@ -102,27 +141,21 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
             </button>
             {dev?.url && (
               <a href={dev.url} target="_blank" rel="noreferrer">
-                Open Runtime Preview
+                Preview
               </a>
             )}
           </div>
         </div>
 
         <div className="service-card">
-          <div className="service-header">
-            <StatusDot on={Boolean(mcp?.running)} />
-            <strong>bjs-mcp (Behavior Authoring)</strong>
+          <div className="service-top">
+            <div className="service-title">
+              <StatusDot on={Boolean(mcp?.running)} />
+              <strong>bjs-mcp</strong>
+            </div>
+            <span className="muted service-meta">{McpStatusText(mcp)}</span>
           </div>
-          <p className="muted">
-            {!mcp?.built && "Not built · "}
-            {mcp?.running
-              ? `Running${mcp.pid ? ` (pid ${mcp.pid})` : ""}`
-              : mcp?.built ? "Built, not running" : "Run Build first"}
-          </p>
-          <p className="muted" style={{ fontSize: "0.8rem" }}>
-            Cursor connects via stdio — paste the copied config into ~/.cursor/mcp.json
-          </p>
-          <div className="row">
+          <div className="service-actions">
             <button
               type="button"
               className="secondary"
@@ -152,28 +185,10 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
               disabled={!mcp?.built}
               onClick={() => { CopyCursorConfig().catch((e: Error) => onError(e.message)); }}
             >
-              {copied ? "Copied!" : "Copy Cursor Config"}
+              {copied ? "Copied" : "Cursor Config"}
             </button>
           </div>
         </div>
-      </div>
-
-      <div className="row" style={{ marginTop: "1rem" }}>
-        <button
-          type="button"
-          disabled={busy || !project}
-          onClick={() => { Run(() => api.startAllServices(project)); }}
-        >
-          Start All Services
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          disabled={busy || !project}
-          onClick={() => { Run(() => api.stopAllServices(project)); }}
-        >
-          Stop All Services
-        </button>
       </div>
     </section>
   );

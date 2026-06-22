@@ -62,6 +62,29 @@ def _draw_var(layout, comp_index, var_index, v):
     layout.prop(v, slot, text=label)
 
 
+def _draw_particle_textures(body, comp, index):
+    """Texture images copied on export and patched into the particle JSON."""
+    box = body.box()
+    header = box.row()
+    header.label(text="Particle Textures", icon='TEXTURE')
+    add = header.operator("bjs.particle_texture_add", text="", icon='ADD')
+    add.comp_index = index
+    for tex_i, tex in enumerate(comp.particle_textures):
+        col = box.column(align=True)
+        col.prop(tex, "image_file", text="Image")
+        col.prop(tex, "json_url", text="URL in JSON")
+        col.prop(tex, "match_url", text="Replace URL")
+        rem = col.row()
+        op = rem.operator("bjs.particle_texture_remove", text="Remove", icon='X')
+        op.comp_index = index
+        op.particle_texture_index = tex_i
+    if len(comp.particle_textures) == 0:
+        box.label(
+            text="Optional: copy images to particles/ and set the JSON URL",
+            icon='INFO',
+        )
+
+
 def _draw_click_events(body, comp, index):
     """The On Click events box for 3D GUI controls (mirrors trigger events)."""
     box = body.box()
@@ -227,6 +250,7 @@ def draw_component(layout, obj, index, comp):
         body.prop(comp, "particle_autostart")
         body.prop(comp, "particle_gpu")
         body.prop(comp, "particle_capacity")
+        _draw_particle_textures(body, comp, index)
 
     elif comp.comp_type == 'MSDF_TEXT':
         body.prop(comp, "msdf_text")

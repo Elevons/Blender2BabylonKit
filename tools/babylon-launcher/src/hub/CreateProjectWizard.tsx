@@ -43,8 +43,11 @@ export function CreateProjectWizard({ onClose, onCreated }: Props): JSX.Element
   }
 
   return (
-    <section className="panel">
-      <h2>Create Project</h2>
+    <section className="panel panel-compact">
+      <div className="panel-head">
+        <h2>New Project</h2>
+        <button type="button" className="secondary" onClick={onClose}>Cancel</button>
+      </div>
       <form className="wizard-grid" onSubmit={(e) => { Submit(e).catch(() => undefined); }}>
         <label>
           App name
@@ -67,10 +70,7 @@ export function CreateProjectWizard({ onClose, onCreated }: Props): JSX.Element
           </select>
         </label>
         {error && <p className="status-warn">{error}</p>}
-        <div className="row">
-          <button type="submit" disabled={busy}>{busy ? "Creating…" : "Create"}</button>
-          <button type="button" className="secondary" onClick={onClose}>Cancel</button>
-        </div>
+        <button type="submit" disabled={busy}>{busy ? "Creating…" : "Create"}</button>
       </form>
     </section>
   );

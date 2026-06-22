@@ -1644,7 +1644,7 @@
             "rearLeftWheel": "476ea48843c64b8a8bca8104e9861c35",
             "rearRightWheel": "d9e916b3045c4410b4d17d0cea10d61a",
             "speed": 2000.0,
-            "force": 20000.0,
+            "force": 2000.0,
             "body": "7fe725f6d257495ba4ef2c5d87d43c2e"
           }
         }
@@ -2375,6 +2375,21 @@
           "motor": false,
           "motorSpeed": 0.0,
           "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "46c72c309adc4a9c9b24895fc1e5ef28",
+      "name": "Bubbles",
+      "parent": "7fe725f6d257495ba4ef2c5d87d43c2e",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
         }
       ]
     },

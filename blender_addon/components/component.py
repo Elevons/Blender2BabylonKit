@@ -86,6 +86,28 @@ class BJSConstraintAxisDoF(PropertyGroup):
                            description="Spring damping")
 
 
+class BJSParticleTexture(PropertyGroup):
+    """One particle texture image copied on export and wired into the particle JSON."""
+    image_file: StringProperty(
+        name="Image",
+        subtype='FILE_PATH',
+        default="",
+        description="Source image copied into the level's particles/ folder on export",
+    )
+    json_url: StringProperty(
+        name="URL in JSON",
+        default="",
+        description="Filename the particle JSON references (e.g. bubble.png or "
+                    "fx/bubble.png). Empty = use the exported image filename",
+    )
+    match_url: StringProperty(
+        name="Replace URL",
+        default="",
+        description="Only patch texture blocks whose current URL equals this "
+                    "(empty = auto: first empty block, or the only block)",
+    )
+
+
 class BJSTriggerEvent(PropertyGroup):
     """One authored trigger reaction: when something enters this trigger
     collider, send `message` to `target`'s behaviors (OnMessage). An optional
@@ -182,10 +204,11 @@ class BJSComponent(PropertyGroup):
     particle_autostart: BoolProperty(name="Auto Start", default=True,
                                      description="Begin emitting as soon as the level loads")
     particle_attach:    BoolProperty(name="Attach to Object", default=True,
-                                     description="Emit from this object (a mesh follows it; an "
-                                                 "empty uses its position)")
+                                     description="Emit from this object (meshes and empties "
+                                                 "follow it at runtime)")
     particle_capacity:  IntProperty(name="Max Particles", default=0, min=0,
                                     description="Override the JSON's capacity (0 = use the file's value)")
+    particle_textures: CollectionProperty(type=BJSParticleTexture)
 
     # --- MSDF TEXT ---
     msdf_text: StringProperty(name="Text", default="",

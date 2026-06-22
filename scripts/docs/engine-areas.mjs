@@ -1951,7 +1951,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "PARTICLE component",
           "sub": "Blender",
-          "desc": "References a .json from Babylon's Particle Editor. GPU toggle, autoStart, attachToEntity (mesh or empty position), optional capacity override. File copied to particles/.",
+          "desc": "References a .json from Babylon's Particle or Node Particle Editor. GPU, autoStart, attachToEntity, capacity. Particle Textures list: copy images + patch JSON URL on export.",
           "meta": [
             [
               "Editor",
@@ -1964,6 +1964,26 @@ export const ENGINE_AREA_PAGES = {
           ]
         },
         {
+          "id": 12,
+          "x": 170,
+          "y": 200,
+          "w": 150,
+          "h": 40,
+          "label": "export_particle_system",
+          "sub": "export/particles.py",
+          "desc": "Copy particle JSON + Particle Textures images into particles/; patch ParticleTextureSourceBlock.url in the exported JSON (URL in JSON / Replace URL).",
+          "meta": [
+            [
+              "Export",
+              "serialize_components"
+            ],
+            [
+              "Images",
+              "beside JSON"
+            ]
+          ]
+        },
+        {
           "id": 4,
           "x": 300,
           "y": 200,
@@ -1971,7 +1991,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyParticles",
           "sub": "subsystems/particles.ts",
-          "desc": "ParticleHelper.ParseFromFileAsync (GPU when supported). Emitter = entity mesh or absolute position clone. Queued async; settled in FinalizeLevel.",
+          "desc": "LoadParticleSystems + ResolveNodeParticleSetTextureUrls (rootUrl). attachToEntity: mesh or owned Vector3 + emptyEmitter. Queued async; settled in FinalizeLevel.",
           "meta": [
             [
               "Storage",
@@ -1980,6 +2000,26 @@ export const ENGINE_AREA_PAGES = {
             [
               "Lookup",
               "GetParticles(stem)"
+            ]
+          ]
+        },
+        {
+          "id": 11,
+          "x": 560,
+          "y": 200,
+          "w": 150,
+          "h": 40,
+          "label": "WireParticleEmitterTracking",
+          "sub": "subsystems/particles.ts",
+          "desc": "After SettleTasks: CollectEmptyParticleEmitters → level.particleEmitterManager. Each frame (insertFirst onBeforeRender) copies getAbsolutePosition() into the owned Vector3 emitter for empty nodes.",
+          "meta": [
+            [
+              "Meshes",
+              "use mesh emitter directly"
+            ],
+            [
+              "Disposal",
+              "level.particleEmitterManager"
             ]
           ]
         },
@@ -2075,7 +2115,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "SettleTasks",
           "sub": "FinalizeLevel",
-          "desc": "Promise.allSettled for audioTasks, guiTasks, particleTasks — one bad JSON logs a warning; the level still loads.",
+          "desc": "Promise.allSettled for audioTasks, guiTasks, particleTasks, msdfTextTasks — one bad JSON logs a warning; the level still loads. Particle/MSDF wire hooks run immediately after.",
           "meta": [
             [
               "File",
@@ -2087,8 +2127,10 @@ export const ENGINE_AREA_PAGES = {
       "edges": [
         { "id": 100, "src": 1, "tgt": 2, "label": "manifest" },
         { "id": 101, "src": 2, "tgt": 10, "label": "async" },
-        { "id": 102, "src": 3, "tgt": 4, "label": "manifest" },
+        { "id": 102, "src": 3, "tgt": 12, "label": "export" },
+        { "id": 110, "src": 12, "tgt": 4, "label": "manifest" },
         { "id": 103, "src": 4, "tgt": 10, "label": "async" },
+        { "id": 109, "src": 10, "tgt": 11, "label": "wire" },
         { "id": 104, "src": 5, "tgt": 6, "label": "export" },
         { "id": 105, "src": 6, "tgt": 7, "label": "post-pass" },
         { "id": 106, "src": 7, "tgt": 8, "label": "controls" },

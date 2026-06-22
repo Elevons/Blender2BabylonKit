@@ -174,7 +174,7 @@ export interface ParticleComponent {
   gpu: boolean;
   /** Begin emitting as soon as the level finishes loading. */
   autoStart: boolean;
-  /** Emit from this entity's node (a mesh follows it; an empty uses its position). */
+  /** Emit from this entity's node (meshes and empties follow it at runtime). */
   attachToEntity: boolean;
   /** Override the JSON's capacity; 0 = keep the file's value. */
   capacity: number;

@@ -1,11 +1,9 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 
 import { ListAssets, ListAllAssets, ReadAsset, WriteAsset } from "./assets.js";
-import { CheckEditorCompatibility, GetEditorVersions, UpdateEditorPackages } from "./editors.js";
 import { CreateProject } from "./createProject.js";
 import {
   ASSET_FOLDERS,
-  EDITOR_ASSET_FOLDER,
   type AssetFolder,
 } from "./paths.js";
 import {
@@ -21,6 +19,11 @@ import {
   StartMcp,
   StopMcp,
 } from "./mcp.js";
+import {
+  BuildDocs,
+  GetDocsStatus,
+  MountDocsStatic,
+} from "./docs.js";
 
 function AsyncHandler(
   handler: (req: Request, res: Response, next: NextFunction) => Promise<void>,
@@ -189,38 +192,17 @@ export function CreateApiApp(): Express
     res.json({ dev, mcp });
   }));
 
-  app.get("/api/editors", (_req, res) =>
+  app.get("/api/docs", (_req, res) =>
   {
-    res.json({
-      editors: [
-        { id: "gui", name: "GUI Editor", folder: EDITOR_ASSET_FOLDER.gui },
-        { id: "npe", name: "Node Particle Editor", folder: EDITOR_ASSET_FOLDER.npe },
-        { id: "nme", name: "Node Material Editor", folder: EDITOR_ASSET_FOLDER.nme },
-        { id: "nge", name: "Node Geometry Editor", folder: EDITOR_ASSET_FOLDER.nge },
-        { id: "nrge", name: "Node Render Graph Editor", folder: EDITOR_ASSET_FOLDER.nrge },
-        { id: "sfe", name: "Smart Filter Editor", folder: EDITOR_ASSET_FOLDER.sfe },
-      ],
-    });
+    res.json(GetDocsStatus());
   });
 
-  app.get("/api/editors/versions", (_req, res) =>
+  app.post("/api/docs/build", AsyncHandler(async (_req, res) =>
   {
-    res.json({
-      compatibility: CheckEditorCompatibility(),
-      packages: GetEditorVersions(),
-    });
-  });
-
-  app.post("/api/editors/update", AsyncHandler(async (req, res) =>
-  {
-    const target = (req.body as { target?: string }).target;
-    const result = await UpdateEditorPackages(target);
-    res.json({
-      ok: true,
-      compatibility: CheckEditorCompatibility(),
-      ...result,
-    });
+    res.json(await BuildDocs());
   }));
+
+  MountDocsStatic(app);
 
   app.use((error: Error, _req: Request, res: Response, _next: NextFunction) =>
   {

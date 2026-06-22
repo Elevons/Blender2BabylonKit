@@ -128,7 +128,7 @@ for (const row of entity.GetAttachmentsOfType("AUDIO"))
 | `"SCRIPT"` | `data` + `behavior` |
 | `"AUDIO"` | `data` + `sound` |
 | `"GUI"` | `data` + `texture` |
-| `"PARTICLE"` | `data` + `system` |
+| `"PARTICLE"` | `data` + `system` (+ `emptyEmitter` when the entity node is an empty) |
 | `"CONSTRAINT"` | `data` + `constraint` |
 | `"GUI3D_*"` | `data` + `control` |
 
@@ -460,8 +460,11 @@ drops enterers whose `entity.tag` doesn't match.
 ## GUI & particles
 
 GUI layouts and particle systems are authored in Blender as **GUI** / **Particles**
-components pointing at a Babylon-editor `.json`; the runtime loads them, so a
-behavior just drives the already-built objects:
+components pointing at a Babylon-editor `.json`. **Particle Textures** (optional
+list on the Particles component) copy images into `particles/` on export and
+patch texture URLs in the exported JSON; the runtime resolves those paths beside
+the particle file (`rootUrl` in `LoadParticleSystems`). Behaviors drive the
+already-built objects:
 
 | GUI mode | Babylon API | Requirement |
 |---|---|---|
@@ -473,9 +476,13 @@ this.entity.GetGui("hud")?.getControlByName("Score");   // names = file stem ("g
 this.entity.GetParticles("fire")?.start();              // or .stop(); also this.entity.particleSystems
 ```
 
-Particle **autoStart** and **attachToEntity** are authored in Blender (mesh
-emitter or empty position). `AdvancedDynamicTexture` / GUI control types import
-from `@babylonjs/gui`; `IParticleSystem` imports from `@babylonjs/core`.
+Particle **autoStart** and **attachToEntity** are authored in Blender. With
+**attachToEntity**, meshes use the mesh as the Babylon emitter; empties use an
+owned world-space `Vector3` kept in sync each frame by
+`WireParticleEmitterTracking` (`level.particleEmitterManager`). Already-spawned
+particles stay in world space unless the particle file sets `isLocal: true`.
+`AdvancedDynamicTexture` / GUI control types import from `@babylonjs/gui`;
+`IParticleSystem` imports from `@babylonjs/core`.
 
 ## 3D GUI
 

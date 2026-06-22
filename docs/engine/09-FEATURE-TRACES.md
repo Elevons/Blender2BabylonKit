@@ -146,12 +146,16 @@ GUI component (`components/` → `export/assets.copy_asset` to `gui/`) → manif
 `entity.guiTextures`, `RegisterAttachment({type:"GUI", data, texture})`,
 `GetGui(stem)`. Trace: [trace-gui.html](trace-gui.html).
 
-### Particles (Particle Editor JSON)
-PARTICLE component → `copy_asset` to `particles/` → manifest →
-`ApplyParticles` (`subsystems/particles.ts`, `ParticleHelper.ParseFromFileAsync`)
-→ `entity.particleSystems`, `RegisterAttachment({type:"PARTICLE", data, system})`,
-`GetParticles(stem)`. Trace:
-[trace-particles.html](trace-particles.html).
+### Particles (Particle / Node Particle Editor JSON)
+PARTICLE component → `export_particle_system` (`export/particles.py`: copy JSON,
+copy **Particle Textures** images, patch `ParticleTextureSourceBlock.url` in the
+exported file) → manifest → `ApplyParticles` (`subsystems/particles.ts`:
+`ResolveNodeParticleSetTextureUrls` + legacy or `NodeParticleSystemSet`) → mesh
+emitter or owned `Vector3` + optional `emptyEmitter` → `SettleTasks` →
+`WireParticleEmitterTracking` (`level.particleEmitterManager`, empties only) →
+`entity.particleSystems`, `RegisterAttachment`, `GetParticles(stem)`. Trace:
+[trace-particles.html](trace-particles.html) · Blender:
+[../blender/trace-particles.html](../blender/trace-particles.html).
 
 ### 3D GUI (buttons + panels)
 Nine `GUI3D_*` types → `serialize_components` (layout fields, click events,

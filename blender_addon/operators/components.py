@@ -326,6 +326,45 @@ class BJS_OT_gui3d_event_remove(Operator):
         return {'FINISHED'}
 
 
+class BJS_OT_particle_texture_add(Operator):
+    """Add a particle texture override row."""
+    bl_idname = "bjs.particle_texture_add"
+    bl_label = "Add Particle Texture"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            comps[self.comp_index].particle_textures.add()
+        return {'FINISHED'}
+
+
+class BJS_OT_particle_texture_remove(Operator):
+    """Remove a particle texture override row."""
+    bl_idname = "bjs.particle_texture_remove"
+    bl_label = "Remove Particle Texture"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+    particle_texture_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            textures = comps[self.comp_index].particle_textures
+            if 0 <= self.particle_texture_index < len(textures):
+                textures.remove(self.particle_texture_index)
+        return {'FINISHED'}
+
+
 class BJS_OT_list_add(Operator):
     """Add an item to a LIST exposed variable."""
     bl_idname = "bjs.list_add"
@@ -431,4 +470,6 @@ classes = (
     BJS_OT_trigger_event_remove,
     BJS_OT_gui3d_event_add,
     BJS_OT_gui3d_event_remove,
+    BJS_OT_particle_texture_add,
+    BJS_OT_particle_texture_remove,
 )

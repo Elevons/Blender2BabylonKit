@@ -23,7 +23,7 @@ async function Main(): Promise<void>
 
   const server = app.listen(LAUNCHER_PORT, () =>
   {
-    console.log(`Babylon Editor Launcher: http://localhost:${LAUNCHER_PORT}`);
+    console.log(`Babylon Launcher: http://localhost:${LAUNCHER_PORT}`);
   });
 
   server.on("error", (error: NodeJS.ErrnoException) =>

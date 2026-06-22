@@ -9,6 +9,7 @@ import {
 } from "@babylonjs/core";
 import type { GUI3DManager } from "@babylonjs/gui";
 import type { MsdfTextManager } from "../ui/msdfText";
+import type { ParticleEmitterManager } from "../subsystems/particles";
 import { Entity } from "./Entity";
 import { InputManager } from "../input";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
@@ -40,6 +41,8 @@ export class Level
   gui3DManager?: GUI3DManager;
   /** MSDF text draw hook, present when any MSDF_TEXT component was authored. */
   msdfTextManager?: MsdfTextManager;
+  /** Empty-node particle emitter sync, present when any such emitter was authored. */
+  particleEmitterManager?: ParticleEmitterManager;
 
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
@@ -232,6 +235,12 @@ export class Level
     {
       this.msdfTextManager.dispose();
       this.msdfTextManager = undefined;
+    }
+
+    if (this.particleEmitterManager !== undefined)
+    {
+      this.particleEmitterManager.dispose();
+      this.particleEmitterManager = undefined;
     }
 
     if (this.atmosphere !== undefined)

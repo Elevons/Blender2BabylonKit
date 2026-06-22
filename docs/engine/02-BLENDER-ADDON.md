@@ -72,7 +72,9 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
    **Skybox Ignores Fog** → `createSkybox` / `skyboxIgnoreFog` (forced off when
    **Atmosphere** is on — the addon renders the sky); color-grading
    LUTs → `post/`, audio → `audio/`, GUI layouts → `gui/`, particle systems →
-   `particles/`, 3D button images → `gui/`. Each export pass resets path
+   `particles/` (JSON via `export_particle_system`; optional **Particle Textures**
+   copy images and patch texture URLs in the exported JSON), 3D button images →
+   `gui/`. Each export pass resets path
    reservations so **re-exports overwrite** the same sanitized name (Live Link
    safe). `_2`, `_3`, … suffixes apply only when two *different* sources
    collide on the same sanitized name in a single export.

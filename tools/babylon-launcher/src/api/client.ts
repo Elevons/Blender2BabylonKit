@@ -8,13 +8,6 @@ export interface ProjectSummary
   hasLevels: boolean;
 }
 
-export interface EditorInfo
-{
-  id: string;
-  name: string;
-  folder: string;
-}
-
 export interface DevServerStatus
 {
   app: string;
@@ -49,12 +42,11 @@ export interface ServicesStatus
   mcp: McpStatus;
 }
 
-export interface CompatibilityReport
+export interface DocsStatus
 {
-  engineCore: string;
-  editors: Array<{ editorId: string; name: string; version: string }>;
-  aligned: boolean;
-  warnings: string[];
+  built: boolean;
+  indexPath: string;
+  url: string;
 }
 
 async function Request<T>(url: string, init?: RequestInit): Promise<T>
@@ -88,25 +80,6 @@ export const api = {
       `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}${query}`,
     );
   },
-  readAsset: (app: string, level: string, folder: string, file: string) =>
-    Request<string>(
-      `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`,
-    ).then(async () =>
-    {
-      const response = await fetch(
-        `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`,
-      );
-      return response.text();
-    }),
-  writeAsset: (app: string, level: string, folder: string, file: string, content: string) =>
-    Request<{ path: string; relative: string }>(
-      `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}/${encodeURIComponent(folder)}/${encodeURIComponent(file)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: content,
-      },
-    ),
   getDevStatus: (app: string) =>
     Request<DevServerStatus>(`/api/dev/${encodeURIComponent(app)}`),
   startDev: (app: string) =>
@@ -123,41 +96,6 @@ export const api = {
     Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}/start-all`, { method: "POST" }),
   stopAllServices: (app: string) =>
     Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}/stop-all`, { method: "POST" }),
-  getEditors: () => Request<{ editors: EditorInfo[] }>("/api/editors"),
-  getEditorVersions: () =>
-    Request<{ compatibility: CompatibilityReport; packages: CompatibilityReport["editors"] }>(
-      "/api/editors/versions",
-    ),
-  updateEditors: (target?: string) =>
-    Request<{ ok: boolean; compatibility: CompatibilityReport }>("/api/editors/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target }),
-    }),
+  getDocsStatus: () => Request<DocsStatus>("/api/docs"),
+  buildDocs: () => Request<DocsStatus>("/api/docs/build", { method: "POST" }),
 };
-
-export function EditorUrl(
-  editorId: string,
-  project: string,
-  level: string,
-  file?: string,
-): string
-{
-  const params = new URLSearchParams({ project, level });
-  if (file)
-  {
-    params.set("file", file);
-  }
-  return `/editors/${editorId}?${params.toString()}`;
-}
-
-export function LauncherDeepLink(
-  editorId: string,
-  project: string,
-  level: string,
-  file?: string,
-): string
-{
-  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3200";
-  return `${origin}${EditorUrl(editorId, project, level, file)}`;
-}

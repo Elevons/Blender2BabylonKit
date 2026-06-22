@@ -9,6 +9,7 @@ from ..components.constants import (
 )
 from ..components.component import ensure_custom_constraint_axes
 from .assets import copy_asset
+from .particles import export_particle_system
 
 
 # Blender local axis -> Babylon Y-up unit vector, via (x, y, z) -> (x, z, -y).
@@ -215,7 +216,8 @@ def serialize_components(obj, output_dir):
 
         elif c.comp_type == 'PARTICLE':
             d.update({
-                "file": copy_asset(c.particle_file, output_dir, "particles"),
+                "file": export_particle_system(
+                    c.particle_file, c.particle_textures, output_dir),
                 "gpu": bool(c.particle_gpu),
                 "autoStart": bool(c.particle_autostart),
                 "attachToEntity": bool(c.particle_attach),

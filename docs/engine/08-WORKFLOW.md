@@ -41,16 +41,30 @@ PhysicsViewer) and **I** (the Babylon Inspector, lazily imported so it never
 ships in production bundles) — and the `debugColliders` loader option. Untick
 for release exports.
 
+## Babylon Launcher <a name="launcher"></a>
+
+`tools/babylon-launcher/` (`@bjs/babylon-launcher`) is a local web hub on port
+**3200** (`npm run launcher:dev`). It lists `apps/` projects, starts each app's
+Vite dev server, manages **bjs-mcp** for Cursor, scaffolds new projects, and
+browses per-level JSON asset folders. It does not host embedded Babylon editors.
+
+Full reference: **[Launcher docs](../launcher/00-INDEX.md)**.
+
+Typical loop: pick project + level in the hub → **Start All Services** → open
+the runtime preview link → export from Blender via Live Link into
+`apps/<app>/public/levels/<level>/` (path shown in the hub).
+
 ## Monorepo & scaffolder
 
 See [Architecture](01-ARCHITECTURE.md#monorepo-layout) for the layout. Daily
 commands (repo root): `npm install` (links workspaces) · `npm run dev`
-(playground) · `npm run dev --workspace apps/<name>` · `npm run typecheck`
-(tsc over the engine package and the app) ·
+(playground) · `npm run dev --workspace apps/<name>` · `npm run launcher:dev`
+(project hub) · `npm run typecheck` (tsc over the engine package and the app) ·
 `npm run create -- --name my-game [--title "…"] [--level Arena]` (stamps
 `apps/my-game` from the playground template — own `main.ts`/`behaviors`/empty
 `public/levels/`; the engine is **not** copied, it's the shared symlinked
-package).
+package). The launcher wizard calls the same `create-app.mjs` script via
+`POST /api/projects`.
 
 ## Versioning & artifacts
 
