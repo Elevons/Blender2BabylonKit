@@ -208,12 +208,44 @@ export const RECIPES: Recipe[] = [
       "Guard target !== null and camera !== null in OnUpdate.",
       "Convert orbit speed from degrees to radians in OnStart.",
       "Sets scene.activeCamera — only one active camera per scene.",
+      "For globe/planet map cameras, author Blender Camera component GEOSPATIAL — do not use this recipe.",
     ],
     exposedFields: [
       '@exposed({ type: "entity", label: "Target" }) target: Entity | null = null',
       '@exposed({ min: 0, max: 360, label: "Orbit Speed (deg/s)" }) orbitSpeed = 45',
       '@exposed({ min: 0.1, max: 100, label: "Radius" }) radius = 10',
       '@exposed({ min: -10, max: 10, label: "Height Offset" }) heightOffset = 2',
+    ],
+  },
+  {
+    name: "geospatial-camera-flyto",
+    description:
+      "Fly the scene's authored GeospatialCamera to a world point (requires CAMERA component GEOSPATIAL on the scene camera).",
+    keywords: [
+      "geospatial",
+      "globe",
+      "planet",
+      "map",
+      "earth",
+      "flyto",
+      "fly to",
+      "zoom",
+      "cinematic",
+      "camera",
+    ],
+    hooks: ["OnStart", "OnMessage"],
+    referenceBehavior: "",
+    pitfalls: [
+      "Globe navigation is authored in Blender as Camera component GEOSPATIAL — not a behavior.",
+      "Planet mesh must be at world origin; Planet Radius must match mesh radius.",
+      "Cast scene.activeCamera to GeospatialCamera — import from @babylonjs/core/Cameras/geospatialCamera.",
+      "flyToPointAsync returns a Promise — await from async OnStart/OnMessage or void the call.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "entity", label: "Fly-to target" }) destination: Entity | null = null',
+      '@exposed({ min: 0.05, max: 1, label: "Distance scale" }) distanceScale = 0.5',
+      '@exposed({ min: 100, max: 10000, label: "Duration (ms)" }) durationMs = 1500',
+      '@exposed({ label: "Trigger message (empty = OnStart)" }) triggerMessage = ""',
     ],
   },
   {
@@ -837,6 +869,68 @@ export default class ${className} extends Behavior
       targetPosition.z + offsetZ
     );
     this.camera.setTarget(targetPosition);
+  }
+}
+`,
+
+  "geospatial-camera-flyto": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { GeospatialCamera } from "@babylonjs/core/Cameras/geospatialCamera";
+
+/** Fly the authored GeospatialCamera toward a target (Camera component GEOSPATIAL in Blender). */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "entity", label: "Fly-to target" })
+  destination: Entity | null = null;
+
+  @exposed({ min: 0.05, max: 1, label: "Distance scale" })
+  distanceScale = 0.5;
+
+  @exposed({ min: 100, max: 10000, label: "Duration (ms)" })
+  durationMs = 1500;
+
+  @exposed({ label: "Trigger message (empty = OnStart)" })
+  triggerMessage = "";
+
+  /** Fly on load when no trigger message is set. */
+  OnStart(): void
+  {
+    if (this.triggerMessage.length === 0)
+    {
+      void this.FlyToDestination();
+    }
+  }
+
+  /** Fly when a matching message arrives (e.g. trigger or GUI click). */
+  OnMessage(message: string, _source: Entity): void
+  {
+    if (this.triggerMessage.length > 0 && message === this.triggerMessage)
+    {
+      void this.FlyToDestination();
+    }
+  }
+
+  /** Fly the active GeospatialCamera toward the configured destination. */
+  private async FlyToDestination(): Promise<void>
+  {
+    if (this.destination === null)
+    {
+      return;
+    }
+
+    const activeCamera = this.scene.activeCamera;
+    // scene.activeCamera is Nullable<Camera> — truthiness catches null and undefined at runtime.
+    if (!activeCamera)
+    {
+      return;
+    }
+    if (!(activeCamera instanceof GeospatialCamera))
+    {
+      console.warn(\`[\${this.entity.name}] active camera is not a GeospatialCamera\`);
+      return;
+    }
+
+    const destinationPoint = this.destination.node.getAbsolutePosition();
+    await activeCamera.flyToPointAsync(destinationPoint, this.distanceScale, this.durationMs);
   }
 }
 `,

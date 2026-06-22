@@ -25,6 +25,8 @@ const NODE_POSITION_WRITE_PATTERN =
 const K_AND_R_BRACE_PATTERN = /\b(if|for|while)\s*\([^)]*\)\s*\{/g;
 const RAW_KEY_PATTERN =
   /\b(KeyW|KeyA|KeyS|KeyD|KeyQ|KeyE|KeyboardEventTypes|onKeyDown|onKeyUp|window\.addEventListener)\b/;
+const SCENE_POST_PROCESS_PATTERN =
+  /\b(VolumetricLightScatteringPostProcess|DefaultRenderingPipeline|SSAO2RenderingPipeline|ApplyPostProcessing|ApplyAtmosphere|@babylonjs\/addons\/atmosphere|TextRenderer|FontAsset|@babylonjs\/addons\/msdfText)\b/;
 
 /**
  * Validate a behavior draft against Blender-parse rules and project conventions.
@@ -120,6 +122,7 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   CheckRawInput(source, issues);
   CheckBraceStyle(source, issues);
   CheckKeyboardObserverCleanup(source, issues);
+  CheckScenePostProcessInBehavior(source, issues);
 
   return {
     valid: issues.filter((issue) => issue.severity === "error").length === 0,
@@ -334,6 +337,21 @@ function CheckKeyboardObserverCleanup(source: string, issues: ValidationIssue[])
       severity: "warning",
     });
   }
+}
+
+function CheckScenePostProcessInBehavior(source: string, issues: ValidationIssue[]): void
+{
+  if (!SCENE_POST_PROCESS_PATTERN.test(source))
+  {
+    return;
+  }
+
+  issues.push({
+    code: "scene-post-in-behavior",
+    message:
+      "Scene atmosphere, post-processing, and MSDF text (Atmosphere, VLS, Default Pipeline, SSAO, TextRenderer/FontAsset) are authored in Blender — not in behaviors. See get_scripting_context(section=\"scene-look\") or section=\"msdf-text\".",
+    severity: "warning",
+  });
 }
 
 export function FormatValidationResult(result: ValidationResult): string

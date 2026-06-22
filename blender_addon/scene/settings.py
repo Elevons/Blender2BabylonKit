@@ -10,6 +10,7 @@ from bpy.props import (
 from bpy.types import PropertyGroup, Scene
 
 from .post_processing import BJSPostProcessingSettings
+from .atmosphere import BJSAtmosphereSettings
 
 
 class BJSSceneSettings(PropertyGroup):
@@ -59,10 +60,14 @@ class BJSSceneSettings(PropertyGroup):
     # Default rendering pipeline + SSAO (see post_processing.py for fields).
     post: PointerProperty(type=BJSPostProcessingSettings)
 
+    # Physically based sky / aerial perspective (Babylon Atmosphere addon).
+    atmosphere: PointerProperty(type=BJSAtmosphereSettings)
+
 
 def register():
-    from . import post_processing
+    from . import post_processing, atmosphere
     post_processing.register()
+    atmosphere.register()
     bpy.utils.register_class(BJSSceneSettings)
     Scene.bjs_scene = bpy.props.PointerProperty(type=BJSSceneSettings)
 
@@ -70,5 +75,6 @@ def register():
 def unregister():
     del Scene.bjs_scene
     bpy.utils.unregister_class(BJSSceneSettings)
-    from . import post_processing
+    from . import post_processing, atmosphere
+    atmosphere.unregister()
     post_processing.unregister()

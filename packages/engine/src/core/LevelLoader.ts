@@ -17,12 +17,14 @@ import { ResolveCameraTargets } from "../subsystems/cameras";
 import { WireTriggerEvents } from "../subsystems/triggers";
 import { BuildConstraints } from "../subsystems/constraints";
 import { BuildGui3DControls } from "../ui/gui3d/builder";
+import { CollectTextRenderers, WireMsdfTextRendering } from "../ui/msdfText";
 import { FetchAndValidateManifest, GetDirectory } from "./loader/manifest";
 import { NeutralizeGltfRoot } from "./loader/nodeResolution";
 import { CreateLoadContext, type LoadContext } from "./loader/context";
 import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
 import { ApplyPostProcessing } from "../subsystems/postprocess";
+import { ApplyAtmosphere } from "../subsystems/atmosphere";
 
 /** Await a batch of asset-load promises, logging any that rejected. */
 async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
@@ -135,6 +137,23 @@ export class LevelLoader
     if (manifest.scene !== undefined)
     {
       await ApplySceneSettings(this.scene, manifest.scene, context.baseUrl, context.level);
+
+      const atmosphereInfo = manifest.scene.atmosphere;
+      if (atmosphereInfo !== undefined && atmosphereInfo !== null)
+      {
+        const hasHdrPipeline = manifest.scene.postProcessing?.defaultPipeline === true;
+        const atmosphere = ApplyAtmosphere(
+          this.scene,
+          atmosphereInfo,
+          manifest.entities,
+          context.idIndex,
+          hasHdrPipeline
+        );
+        if (atmosphere !== null)
+        {
+          context.level.atmosphere = atmosphere;
+        }
+      }
     }
 
     ApplyAutoPlayAnimations(this.scene, context.animatedEntities);
@@ -145,6 +164,12 @@ export class LevelLoader
     await SettleTasks(context.audioTasks, "sound");
     await SettleTasks(context.guiTasks, "GUI");
     await SettleTasks(context.particleTasks, "particle system");
+    await SettleTasks(context.msdfTextTasks, "MSDF text");
+
+    context.level.msdfTextManager = WireMsdfTextRendering(
+      this.scene,
+      CollectTextRenderers(context.level.entities.values())
+    );
 
     context.level.triggerObserver =
       WireTriggerEvents(this.scene, context.level, context.triggerRegistrations);
@@ -167,7 +192,8 @@ export class LevelLoader
         this.scene,
         this.scene.activeCamera,
         postProcessing,
-        context.baseUrl
+        context.baseUrl,
+        context.level
       );
     }
 

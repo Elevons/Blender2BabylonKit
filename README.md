@@ -74,6 +74,9 @@ APIs.
 - **Particles** – attach a Babylon particle system (the `.json` saved by the
   online **Particle Editor**, copied next to the export); emits from this
   object, with optional GPU mode, auto-start, and a capacity override.
+- **MSDF Text** – crisp scalable 3D labels using Babylon's MSDF TextRenderer
+  (BMFont `.json` + glyph atlas `.png`, copied into `fonts/` next to the export);
+  color, thickness, stroke, billboard, and alignment options.
 - **3D GUI** – in-scene interactive UI, one component per Babylon 3D control:
   **3D Button** / **3D Holographic Button** / **3D Touch Holographic Button**
   (anchored to the object, with text/image and On Click events), **3D Mesh
@@ -81,8 +84,8 @@ APIs.
   panels **3D Stack / Sphere / Cylinder / Plane / Scatter Panel** (children =
   Blender child objects carrying button components). Clicks send messages via
   the same `OnMessage` hook trigger volumes use.
-- **Camera** – opt-in type override on a camera object (ArcRotate / Follow / …);
-  most cameras stay faithful FreeCameras with no component.
+- **Camera** – opt-in type override on a camera object (ArcRotate / Follow /
+  Geospatial / …); most cameras stay faithful FreeCameras with no component.
 - **Script** – click **Open Script…** to pick the behavior's source file in a
   file browser. The picked filename (minus extension) becomes the *registry
   key* (e.g. `behaviors/Rotator.ts` → `Rotator`); the field stays editable. Add
@@ -292,10 +295,13 @@ this is opt-in and leaves the faithful FreeCamera as the default for every other
 camera. Pick a type: **Free**/**Universal** (configures the camera with
 speed/inertia/controls), **ArcRotate** (orbits — around a target object you pick,
 or, if none, a point ahead of where Blender framed the camera; with optional zoom
-limits), or **Follow** (tracks a target object you pick). All build from the
-faithful camera's world transform, so they begin where Blender framed them: Arc
-starts at the exported position (its offset from the orbit target defines the
-starting angle/distance). Follow has two modes: **Fixed Offset** (default) keeps
+limits), **Follow** (tracks a target object you pick), or **Geospatial** (orbits a
+spherical planet at world origin — map-like pan/zoom/tilt; set **Planet Radius**
+to match your globe mesh, optional min/max zoom and collision checking). All build
+from the faithful camera's world transform, so they begin where Blender framed
+them: Arc starts at the exported position (its offset from the orbit target
+defines the starting angle/distance). Geospatial raycasts the exported pose
+against the planet sphere to seed center/yaw/pitch/radius. Follow has two modes: **Fixed Offset** (default) keeps
 the camera at a constant world-space offset from the target — exactly where it
 sits in Blender — translating with the target and always looking at it; **Orbit**
 uses Babylon's FollowCamera, whose offset rotates with the target's facing (with
@@ -304,7 +310,7 @@ or set them by hand). When controls are attached, the keyboard-driven types
 (Free/Universal/Arc) take a **key scheme** — Arrow keys, WASD, both, or a custom
 up/down/left/right assignment.
 
-## Scene settings (environment, fog, post-processing)
+## Scene settings (environment, fog, atmosphere, post-processing)
 
 The **Properties → Scene → Babylon Scene** panel holds scene-wide render
 settings, serialized into a top-level `scene` block in the manifest and applied
@@ -329,6 +335,14 @@ at load:
     before creating a skybox so the first Live Link reload doesn't show a blank
     background.
 - **Fog** — linear/exp/exp² with color and range/density.
+- **Atmosphere** — physically based sky and aerial perspective via Babylon's
+  `@babylonjs/addons/atmosphere` addon. Enable in **Properties → Scene → Babylon
+  → Atmosphere**; pick a **Sun Light** (Blender SUN lamp) or leave empty to use
+  the first exported sun. Replaces the environment skybox at runtime; IBL from a
+  World texture still applies to materials. Tune Rayleigh/Mie/ozone scattering,
+  multi-scattering, and night ambient. For best results, also enable
+  **Post-Processing** with HDR tone mapping. Time of day follows the sun lamp's
+  direction in Blender.
 - **Post-processing** — Babylon's `DefaultRenderingPipeline` (FXAA, bloom, tone
   mapping/exposure/contrast). SSAO is wired as a *separate* `SSAO2RenderingPipeline`
   (it isn't part of the default pipeline). These attach to the active camera, so
@@ -373,6 +387,37 @@ position), and **Max Particles** (override the JSON's capacity; 0 keeps it). Any
 texture the JSON names is loaded from beside the `.json`, so drop it in
 `particles/` too. Scripts reach the system via `entity.GetParticles("name")` (named
 by file stem) or `entity.particleSystems` to `.start()` / `.stop()` it.
+
+## MSDF Text
+
+Add an **MSDF Text** component to any object for resolution-independent 3D labels
+using Babylon's [`TextRenderer`](https://doc.babylonjs.com/addons/msdfText/)
+(`@babylonjs/addons`). Pick the paragraph **Text**, a **Font JSON** (BMFont format
+from [msdf-bmfont](https://msdf-bmfont.donmccurdy.com/) or
+[msdfgen](https://github.com/Chlumsky/msdfgen)), and the paired **Font Texture**
+PNG atlas — both are copied into `fonts/` next to the export.
+
+Options mirror the Babylon API: **Color**, **Thickness** (−0.5…0.5), **Billboard**
+(always face the camera; only the parent's translation is used), **Screen
+Projected** (constant on-screen size when billboarding), **Ignore Depth** (draw on
+top), stroke color/inset/outset, **Align**, **Max Width** (wrap; 0 = no wrap),
+**Line Height**, and **Letter Spacing**. The text is parented to the entity's glTF
+node, so Blender position/rotation/scale place it in the world.
+
+Font assets are shared when several entities use the same files. At load the
+engine creates a `TextRenderer` per component (async shader compile) and draws
+all of them after the main scene pass. Scripts reach a renderer via
+`entity.GetTextRenderer("roboto-regular")` (named by the JSON file stem),
+`entity.textRenderers`, or `entity.GetAttachment("MSDF_TEXT")`.
+
+Generate glyph sets for the characters your game needs — a typical English set:
+
+```
+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 `~!@#$%^&*()-_=+[{]}\|;:'",<.>/?
+```
+
+The runtime depends on `@babylonjs/addons` (already wired into the playground and
+every scaffolded app).
 
 ## 3D GUI (in-scene interfaces)
 
@@ -830,6 +875,11 @@ background (`true` = show skybox, `false` = IBL only).
           "foreground": true, "width": 1024, "height": 1024 },
         { "type": "PARTICLE", "file": "particles/fire.json", "gpu": false,
           "autoStart": true, "attachToEntity": true, "capacity": 0 },
+        { "type": "MSDF_TEXT", "text": "Hello", "fontJson": "fonts/roboto-regular.json",
+          "fontTexture": "fonts/roboto-regular.png", "color": [1,1,1,1], "thickness": 0,
+          "billboard": true, "billboardScreenProjected": false, "ignoreDepth": false,
+          "strokeColor": [0,0,0,0], "strokeInset": 0, "strokeOutset": 0,
+          "textAlign": "center", "maxWidth": 0, "lineHeight": 1, "letterSpacing": 1 },
         { "type": "GUI3D_HOLO", "text": "Open", "image": null, "tooltip": "",
           "events": [ { "target": "guid", "message": "open" } ] },
         { "type": "GUI3D_CYLINDER", "margin": 0.02, "columns": 3, "rows": 0,
@@ -849,6 +899,9 @@ background (`true` = show skybox, `false` = IBL only).
             { "axis": "ANGULAR_Y", "mode": "locked" },
             { "axis": "ANGULAR_Z", "mode": "locked" }
           ] },
+        { "type": "CAMERA", "cameraType": "GEOSPATIAL", "attachControl": true,
+          "planetRadius": 1.0, "lowerRadius": 0.01, "upperRadius": 0,
+          "checkCollisions": false },
         { "type": "CAMERA", "cameraType": "ARC", "attachControl": true,
           "keys": { "scheme": "ARROWS", "up": "W", "down": "S", "left": "A", "right": "D" },
           "useBlenderTransform": true, "followMode": "OFFSET", "radius": 10, "lowerRadius": 0, "upperRadius": 0,

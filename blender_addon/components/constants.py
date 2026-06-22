@@ -17,6 +17,7 @@ COMPONENT_TYPES = [
     ('AUDIO',    "Audio",    "Attach a sound to this entity (ambient or 3D-positioned)"),
     ('GUI',      "GUI",      "Attach a Babylon GUI (.json from the GUI Editor) as a HUD or on this mesh"),
     ('PARTICLE', "Particles", "Attach a Babylon particle system (.json from the Particle Editor)"),
+    ('MSDF_TEXT', "MSDF Text", "Crisp scalable 3D text via Babylon's MSDF TextRenderer"),
 
     ("", "3D GUI — Controls", ""),
     ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),
@@ -38,6 +39,12 @@ GUI3D_CONTROLS = {'GUI3D_BUTTON', 'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO', 'GUI3D_MESH'
 GUI3D_PANELS = {'GUI3D_STACK', 'GUI3D_SPHERE', 'GUI3D_CYLINDER', 'GUI3D_PLANE', 'GUI3D_SCATTER'}
 # Controls that render text/image content (everything but the mesh button).
 GUI3D_TEXTURED = {'GUI3D_BUTTON', 'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO'}
+
+MSDF_TEXT_ALIGNS = [
+    ('left', "Left", ""),
+    ('center', "Center", ""),
+    ('right', "Right", ""),
+]
 
 GUI_MODES = [
     ('FULLSCREEN', "Fullscreen", "Render as a fullscreen 2D overlay (a HUD)"),
@@ -88,10 +95,11 @@ CONSTRAINT_AXES = [
 ]
 
 CAMERA_TYPES = [
-    ('FREE',      "Free",       "FreeCamera (the faithful default, configurable)"),
-    ('UNIVERSAL', "Universal",  "UniversalCamera (free + touch/gamepad)"),
-    ('ARC',       "ArcRotate",  "Orbit camera around a target"),
-    ('FOLLOW',    "Follow",     "Follow a target object"),
+    ('FREE',        "Free",         "FreeCamera (the faithful default, configurable)"),
+    ('UNIVERSAL',   "Universal",    "UniversalCamera (free + touch/gamepad)"),
+    ('ARC',         "ArcRotate",    "Orbit camera around a target"),
+    ('FOLLOW',      "Follow",       "Follow a target object"),
+    ('GEOSPATIAL',  "Geospatial",   "Orbit a spherical planet at world origin (map-like pan/zoom/tilt)"),
 ]
 
 CAMERA_KEY_SCHEMES = [

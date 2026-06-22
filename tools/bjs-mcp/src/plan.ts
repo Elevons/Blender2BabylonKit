@@ -36,6 +36,9 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["message", "trigger event", "sendmessage", "onclick", "door"], section: "audio" },
   { keywords: ["gui", "hud", "button", "particle", "3d gui", "holographic"], section: "gui" },
   { keywords: ["attachment", "getbehavior", "entity api", "component"], section: "entity" },
+  { keywords: ["camera", "geospatial", "globe", "planet", "map", "orbit", "follow"], section: "cameras" },
+  { keywords: ["atmosphere", "physical sky", "aerial perspective", "rayleigh", "mie", "skybox", "sky"], section: "scene-look" },
+  { keywords: ["volumetric", "light shaft", "god ray", "sun ray", "scattering", "post-processing", "postprocess", "bloom", "ssao", "dof", "vignette"], section: "scene-look" },
   { keywords: ["lifecycle", "onstart", "onupdate", "ondestroy"], section: "lifecycle" },
 ];
 
@@ -52,6 +55,7 @@ const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
   { keywords: ["hinge", "motor", "wheel"], fragment: "set-hinge-motor-velocity" },
   { keywords: ["path", "waypoint", "train", "tangent"], fragment: "path3d-from-entities" },
   { keywords: ["camera", "orbit", "follow"], fragment: "orbit-camera-around-target" },
+  { keywords: ["geospatial", "globe", "planet", "map", "earth", "flyto", "fly to"], fragment: "geospatial-camera-flyto-point" },
 ];
 
 const RECIPE_ROLES: Record<string, string> = {
@@ -59,6 +63,7 @@ const RECIPE_ROLES: Record<string, string> = {
   "constraint-hinge-motor": "drive Blender-authored hinge constraints (wheels, doors)",
   "path-follow-advanced": "Path3D motion with acceleration and tangent facing",
   "camera-follow": "runtime UniversalCamera orbiting a target entity",
+  "geospatial-camera-flyto": "fly authored GeospatialCamera to a point (Blender CAMERA component GEOSPATIAL)",
   "on-message-handler": "react to triggers / SendMessage / GUI clicks",
   "message-state-handler": "OnMessage-driven state machine with enum state",
   "input-poll-move": "poll named Input Actions each frame",

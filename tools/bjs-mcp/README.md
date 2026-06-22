@@ -54,13 +54,13 @@ Replace paths with your checkout location.
 | `get_kernel` | Minimal authoring kernel — call first |
 | `plan_behavior` | Intent → recipes, sections, fragments, steps |
 | `get_style_guide` | Full style guide or a section |
-| `get_scripting_context` | Full contract or a section (exposed, input, physics, …) |
+| `get_scripting_context` | Full contract or a section (exposed, input, physics, cameras, **scene-look**, …) |
 | `list_recipes` | All behavior patterns |
 | `suggest_recipe` | Match intent → recipe |
 | `get_recipe_template` | Full valid skeleton for a recipe + class name |
 | `get_exposed_field_snippet` | Blender-safe `@exposed` one-liner |
 | `list_input_actions` | Maps and actions from playground |
-| `list_scene_entities` | Entity names/components from a level manifest |
+| `list_scene_entities` | Entity names/components/light types + enabled atmosphere / post-processing from a level manifest |
 | `get_behavior` | Full source of an example behavior by stem |
 | `find_similar_behavior` | Search example behaviors by keyword |
 | `validate_behavior` | Check draft against parse/style/physics rules |
@@ -97,6 +97,7 @@ Replace paths with your checkout location.
 - `constraint-hinge-motor` — drive Blender HINGE constraints (see `CarController.ts`)
 - `path-follow-advanced` — Path3D + throttle + tangent facing (see `TrainBehavior.ts`)
 - `camera-follow` — orbiting `UniversalCamera` (see `TrainCamera.ts`)
+- `geospatial-camera-flyto` — fly the authored `GeospatialCamera` to a point (Blender Camera component **Geospatial**)
 - `message-state-handler` — OnMessage-driven state machine
 
 ## Fragments
@@ -105,7 +106,8 @@ Replace paths with your checkout location.
 `make-body-kinematic`, `animated-body-sync`, `enable-trigger-logging`,
 `cleanup-keyboard-observer`, `play-animation`, `send-message`,
 `resolve-hinge-constraint`, `set-hinge-motor-velocity`, `path3d-from-entities`,
-`orbit-camera-around-target`
+`orbit-camera-around-target`, `geospatial-camera-flyto-point`,
+`geospatial-camera-flyto-properties`
 
 ## Validation
 
@@ -117,4 +119,5 @@ Replace paths with your checkout location.
 - Physics anti-pattern: `node.position` in `OnUpdate` without `ANIMATED`
 - Unknown `FindAction("…")` names vs playground input catalog
 - Raw key codes when Input Actions are available
+- Scene atmosphere / post-processing / MSDF text APIs in behaviors (`Atmosphere`, `VolumetricLightScatteringPostProcess`, `TextRenderer`, etc.) — author in Blender
 - Allman brace style, observer cleanup in `OnDestroy`

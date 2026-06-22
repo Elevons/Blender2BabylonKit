@@ -148,6 +148,55 @@ this.camera.position = new Vector3(
 this.camera.setTarget(targetPosition);`,
   },
   {
+    name: "geospatial-camera-flyto-point",
+    description:
+      "Fly the active GeospatialCamera toward a world point (requires CAMERA component GEOSPATIAL in Blender).",
+    code: `import { GeospatialCamera } from "@babylonjs/core/Cameras/geospatialCamera";
+
+const activeCamera = this.scene.activeCamera;
+// scene.activeCamera is Nullable<Camera> — truthiness catches null and undefined at runtime.
+if (!activeCamera || !(activeCamera instanceof GeospatialCamera))
+{
+  return;
+}
+
+const destinationPoint = targetEntity.node.getAbsolutePosition();
+await activeCamera.flyToPointAsync(destinationPoint, 0.5, 1500);`,
+  },
+  {
+    name: "update-msdf-text",
+    description:
+      "Replace MSDF label copy at runtime (MSDF_TEXT component authored in Blender).",
+    code: `const label = this.entity.GetTextRenderer("roboto-regular");
+if (label !== undefined)
+{
+  label.clearParagraphs();
+  label.addParagraph(\`Score: \${score}\`, { textAlign: "center" });
+}`,
+  },
+  {
+    name: "geospatial-camera-flyto-properties",
+    description:
+      "Animate GeospatialCamera yaw, pitch, radius, and center (any arg undefined keeps current value).",
+    code: `import { GeospatialCamera } from "@babylonjs/core/Cameras/geospatialCamera";
+import { Vector3 } from "@babylonjs/core";
+
+const activeCamera = this.scene.activeCamera;
+// scene.activeCamera is Nullable<Camera> — truthiness catches null and undefined at runtime.
+if (!activeCamera || !(activeCamera instanceof GeospatialCamera))
+{
+  return;
+}
+
+await activeCamera.flyToAsync(
+  undefined,
+  undefined,
+  50000,
+  new Vector3(6371000, 0, 0),
+  2000
+);`,
+  },
+  {
     name: "animated-body-sync",
     description:
       "ANIMATED body + disablePreStep for Path3D / per-frame node driving (see TrainBehavior).",

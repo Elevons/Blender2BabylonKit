@@ -73,6 +73,10 @@ computed or multi-line defaults).
 | MESH trigger collider | Never fires in Havok |
 | Invented input action names | Always undefined at runtime |
 | `window` keyboard listeners | Leaks; use scene observables + `OnDestroy` |
+| Script-built `UniversalCamera` for globe navigation | Use Blender **Camera** component `GEOSPATIAL` instead |
+| Wrong **Planet Radius** on Geospatial camera | Zoom/pan limits and pose derivation break — match globe mesh |
+| `VolumetricLightScatteringPostProcess` / scene post in a behavior | Author VLS + post in Blender **Properties › Scene › Post-Processing** |
+| `Atmosphere` / `@babylonjs/addons/atmosphere` in a behavior | Author sky in Blender **Properties › Scene › Atmosphere** (Sun lamp) |
 
 ## MCP workflow (complex scripts)
 

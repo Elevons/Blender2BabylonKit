@@ -6,8 +6,11 @@ import {
   DefaultRenderingPipeline,
   DepthOfFieldEffectBlurLevel,
   ImageProcessingConfiguration,
+  Mesh,
   SSAO2RenderingPipeline,
   Texture,
+  Vector3,
+  VolumetricLightScatteringPostProcess,
 } from "@babylonjs/core";
 import type {
   ChromaticAberrationInfo,
@@ -20,8 +23,10 @@ import type {
   SharpenInfo,
   SsaoInfo,
   VignetteInfo,
+  VolumetricLightScatteringInfo,
 } from "../core/types";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
+import type { Level } from "../core/Level";
 
 const TONE_MAPPING_TYPES = {
   STANDARD: ImageProcessingConfiguration.TONEMAPPING_STANDARD,
@@ -37,9 +42,9 @@ const DOF_BLUR_LEVELS = {
 
 function NeedsImageProcessing(info: PostProcessingInfo): boolean
 {
-  return info.toneMapping ||
-    info.exposure !== 1 ||
-    info.contrast !== 1 ||
+  return info.toneMapping === true ||
+    (info.exposure !== undefined && info.exposure !== 1) ||
+    (info.contrast !== undefined && info.contrast !== 1) ||
     info.vignette?.enabled === true ||
     info.colorGrading?.enabled === true ||
     info.colorCurves?.enabled === true;
@@ -222,25 +227,26 @@ function BuildDefaultPipeline(
   const pipeline = new DefaultRenderingPipeline("bjsDefault", true, scene, targetCameras);
 
   pipeline.samples = postProcessingInfo.msaaSamples ?? 1;
-  pipeline.fxaaEnabled = postProcessingInfo.fxaa;
+  pipeline.fxaaEnabled = postProcessingInfo.fxaa ?? false;
 
-  pipeline.bloomEnabled = postProcessingInfo.bloom.enabled;
-  if (postProcessingInfo.bloom.enabled)
+  const bloom = postProcessingInfo.bloom;
+  pipeline.bloomEnabled = bloom?.enabled === true;
+  if (bloom?.enabled === true)
   {
-    pipeline.bloomThreshold = postProcessingInfo.bloom.threshold;
-    pipeline.bloomWeight = postProcessingInfo.bloom.intensity;
-    if (postProcessingInfo.bloom.kernel !== undefined)
+    pipeline.bloomThreshold = bloom.threshold;
+    pipeline.bloomWeight = bloom.intensity;
+    if (bloom.kernel !== undefined)
     {
-      pipeline.bloomKernel = postProcessingInfo.bloom.kernel;
+      pipeline.bloomKernel = bloom.kernel;
     }
-    if (postProcessingInfo.bloom.scale !== undefined)
+    if (bloom.scale !== undefined)
     {
-      pipeline.bloomScale = postProcessingInfo.bloom.scale;
+      pipeline.bloomScale = bloom.scale;
     }
   }
 
-  let toneMappingEnabled = postProcessingInfo.toneMapping;
-  if (postProcessingInfo.bloom.enabled && !toneMappingEnabled)
+  let toneMappingEnabled = postProcessingInfo.toneMapping === true;
+  if (bloom?.enabled === true && !toneMappingEnabled)
   {
     console.warn(
       "[bjs] post-processing: bloom requires tone mapping with HDR — enabling tone mapping"
@@ -258,8 +264,8 @@ function BuildDefaultPipeline(
       const toneMappingType = postProcessingInfo.toneMappingType ?? "ACES";
       pipeline.imageProcessing.toneMappingType = TONE_MAPPING_TYPES[toneMappingType];
     }
-    pipeline.imageProcessing.exposure = postProcessingInfo.exposure;
-    pipeline.imageProcessing.contrast = postProcessingInfo.contrast;
+    pipeline.imageProcessing.exposure = postProcessingInfo.exposure ?? 1;
+    pipeline.imageProcessing.contrast = postProcessingInfo.contrast ?? 1;
 
     if (postProcessingInfo.vignette?.enabled)
     {
@@ -322,9 +328,108 @@ function ApplySsaoSettings(ssao: SSAO2RenderingPipeline, settings: SsaoInfo): vo
   }
 }
 
+/** Resolve an entity's export mesh for use as a VLS light-source billboard. */
+function ResolveEntityMesh(level: Level, guid: string): Mesh | null
+{
+  const entity = level.ById(guid);
+  if (entity === undefined)
+  {
+    console.warn(`[bjs] volumetric light scattering: light source entity not found (${guid})`);
+    return null;
+  }
+
+  const node = entity.node;
+  if (node instanceof Mesh)
+  {
+    return node;
+  }
+
+  for (const child of node.getChildMeshes(false))
+  {
+    if (child instanceof Mesh)
+    {
+      return child;
+    }
+  }
+
+  console.warn(
+    `[bjs] volumetric light scattering: entity "${entity.name}" has no mesh for the light source`
+  );
+  return null;
+}
+
+/** Apply manifest tuning fields onto a VolumetricLightScatteringPostProcess. */
+function ApplyVolumetricLightScatteringSettings(
+  volumetricLightScattering: VolumetricLightScatteringPostProcess,
+  settings: VolumetricLightScatteringInfo
+): void
+{
+  if (settings.invert !== undefined)
+  {
+    volumetricLightScattering.invert = settings.invert;
+  }
+  if (settings.exposure !== undefined)
+  {
+    volumetricLightScattering.exposure = settings.exposure;
+  }
+  if (settings.decay !== undefined)
+  {
+    volumetricLightScattering.decay = settings.decay;
+  }
+  if (settings.weight !== undefined)
+  {
+    volumetricLightScattering.weight = settings.weight;
+  }
+  if (settings.density !== undefined)
+  {
+    volumetricLightScattering.density = settings.density;
+  }
+  if (settings.useCustomMeshPosition === true && settings.customMeshPosition !== undefined)
+  {
+    const [positionX, positionY, positionZ] = settings.customMeshPosition;
+    volumetricLightScattering.useCustomMeshPosition = true;
+    volumetricLightScattering.setCustomMeshPosition(new Vector3(positionX, positionY, positionZ));
+  }
+}
+
+/** Create VolumetricLightScatteringPostProcess on the active camera. */
+function BuildVolumetricLightScattering(
+  scene: Scene,
+  camera: Camera,
+  level: Level | undefined,
+  settings: VolumetricLightScatteringInfo
+): VolumetricLightScatteringPostProcess
+{
+  const engine = scene.getEngine();
+  const ratio = settings.ratio ?? 1.0;
+  const samples = settings.samples ?? 100;
+
+  let lightMesh: Mesh | undefined;
+  if (settings.lightSource !== undefined && settings.lightSource !== null && level !== undefined)
+  {
+    lightMesh = ResolveEntityMesh(level, settings.lightSource) ?? undefined;
+  }
+
+  const volumetricLightScattering = new VolumetricLightScatteringPostProcess(
+    "bjsVLS",
+    ratio,
+    camera,
+    lightMesh,
+    samples,
+    Texture.BILINEAR_SAMPLINGMODE,
+    engine,
+    false,
+    scene
+  );
+
+  ApplyVolumetricLightScatteringSettings(volumetricLightScattering, settings);
+  return volumetricLightScattering;
+}
+
 export interface PostProcessingHandles {
   pipeline?: DefaultRenderingPipeline;
   ssao?: SSAO2RenderingPipeline;
+  volumetricLightScattering?: VolumetricLightScatteringPostProcess;
 }
 
 /** Move the default rendering pipeline onto a different camera. */
@@ -360,7 +465,8 @@ export function ApplyPostProcessing(
   scene: Scene,
   activeCamera: Camera | null,
   postProcessingInfo: PostProcessingInfo,
-  baseUrl = ""
+  baseUrl = "",
+  level?: Level
 ): PostProcessingHandles
 {
   const targetCameras = activeCamera ? [activeCamera] : scene.cameras;
@@ -372,20 +478,32 @@ export function ApplyPostProcessing(
     return handles;
   }
 
-  if (postProcessingInfo.defaultPipeline)
+  if (postProcessingInfo.defaultPipeline === true)
   {
     handles.pipeline = BuildDefaultPipeline(
       scene, targetCameras, postProcessingInfo, baseUrl
     );
   }
 
-  if (postProcessingInfo.ssao)
+  if (postProcessingInfo.ssao === true)
   {
     handles.ssao = new SSAO2RenderingPipeline("bjsSSAO", scene, 0.75, targetCameras);
     ApplySsaoSettings(handles.ssao, {
       enabled: true,
       ...postProcessingInfo.ssaoSettings,
     });
+  }
+
+  const volumetricLightScatteringSettings = postProcessingInfo.volumetricLightScattering;
+  if (
+    volumetricLightScatteringSettings !== undefined &&
+    volumetricLightScatteringSettings.enabled === true &&
+    activeCamera !== null
+  )
+  {
+    handles.volumetricLightScattering = BuildVolumetricLightScattering(
+      scene, activeCamera, level, volumetricLightScatteringSettings
+    );
   }
 
   return handles;

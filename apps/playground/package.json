@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babylonjs/addons": "^9.0.0",
     "@babylonjs/core": "^9.0.0",
     "@babylonjs/gui": "^9.0.0",
     "@babylonjs/loaders": "^9.0.0",

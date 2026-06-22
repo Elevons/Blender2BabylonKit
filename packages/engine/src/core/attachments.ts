@@ -5,6 +5,7 @@ import type {
   PhysicsConstraint,
 } from "@babylonjs/core";
 import type { AdvancedDynamicTexture, Control3D } from "@babylonjs/gui";
+import type { TextRenderer } from "@babylonjs/addons/msdfText";
 import type { Behavior } from "../scripting/Behavior";
 import type { Entity } from "./Entity";
 import type {
@@ -15,6 +16,7 @@ import type {
   AudioComponent,
   GuiComponent,
   ParticleComponent,
+  MsdfTextComponent,
   ConstraintComponent,
   Gui3DComponent,
 } from "./types";
@@ -28,6 +30,7 @@ export type EntityAttachment =
   | { type: "AUDIO"; data: AudioComponent; sound: StaticSound }
   | { type: "GUI"; data: GuiComponent; texture: AdvancedDynamicTexture }
   | { type: "PARTICLE"; data: ParticleComponent; system: IParticleSystem }
+  | { type: "MSDF_TEXT"; data: MsdfTextComponent; renderer: TextRenderer }
   | { type: "CONSTRAINT"; data: ConstraintComponent; constraint: PhysicsConstraint }
   | { type: Gui3DComponent["type"]; data: Gui3DComponent; control: Control3D };
 

@@ -34,12 +34,15 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
      applies `@exposed` values, and `InjectInputMaps` (entity refs deferred as
      `PendingRef`s); TAG rows register during classification;
    - `ProcessLightForEntity` / `ProcessCameraForEntity` (typed camera override
-     via `BuildTypedCamera`; target bindings queued by `QueueCameraTargets`).
+     via `BuildTypedCamera`; FOLLOW/ARC/OFFSET target bindings queued by
+     `QueueCameraTargets` — GEOSPATIAL resolves pose immediately).
 6. **Second pass** — now every entity exists: `ResolveObjectReferences`
    (entity-typed `@exposed` fields + list slots) and `ResolveCameraTargets`
    (FOLLOW lockedTarget / ARC re-pivot / OFFSET per-frame updater).
 7. **`FinalizeLevel`** — shadows (`SetupShadows`), scene block
    (`await ApplySceneSettings` → clear/ambient, async `ApplyEnvironment` + fog),
+   **`ApplyAtmosphere`** when the manifest includes `scene.atmosphere` (SUN lamp
+   → `@babylonjs/addons/atmosphere`; sets `level.atmosphere`),
    `ApplyAutoPlayAnimations` (stop the glTF loader's auto-started groups, start
    the chosen clips), `SettleTasks` for audio/GUI/particle promises
    (`Promise.allSettled` so one bad file logs instead of rejecting the load),
@@ -48,7 +51,8 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    owner entities), build 3D GUI (`BuildGui3DControls` → `level.gui3DManager` +
    GUI3D_* rows on owning entities), then **`level.Begin()`**
    (behaviors' `OnStart`, including any runtime camera creation), then
-   **`ApplyPostProcessing`** (default pipeline + SSAO on `scene.activeCamera`),
+   **`ApplyPostProcessing`** (default pipeline + SSAO + volumetric light
+   scattering on `scene.activeCamera`),
    and if `debugColliders` *and* the export's Debug Build flag allow, show
    collider wireframes.
 
@@ -58,7 +62,7 @@ See [10 — UI](10-UI.md) for the 2D GUI, particle, and 3D GUI pipelines.
 
 **`Level`** (`core/Level.ts`) is the runtime container: `entities` map,
 `ById`/`ByTag`, `activeCamera`, `shadowGenerators`, `constraints`, `post`,
-`debugEnabled`, `ShowColliders`, `AddUpdater`. `Begin` attaches
+`atmosphere`, `debugEnabled`, `ShowColliders`, `AddUpdater`. `Begin` attaches
 [Input](04-SCRIPTING.md#input), runs every `OnStart`, then drives `RunFrame`
 each render: `InputManager.Process` first, all `OnUpdate(deltaSeconds)`,
 registered updaters, then `InputManager.EndFrame` last (so `WasPressed` edges

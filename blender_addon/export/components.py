@@ -161,6 +161,9 @@ def serialize_components(obj, output_dir):
                 "height": c.cam_height,
                 "rotationOffset": c.cam_rotation_offset,
             })
+            if c.cam_type == 'GEOSPATIAL':
+                d["planetRadius"] = c.cam_planet_radius
+                d["checkCollisions"] = bool(c.cam_check_collisions)
 
         elif c.comp_type == 'CONSTRAINT':
             px, py, pz = c.con_pivot
@@ -217,6 +220,25 @@ def serialize_components(obj, output_dir):
                 "autoStart": bool(c.particle_autostart),
                 "attachToEntity": bool(c.particle_attach),
                 "capacity": c.particle_capacity,
+            })
+
+        elif c.comp_type == 'MSDF_TEXT':
+            d.update({
+                "text": c.msdf_text,
+                "fontJson": copy_asset(c.msdf_font_json, output_dir, "fonts"),
+                "fontTexture": copy_asset(c.msdf_font_texture, output_dir, "fonts"),
+                "color": list(c.msdf_color),
+                "thickness": c.msdf_thickness,
+                "billboard": bool(c.msdf_billboard),
+                "billboardScreenProjected": bool(c.msdf_billboard_screen),
+                "ignoreDepth": bool(c.msdf_ignore_depth),
+                "strokeColor": list(c.msdf_stroke_color),
+                "strokeInset": c.msdf_stroke_inset,
+                "strokeOutset": c.msdf_stroke_outset,
+                "textAlign": c.msdf_text_align,
+                "maxWidth": c.msdf_max_width,
+                "lineHeight": c.msdf_line_height,
+                "letterSpacing": c.msdf_letter_spacing,
             })
 
         elif c.comp_type in GUI3D_CONTROLS:

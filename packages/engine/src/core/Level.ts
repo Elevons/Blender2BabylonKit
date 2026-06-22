@@ -8,9 +8,11 @@ import {
   type PhysicsConstraint,
 } from "@babylonjs/core";
 import type { GUI3DManager } from "@babylonjs/gui";
+import type { MsdfTextManager } from "../ui/msdfText";
 import { Entity } from "./Entity";
 import { InputManager } from "../input";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
+import type { AtmosphereHandle } from "../subsystems/atmosphere";
 
 /**
  * Runtime container for a loaded level: the entity map, the active camera,
@@ -26,6 +28,8 @@ export class Level
   shadowGenerators: ShadowGenerator[] = [];
   /** Post-processing pipelines, if the manifest enabled them. */
   post?: PostProcessingHandles;
+  /** Physically based atmosphere, if the manifest enabled it. */
+  atmosphere?: AtmosphereHandle;
   /** From the manifest's "Debug Build" export flag; gates debug keys/tools. */
   debugEnabled = true;
   /** The Havok trigger-event observer, when any trigger events were authored. */
@@ -34,6 +38,8 @@ export class Level
   constraints: PhysicsConstraint[] = [];
   /** Shared 3D GUI manager, present when any GUI3D_* component was authored. */
   gui3DManager?: GUI3DManager;
+  /** MSDF text draw hook, present when any MSDF_TEXT component was authored. */
+  msdfTextManager?: MsdfTextManager;
 
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
@@ -222,6 +228,18 @@ export class Level
       this.gui3DManager = undefined;
     }
 
+    if (this.msdfTextManager !== undefined)
+    {
+      this.msdfTextManager.dispose();
+      this.msdfTextManager = undefined;
+    }
+
+    if (this.atmosphere !== undefined)
+    {
+      this.atmosphere.dispose();
+      this.atmosphere = undefined;
+    }
+
     for (const entity of this.entities.values())
     {
       for (const behavior of entity.behaviors)
@@ -253,6 +271,12 @@ export class Level
         system.dispose();
       }
       entity.particleSystems.length = 0;
+
+      for (const renderer of entity.textRenderers)
+      {
+        renderer.dispose();
+      }
+      entity.textRenderers.length = 0;
 
       // The controls themselves were disposed with the manager above.
       entity.controls3D.length = 0;

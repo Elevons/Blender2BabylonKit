@@ -13,7 +13,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Blender scene",
           "sub": "objects + components",
-          "desc": "Authoring: the viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, GUI3D_*) to objects. GUIDs (bjs_id) make objects addressable entities.",
+          "desc": "Authoring: the viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, MSDF Text, GUI3D_*) to objects. GUIDs (bjs_id) make objects addressable entities.",
           "meta": [
             [
               "Module",
@@ -213,7 +213,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Cameras & Lights",
           "sub": "faithful + overrides",
-          "desc": "glb creates them; we copy Blender properties on (parent-chain find). CAMERA component swaps in Universal/Arc/Follow built from the exported pose; targets resolve in the second pass.",
+          "desc": "glb creates them; we copy Blender properties on (parent-chain find). CAMERA component swaps in Universal/Arc/Follow/Geospatial built from the exported pose; FOLLOW/ARC targets resolve in the second pass.",
           "meta": [
             [
               "Files",
@@ -451,7 +451,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Object UI",
           "sub": "ui/view3d_panels",
-          "desc": "Viewport N-panel 'Babylon': component list with per-type fields, light/camera/animation child panels, and a quick Export block (Export / Live Link / Debug Build / Validate). Scene-wide settings (rendering, fog, post, Input Actions) live under Properties › Scene › Babylon.",
+          "desc": "Viewport N-panel 'Babylon': component list with per-type fields, light/camera/animation child panels, and a quick Export block (Export / Live Link / Debug Build / Validate). Scene-wide settings (rendering, fog, atmosphere, post, Input Actions) live under Properties › Scene › Babylon.",
           "meta": [
             [
               "Kind",
@@ -471,7 +471,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Data model",
           "sub": "components/",
-          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene): clear/ambient, Default Environment, Show Skybox, Skybox Ignores Fog, fog, freeze shadows.",
+          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/MSDF_TEXT/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene): clear/ambient, Default Environment, Show Skybox, Skybox Ignores Fog, fog, Atmosphere (scene/atmosphere.py), freeze shadows.",
           "meta": [
             [
               "Identity",
@@ -571,7 +571,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene block",
           "sub": "export/scene.py",
-          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/, or useDefault when Default Environment is enabled; createSkybox; skyboxIgnoreFog when skybox on), fog, post-processing (via export/post_processing.py), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
+          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/, or useDefault when Default Environment is enabled; createSkybox forced off when Atmosphere is on; skyboxIgnoreFog when skybox on), fog, atmosphere (export/atmosphere.py), post-processing (via export/post_processing.py — default pipeline, SSAO, volumetric light scattering), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/atmosphere.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
           "meta": [
             [
               "Manifest key",
@@ -941,7 +941,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyComponents",
           "sub": "per entity",
-          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations → queue async audio/GUI/particle tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
           "meta": [
             [
               "Helpers",
@@ -989,7 +989,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
+          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 + VolumetricLightScatteringPostProcess on active camera) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1609,7 +1609,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "BuildTypedCamera",
           "sub": "CAMERA component",
-          "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset). Free-fly cameras honor a Keep Upright toggle (lockRoll): LockCameraRoll bakes the world pose, detaches the orientation-correction parent, and pins look-at to world up so yaw/pitch stay level.",
+          "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset) / Geospatial (planet at origin; DeriveGeospatialPose seeds center/yaw/pitch/radius). Free-fly cameras honor a Keep Upright toggle (lockRoll): LockCameraRoll bakes the world pose, detaches the orientation-correction parent, and pins look-at to world up so yaw/pitch stay level.",
           "meta": [
             [
               "Targets",
@@ -1648,8 +1648,8 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Scene look",
-          "sub": "environment / fog / postprocess",
-          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; waits for texture before skybox; .env / useDefault skybox uses EnvironmentHelper with large size + infiniteDistance; createSkybox off = IBL only; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
+          "sub": "environment / fog / atmosphere / postprocess",
+          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; waits for texture before skybox; createSkybox off when atmosphere on or IBL-only; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 + VolumetricLightScatteringPostProcess (optional lightSource mesh GUID; default billboard when omitted) → level.post. RetargetPostProcessing if the active camera changes at runtime.",
           "meta": [
             [
               "Attach",
@@ -1669,7 +1669,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Level",
           "sub": "holds the handles",
-          "desc": "activeCamera, shadowGenerators, post — all reachable from gameplay code for further tuning.",
+          "desc": "activeCamera, shadowGenerators, post, atmosphere — all reachable from gameplay code for further tuning.",
           "meta": [
             [
               "See",

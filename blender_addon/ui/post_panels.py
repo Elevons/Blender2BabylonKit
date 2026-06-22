@@ -302,6 +302,39 @@ class BJS_PT_scene_post_glow(Panel):
         col.prop(p, "glow_intensity")
 
 
+class BJS_PT_scene_post_vls(Panel):
+    bl_label = "Volumetric Light Scattering"
+    bl_idname = "BJS_PT_scene_post_vls"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "scene"
+    bl_parent_id = "BJS_PT_scene_post"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw_header(self, context):
+        self.layout.prop(_post(context), "use_vls", text="")
+
+    def draw(self, context):
+        p = _post(context)
+        self.layout.active = p.use_vls
+        col = self.layout.column()
+        col.use_property_split = True
+        col.prop(p, "vls_light_source")
+        col.prop(p, "vls_samples")
+        col.prop(p, "vls_post_ratio")
+        col.prop(p, "vls_pass_ratio")
+        col.prop(p, "vls_invert")
+        col.prop(p, "vls_use_custom_position")
+        if p.vls_use_custom_position:
+            col.prop(p, "vls_custom_position")
+        col.separator()
+        col.label(text="Scattering")
+        col.prop(p, "vls_exposure")
+        col.prop(p, "vls_decay")
+        col.prop(p, "vls_weight")
+        col.prop(p, "vls_density")
+
+
 classes = (
     BJS_PT_scene_post,
     BJS_PT_scene_post_bloom,
@@ -315,4 +348,5 @@ classes = (
     BJS_PT_scene_post_chromatic,
     BJS_PT_scene_post_grain,
     BJS_PT_scene_post_glow,
+    BJS_PT_scene_post_vls,
 )

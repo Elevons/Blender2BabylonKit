@@ -3,8 +3,17 @@
 import bpy
 from bpy.props import (
     BoolProperty, FloatProperty, EnumProperty, IntProperty, StringProperty,
+    PointerProperty, FloatVectorProperty,
 )
-from bpy.types import PropertyGroup
+from bpy.types import PropertyGroup, Object
+
+from ..core.ids import ensure_object_id
+
+
+def _on_vls_source_update(self, context):
+    """Light-source picker: assign a GUID so the runtime can resolve the mesh."""
+    if self.vls_light_source is not None:
+        ensure_object_id(self.vls_light_source)
 
 
 class BJSPostProcessingSettings(PropertyGroup):
@@ -106,6 +115,35 @@ class BJSPostProcessingSettings(PropertyGroup):
     use_glow: BoolProperty(name="Glow Layer", default=False)
     glow_blur_kernel: IntProperty(name="Blur Kernel", default=16, min=1, max=128)
     glow_intensity: FloatProperty(name="Intensity", default=1.0, min=0.0, max=5.0)
+
+    # Volumetric Light Scattering (separate post-process; does not need Default Pipeline)
+    use_vls: BoolProperty(name="Volumetric Light Scattering", default=False)
+    vls_light_source: PointerProperty(
+        name="Light Source", type=Object, update=_on_vls_source_update,
+        description="Mesh that supplies the light color (e.g. a sun billboard). "
+                    "Empty = a default billboard is created at runtime")
+    vls_samples: IntProperty(
+        name="Samples", default=100, min=1, max=500,
+        description="Ray-march quality (shader sample count)")
+    vls_post_ratio: FloatProperty(
+        name="Post Process Ratio", default=1.0, min=0.1, max=1.0,
+        description="Output resolution scale (1 = full resolution)")
+    vls_pass_ratio: FloatProperty(
+        name="Internal Pass Ratio", default=0.5, min=0.1, max=1.0,
+        description="Internal render-target scale (lower = faster)")
+    vls_invert: BoolProperty(
+        name="Invert Rays", default=False,
+        description="When on, rays go downward instead of upward")
+    vls_use_custom_position: BoolProperty(
+        name="Custom Light Position", default=False,
+        description="Scatter from a custom world position instead of the mesh")
+    vls_custom_position: FloatVectorProperty(
+        name="Custom Position", size=3, default=(0.0, 0.0, 0.0), subtype='XYZ',
+        description="World position for scattering, in Blender axes")
+    vls_exposure: FloatProperty(name="Exposure", default=0.3, min=0.0, max=10.0)
+    vls_decay: FloatProperty(name="Decay", default=0.96815, min=0.0, max=1.0)
+    vls_weight: FloatProperty(name="Weight", default=0.58767, min=0.0, max=1.0)
+    vls_density: FloatProperty(name="Density", default=0.926, min=0.0, max=2.0)
 
 
 def register():

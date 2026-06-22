@@ -94,6 +94,8 @@ def _component_label(comp):
         label = f"GUI: {os.path.basename(comp.gui_file)}"
     elif comp.comp_type == 'PARTICLE' and comp.particle_file:
         label = f"Particles: {os.path.basename(comp.particle_file)}"
+    elif comp.comp_type == 'MSDF_TEXT' and comp.msdf_text:
+        label = f"MSDF Text: {comp.msdf_text[:32]}"
     elif comp.comp_type in GUI3D_TEXTURED and comp.gui3d_text:
         kind = {'GUI3D_BUTTON': "3D Button", 'GUI3D_HOLO': "3D Holo Button",
                 'GUI3D_TOUCH_HOLO': "3D Touch Button"}[comp.comp_type]
@@ -219,6 +221,26 @@ def draw_component(layout, obj, index, comp):
         body.prop(comp, "particle_autostart")
         body.prop(comp, "particle_gpu")
         body.prop(comp, "particle_capacity")
+
+    elif comp.comp_type == 'MSDF_TEXT':
+        body.prop(comp, "msdf_text")
+        body.prop(comp, "msdf_font_json")
+        body.prop(comp, "msdf_font_texture")
+        body.prop(comp, "msdf_color")
+        body.prop(comp, "msdf_thickness", slider=True)
+        row = body.row(align=True)
+        row.prop(comp, "msdf_billboard")
+        row.prop(comp, "msdf_billboard_screen")
+        body.prop(comp, "msdf_ignore_depth")
+        body.prop(comp, "msdf_stroke_color")
+        row = body.row(align=True)
+        row.prop(comp, "msdf_stroke_inset")
+        row.prop(comp, "msdf_stroke_outset")
+        body.prop(comp, "msdf_text_align")
+        row = body.row(align=True)
+        row.prop(comp, "msdf_max_width")
+        row.prop(comp, "msdf_line_height")
+        body.prop(comp, "msdf_letter_spacing")
 
     elif comp.comp_type in GUI3D_CONTROLS:
         if comp.comp_type in GUI3D_TEXTURED:
@@ -350,6 +372,14 @@ def draw_component(layout, obj, index, comp):
                     body.prop(comp, "cam_distance")
                     body.prop(comp, "cam_height")
                     body.prop(comp, "cam_rotation_offset")
+        elif t == 'GEOSPATIAL':
+            body.prop(comp, "cam_planet_radius")
+            body.prop(comp, "cam_lower_radius")
+            body.prop(comp, "cam_upper_radius")
+            body.prop(comp, "cam_check_collisions")
+            body.label(
+                text="Starts at the exported camera pose; planet must be centered at world origin",
+                icon='INFO')
         # Key bindings: only for keyboard-driven types, when controls are attached.
         if comp.cam_attach_control and t in {'FREE', 'UNIVERSAL', 'ARC'}:
             kbox = body.box()

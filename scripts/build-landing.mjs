@@ -58,6 +58,8 @@ const SYNONYMS = {
   animate: ["animation", "clip"],
   particle: ["particles", "emitter"],
   particles: ["particle", "emitter"],
+  msdf: ["text", "label", "font", "bmfont", "signed distance"],
+  text: ["msdf", "label", "gui"],
   export: ["glb", "manifest", "serialize", "scene.json"],
   import: ["loader", "glb", "append"],
   script: ["behavior", "exposed", "scripting"],
@@ -73,10 +75,13 @@ const SYNONYMS = {
   validate: ["validation", "validator", "warning", "checks"],
   validation: ["validate", "validator", "checks"],
   tag: ["tag", "bytag"],
-  fog: ["scene", "environment", "rendering", "skybox"],
-  environment: ["skybox", "ibl", "rendering", "default environment", "skyboxignorefog"],
-  skybox: ["environment", "rendering", "ibl", "fog"],
-  ibl: ["environment", "skybox", "rendering", "default environment"],
+  fog: ["scene", "environment", "rendering", "skybox", "atmosphere"],
+  environment: ["skybox", "ibl", "rendering", "default environment", "skyboxignorefog", "atmosphere"],
+  skybox: ["environment", "rendering", "ibl", "fog", "atmosphere"],
+  ibl: ["environment", "skybox", "rendering", "default environment", "atmosphere"],
+  atmosphere: ["sky", "aerial perspective", "sun", "rayleigh", "scattering", "rendering", "environment"],
+  rayleigh: ["atmosphere", "scattering", "sky"],
+  scattering: ["atmosphere", "mie", "rayleigh", "sky"],
 };
 
 // Suggested chips shown under the search box (term + what it surfaces).

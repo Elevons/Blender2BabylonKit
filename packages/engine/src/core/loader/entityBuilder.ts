@@ -12,6 +12,7 @@ import type {
   ConstraintComponent,
   GuiComponent,
   ParticleComponent,
+  MsdfTextComponent,
   Gui3DComponent,
   LightInfo,
   CameraInfo,
@@ -28,6 +29,7 @@ import { ApplyBlenderCamera, BuildTypedCamera, QueueCameraTargets } from "../../
 import { ApplyAudio } from "../../subsystems/audio";
 import { ApplyGui } from "../../ui/gui2d";
 import { ApplyParticles } from "../../subsystems/particles";
+import { ApplyMsdfText } from "../../ui/msdfText";
 import { FindNodeByName } from "./nodeResolution";
 import type { LoadContext } from "./context";
 
@@ -47,6 +49,7 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
   constraintComponents: ConstraintComponent[];
   guiComponents: GuiComponent[];
   particleComponents: ParticleComponent[];
+  msdfTextComponents: MsdfTextComponent[];
   gui3dComponents: Gui3DComponent[];
 }
 {
@@ -57,6 +60,7 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
   const constraintComponents: ConstraintComponent[] = [];
   const guiComponents: GuiComponent[] = [];
   const particleComponents: ParticleComponent[] = [];
+  const msdfTextComponents: MsdfTextComponent[] = [];
   const gui3dComponents: Gui3DComponent[] = [];
 
   for (const component of components)
@@ -88,6 +92,9 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
       case "PARTICLE":
         particleComponents.push(component);
         break;
+      case "MSDF_TEXT":
+        msdfTextComponents.push(component);
+        break;
       case "GUI3D_BUTTON":
       case "GUI3D_HOLO":
       case "GUI3D_TOUCH_HOLO":
@@ -104,7 +111,7 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
 
   return {
     collider, body, scripts, audioComponents, constraintComponents,
-    guiComponents, particleComponents, gui3dComponents,
+    guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
   };
 }
 
@@ -200,7 +207,7 @@ function ApplyComponents(
 {
   const {
     collider, body, scripts, audioComponents, constraintComponents,
-    guiComponents, particleComponents, gui3dComponents,
+    guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
   } = ClassifyComponents(entity, entityData.components);
 
   if (collider !== undefined || body !== undefined)
@@ -250,6 +257,11 @@ function ApplyComponents(
   for (const particleComponent of particleComponents)
   {
     context.particleTasks.push(ApplyParticles(entity, particleComponent, context.baseUrl));
+  }
+
+  for (const msdfTextComponent of msdfTextComponents)
+  {
+    context.msdfTextTasks.push(ApplyMsdfText(entity, msdfTextComponent, context.baseUrl));
   }
 
   // 3D GUI needs panels before child controls and resolvable click targets,

@@ -118,6 +118,19 @@ def _check_media(obj, warnings):
             elif not os.path.isfile(bpy.path.abspath(comp.particle_file)):
                 warnings.append(
                     f"{obj.name}: particle file not found: {comp.particle_file}")
+        elif comp.comp_type == 'MSDF_TEXT':
+            if not comp.msdf_text:
+                warnings.append(f"{obj.name}: MSDF Text component has no text")
+            if not comp.msdf_font_json:
+                warnings.append(f"{obj.name}: MSDF Text component has no font JSON")
+            elif not os.path.isfile(bpy.path.abspath(comp.msdf_font_json)):
+                warnings.append(
+                    f"{obj.name}: MSDF font JSON not found: {comp.msdf_font_json}")
+            if not comp.msdf_font_texture:
+                warnings.append(f"{obj.name}: MSDF Text component has no font texture")
+            elif not os.path.isfile(bpy.path.abspath(comp.msdf_font_texture)):
+                warnings.append(
+                    f"{obj.name}: MSDF font texture not found: {comp.msdf_font_texture}")
 
 
 def _check_gui3d(obj, warnings):
@@ -298,6 +311,45 @@ def _check_active_camera(scene, warnings):
             "fallback orbit camera")
 
 
+def _check_volumetric_light_scattering(scene, warnings):
+    """Volumetric light scattering sources must be renderable or the runtime falls back."""
+    post = scene.bjs_scene.post
+    if not post.use_vls:
+        return
+    lightSource = post.vls_light_source
+    if lightSource is None:
+        return
+    if not _is_renderable(lightSource):
+        warnings.append(
+            f"Volumetric Light Scattering light source '{lightSource.name}' is "
+            f"render-disabled and won't be exported")
+
+
+def _check_atmosphere(scene, warnings):
+    """Atmosphere needs at least one exported SUN lamp (or a valid Sun Light pick)."""
+    atmosphere = scene.bjs_scene.atmosphere
+    if not atmosphere.use_atmosphere:
+        return
+
+    if atmosphere.sun_light is not None:
+        if not _is_renderable(atmosphere.sun_light):
+            warnings.append(
+                "Atmosphere: Sun Light is render-disabled and won't be exported")
+        elif atmosphere.sun_light.data.type != 'SUN':
+            warnings.append(
+                f"Atmosphere: Sun Light '{atmosphere.sun_light.name}' is not a SUN lamp")
+        return
+
+    has_sun = any(
+        obj.type == 'LIGHT' and obj.data.type == 'SUN' and _is_renderable(obj)
+        for obj in scene.objects
+    )
+    if not has_sun:
+        warnings.append(
+            "Atmosphere: no SUN lamp in the scene — add a Sun light or pick one "
+            "in Sun Light")
+
+
 def validate_scene(context):
     """Run every check over the renderable scene. Returns a list of warning
     strings; an empty list means the export looks clean."""
@@ -320,5 +372,7 @@ def validate_scene(context):
     _check_input_map(scene, warnings)
     _check_duplicate_guids(scene, warnings)
     _check_active_camera(scene, warnings)
+    _check_volumetric_light_scattering(scene, warnings)
+    _check_atmosphere(scene, warnings)
 
     return warnings

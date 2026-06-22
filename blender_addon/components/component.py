@@ -24,7 +24,7 @@ from bpy.types import PropertyGroup, Object
 
 from ..core.ids import ensure_object_id
 from .constants import (
-    COMPONENT_TYPES, GUI_MODES, COLLIDER_SHAPES, BODY_TYPES,
+    COMPONENT_TYPES, GUI_MODES, MSDF_TEXT_ALIGNS, COLLIDER_SHAPES, BODY_TYPES,
     CONSTRAINT_TYPES, CONSTRAINT_AXES, CONSTRAINT_DOF_AXES,
     CONSTRAINT_AXIS_MODES, CUSTOM_AXIS_DEFAULTS,
     CAMERA_TYPES, CAMERA_KEY_SCHEMES, FOLLOW_MODES,
@@ -130,8 +130,8 @@ class BJSComponent(PropertyGroup):
     # --- RIGIDBODY ---
     body_type:       EnumProperty(name="Body Type", items=BODY_TYPES, default='DYNAMIC')
     mass:            FloatProperty(name="Mass", default=1.0, min=0.0)
-    friction:        FloatProperty(name="Friction", default=0.5, min=0.0, max=1.0)
-    restitution:     FloatProperty(name="Restitution (Bounce)", default=0.2, min=0.0, max=1.0)
+    friction:        FloatProperty(name="Friction", default=0.5, min=0.0)
+    restitution:     FloatProperty(name="Restitution (Bounce)", default=0.2, min=0.0)
     linear_damping:  FloatProperty(name="Linear Damping", default=0.0, min=0.0)
     angular_damping: FloatProperty(name="Angular Damping", default=0.0, min=0.0)
     start_asleep:    BoolProperty(name="Start Asleep", default=False,
@@ -186,6 +186,35 @@ class BJSComponent(PropertyGroup):
                                                  "empty uses its position)")
     particle_capacity:  IntProperty(name="Max Particles", default=0, min=0,
                                     description="Override the JSON's capacity (0 = use the file's value)")
+
+    # --- MSDF TEXT ---
+    msdf_text: StringProperty(name="Text", default="",
+                              description="Paragraph text rendered with MSDF")
+    msdf_font_json: StringProperty(name="Font JSON", subtype='FILE_PATH', default="",
+                                   description="MSDF font definition (.json from msdf-bmfont or msdfgen)")
+    msdf_font_texture: StringProperty(name="Font Texture", subtype='FILE_PATH', default="",
+                                      description="MSDF glyph atlas (.png paired with the JSON)")
+    msdf_color: FloatVectorProperty(name="Color", size=4, subtype='COLOR',
+                                    default=(1.0, 1.0, 1.0, 1.0), min=0.0, max=1.0)
+    msdf_thickness: FloatProperty(name="Thickness", default=0.0, min=-0.5, max=0.5,
+                                  description="Overall glyph thickness (-0.5 to 0.5; 0 = font default)")
+    msdf_billboard: BoolProperty(name="Billboard", default=False,
+                                 description="Always face the camera (only parent translation is used)")
+    msdf_billboard_screen: BoolProperty(name="Screen Projected", default=False,
+                                        description="Billboard keeps constant on-screen size")
+    msdf_ignore_depth: BoolProperty(name="Ignore Depth", default=False,
+                                    description="Draw on top of the scene (no depth test)")
+    msdf_stroke_color: FloatVectorProperty(name="Stroke Color", size=4, subtype='COLOR',
+                                           default=(0.0, 0.0, 0.0, 0.0), min=0.0, max=1.0)
+    msdf_stroke_inset: FloatProperty(name="Stroke Inset", default=0.0, min=0.0,
+                                     description="Stroke width inside the glyphs")
+    msdf_stroke_outset: FloatProperty(name="Stroke Outset", default=0.0, min=0.0,
+                                      description="Stroke width outside the glyphs")
+    msdf_text_align: EnumProperty(name="Align", items=MSDF_TEXT_ALIGNS, default='center')
+    msdf_max_width: FloatProperty(name="Max Width", default=0.0, min=0.0,
+                                  description="Wrap width in font units (0 = no wrap)")
+    msdf_line_height: FloatProperty(name="Line Height", default=1.0, min=0.1)
+    msdf_letter_spacing: FloatProperty(name="Letter Spacing", default=1.0, min=0.0)
 
     # --- GUI3D (3D buttons + layout panels) ---
     gui3d_text:    StringProperty(name="Text", default="",
@@ -280,3 +309,9 @@ class BJSComponent(PropertyGroup):
     cam_height:         FloatProperty(name="Height Offset", default=4.0)
     cam_rotation_offset: FloatProperty(name="Rotation Offset", default=0.0,
                                        description="Degrees behind the target")
+    cam_planet_radius: FloatProperty(
+        name="Planet Radius", default=1.0, min=0.001,
+        description="Radius of the globe mesh at world origin (must match your scene scale)")
+    cam_check_collisions: BoolProperty(
+        name="Check Collisions", default=False,
+        description="Use the scene collision system to keep the camera out of geometry")

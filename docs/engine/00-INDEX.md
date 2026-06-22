@@ -35,7 +35,7 @@ TypeScript source): **Load** (manifest → `Level`) · **Physics** (collider →
 Havok body) · **@exposed** (field → Blender → instance) · **Triggers**
 (On-Enter → `OnMessage`) · **Constraints** (component → joint) · **Audio** ·
 **Input** (key → action → behavior) · **Live Link** · **2D GUI** · **Particles**
-· **3D GUI**.
+· **MSDF text** · **3D GUI** · **Atmosphere** (SUN lamp → physical sky).
 
 ## The prose chapters
 
@@ -44,11 +44,11 @@ Havok body) · **@exposed** (field → Blender → instance) · **Triggers**
 3. [Load Pipeline](03-LOAD-PIPELINE.md) — `LevelLoader.Load`, the passes, `FinalizeLevel`
 4. [Scripting](04-SCRIPTING.md) — `Entity`, `Behavior`, `@exposed`, `@inputMap`, Input
 5. [Physics](05-PHYSICS.md) — bodies, constraints, triggers, right-handed import
-6. [Rendering](06-RENDERING.md) — lights, cameras, shadows, scene look
+6. [Rendering](06-RENDERING.md) — lights, cameras, shadows, environment, atmosphere, scene look
 7. [Audio & Animation](07-AUDIO-ANIMATION.md) — sounds, NLA clips, the skinned-mesh rule
 8. [Workflow](08-WORKFLOW.md) — Live Link, the validator, Debug Build, tooling
 9. [Feature Traces](09-FEATURE-TRACES.md) — every feature's Blender → runtime file/function chain
-10. [UI](10-UI.md) — 2D GUI, particles, 3D GUI
+10. [UI](10-UI.md) — 2D GUI, particles, MSDF text, 3D GUI
 
 ## Regenerating
 

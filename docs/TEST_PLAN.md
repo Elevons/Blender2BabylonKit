@@ -80,6 +80,17 @@ testing. v0.29 restructured the repo into npm workspaces (`packages/engine` +
 - **Expect:** level geometry is fogged; the skybox/background stays visible.
   Untick **Skybox Ignores Fog**, re-export → sky washes out with fog again.
 
+  Untick **Skybox Ignores Fog**, re-export → sky washes out with fog again.
+
+### 1.5a Atmosphere
+- **Steps:** add a **Sun** lamp, aim it (e.g. from above). Enable **Atmosphere**
+  under Properties › Scene › Babylon. Enable **Post-Processing → Default Pipeline**
+  and tone mapping. Export and reload.
+- **Expect:** a physically based sky replaces the environment skybox; PBR
+  materials show aerial perspective. Console logs `[bjs] atmosphere enabled`.
+  `level.atmosphere` is set. Re-aim the sun in Blender and re-export → time of
+  day changes. With **Atmosphere** off, the environment skybox behaves as before.
+
 ### 1.6 Debug Build flag (v0.25.1)
 - **Steps:** untick **Debug Build** in the Export panel, export, reload.
   Press **C** and **I**.
@@ -195,14 +206,16 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
 - **5.2 Cameras:** a plain Blender camera frames the view exactly as in
   Blender; a CAMERA component set to ArcRotate orbits a picked target from the
   Blender position; Follow (Orbit + Use Blender Position) trails a moving
-  target.
+  target; Geospatial (planet at world origin, **Planet Radius** matching the
+  mesh) starts at the exported pose and supports drag-to-pan / scroll-to-zoom /
+  right-click tilt when **Attach Controls** is on.
 - **5.3 Exposed vars:** Rotator speed edited per-object in Blender takes
   effect; a LookAt target picked in Blender resolves (object reference);
   PatrolTargets entity list visits each picked empty in order.
 - **5.4 Animation:** an object with 2 NLA strips + Auto Play plays only the
   chosen clip on load (nothing else auto-plays); `ClipSwitcher.ts` cycles clips.
 - **5.5 Sounds/level teardown:** if your app ever calls `level.Dispose()`,
-  sounds stop, constraints release, GUI textures and particle systems dispose,
+  sounds stop, constraints release, GUI textures, MSDF text renderers, and particle systems dispose,
   the 3D GUI manager disposes, and the trigger observer detaches (no
   console errors on a second load).
 - **5.6 Center of mass:** on a tall thin dynamic box (Collider + Dynamic Rigid
@@ -247,6 +260,14 @@ The v0.26.1 style refactor restructured `physics.ts`, `subsystems/cameras/`, and
 ### 6.5 3D Mesh Button
 - **Steps:** add **3D Mesh Button** to a mesh cube (not an empty). Export.
 - **Expect:** the mesh is clickable. Validator warns on non-mesh objects.
+
+### 6.6 MSDF text
+- **Steps:** generate a BMFont MSDF pair (e.g. Roboto via msdf-bmfont). Add
+  **MSDF Text** to an empty at a readable position: set **Text**, pick **Font JSON**
+  and **Font Texture**, try **Billboard** ON. Export, reload.
+- **Expect:** crisp label at the empty's transform; files in `levels/fonts/`.
+  `entity.GetTextRenderer("<json-stem>")` resolves. Validator warns on missing
+  text or font files. Requires instanced-array support (WebGL2).
 
 ## Known risk areas (where a failure is most likely)
 

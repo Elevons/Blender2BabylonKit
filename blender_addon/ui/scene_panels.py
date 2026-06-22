@@ -19,6 +19,10 @@ from .common import draw_export_controls
 from .post_panels import classes as post_panel_classes
 
 
+def _atmosphere(context):
+    return context.scene.bjs_scene.atmosphere
+
+
 class BJS_PT_scene(Panel):
     """Root container panel; the real settings are the child panels."""
     bl_label = "Babylon"
@@ -101,6 +105,48 @@ class BJS_PT_scene_fog(Panel):
             c.prop(s, "fog_density")
 
 
+class BJS_PT_scene_atmosphere(Panel):
+    bl_label = "Atmosphere"
+    bl_idname = "BJS_PT_scene_atmosphere"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "scene"
+    bl_parent_id = "BJS_PT_scene"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    def draw_header(self, context):
+        self.layout.prop(_atmosphere(context), "use_atmosphere", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        atmosphere = _atmosphere(context)
+        layout.active = atmosphere.use_atmosphere
+
+        col = layout.column()
+        col.use_property_split = True
+        col.prop(atmosphere, "sun_light")
+        col.prop(atmosphere, "pbr_sun_intensity")
+        col.prop(atmosphere, "use_luts")
+
+        box = layout.box()
+        box.label(text="Scattering", icon='LIGHT_SUN')
+        scattering = box.column()
+        scattering.use_property_split = True
+        scattering.prop(atmosphere, "multi_scattering_intensity")
+        scattering.prop(atmosphere, "minimum_multi_scattering_intensity")
+        scattering.prop(atmosphere, "ground_albedo")
+        scattering.prop(atmosphere, "peak_rayleigh_scattering")
+        scattering.prop(atmosphere, "mie_scattering_scale")
+        scattering.prop(atmosphere, "ozone_absorption_scale")
+        scattering.prop(atmosphere, "origin_height")
+
+        if atmosphere.use_atmosphere:
+            layout.label(
+                text="Replaces the environment skybox; enable Post-Processing "
+                     "HDR + tone mapping for best results",
+                icon='INFO')
+
+
 class BJS_PT_scene_export(Panel):
     bl_label = "Export"
     bl_idname = "BJS_PT_scene_export"
@@ -117,6 +163,7 @@ classes = (
     BJS_PT_scene,
     BJS_PT_scene_rendering,
     BJS_PT_scene_fog,
+    BJS_PT_scene_atmosphere,
     *post_panel_classes,
     BJS_PT_scene_export,
 )

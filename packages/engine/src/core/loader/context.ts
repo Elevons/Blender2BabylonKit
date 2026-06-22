@@ -26,6 +26,7 @@ export interface LoadContext {
   audioTasks: Promise<unknown>[];
   guiTasks: Promise<unknown>[];
   particleTasks: Promise<unknown>[];
+  msdfTextTasks: Promise<unknown>[];
   triggerRegistrations: TriggerRegistration[];
   constraintRegistrations: ConstraintRegistration[];
   gui3dRegistrations: Gui3DRegistration[];
@@ -51,6 +52,7 @@ export function CreateLoadContext(
     audioTasks: [],
     guiTasks: [],
     particleTasks: [],
+    msdfTextTasks: [],
     triggerRegistrations: [],
     constraintRegistrations: [],
     gui3dRegistrations: [],

@@ -18,7 +18,7 @@ Split by **object vs scene**:
   `core/inspector.py:inspector_object()`, so they all act on the pinned object.
 - **Properties › Scene › "Babylon"** (`ui/scene_panels.py` + `ui/input_panel.py`)
   — scene-wide: rendering (clear/ambient, **Default Environment**, **Show
-  Skybox**, freeze shadows), fog, post-processing, **Input Actions**, and the same
+  Skybox**, freeze shadows), fog, **Atmosphere**, post-processing, **Input Actions**, and the same
   Export controls. Both export blocks call `ui/common.py:draw_export_controls()`
   so they cannot drift.
 
@@ -41,9 +41,9 @@ switch the panel away.
 | `__init__.py` | extension registration order + dev-reload of submodules |
 | `core/` | pure helpers, nothing registered: `ids.py` (GUIDs), `script_parse.py` (`@exposed` / `@inputMap` regex parsing) |
 | `components/` | per-object data model: `component.py` (`BJSComponent`, trigger/click events), `exposed_vars.py`, `object_settings.py`, `clipboard.py`, `constants.py` (all enums) |
-| `scene/` | scene-wide render settings on `Scene.bjs_scene` (`settings.py`, `environment.py` for World Output texture discovery, `post_processing.py` for the nested `post` block) |
+| `scene/` | scene-wide render settings on `Scene.bjs_scene` (`settings.py`, `environment.py` for World Output texture discovery, `atmosphere.py` for physical sky, `post_processing.py` for the nested `post` block) |
 | `input_actions/` | the Input Actions asset end-to-end: `properties.py`, `defaults.py`, `serialize.py`, `operators.py` |
-| `export/` | everything that writes files: `level.py` (orchestrator), `components.py` (component stack → manifest, axis conversion here), `datablocks.py`, `animation.py`, `scene.py`, `post_processing.py`, `assets.py` (`copy_asset`), `validate.py`, `live_link.py` |
+| `export/` | everything that writes files: `level.py` (orchestrator), `components.py` (component stack → manifest, axis conversion here), `datablocks.py`, `animation.py`, `scene.py`, `atmosphere.py`, `post_processing.py`, `assets.py` (`copy_asset`), `validate.py`, `live_link.py` |
 | `operators/` | component verbs (`components.py`), script pick + Sync (`scripts.py`), Validate + Export (`export_ops.py`) |
 | `ui/` | all panels and menus: `view3d_panels.py`, `scene_panels.py`, `post_panels.py`, `input_panel.py`, `component_draw.py`, `common.py`, `menus.py` |
 | `viewport/` | GPU overlays: `collider_preview.py` (manual collider wireframe) |
@@ -56,8 +56,8 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
 1. **Validate** (`export/validate.py:validate_scene`) — warnings surface in the report.
 2. **GUID pass** (`export/level.py`) — `ensure_object_id` (`core/ids.py`) for
    every object that needs one, including *referenced* objects (entity fields,
-   camera targets, trigger/click targets, constraint targets) so references
-   always resolve. Duplicated GUIDs (copy-pasted objects) are re-issued.
+   camera targets, trigger/click targets, constraint targets, VLS light source)
+   so references always resolve. Duplicated GUIDs (copy-pasted objects) are re-issued.
 3. **Write the glb** via Blender's glTF exporter (+Y-up), GUIDs in node extras.
 4. **Build the manifest** — per entity: `serialize_components`
    (`export/components.py`; one dict per component), plus auto-derived
@@ -69,7 +69,8 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
    `find_world_env_node` (`scene/environment.py`) finds one on the active World
    Output chain (sanitized filename under `env/`); **Default Environment** sets
    `useDefault` in the manifest instead of a file; **Show Skybox** /
-   **Skybox Ignores Fog** → `createSkybox` / `skyboxIgnoreFog`; color-grading
+   **Skybox Ignores Fog** → `createSkybox` / `skyboxIgnoreFog` (forced off when
+   **Atmosphere** is on — the addon renders the sky); color-grading
    LUTs → `post/`, audio → `audio/`, GUI layouts → `gui/`, particle systems →
    `particles/`, 3D button images → `gui/`. Each export pass resets path
    reservations so **re-exports overwrite** the same sanitized name (Live Link

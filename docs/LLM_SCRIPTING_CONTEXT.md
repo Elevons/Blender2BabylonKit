@@ -181,7 +181,109 @@ If you only have a node:
 grouping, author a TAG component and read `entity.tag` (or filter in your own
 `@exposed` entity list).
 
-## Physics quick reference
+## Cameras
+
+Cameras are **not** behaviors. By default the Blender scene camera exports as a
+faithful `FreeCamera` with no controls — you see exactly what Blender framed.
+
+To change the camera type, add a **Camera** component on the camera object in
+Blender (not a SCRIPT behavior). The loader builds the requested type from the
+exported pose:
+
+| `cameraType` | Use when |
+|---|---|
+| `FREE` / `UNIVERSAL` | Free-fly inspection; optional key scheme + **Keep Upright** |
+| `ARC` | Orbit a target object (or a point ahead of the exported view) |
+| `FOLLOW` | Track a target — fixed world offset or Babylon FollowCamera orbit |
+| `GEOSPATIAL` | **Globe / planet** at world origin — map-like pan, zoom-to-cursor, tilt |
+
+**Geospatial** (`GEOSPATIAL`): the planet mesh must be centered at world origin;
+set **Planet Radius** to match the mesh radius in scene units. Optional min/max
+zoom and collision checking. Controls attach when **Attach Controls** is on
+(pointer, wheel, keyboard — built into Babylon's `GeospatialCamera`). Do **not**
+write a behavior to recreate globe navigation — author the Camera component
+instead.
+
+Behaviors that need to **drive** an authored Geospatial camera (e.g. fly to a
+marker on click) use `this.scene.activeCamera` after load:
+
+```ts
+import { GeospatialCamera } from "@babylonjs/core/Cameras/geospatialCamera";
+import { Vector3 } from "@babylonjs/core";
+
+const camera = this.scene.activeCamera;
+if (camera instanceof GeospatialCamera)
+{
+  const destination = marker.node.getAbsolutePosition();
+  await camera.flyToPointAsync(destination, 0.5, 1500);
+}
+```
+
+`flyToAsync(yaw?, pitch?, radius?, center?, durationMs?)` animates all four
+properties; any argument can be `undefined` to keep the current value.
+`updateFlyToDestination` redirects an in-flight animation. Movement tuning
+(`movement.zoomSpeed`, `movement.panInertia`, etc.) is on the runtime camera
+object — not exported from Blender today.
+
+For a **script-built** orbit around a moving entity (not a globe), see the
+`camera-follow` recipe — it creates a `UniversalCamera` and sets
+`scene.activeCamera`. Only one active camera per scene.
+
+Post-processing (bloom, SSAO, volumetric light scattering, etc.) attaches to
+`scene.activeCamera` **after** all `OnStart` hooks run. If your behavior creates
+or swaps the active camera in `OnStart`, the exported stack is already on
+whichever camera is active at that moment — you do not get a `Level` handle to
+call `RetargetPostProcessing` from behaviors. Prefer authoring cameras and
+post-processing in Blender when possible.
+
+## Scene look & post-processing
+
+Scene-wide rendering (environment, fog, atmosphere, post-processing) is **not** a behavior
+concern — it is authored under **Properties › Scene › Babylon** and exported in
+`manifest.scene`. Behaviors do not receive `level.post`, `level.atmosphere`, or a `Level` handle.
+
+| Effect | Author in Blender | Behavior role |
+|---|---|---|
+| Environment / IBL | Rendering › Environment | None — IBL only when Atmosphere replaces the skybox |
+| **Atmosphere** (physical sky) | Atmosphere (SUN lamp + scattering) | None — time of day follows the sun lamp direction |
+| Fog | Scene › Fog | None |
+| Default pipeline (bloom, DOF, …) | Post-Processing › Default Pipeline | None |
+| SSAO | Post-Processing › SSAO | None |
+| **Volumetric light scattering** | Post-Processing › Volumetric Light Scattering | None — pick a **Light Source** mesh (sun billboard); empty = default billboard |
+
+**Volumetric light scattering** creates light shafts from a mesh light source via
+Babylon's `VolumetricLightScatteringPostProcess`. Author the sun (or floor glow)
+as a mesh with an emissive/diffuse material in Blender, assign it as **Light
+Source**, enable the panel, and export. The manifest block is
+`scene.postProcessing.volumetricLightScattering` (`lightSource` GUID, `samples`,
+`ratio`, `invert`, optional `customMeshPosition`, `exposure`/`decay`/`weight`/
+`density`). It works with or without Default Pipeline.
+
+**Atmosphere** (`@babylonjs/addons/atmosphere`) provides a physically based sky and
+aerial perspective. Author under **Properties › Scene › Babylon › Atmosphere**:
+enable the panel, add or pick a **Sun Light** (Blender **Sun** lamp), tune
+scattering if needed. Export writes `scene.atmosphere` (`sunLightId` GUID when
+picked, `pbrSunIntensity`, `useLuts`, `multiScatteringIntensity`,
+`minimumMultiScatteringIntensity`, `groundAlbedo`, `physical.*`). When atmosphere
+is on, export forces `environment.createSkybox: false` — the addon renders the
+sky; World/Default Environment IBL still loads for materials. Pair with
+**Post-Processing › Default Pipeline** + tone mapping for HDR. Time of day =
+aim the Sun lamp in Blender and re-export.
+
+Do **not** import `Atmosphere` from `@babylonjs/addons/atmosphere` (or
+`ApplyAtmosphere`) inside behaviors — the loader owns creation and disposal on
+`level.atmosphere`. PBR integration is automatic; you do not wire sky shaders in
+script code.
+
+Do **not** instantiate `VolumetricLightScatteringPostProcess` (or other scene
+post stacks) inside behaviors — that duplicates the loader, fights the exported
+settings, and won't survive level reload. Use `list_scene_entities` to see
+enabled **atmosphere** / **post-processing** and which entity is the sun lamp
+or VLS light source when grounding `@exposed` picks.
+
+Runtime detail: `docs/engine/06-RENDERING.md` (Atmosphere + post-processing).
+
+## Physics
 
 `entity.body` is a Havok V2 `PhysicsBody`. Common calls:
 
@@ -462,6 +564,8 @@ export default class HoverBob extends Behavior
 | Full scripting chapter | `docs/engine/04-SCRIPTING.md` |
 | Physics (bodies, triggers, constraints) | `docs/engine/05-PHYSICS.md` |
 | Load order / when `OnStart` runs | `docs/engine/03-LOAD-PIPELINE.md` |
+| Cameras (component types, Geospatial) | `docs/engine/06-RENDERING.md` |
+| Scene look / atmosphere / post-processing (VLS, bloom, SSAO) | `docs/engine/06-RENDERING.md` · `get_scripting_context(section="scene-look")` |
 | Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.md` |
 | 2D GUI, particles, 3D GUI | `docs/engine/10-UI.md` |
 | Code style | `docs/STYLE_GUIDE.md` |

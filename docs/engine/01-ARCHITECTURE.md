@@ -45,7 +45,7 @@ bjs-level-kit/
       scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts
       input/              #   InputManager · maps/actions/bindings · @inputMap
       subsystems/         #   physics lights cameras/ shadows constraints audio
-                          #   triggers environment fog postprocess animation
+                          #   triggers environment fog atmosphere postprocess animation
   apps/                   # each game is an app; engine reaches it via symlink
     playground/           #   the dev/test app (Vite); template for npm run create
   blender_addon/          # the editor half (Python, Blender 4.2+ extension)

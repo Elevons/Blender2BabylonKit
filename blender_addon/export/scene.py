@@ -10,6 +10,7 @@ from ..input_actions.serialize import serialize_input_asset
 from ..scene.environment import find_world_env_node, world_background_strength
 from .assets import copy_asset, save_image_asset
 from .post_processing import serialize_post_processing
+from .atmosphere import serialize_atmosphere
 
 
 def _round3(c):
@@ -49,7 +50,10 @@ def _environment_skybox_flags(s):
 
 def _serialize_environment(context, output_dir):
     s = context.scene.bjs_scene
+    # Atmosphere renders its own sky — skip the environment skybox.
     skybox_flags = _environment_skybox_flags(s)
+    if s.atmosphere.use_atmosphere:
+        skybox_flags = {"createSkybox": False}
     node = find_world_env_node(context.scene.world)
     if node:
         env_path = _copy_environment(node, output_dir)
@@ -81,6 +85,7 @@ def serialize_scene(context, output_dir):
         "environment": _serialize_environment(context, output_dir),
         "freezeShadows": bool(s.freeze_shadows),
         "fog": None,
+        "atmosphere": None,
         "postProcessing": None,
     }
 
@@ -90,6 +95,7 @@ def serialize_scene(context, output_dir):
             "density": s.fog_density, "start": s.fog_start, "end": s.fog_end,
         }
 
+    data["atmosphere"] = serialize_atmosphere(context)
     data["postProcessing"] = serialize_post_processing(s, output_dir)
     data["inputActions"] = serialize_input_asset(context.scene)
     data["defaultInputMap"] = context.scene.bjs_input_default_map

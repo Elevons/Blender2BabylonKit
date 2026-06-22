@@ -12,6 +12,7 @@ export interface SceneEntitySummary
   script?: string;
   bodyType?: string;
   constraintTypes?: string[];
+  lightType?: string;
 }
 
 export interface SceneSummary
@@ -19,6 +20,8 @@ export interface SceneSummary
   level: string;
   path: string;
   entityCount: number;
+  atmosphere?: string;
+  postProcessing?: string[];
   entities: SceneEntitySummary[];
 }
 
@@ -27,6 +30,7 @@ interface SceneEntityJson
   id: string;
   name: string;
   parent?: string | null;
+  light?: { type: string };
   components?: Array<{
     type: string;
     script?: string;
@@ -36,9 +40,42 @@ interface SceneEntityJson
   }>;
 }
 
+interface AtmosphereJson
+{
+  sunLightId?: string;
+  pbrSunIntensity?: boolean;
+  useLuts?: boolean;
+  multiScatteringIntensity?: number;
+  minimumMultiScatteringIntensity?: number;
+}
+
 interface SceneJson
 {
+  scene?: {
+    atmosphere?: AtmosphereJson | null;
+    postProcessing?: PostProcessingJson | null;
+  };
   entities?: SceneEntityJson[];
+}
+
+interface PostProcessingJson
+{
+  defaultPipeline?: boolean;
+  ssao?: boolean;
+  volumetricLightScattering?: {
+    enabled?: boolean;
+    lightSource?: string | null;
+    samples?: number;
+  };
+  bloom?: { enabled?: boolean };
+  sharpen?: { enabled?: boolean };
+  depthOfField?: { enabled?: boolean };
+  chromaticAberration?: { enabled?: boolean };
+  grain?: { enabled?: boolean };
+  glow?: { enabled?: boolean };
+  vignette?: { enabled?: boolean };
+  colorGrading?: { enabled?: boolean };
+  colorCurves?: { enabled?: boolean };
 }
 
 /** List exported level folder names under the playground public levels directory. */
@@ -120,7 +157,150 @@ function ParseEntity(entity: SceneEntityJson): SceneEntitySummary
     script,
     bodyType,
     constraintTypes: constraintTypes.length > 0 ? constraintTypes : undefined,
+    lightType: entity.light?.type,
   };
+}
+
+function SummarizeAtmosphere(
+  atmosphere: AtmosphereJson | null | undefined,
+  entities: SceneEntitySummary[]
+): string | undefined
+{
+  if (atmosphere === undefined || atmosphere === null)
+  {
+    return undefined;
+  }
+
+  const parts = ["enabled"];
+
+  if (atmosphere.sunLightId !== undefined && atmosphere.sunLightId.length > 0)
+  {
+    const sun = entities.find((entity) => entity.id === atmosphere.sunLightId);
+    parts.push(sun !== undefined ? `sun=${sun.name}` : `sunLightId=${atmosphere.sunLightId}`);
+  }
+  else
+  {
+    const sun = entities.find((entity) => entity.lightType === "SUN");
+    if (sun !== undefined)
+    {
+      parts.push(`sun=${sun.name} (auto)`);
+    }
+  }
+
+  if (atmosphere.pbrSunIntensity !== false)
+  {
+    parts.push("pbrSunIntensity");
+  }
+
+  if (atmosphere.useLuts === false)
+  {
+    parts.push("rayMarching");
+  }
+
+  if (atmosphere.multiScatteringIntensity !== undefined)
+  {
+    parts.push(`multiScattering=${atmosphere.multiScatteringIntensity}`);
+  }
+
+  if (atmosphere.minimumMultiScatteringIntensity !== undefined)
+  {
+    parts.push(`nightAmbient=${atmosphere.minimumMultiScatteringIntensity}`);
+  }
+
+  return parts.join(", ");
+}
+
+function SummarizePostProcessing(
+  post: PostProcessingJson | null | undefined,
+  entities: SceneEntitySummary[]
+): string[] | undefined
+{
+  if (post === undefined || post === null)
+  {
+    return undefined;
+  }
+
+  const enabled: string[] = [];
+
+  if (post.defaultPipeline === true)
+  {
+    enabled.push("defaultPipeline");
+  }
+  if (post.ssao === true)
+  {
+    enabled.push("ssao");
+  }
+  if (post.bloom?.enabled === true)
+  {
+    enabled.push("bloom");
+  }
+  if (post.sharpen?.enabled === true)
+  {
+    enabled.push("sharpen");
+  }
+  if (post.depthOfField?.enabled === true)
+  {
+    enabled.push("depthOfField");
+  }
+  if (post.chromaticAberration?.enabled === true)
+  {
+    enabled.push("chromaticAberration");
+  }
+  if (post.grain?.enabled === true)
+  {
+    enabled.push("grain");
+  }
+  if (post.glow?.enabled === true)
+  {
+    enabled.push("glow");
+  }
+  if (post.vignette?.enabled === true)
+  {
+    enabled.push("vignette");
+  }
+  if (post.colorGrading?.enabled === true)
+  {
+    enabled.push("colorGrading");
+  }
+  if (post.colorCurves?.enabled === true)
+  {
+    enabled.push("colorCurves");
+  }
+
+  const volumetricLightScattering = post.volumetricLightScattering;
+  if (volumetricLightScattering !== undefined && volumetricLightScattering.enabled === true)
+  {
+    let label = "volumetricLightScattering";
+    if (volumetricLightScattering.samples !== undefined)
+    {
+      label += `(samples=${volumetricLightScattering.samples})`;
+    }
+    if (
+      volumetricLightScattering.lightSource !== undefined &&
+      volumetricLightScattering.lightSource !== null
+    )
+    {
+      let lightSourceName: string | undefined;
+      for (const entity of entities)
+      {
+        if (entity.id === volumetricLightScattering.lightSource)
+        {
+          lightSourceName = entity.name;
+          break;
+        }
+      }
+      label += lightSourceName !== undefined
+        ? ` lightSource=${lightSourceName}`
+        : ` lightSource=${volumetricLightScattering.lightSource}`;
+    }
+    else
+    {
+      label += " lightSource=default";
+    }
+    enabled.push(label);
+  }
+
+  return enabled.length > 0 ? enabled : undefined;
 }
 
 /** Load entity summaries from a level's scene.json manifest. */
@@ -133,7 +313,8 @@ export function LoadSceneSummary(level: string, filter?: string): SceneSummary |
   }
 
   const raw = JSON.parse(readFileSync(scenePath, "utf-8")) as SceneJson;
-  let entities = (raw.entities ?? []).map(ParseEntity);
+  const allEntities = (raw.entities ?? []).map(ParseEntity);
+  let entities = allEntities;
 
   if (filter !== undefined && filter.trim().length > 0)
   {
@@ -145,7 +326,8 @@ export function LoadSceneSummary(level: string, filter?: string): SceneSummary |
         entity.componentTypes.some((type) => type.toLowerCase().includes(normalized)) ||
         (entity.script?.toLowerCase().includes(normalized) ?? false) ||
         (entity.constraintTypes?.some((type) => type.toLowerCase().includes(normalized)) ?? false) ||
-        (entity.bodyType?.toLowerCase().includes(normalized) ?? false)
+        (entity.bodyType?.toLowerCase().includes(normalized) ?? false) ||
+        (entity.lightType?.toLowerCase().includes(normalized) ?? false)
     );
   }
 
@@ -153,6 +335,8 @@ export function LoadSceneSummary(level: string, filter?: string): SceneSummary |
     level,
     path: scenePath,
     entityCount: entities.length,
+    atmosphere: SummarizeAtmosphere(raw.scene?.atmosphere, allEntities),
+    postProcessing: SummarizePostProcessing(raw.scene?.postProcessing, allEntities),
     entities,
   };
 }
@@ -163,8 +347,19 @@ export function FormatSceneSummary(summary: SceneSummary, maxEntities = 80): str
     `Level: ${summary.level}`,
     `Manifest: ${summary.path}`,
     `Entities: ${summary.entityCount}`,
-    "",
   ];
+
+  if (summary.atmosphere !== undefined)
+  {
+    lines.push(`Atmosphere: ${summary.atmosphere}`);
+  }
+
+  if (summary.postProcessing !== undefined)
+  {
+    lines.push(`Post-processing: ${summary.postProcessing.join(", ")}`);
+  }
+
+  lines.push("");
 
   const slice = summary.entities.slice(0, maxEntities);
 
@@ -190,6 +385,11 @@ export function FormatSceneSummary(summary: SceneSummary, maxEntities = 80): str
     if (entity.constraintTypes !== undefined)
     {
       parts.push(`constraints=[${entity.constraintTypes.join(", ")}]`);
+    }
+
+    if (entity.lightType !== undefined)
+    {
+      parts.push(`light=${entity.lightType}`);
     }
 
     lines.push(parts.join(" · "));

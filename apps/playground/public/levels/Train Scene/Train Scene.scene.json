@@ -29,9 +29,10 @@
         0.314
       ],
       "density": 0.009999999776482582,
-      "start": 20.0,
-      "end": 75.0
+      "start": 50.0,
+      "end": 150.0
     },
+    "atmosphere": null,
     "postProcessing": {
       "defaultPipeline": true,
       "fxaa": true,
@@ -53,12 +54,33 @@
         "edgeAmount": 0.30000001192092896,
         "colorAmount": 1.0
       },
+      "chromaticAberration": {
+        "enabled": true,
+        "aberrationAmount": 5.0,
+        "radialIntensity": 0.0,
+        "directionX": 0.0,
+        "directionY": 0.0
+      },
       "vignette": {
         "enabled": true,
         "weight": 1.5,
         "stretch": 0.0,
         "centerX": 0.0,
         "centerY": 0.0
+      },
+      "volumetricLightScattering": {
+        "enabled": true,
+        "samples": 100,
+        "ratio": {
+          "postProcessRatio": 1.0,
+          "passRatio": 0.5
+        },
+        "invert": true,
+        "exposure": 0.30000001192092896,
+        "decay": 0.9681500196456909,
+        "weight": 0.5876700282096863,
+        "density": 0.9259999990463257,
+        "lightSource": "7f21703cbcf94f3f9f780310462a068d"
       }
     },
     "inputActions": {
@@ -239,6 +261,17 @@
                   "control": "d"
                 }
               ]
+            },
+            {
+              "name": "Reset",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "r"
+                }
+              ]
             }
           ]
         }
@@ -294,8 +327,8 @@
         "castShadows": true,
         "shadow": {
           "mapSize": 8092,
-          "bias": 0.004999999888241291,
-          "normalBias": 0.05000000074505806,
+          "bias": 0.0010000000474974513,
+          "normalBias": 0.019999999552965164,
           "darkness": 0.0,
           "minZ": 0.0,
           "maxZ": 0.0,
@@ -304,6 +337,37 @@
           "frustumEdgeFalloff": 1.0
         }
       }
+    },
+    {
+      "id": "26d5f836ea084df0a0bb9a732d85d6ff",
+      "name": "Cube",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        }
+      ]
     },
     {
       "id": "63576202f6b845c3a193853a9aab8303",
@@ -1516,9 +1580,9 @@
           "path": "//../src/behaviors/TrainCamera.ts",
           "vars": {
             "target": "7fe725f6d257495ba4ef2c5d87d43c2e",
-            "orbitSpeed": 10.0,
-            "radius": 30.0,
-            "heightOffset": 10.0
+            "orbitSpeed": 5.0,
+            "radius": 45.0,
+            "heightOffset": 15.0
           }
         }
       ],
@@ -1527,7 +1591,7 @@
         "clipStart": 0.10000000149011612,
         "clipEnd": 10000.0,
         "active": true,
-        "fov": 0.4710899591445923
+        "fov": 1.3494819402694702
       }
     },
     {
@@ -1562,7 +1626,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 1.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
@@ -1575,12 +1639,13 @@
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
           "vars": {
-            "frontLeftWheel": "3490216e0eac41fa931580ab6990fc4d",
+            "frontLeftWheel": "52692d0cfcbd4cf8baeccf084eaafdf1",
             "frontRightWheel": "8ea4451f912645849da070d9721f384c",
             "rearLeftWheel": "476ea48843c64b8a8bca8104e9861c35",
             "rearRightWheel": "d9e916b3045c4410b4d17d0cea10d61a",
-            "speed": 1000.0,
-            "force": 100.0
+            "speed": 2000.0,
+            "force": 20000.0,
+            "body": "7fe725f6d257495ba4ef2c5d87d43c2e"
           }
         }
       ]
@@ -1617,7 +1682,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 1.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
@@ -1678,8 +1743,8 @@
               "mode": "spring",
               "min": 3.0,
               "max": 3.0,
-              "stiffness": 1000.0,
-              "damping": 10.0
+              "stiffness": 5000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Y",
@@ -1799,7 +1864,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 1.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
@@ -1860,8 +1925,8 @@
               "mode": "spring",
               "min": 3.0,
               "max": 3.0,
-              "stiffness": 1000.0,
-              "damping": 10.0
+              "stiffness": 5000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Y",
@@ -1880,6 +1945,72 @@
               "damping": 10.0
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "52692d0cfcbd4cf8baeccf084eaafdf1",
+      "name": "Cylinder.016",
+      "parent": "eab7b2262bb342a883df3f7923e4af50",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            -0.163516104221344,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "eab7b2262bb342a883df3f7923e4af50",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
         }
       ]
     },
@@ -1915,7 +2046,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 1.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
@@ -1976,8 +2107,8 @@
               "mode": "spring",
               "min": 3.0,
               "max": 3.0,
-              "stiffness": 1000.0,
-              "damping": 10.0
+              "stiffness": 5000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Y",
@@ -2097,7 +2228,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 1.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
@@ -2158,8 +2289,8 @@
               "mode": "spring",
               "min": 3.0,
               "max": 3.0,
-              "stiffness": 1000.0,
-              "damping": 10.0
+              "stiffness": 5000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Y",
@@ -2196,7 +2327,7 @@
             1.222508430480957,
             1.2225080728530884
           ],
-          "radius": 0.6112540364265442,
+          "radius": 0.6112539768218994,
           "height": 0.5025084614753723,
           "center": [
             0.1599999964237213,
@@ -2213,7 +2344,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 0.10000000149011612,
+          "mass": 1.0,
           "friction": 1.0,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
@@ -2248,9 +2379,255 @@
       ]
     },
     {
-      "id": "52692d0cfcbd4cf8baeccf084eaafdf1",
-      "name": "Cylinder.016",
-      "parent": "eab7b2262bb342a883df3f7923e4af50",
+      "id": "966546ce82cd47c2b2819c01dfda7906",
+      "name": "Body.007",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "7fe725f6d257495ba4ef2c5d87d43c2e",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "spring",
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "300cb5cb1fb0441c92c6c65539657c7f",
+            "frontRightWheel": "101693f6544c4705917e9d37b025ce22",
+            "rearLeftWheel": "9fe0910e9eb346179fdddf5f0d308fa3",
+            "rearRightWheel": "686a419fdc6c44cfad72357ed236ce51",
+            "speed": 2000.0,
+            "force": 20000.0,
+            "body": "966546ce82cd47c2b2819c01dfda7906"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2f6b9c6a274d4b1d982f1e20ac634a97",
+      "name": "Cylinder.014",
+      "parent": "966546ce82cd47c2b2819c01dfda7906",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "966546ce82cd47c2b2819c01dfda7906",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9fe0910e9eb346179fdddf5f0d308fa3",
+      "name": "Cylinder.028",
+      "parent": "2f6b9c6a274d4b1d982f1e20ac634a97",
       "components": [
         {
           "type": "COLLIDER",
@@ -2280,7 +2657,73 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 1.0,
-          "friction": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "2f6b9c6a274d4b1d982f1e20ac634a97",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "09834035c8ab42f48fccf7cd40731691",
+      "name": "Cylinder.030",
+      "parent": "966546ce82cd47c2b2819c01dfda7906",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
           "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -2289,8 +2732,2204 @@
         },
         {
           "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "966546ce82cd47c2b2819c01dfda7906",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "651502f45b2f48d899ccc9562707ccac",
+      "name": "Cylinder.031",
+      "parent": "966546ce82cd47c2b2819c01dfda7906",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "966546ce82cd47c2b2819c01dfda7906",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "101693f6544c4705917e9d37b025ce22",
+      "name": "Cylinder.033",
+      "parent": "651502f45b2f48d899ccc9562707ccac",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            0.1599999964237213,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
           "constraintType": "HINGE",
-          "target": "eab7b2262bb342a883df3f7923e4af50",
+          "target": "651502f45b2f48d899ccc9562707ccac",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "0889280b29514383b562ed04e15bfa20",
+      "name": "Cylinder.036",
+      "parent": "966546ce82cd47c2b2819c01dfda7906",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "966546ce82cd47c2b2819c01dfda7906",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "686a419fdc6c44cfad72357ed236ce51",
+      "name": "Cylinder.040",
+      "parent": "0889280b29514383b562ed04e15bfa20",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112539768218994,
+          "height": 0.5025084614753723,
+          "center": [
+            0.1599999964237213,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "651502f45b2f48d899ccc9562707ccac",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "300cb5cb1fb0441c92c6c65539657c7f",
+      "name": "Cylinder.041",
+      "parent": "09834035c8ab42f48fccf7cd40731691",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            -0.163516104221344,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "09834035c8ab42f48fccf7cd40731691",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "bed2a0670b02470986736aec09487b30",
+      "name": "Body.008",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "966546ce82cd47c2b2819c01dfda7906",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "spring",
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "de178c01d9a44074bee658d00ca823e4",
+            "frontRightWheel": "a74f00aa1927425d8c22e2240dcfe10a",
+            "rearLeftWheel": "f9ae52c255e24869ac9766be503aea2d",
+            "rearRightWheel": "4d0b35a7dceb45dc8964a846bd554bc6",
+            "speed": 2000.0,
+            "force": 20000.0,
+            "body": "bed2a0670b02470986736aec09487b30"
+          }
+        }
+      ]
+    },
+    {
+      "id": "1e7db8c3f3d84501afbaf6b11c1907b0",
+      "name": "Cylinder.008",
+      "parent": "bed2a0670b02470986736aec09487b30",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bed2a0670b02470986736aec09487b30",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f9ae52c255e24869ac9766be503aea2d",
+      "name": "Cylinder.023",
+      "parent": "1e7db8c3f3d84501afbaf6b11c1907b0",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            -0.163516104221344,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "1e7db8c3f3d84501afbaf6b11c1907b0",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "53d0eff2926a45618bf4c0557059075d",
+      "name": "Cylinder.027",
+      "parent": "bed2a0670b02470986736aec09487b30",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bed2a0670b02470986736aec09487b30",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "93c0c5c0d54e46feb3890816725097df",
+      "name": "Cylinder.035",
+      "parent": "bed2a0670b02470986736aec09487b30",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bed2a0670b02470986736aec09487b30",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a74f00aa1927425d8c22e2240dcfe10a",
+      "name": "Cylinder.038",
+      "parent": "93c0c5c0d54e46feb3890816725097df",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            0.1599999964237213,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "93c0c5c0d54e46feb3890816725097df",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "b743c4153883438ca7a0ccd95fbb085a",
+      "name": "Cylinder.039",
+      "parent": "bed2a0670b02470986736aec09487b30",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bed2a0670b02470986736aec09487b30",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4d0b35a7dceb45dc8964a846bd554bc6",
+      "name": "Cylinder.044",
+      "parent": "b743c4153883438ca7a0ccd95fbb085a",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112539768218994,
+          "height": 0.5025084614753723,
+          "center": [
+            0.1599999964237213,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "93c0c5c0d54e46feb3890816725097df",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "de178c01d9a44074bee658d00ca823e4",
+      "name": "Cylinder.045",
+      "parent": "53d0eff2926a45618bf4c0557059075d",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            -0.163516104221344,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "53d0eff2926a45618bf4c0557059075d",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "37f8f3b2d5754788947f1277bfb465ea",
+      "name": "Body.009",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bed2a0670b02470986736aec09487b30",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "spring",
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "limited",
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "4b65ed9caa2e48149c8c0ccbc4470406",
+            "frontRightWheel": "1a7cd9cc73614654a242302a2666f238",
+            "rearLeftWheel": "bd78377ba0b04e3aa78d3450159ff978",
+            "rearRightWheel": "202fcf95fbd44a1dbc00296508d025b7",
+            "speed": 2000.0,
+            "force": 20000.0,
+            "body": "37f8f3b2d5754788947f1277bfb465ea"
+          }
+        }
+      ]
+    },
+    {
+      "id": "633e6521494d40babce505d8dcd18458",
+      "name": "Cylinder.046",
+      "parent": "37f8f3b2d5754788947f1277bfb465ea",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "37f8f3b2d5754788947f1277bfb465ea",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bd78377ba0b04e3aa78d3450159ff978",
+      "name": "Cylinder.047",
+      "parent": "633e6521494d40babce505d8dcd18458",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            -0.163516104221344,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "633e6521494d40babce505d8dcd18458",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "30f5cee72a3d43efaa884bc297207adf",
+      "name": "Cylinder.048",
+      "parent": "37f8f3b2d5754788947f1277bfb465ea",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "37f8f3b2d5754788947f1277bfb465ea",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d074934c629a44f5b87848d047b42d0f",
+      "name": "Cylinder.049",
+      "parent": "37f8f3b2d5754788947f1277bfb465ea",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "37f8f3b2d5754788947f1277bfb465ea",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 10.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1a7cd9cc73614654a242302a2666f238",
+      "name": "Cylinder.050",
+      "parent": "d074934c629a44f5b87848d047b42d0f",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            0.1599999964237213,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "d074934c629a44f5b87848d047b42d0f",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "f4b9bc76bbe44a1595370b40a14b2d1c",
+      "name": "Cylinder.051",
+      "parent": "37f8f3b2d5754788947f1277bfb465ea",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": false,
+          "autoFit": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "37f8f3b2d5754788947f1277bfb465ea",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": 3.0,
+              "max": 3.0,
+              "stiffness": 5000.0,
+              "damping": 100.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "202fcf95fbd44a1dbc00296508d025b7",
+      "name": "Cylinder.052",
+      "parent": "f4b9bc76bbe44a1595370b40a14b2d1c",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112539768218994,
+          "height": 0.5025084614753723,
+          "center": [
+            0.1599999964237213,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "d074934c629a44f5b87848d047b42d0f",
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "4b65ed9caa2e48149c8c0ccbc4470406",
+      "name": "Cylinder.053",
+      "parent": "30f5cee72a3d43efaa884bc297207adf",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "autoFit": false,
+          "size": [
+            0.49594199657440186,
+            1.222508430480957,
+            1.2225080728530884
+          ],
+          "radius": 0.6112540364265442,
+          "height": 0.5025084614753723,
+          "center": [
+            -0.163516104221344,
+            -1.1920928955078125e-07,
+            -5.960464477539063e-08
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1.0,
+          "friction": 5.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "30f5cee72a3d43efaa884bc297207adf",
           "pivot": [
             0.0,
             0.0,

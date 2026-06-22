@@ -37,6 +37,11 @@ def _referenced_ids(context):
                 rid = ref.get(ID_KEY)
                 if rid:
                     ids.add(rid)
+    volumetricLightSource = context.scene.bjs_scene.post.vls_light_source
+    if volumetricLightSource is not None:
+        lightSourceId = volumetricLightSource.get(ID_KEY)
+        if lightSourceId:
+            ids.add(lightSourceId)
     return ids
 
 
@@ -72,6 +77,9 @@ def _ensure_entity_ids(context):
             for ref in iter_referenced_objects(comp):
                 if _is_renderable(ref):
                     ensure_object_id(ref)
+    volumetricLightSource = context.scene.bjs_scene.post.vls_light_source
+    if volumetricLightSource is not None and _is_renderable(volumetricLightSource):
+        ensure_object_id(volumetricLightSource)
 
 
 def _build_manifest(context, glb_filename, output_dir):

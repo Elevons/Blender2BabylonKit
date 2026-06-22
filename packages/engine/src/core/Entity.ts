@@ -6,6 +6,7 @@ import type {
   IParticleSystem,
 } from "@babylonjs/core";
 import type { AdvancedDynamicTexture, Control3D } from "@babylonjs/gui";
+import type { TextRenderer } from "@babylonjs/addons/msdfText";
 // Type-only import: Entity references Behavior, Behavior references Entity.
 // `import type` erases at compile time, so the cycle is harmless at runtime.
 import type { Behavior } from "../scripting/Behavior";
@@ -35,6 +36,8 @@ export class Entity
   controls3D: Control3D[] = [];
   /** Particle systems created from PARTICLE components. */
   particleSystems: IParticleSystem[] = [];
+  /** MSDF text renderers created from MSDF_TEXT components. */
+  textRenderers: TextRenderer[] = [];
 
   constructor(id: string, name: string, node: TransformNode)
   {
@@ -153,6 +156,25 @@ export class Entity
     return this.particleSystems.find((system) => system.name.toLowerCase().includes(wanted));
   }
 
+  /** Find one of this entity's MSDF text renderers by font file stem (exact, then contains). */
+  GetTextRenderer(fontName: string): TextRenderer | undefined
+  {
+    const wanted = fontName.toLowerCase();
+    const attachments = this.GetAttachmentsOfType("MSDF_TEXT");
+
+    const exactMatch = attachments.find(
+      (attachment) => FontJsonStem(attachment.data.fontJson).toLowerCase() === wanted
+    );
+    if (exactMatch !== undefined)
+    {
+      return exactMatch.renderer;
+    }
+
+    return attachments.find(
+      (attachment) => FontJsonStem(attachment.data.fontJson).toLowerCase().includes(wanted)
+    )?.renderer;
+  }
+
   /** Deliver a message to every behavior on this entity (their OnMessage hook). */
   SendMessage(message: string, source: Entity): void
   {
@@ -168,4 +190,10 @@ export class Entity
       }
     }
   }
+}
+
+/** Manifest font JSON path → file stem for GetTextRenderer lookup. */
+function FontJsonStem(fontJson: string | null | undefined): string
+{
+  return fontJson?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? "";
 }

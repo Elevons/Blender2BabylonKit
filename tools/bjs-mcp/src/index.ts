@@ -25,7 +25,7 @@ import { FormatSceneSummary, ListLevels, LoadSceneSummary } from "./scene.js";
 
 const server = new McpServer({
   name: "bjs-level-kit",
-  version: "1.2.0",
+  version: "1.2.1",
 });
 
 // --- Resources -------------------------------------------------------------
@@ -170,7 +170,7 @@ server.tool(
 
 server.tool(
   "list_scene_entities",
-  "List entities from a level scene.json manifest — names, tags, component types, scripts. Ground @exposed entity picks.",
+  "List entities from a level scene.json manifest — names, tags, component types, scripts, light types, and enabled scene atmosphere / post-processing (incl. volumetric light scattering). Ground @exposed entity picks.",
   {
     level: z
       .string()
@@ -255,13 +255,13 @@ server.tool(
 
 server.tool(
   "get_scripting_context",
-  "Return docs/LLM_SCRIPTING_CONTEXT.md — full contract or one section (exposed, input, physics, lifecycle, etc.).",
+  "Return docs/LLM_SCRIPTING_CONTEXT.md — full contract or one section (exposed, input, physics, cameras, scene-look, lifecycle, etc.).",
   {
     section: z
       .string()
       .optional()
       .describe(
-        'Optional section slug, e.g. "exposed", "input", "physics", "lifecycle-methods". Use section="list" to see all. Omit for the full doc.'
+        'Optional section slug, e.g. "exposed", "input", "physics", "cameras", "scene-look". Use section="list" to see all. Omit for the full doc.'
       ),
   },
   async ({ section }) =>

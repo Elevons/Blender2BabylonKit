@@ -57,18 +57,33 @@ exact, intensity scaled) → casting lights collected →
 Camera object → `camera` block (clip/FOV/active) →
 `cameras.ApplyBlenderCamera` onto the glb FreeCamera; active →
 `scene.activeCamera`. CAMERA component → `BuildTypedCamera` per-type builder →
-target bindings via `QueueCameraTargets` → second pass
-`ResolveCameraTargets` (FOLLOW lockedTarget / ARC re-pivot / OFFSET
-`AddUpdater`).
+target bindings via `QueueCameraTargets` (FOLLOW / ARC / OFFSET only) → second
+pass `ResolveCameraTargets` (FOLLOW lockedTarget / ARC re-pivot / OFFSET
+`AddUpdater`). GEOSPATIAL skips the target pass — `BuildGeospatialCamera` derives
+`center` / `yaw` / `pitch` / `radius` from the exported pose and `planetRadius`.
+
+### Atmosphere
+Properties › Scene › Atmosphere (`ui/scene_panels.py`) edits
+`scene.bjs_scene.atmosphere` (`scene/atmosphere.py`) →
+`export/atmosphere.serialize_atmosphere` (optional `sunLightId` GUID; scattering
+tuning) → manifest `scene.atmosphere` → `LevelLoader.FinalizeLevel`:
+`ApplySceneSettings` (env skybox forced off at export when atmosphere is on) →
+`ApplyAtmosphere` (`subsystems/atmosphere.ts`: resolves SUN →
+`DirectionalLight`, optional π intensity for PBR, `@babylonjs/addons/atmosphere`)
+→ `level.atmosphere` (disposed with the level). Time of day follows the sun
+lamp's direction in Blender. See [Rendering — Atmosphere](06-RENDERING.md).
 
 ### Post-processing
 Properties › Scene › Post-Processing (`ui/post_panels.py`) edits
 `scene.bjs_scene.post` (`scene/post_processing.py`) →
 `export/post_processing.serialize_post_processing` (LUTs via `copy_asset` →
-`post/`) → manifest `scene.postProcessing` → `LevelLoader.FinalizeLevel`:
-`ApplySceneSettings` (clear/ambient, env, fog) → … → `Level.Begin` (runtime
-cameras) → `ApplyPostProcessing` (`subsystems/postprocess.ts`, on `scene.activeCamera`) →
-`level.post`. See [Rendering — Scene look](06-RENDERING.md).
+`post/`; VLS `lightSource` GUID + axis-converted `customMeshPosition`) → manifest
+`scene.postProcessing` → `LevelLoader.FinalizeLevel`:
+`ApplySceneSettings` (clear/ambient, env, fog) → `ApplyAtmosphere` (when
+enabled) → … → `Level.Begin` (runtime cameras) → `ApplyPostProcessing` (`subsystems/postprocess.ts`: Default Pipeline
++ SSAO2 + `VolumetricLightScatteringPostProcess` on `scene.activeCamera`,
+resolving `lightSource` via `level.ById`) → `level.post`. See
+[Rendering — Scene look](06-RENDERING.md).
 
 ### Animation autoplay
 NLA strips → `export/animation.serialize_animation` → `animation` block →

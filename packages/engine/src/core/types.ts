@@ -72,7 +72,7 @@ export interface CameraKeys {
 
 export interface CameraComponent {
   type: "CAMERA";
-  cameraType: "FREE" | "UNIVERSAL" | "ARC" | "FOLLOW";
+  cameraType: "FREE" | "UNIVERSAL" | "ARC" | "FOLLOW" | "GEOSPATIAL";
   attachControl: boolean;
   keys: CameraKeys;       // key bindings when controls are attached (not FOLLOW)
   useBlenderTransform: boolean; // FOLLOW/ORBIT: derive radius/height/angle from the exported camera
@@ -81,12 +81,14 @@ export interface CameraComponent {
   speed: number;
   inertia: number;
   radius: number;        // ARC: orbit distance
-  lowerRadius: number;   // ARC: min zoom (0 = none)
-  upperRadius: number;   // ARC: max zoom (0 = none)
+  lowerRadius: number;   // ARC / GEOSPATIAL: min zoom (0 = none)
+  upperRadius: number;   // ARC / GEOSPATIAL: max zoom (0 = none)
   target: string | null; // ARC orbit pivot / FOLLOW target entity GUID
   distance: number;      // FOLLOW: follow distance
   height: number;        // FOLLOW: height offset
   rotationOffset: number;// FOLLOW: angle behind target (deg)
+  planetRadius?: number; // GEOSPATIAL: radius of the globe at world origin
+  checkCollisions?: boolean; // GEOSPATIAL: scene collision avoidance
 }
 
 /** One 6DoF axis in a CUSTOM constraint (constraint-frame coordinates). */
@@ -176,6 +178,29 @@ export interface ParticleComponent {
   attachToEntity: boolean;
   /** Override the JSON's capacity; 0 = keep the file's value. */
   capacity: number;
+}
+
+export interface MsdfTextComponent {
+  type: "MSDF_TEXT";
+  text: string;
+  /** Manifest-relative BMFont JSON ("fonts/roboto-regular.json"). */
+  fontJson: string | null;
+  /** Manifest-relative glyph atlas PNG paired with fontJson. */
+  fontTexture: string | null;
+  color: [number, number, number, number];
+  /** -0.5 to 0.5; 0 = font default. */
+  thickness: number;
+  billboard: boolean;
+  billboardScreenProjected: boolean;
+  ignoreDepth: boolean;
+  strokeColor: [number, number, number, number];
+  strokeInset: number;
+  strokeOutset: number;
+  textAlign: "left" | "center" | "right";
+  /** Wrap width in font units; 0 = no wrap. */
+  maxWidth: number;
+  lineHeight: number;
+  letterSpacing: number;
 }
 
 // ---- 3D GUI components (Babylon's @babylonjs/gui 3D controls + panels) ----
@@ -283,6 +308,7 @@ export type Component =
   | ConstraintComponent
   | GuiComponent
   | ParticleComponent
+  | MsdfTextComponent
   | Gui3DComponent;
 
 export interface ShadowSettings {
@@ -353,6 +379,33 @@ export interface FogInfo {
   density: number;
   start: number;
   end: number;
+}
+
+export interface AtmospherePhysicalInfo {
+  peakRayleighScattering?: [number, number, number];
+  rayleighScatteringScale?: number;
+  mieScatteringScale?: number;
+  mieAbsorptionScale?: number;
+  ozoneAbsorptionScale?: number;
+  planetRadius?: number;
+  atmosphereThickness?: number;
+  originHeight?: number;
+}
+
+/** Physically based sky and aerial perspective (Babylon Atmosphere addon). */
+export interface AtmosphereInfo {
+  /** Entity GUID of the sun lamp. Omit to use the first exported SUN. */
+  sunLightId?: string;
+  /** Set sun intensity to π for PBRMaterials (default true). */
+  pbrSunIntensity?: boolean;
+  /** LUT-based sky/aerial perspective (default true). False = ray marching. */
+  useLuts?: boolean;
+  multiScatteringIntensity?: number;
+  minimumMultiScatteringIntensity?: number;
+  groundAlbedo?: [number, number, number];
+  physical?: AtmospherePhysicalInfo;
+  isLinearSpaceLight?: boolean;
+  isLinearSpaceComposition?: boolean;
 }
 
 export interface BloomInfo {
@@ -439,17 +492,34 @@ export interface SsaoInfo {
   maxZ?: number;
 }
 
+export interface VolumetricLightScatteringInfo {
+  enabled: boolean;
+  /** Entity GUID of the light-source mesh (omit for a runtime default billboard). */
+  lightSource?: string | null;
+  samples?: number;
+  /** Output scale, or `{ postProcessRatio, passRatio }` for split quality. */
+  ratio?: number | { postProcessRatio: number; passRatio: number };
+  invert?: boolean;
+  useCustomMeshPosition?: boolean;
+  /** Babylon Y-up world position. */
+  customMeshPosition?: [number, number, number];
+  exposure?: number;
+  decay?: number;
+  weight?: number;
+  density?: number;
+}
+
 export interface PostProcessingInfo {
-  defaultPipeline: boolean;
-  fxaa: boolean;
+  defaultPipeline?: boolean;
+  fxaa?: boolean;
   msaaSamples?: number;
-  bloom: BloomInfo;
-  ssao: boolean;
+  bloom?: BloomInfo;
+  ssao?: boolean;
   ssaoSettings?: Omit<SsaoInfo, "enabled">;
-  toneMapping: boolean;
+  toneMapping?: boolean;
   toneMappingType?: "STANDARD" | "ACES" | "KHR_PBR_NEUTRAL";
-  exposure: number;
-  contrast: number;
+  exposure?: number;
+  contrast?: number;
   sharpen?: SharpenInfo;
   depthOfField?: DepthOfFieldInfo;
   chromaticAberration?: ChromaticAberrationInfo;
@@ -458,6 +528,7 @@ export interface PostProcessingInfo {
   vignette?: VignetteInfo;
   colorGrading?: ColorGradingInfo;
   colorCurves?: ColorCurvesInfo;
+  volumetricLightScattering?: VolumetricLightScatteringInfo;
 }
 
 export interface SceneInfo {
@@ -465,6 +536,7 @@ export interface SceneInfo {
   ambientColor?: [number, number, number];
   environment?: EnvironmentInfo | null;
   fog?: FogInfo | null;
+  atmosphere?: AtmosphereInfo | null;
   postProcessing?: PostProcessingInfo | null;
   /** Freeze shadow maps after the first render (static-world optimization). */
   freezeShadows?: boolean;

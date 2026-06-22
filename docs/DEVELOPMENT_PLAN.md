@@ -76,4 +76,5 @@ This file is the forward plan only; per-feature design notes live with each item
 | v0.30 | Prefabs phase 1: exporter (prefab artifacts + placements) |
 | v0.31 | Prefabs phase 2: runtime instancing + Spawn/Despawn |
 | v0.32 | (shipped early) GUI + Particles + 3D GUI components; Input mouse support |
+| v0.32+ | MSDF Text component (`MSDF_TEXT` → `@babylonjs/addons` TextRenderer) |
 | v0.33 | Navmesh + NavAgent |

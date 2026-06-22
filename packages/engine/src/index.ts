@@ -20,6 +20,7 @@ export * from "./subsystems/cameras";
 export * from "./subsystems/shadows";
 export * from "./subsystems/environment";
 export * from "./subsystems/fog";
+export * from "./subsystems/atmosphere";
 export * from "./subsystems/postprocess";
 export * from "./subsystems/animation";
 export * from "./subsystems/audio";
@@ -30,3 +31,4 @@ export * from "./subsystems/constraints";
 // UI: 2D GUI layouts (GUI Editor JSON) and the 3D GUI (buttons + panels).
 export * from "./ui/gui2d";
 export * from "./ui/gui3d";
+export * from "./ui/msdfText";
