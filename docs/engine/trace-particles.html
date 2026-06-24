@@ -68,6 +68,7 @@ html, body {
 .tb:hover    { border-color: #c8a84a; color: #e0c878; }
 .tb.on       { border-color: #c8a84a; color: #f0d060; background: #1c1b0e; }
 .tb:disabled { opacity: .3; cursor: default; }
+a.tb         { text-decoration: none; display: inline-block; }
 
 /* Vertical rule between toolbar groups */
 .tsep {
@@ -249,10 +250,14 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Particles</span><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Particles</span><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
 <div id="app">
 
   <div id="toolbar">
+    <div class="tg">
+      <a class="tb" href="../index.html" title="Back to documentation search">← Search</a>
+    </div>
+    <div class="tsep"></div>
     <div class="tg">
       <span class="tlbl">file</span>
       <input id="title-bar" value="untitled diagram" spellcheck="false" title="Click to rename">
@@ -436,19 +441,9 @@ function nodeBounds(padding = 0) {
 }
 
 /**
- * Compute the quadratic-bezier geometry for an edge.
- * Returns { x1, y1, x2, y2, cpx, cpy, mx, my }  (mx/my = midpoint for label placement)
+ * Compute straight-line geometry for an edge.
+ * Returns { x1, y1, x2, y2, mx, my }  (mx/my = midpoint for label placement)
  * or null if either endpoint node is missing from the nodes array.
- *
- * Geometry overview:
- *
- *   source centre ──► unit vector ──► x1/y1 (point on source box wall)
- *                                         ↓  curve
- *   target centre ◄── unit vector ◄── x2/y2 (point on target box wall, + arrowhead gap)
- *                          ↑
- *                     control point lifted above the straight midpoint
- *                     by 18% of the horizontal separation, giving a
- *                     gentle arc that grows with distance.
  */
 function edgeEP(e) {
   const src = nodes.find(n => n.id === e.src);
@@ -464,14 +459,6 @@ function edgeEP(e) {
   const unitX  = dx / length;
   const unitY  = dy / length;
 
-  // Straight-line midpoint between the two centres
-  const midX = (nodeCentreX(src) + nodeCentreX(tgt)) / 2;
-  const midY = (nodeCentreY(src) + nodeCentreY(tgt)) / 2;
-
-  // Arc height: lift the control point above the midpoint.
-  // Using horizontal separation (dx) means wider edges arc higher.
-  const arcLift       = Math.abs(dx) * 0.18;
-  const labelLift     = Math.abs(dx) * 0.09;  // label sits halfway up the arc
   const ARROWHEAD_GAP = 7;
 
   // Where the line exits the source box wall
@@ -485,8 +472,8 @@ function edgeEP(e) {
   return {
     x1: startX,  y1: startY,
     x2: endX,    y2: endY,
-    cpx: midX,   cpy: midY - arcLift,
-    mx:  midX,   my:  midY - labelLift,
+    mx: (startX + endX) / 2,
+    my: (startY + endY) / 2,
   };
 }
 
@@ -815,17 +802,17 @@ function draw() {
     const isAdjacent   = selNodeId && (e.src === selNodeId || e.tgt === selNodeId);
     const lit          = isSelected || isAdjacent;
 
-    // Curve
+    // Straight edge
     ctx.strokeStyle = lit ? '#c8a84a' : '#3a3428';
     ctx.lineWidth   = (lit ? 1.8 : 1) / zoom;
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(ep.x1, ep.y1);
-    ctx.quadraticCurveTo(ep.cpx, ep.cpy, ep.x2, ep.y2);
+    ctx.lineTo(ep.x2, ep.y2);
     ctx.stroke();
 
     // Arrowhead (small filled triangle at the tip)
-    const arrowAngle = Math.atan2(ep.y2 - ep.cpy, ep.x2 - ep.cpx);
+    const arrowAngle = Math.atan2(ep.y2 - ep.y1, ep.x2 - ep.x1);
     const arrowSize  = 9 / zoom;
     ctx.fillStyle = lit ? '#c8a84a' : '#3a3428';
     ctx.beginPath();

@@ -88,7 +88,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 5,
           "x": 260,
-          "y": 190,
+          "y": 220,
           "w": 140,
           "h": 40,
           "label": "level.glb",
@@ -108,7 +108,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 6,
           "x": 260,
-          "y": 290,
+          "y": 300,
           "w": 140,
           "h": 40,
           "label": "level.scene.json",
@@ -128,7 +128,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 7,
           "x": 480,
-          "y": 240,
+          "y": 260,
           "w": 150,
           "h": 40,
           "label": "LevelLoader.Load",
@@ -148,7 +148,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 8,
           "x": 700,
-          "y": 30,
+          "y": 40,
           "w": 140,
           "h": 40,
           "label": "Physics",
@@ -168,7 +168,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 9,
           "x": 700,
-          "y": 110,
+          "y": 340,
           "w": 140,
           "h": 40,
           "label": "Constraints",
@@ -188,7 +188,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 10,
           "x": 700,
-          "y": 190,
+          "y": 400,
           "w": 140,
           "h": 40,
           "label": "Triggers",
@@ -208,7 +208,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 11,
           "x": 700,
-          "y": 270,
+          "y": 100,
           "w": 140,
           "h": 40,
           "label": "Cameras & Lights",
@@ -228,7 +228,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 12,
           "x": 700,
-          "y": 350,
+          "y": 160,
           "w": 140,
           "h": 40,
           "label": "Audio",
@@ -248,7 +248,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 13,
           "x": 700,
-          "y": 430,
+          "y": 460,
           "w": 140,
           "h": 40,
           "label": "Animation",
@@ -268,7 +268,7 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 14,
           "x": 920,
-          "y": 150,
+          "y": 160,
           "w": 140,
           "h": 40,
           "label": "Level",
@@ -288,12 +288,12 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 15,
           "x": 920,
-          "y": 250,
+          "y": 260,
           "w": 140,
           "h": 40,
           "label": "Behaviors",
           "sub": "your scripts",
-          "desc": "One default-export class per file (filename = registry key). Lifecycle: OnStart / OnUpdate(deltaSeconds) / OnDestroy / OnMessage. @exposed fields edited per-object in Blender.",
+          "desc": "InstantiateScripts + ApplyExposedVars during the entity pass; OnStart / OnUpdate / OnDestroy / OnMessage after Level.Begin. One default-export class per file (filename = registry key). @exposed fields edited per-object in Blender.",
           "meta": [
             [
               "Base",
@@ -308,12 +308,12 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 16,
           "x": 920,
-          "y": 350,
+          "y": 360,
           "w": 140,
           "h": 40,
           "label": "Input",
           "sub": "src/input/",
-          "desc": "Unity Input System clone: Action Maps > Actions > Bindings. Scene asset + defaultInputMap from Blender; @inputMap fields and behavior.input injected at load. InputManager.Process/EndFrame driven by Level.",
+          "desc": "Unity Input System clone: Action Maps > Actions > Bindings. InputManager.LoadAsset runs at the start of Load (before the glb append) so @inputMap fields and behavior.input can be injected; Level.Begin enables maps and RunFrame drives Process/EndFrame.",
           "meta": [
             [
               "Module",
@@ -322,6 +322,46 @@ export const ENGINE_AREA_PAGES = {
             [
               "Panel",
               "Input Actions"
+            ]
+          ]
+        },
+        {
+          "id": 17,
+          "x": 700,
+          "y": 220,
+          "w": 140,
+          "h": 40,
+          "label": "UI",
+          "sub": "2D · particles · 3D",
+          "desc": "GUI / PARTICLE / MSDF_TEXT queue async fetches during the entity pass (settled in FinalizeLevel); GUI3D_* registrations build panels and controls after constraints. entity.GetGui / GetParticles / GetControl3D.",
+          "meta": [
+            [
+              "Files",
+              "ui/ · subsystems/particles.ts"
+            ],
+            [
+              "Diagram",
+              "ui.html"
+            ]
+          ]
+        },
+        {
+          "id": 18,
+          "x": 700,
+          "y": 280,
+          "w": 140,
+          "h": 40,
+          "label": "Scene look",
+          "sub": "env · fog · post",
+          "desc": "FinalizeLevel: SetupShadows, ApplySceneSettings (clear/ambient, HDR env, fog), ApplyAtmosphere when enabled, then ApplyPostProcessing on the active camera after Level.Begin.",
+          "meta": [
+            [
+              "Files",
+              "loader/sceneSettings.ts · atmosphere.ts"
+            ],
+            [
+              "Post",
+              "subsystems/postprocess.ts"
             ]
           ]
         }
@@ -338,12 +378,6 @@ export const ENGINE_AREA_PAGES = {
           "src": 2,
           "tgt": 3,
           "label": "warnings"
-        },
-        {
-          "id": 102,
-          "src": 1,
-          "tgt": 3,
-          "label": ""
         },
         {
           "id": 103,
@@ -364,6 +398,12 @@ export const ENGINE_AREA_PAGES = {
           "label": "Ctrl+S"
         },
         {
+          "id": 118,
+          "src": 4,
+          "tgt": 7,
+          "label": "reload"
+        },
+        {
           "id": 106,
           "src": 5,
           "tgt": 7,
@@ -379,7 +419,7 @@ export const ENGINE_AREA_PAGES = {
           "id": 108,
           "src": 7,
           "tgt": 8,
-          "label": ""
+          "label": "entity pass"
         },
         {
           "id": 109,
@@ -397,19 +437,43 @@ export const ENGINE_AREA_PAGES = {
           "id": 111,
           "src": 7,
           "tgt": 11,
-          "label": ""
+          "label": "entity pass"
         },
         {
           "id": 112,
           "src": 7,
           "tgt": 12,
-          "label": "async"
+          "label": "entity pass"
+        },
+        {
+          "id": 119,
+          "src": 7,
+          "tgt": 17,
+          "label": "entity pass"
+        },
+        {
+          "id": 120,
+          "src": 7,
+          "tgt": 18,
+          "label": "finalize"
         },
         {
           "id": 113,
           "src": 7,
           "tgt": 13,
           "label": "finalize"
+        },
+        {
+          "id": 121,
+          "src": 7,
+          "tgt": 16,
+          "label": "LoadAsset"
+        },
+        {
+          "id": 122,
+          "src": 7,
+          "tgt": 15,
+          "label": "entity pass"
         },
         {
           "id": 114,
@@ -421,13 +485,13 @@ export const ENGINE_AREA_PAGES = {
           "id": 115,
           "src": 14,
           "tgt": 15,
-          "label": "OnStart/OnUpdate"
+          "label": "OnStart"
         },
         {
           "id": 116,
           "src": 14,
           "tgt": 16,
-          "label": "attach/update"
+          "label": "Process"
         },
         {
           "id": 117,
@@ -451,7 +515,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Object UI",
           "sub": "ui/view3d_panels",
-          "desc": "Viewport N-panel **Babylon Object**: component list with per-type fields, light/camera/animation child panels. Scene-wide settings (rendering, fog, atmosphere, post, Input Actions, export) live in the **Babylon Scene** N-panel (`ui/scene_panels.py`, `ui/post_panels.py`, `ui/input_panel.py`).",
+          "desc": "Viewport N-panel **Babylon Object**: component list with per-type fields, light/camera/animation child panels. Scene-wide settings live in the **Babylon Scene** N-panel — see Scene block and Input Actions nodes.",
           "meta": [
             [
               "Kind",
@@ -459,7 +523,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Entry",
-              "BJS_PT_components · BJS_PT_scene_export"
+              "BJS_PT_components"
             ]
           ]
         },
@@ -665,13 +729,17 @@ export const ENGINE_AREA_PAGES = {
           "y": 360,
           "w": 150,
           "h": 40,
-          "label": "audio/ files",
+          "label": "Sidecar files",
           "sub": "artifact",
-          "desc": "Sound files copied next to the export so the manifest's relative paths resolve.",
+          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (and patched particle JSON). Stable sanitized names; re-export overwrites.",
           "meta": [
             [
               "Copied by",
               "export/assets.copy_asset"
+            ],
+            [
+              "Particles",
+              "export/particles.py patches URLs"
             ]
           ]
         },
@@ -765,13 +833,13 @@ export const ENGINE_AREA_PAGES = {
           "id": 108,
           "src": 6,
           "tgt": 7,
-          "label": ""
+          "label": "scene block"
         },
         {
           "id": 109,
           "src": 6,
           "tgt": 8,
-          "label": ""
+          "label": "animation"
         },
         {
           "id": 110,
@@ -853,7 +921,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Load(manifestUrl)",
           "sub": "core/LevelLoader.ts",
-          "desc": "The orchestrator; stages live in core/loader/. InputManager.LoadAsset runs after manifest fetch.",
+          "desc": "The orchestrator; stages live in core/loader/. Fetch manifest, then InputManager.LoadAsset, then right-handed glb append.",
           "meta": [
             [
               "Returns",
@@ -989,7 +1057,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
+          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1057,25 +1125,31 @@ export const ENGINE_AREA_PAGES = {
           "id": 101,
           "src": 2,
           "tgt": 3,
-          "label": ""
+          "label": "step 1"
         },
         {
-          "id": 102,
-          "src": 2,
+          "id": 115,
+          "src": 3,
+          "tgt": 13,
+          "label": "step 2"
+        },
+        {
+          "id": 116,
+          "src": 13,
           "tgt": 4,
-          "label": ""
+          "label": "step 3"
         },
         {
-          "id": 103,
-          "src": 2,
+          "id": 117,
+          "src": 4,
           "tgt": 5,
-          "label": ""
+          "label": "step 4"
         },
         {
-          "id": 104,
-          "src": 2,
+          "id": 118,
+          "src": 5,
           "tgt": 6,
-          "label": ""
+          "label": "step 5"
         },
         {
           "id": 105,
@@ -1091,15 +1165,15 @@ export const ENGINE_AREA_PAGES = {
         },
         {
           "id": 107,
-          "src": 2,
+          "src": 6,
           "tgt": 9,
           "label": "after loop"
         },
         {
           "id": 108,
-          "src": 2,
+          "src": 9,
           "tgt": 10,
-          "label": ""
+          "label": "step 7"
         },
         {
           "id": 109,
@@ -1112,12 +1186,6 @@ export const ENGINE_AREA_PAGES = {
           "src": 11,
           "tgt": 12,
           "label": "each render"
-        },
-        {
-          "id": 115,
-          "src": 2,
-          "tgt": 13,
-          "label": ""
         }
       ]
     }
@@ -1270,6 +1338,22 @@ export const ENGINE_AREA_PAGES = {
               "core/Level.ts"
             ]
           ]
+        },
+        {
+          "id": 10,
+          "x": 520,
+          "y": 360,
+          "w": 150,
+          "h": 40,
+          "label": "ResolveObjectReferences",
+          "sub": "second pass",
+          "desc": "After every entity exists: each PendingRef GUID resolves via level.ById and the real Entity is assigned (or placed into its list slot). Runs before Level.Begin.",
+          "meta": [
+            [
+              "File",
+              "loader/entityBuilder.ts"
+            ]
+          ]
         }
       ],
       "edges": [
@@ -1306,8 +1390,14 @@ export const ENGINE_AREA_PAGES = {
         {
           "id": 105,
           "src": 6,
+          "tgt": 10,
+          "label": "defers refs"
+        },
+        {
+          "id": 111,
+          "src": 10,
           "tgt": 7,
-          "label": "refs resolve to"
+          "label": "assigns"
         },
         {
           "id": 106,
@@ -1322,6 +1412,12 @@ export const ENGINE_AREA_PAGES = {
           "label": "reads"
         },
         {
+          "id": 112,
+          "src": 5,
+          "tgt": 8,
+          "label": "@inputMap"
+        },
+        {
           "id": 108,
           "src": 9,
           "tgt": 4,
@@ -1331,7 +1427,7 @@ export const ENGINE_AREA_PAGES = {
           "id": 109,
           "src": 9,
           "tgt": 8,
-          "label": "attach/update"
+          "label": "Process"
         }
       ]
     }
@@ -1417,7 +1513,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Manual path",
           "sub": "BuildManualShape",
-          "desc": "Hand-authored center/size/radius/height/rotation, already Babylon-space (converted at export; viewport preview matches).",
+          "desc": "Hand-authored center/size/radius/height/rotation, already Babylon-space (converted at export; viewport preview matches). No mesh sampling — uses authored dimensions only.",
           "meta": [
             [
               "Rotation",
@@ -1437,11 +1533,27 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Where",
-              "LevelLoader.Load step 2"
+              "before appendSceneAsync"
             ],
             [
               "Guard",
               "NeutralizeGltfRoot"
+            ]
+          ]
+        },
+        {
+          "id": 10,
+          "x": 40,
+          "y": 60,
+          "w": 150,
+          "h": 40,
+          "label": "EnableHavokPhysics",
+          "sub": "precondition",
+          "desc": "Must run before Load — BuildPhysics warns if the Havok plugin is missing. main.ts calls this once at startup.",
+          "meta": [
+            [
+              "File",
+              "subsystems/physics.ts"
             ]
           ]
         },
@@ -1537,7 +1649,13 @@ export const ENGINE_AREA_PAGES = {
           "id": 105,
           "src": 6,
           "tgt": 1,
-          "label": "makes sound"
+          "label": "RH import"
+        },
+        {
+          "id": 109,
+          "src": 10,
+          "tgt": 1,
+          "label": "precondition"
         },
         {
           "id": 106,
@@ -1593,7 +1711,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Cameras",
           "sub": "subsystems/cameras/",
-          "desc": "Mirrors lights: faithful glb FreeCamera + ApplyBlenderCamera (clip, FOV/ortho); exporter flags the active one → scene.activeCamera. No controls by default (faithful playback).",
+          "desc": "Mirrors lights: faithful glb FreeCamera + ApplyBlenderCamera (clip, FOV/ortho); exporter flags the active one → scene.activeCamera. Without a CAMERA component override, the exported camera is used directly.",
           "meta": [
             [
               "Fallback",
@@ -1629,7 +1747,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Shadows",
           "sub": "subsystems/shadows.ts",
-          "desc": "One ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light: filter (PCF/PCSS/Poisson/BlurESM/hard), bias, normalBias, darkness, mapSize, frustum minZ/maxZ on the light, frustumEdgeFalloff, forceBackFaces. Anti-acne defaults: normalBias floor (0.02 sun / 0.03 point-spot) + auto-tightened depth range (autoCalcShadowZBounds on suns, shadowMaxZ = range on point/spot) when not overridden. Static-world freeze (scene flag / freezeShadows) bakes maps once (RENDER_ONCE); level.RefreshShadows() re-arms.",
+          "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
           "meta": [
             [
               "Options",
@@ -1695,7 +1813,7 @@ export const ENGINE_AREA_PAGES = {
           "id": 102,
           "src": 1,
           "tgt": 6,
-          "label": ""
+          "label": "entity pass"
         },
         {
           "id": 103,
@@ -1707,13 +1825,13 @@ export const ENGINE_AREA_PAGES = {
           "id": 104,
           "src": 4,
           "tgt": 6,
-          "label": ""
+          "label": "shadowGenerators"
         },
         {
           "id": 105,
           "src": 5,
           "tgt": 6,
-          "label": "post"
+          "label": "env · fog · atmosphere · post"
         }
       ]
     }
@@ -1747,7 +1865,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyAudio",
           "sub": "subsystems/audio.ts",
-          "desc": "Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Names = file stem.",
+          "desc": "Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Queued in ApplyComponents; promises settled in FinalizeLevel. Names = file stem.",
           "meta": [
             [
               "Legacy Sound class",
@@ -1875,7 +1993,7 @@ export const ENGINE_AREA_PAGES = {
           "id": 103,
           "src": 5,
           "tgt": 6,
-          "label": "groups"
+          "label": "glb clips at load"
         },
         {
           "id": 104,
@@ -1901,7 +2019,7 @@ export const ENGINE_AREA_PAGES = {
   "ui.html": {
     "navLabel": "UI",
     "diagram": {
-      "title": "Babylon Level Kit — UI (2D GUI, particles, 3D GUI)",
+      "title": "Babylon Level Kit — UI (2D GUI, particles, MSDF, 3D GUI)",
       "nodes": [
         {
           "id": 1,
@@ -2115,11 +2233,83 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "SettleTasks",
           "sub": "FinalizeLevel",
-          "desc": "Promise.allSettled for audioTasks, guiTasks, particleTasks, msdfTextTasks — one bad JSON logs a warning; the level still loads. Particle/MSDF wire hooks run immediately after.",
+          "desc": "Promise.allSettled for audioTasks, guiTasks, particleTasks, msdfTextTasks — one bad JSON logs a warning; the level still loads. Particle and MSDF wire hooks run immediately after.",
           "meta": [
             [
               "File",
               "core/LevelLoader.ts"
+            ]
+          ]
+        },
+        {
+          "id": 13,
+          "x": 40,
+          "y": 520,
+          "w": 150,
+          "h": 40,
+          "label": "MSDF_TEXT component",
+          "sub": "Blender",
+          "desc": "bmfont JSON + glyph atlas PNG copied to fonts/ with stable names. Resolution-independent 3D labels via @babylonjs/addons TextRenderer.",
+          "meta": [
+            [
+              "Export",
+              "copy_asset → fonts/"
+            ],
+            [
+              "Validator",
+              "missing font files"
+            ]
+          ]
+        },
+        {
+          "id": 14,
+          "x": 300,
+          "y": 520,
+          "w": 150,
+          "h": 40,
+          "label": "ApplyMsdfText",
+          "sub": "ui/msdfText.ts",
+          "desc": "FontAsset cached per scene; TextRenderer.CreateTextRendererAsync; parent = entity.node. Queued async during ApplyComponents.",
+          "meta": [
+            [
+              "Storage",
+              "entity.textRenderers"
+            ],
+            [
+              "Lookup",
+              "GetTextRenderer(stem)"
+            ]
+          ]
+        },
+        {
+          "id": 15,
+          "x": 560,
+          "y": 520,
+          "w": 150,
+          "h": 40,
+          "label": "WireMsdfTextRendering",
+          "sub": "ui/msdfText.ts",
+          "desc": "After SettleTasks: CollectTextRenderers → level.msdfTextManager (onAfterRenderObservable draw pass).",
+          "meta": [
+            [
+              "Disposal",
+              "level.msdfTextManager"
+            ]
+          ]
+        },
+        {
+          "id": 16,
+          "x": 820,
+          "y": 480,
+          "w": 150,
+          "h": 40,
+          "label": "Behaviors",
+          "sub": "OnMessage target",
+          "desc": "WireClickEvents and trigger colliders both fan out to behavior.OnMessage(message, source) — zero sender-side gameplay code.",
+          "meta": [
+            [
+              "See",
+              "scripting.html"
             ]
           ]
         }
@@ -2131,11 +2321,14 @@ export const ENGINE_AREA_PAGES = {
         { "id": 110, "src": 12, "tgt": 4, "label": "manifest" },
         { "id": 103, "src": 4, "tgt": 10, "label": "async" },
         { "id": 109, "src": 10, "tgt": 11, "label": "wire" },
-        { "id": 104, "src": 5, "tgt": 6, "label": "export" },
-        { "id": 105, "src": 6, "tgt": 7, "label": "post-pass" },
+        { "id": 111, "src": 13, "tgt": 14, "label": "manifest" },
+        { "id": 112, "src": 14, "tgt": 10, "label": "async" },
+        { "id": 113, "src": 10, "tgt": 15, "label": "wire" },
+        { "id": 104, "src": 5, "tgt": 6, "label": "manifest" },
+        { "id": 105, "src": 6, "tgt": 7, "label": "finalize" },
         { "id": 106, "src": 7, "tgt": 8, "label": "controls" },
         { "id": 107, "src": 7, "tgt": 9, "label": "register" },
-        { "id": 108, "src": 8, "tgt": 9, "label": "OnMessage" }
+        { "id": 108, "src": 8, "tgt": 16, "label": "OnMessage" }
       ]
     }
   },
@@ -2172,7 +2365,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Validator",
           "sub": "catch it at export",
-          "desc": "Missing scripts · dangling refs · MESH+DYNAMIC · mesh triggers · events on non-triggers · constraint ends without physics · skinned-mesh components · AREA lights · duplicate GUIDs · missing audio · no camera.",
+          "desc": "Missing scripts · dangling refs · MESH+DYNAMIC · mesh triggers · events on non-triggers · constraint ends without physics · skinned-mesh components · AREA lights · duplicate GUIDs · missing audio · no camera · Input Actions (duplicate names, empty bindings, bad @inputMap, missing Scene Default).",
           "meta": [
             [
               "Runs",
@@ -2263,6 +2456,22 @@ export const ENGINE_AREA_PAGES = {
               "apps/<name>/public/levels/"
             ]
           ]
+        },
+        {
+          "id": 8,
+          "x": 660,
+          "y": 100,
+          "w": 150,
+          "h": 40,
+          "label": "Runtime load",
+          "sub": "main.ts",
+          "desc": "LevelLoader.Load after browser reload. debugEnabled from manifest gates C/I keys and the debugColliders loader option.",
+          "meta": [
+            [
+              "File",
+              "packages/engine/src/core/LevelLoader.ts"
+            ]
+          ]
         }
       ],
       "edges": [
@@ -2276,13 +2485,19 @@ export const ENGINE_AREA_PAGES = {
           "id": 101,
           "src": 1,
           "tgt": 7,
-          "label": "reloads"
+          "label": "serves"
+        },
+        {
+          "id": 106,
+          "src": 1,
+          "tgt": 8,
+          "label": "reload → Load"
         },
         {
           "id": 102,
           "src": 3,
-          "tgt": 7,
-          "label": "gates keys"
+          "tgt": 8,
+          "label": "debugEnabled"
         },
         {
           "id": 103,

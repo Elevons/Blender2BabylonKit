@@ -15,10 +15,10 @@ for code walk-throughs; "Runtime docs →" jumps to the engine packet).
 Blender is the editor. The add-on adds two viewport N-panel tabs — **Babylon
 Object** for the selected object, **Babylon Scene** for scene-wide settings
 (Input Actions, rendering, export) — and writes the two artifacts the
-[runtime](../engine/00-INDEX.md) consumes: `level.glb` (what glTF can express)
+[runtime](../engine/00-INDEX.html) consumes: `level.glb` (what glTF can express)
 and `level.scene.json` (everything else). See
-[Architecture](../engine/01-ARCHITECTURE.md) for the two-artifact split and
-[Blender Add-on](../engine/02-BLENDER-ADDON.md) for the prose module tour.
+[Architecture](../engine/01-ARCHITECTURE.html) for the two-artifact split and
+[Blender Add-on](../engine/02-BLENDER-ADDON.html) for the prose module tour.
 
 ## The pages
 
@@ -41,4 +41,4 @@ renamed/deleted function fails the build loudly — the anti-rot guard. (The
 runtime packet alone is `npm run docs:trace`.)
 
 Full build pipeline, file layout, and how to add traces or diagrams:
-**[Building the documentation](../BUILDING-DOCS.md)**.
+**[Building the documentation](../BUILDING-DOCS.html)**.

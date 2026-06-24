@@ -1975,17 +1975,6 @@
           ]
         },
         {
-          "type": "RIGIDBODY",
-          "bodyType": "DYNAMIC",
-          "mass": 100.0,
-          "friction": 0.5,
-          "restitution": 0.20000000298023224,
-          "linearDamping": 0.10000000149011612,
-          "angularDamping": 0.10000000149011612,
-          "startAsleep": false,
-          "centerOfMassAutoFit": true
-        },
-        {
           "type": "SCRIPT",
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
@@ -1998,6 +1987,17 @@
             "force": 20000.060546875,
             "body": "bc2042e80fcf404e988e0c9160a85b94"
           }
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.10000000149011612,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
         }
       ]
     },

@@ -1,0 +1,219 @@
+<h1>Building the documentation</h1>
+<p>This file describes how the kit's documentation is produced, what to edit, and what is generated. For the product docs themselves, start at <strong>[index.html](index.html)</strong> (searchable landing page) or the <strong>[engine](engine/00-INDEX.html)</strong> / <strong>[Blender](blender/00-INDEX.md)</strong> indexes.</p>
+<hr>
+<h2>Three kinds of documentation</h2>
+<table><thead><tr><th>Kind</th><th>Location</th><th>How it is maintained</th></tr></thead><tbody><tr><td><strong>Interactive HTML</strong></td><td><code>docs/engine/*.html</code>, <code>docs/blender/*.html</code>, <code>docs/index.html</code></td><td><strong>Generated</strong> — diagrams and traces from build scripts + data</td></tr><tr><td><strong>Prose chapters</strong></td><td><code>scripts/docs/prose/content/</code> → <code>docs/engine/</code>, <code>docs/launcher/</code></td><td><strong>Hand-authored HTML fragments</strong> — assembled by <code>build-prose-docs.mjs</code></td></tr><tr><td><strong>Meta markdown</strong></td><td><code>docs/*.md</code> (style guide, test plan, LLM contracts, …)</td><td><strong>Hand-authored</strong> — stays <code>.md</code>; not indexed on the landing page</td></tr><tr><td><strong>This guide</strong></td><td><code>scripts/docs/prose/content/meta/BUILDING-DOCS.html</code> → <code>docs/BUILDING-DOCS.html</code></td><td><strong>HTML fragment</strong> — same prose build as chapters</td></tr></tbody></table>
+<p>The interactive pages are clickable node graphs and step-by-step <strong>code traces</strong> that pull live source from <code>packages/engine/</code> and <code>blender_addon/</code>. Prose chapters are longer-form narrative (architecture, workflow, feature traces in prose) as styled HTML — edit the fragment files directly, not markdown.</p>
+<p>Meta markdown (<code>STYLE_GUIDE.md</code>, <code>DEVELOPMENT_PLAN.md</code>, <code>LLM_*.md</code>, etc.) is for contributors and tooling; it is not converted or indexed on the landing page.</p>
+<hr>
+<h2>Build commands</h2>
+<p>All commands run from the <strong>repository root</strong>.</p>
+<table><thead><tr><th>Command</th><th>What it rebuilds</th></tr></thead><tbody><tr><td><code>npm run docs:build</code></td><td>Everything — engine, Blender, prose, landing page</td></tr><tr><td><code>npm run docs:trace</code></td><td><code>docs/engine/</code> diagrams + traces only</td></tr><tr><td><code>npm run docs:blender</code></td><td><code>docs/blender/</code> diagrams + traces only</td></tr><tr><td><code>npm run docs:prose</code></td><td>Prose chapter HTML only (<code>docs/engine/0*.html</code>, <code>docs/launcher/*.html</code>)</td></tr><tr><td><code>npm run docs:landing</code></td><td><code>docs/index.html</code> only (searchable index)</td></tr></tbody></table>
+<p><code>docs:build</code> is the one to use after any doc change. It runs, in order:</p>
+<ol>
+<li><code>scripts/build-trace-docs.mjs</code> → engine diagrams + traces</li>
+<li><code>scripts/build-blender-docs.mjs</code> → Blender diagrams + traces</li>
+<li><code>scripts/build-prose-docs.mjs</code> → prose chapters</li>
+<li><code>scripts/build-landing.mjs</code> → <code>docs/index.html</code></li>
+</ol>
+<p>The Babylon Launcher can also trigger a build via <code>POST /api/docs/build</code> (see <a href="launcher/01-LAUNCHER.html">launcher docs</a>).</p>
+<hr>
+<h2>Architecture</h2>
+<pre class="mermaid">flowchart LR
+  subgraph sources [&quot;Edit these&quot;]
+    direction TB
+    shell[&quot;diagram-shell.html&quot;]
+    proseShell[&quot;prose-shell.html&quot;]
+    shared[&quot;shared.mjs&quot;]
+    engineAreas[&quot;engine-areas.mjs&quot;]
+    engineTraces[&quot;engine TRACES&quot;]
+    blenderAreas[&quot;blender AREA_PAGES&quot;]
+    blenderTraces[&quot;blender TRACES&quot;]
+    proseContent[&quot;prose/content/&quot;]
+    proseManifest[&quot;prose/manifest.mjs&quot;]
+    topics[&quot;topics.mjs&quot;]
+  end
+
+  subgraph build [&quot;Build scripts&quot;]
+    direction TB
+    buildTrace[&quot;build-trace-docs&quot;]
+    buildBlender[&quot;build-blender-docs&quot;]
+    buildProse[&quot;build-prose-docs&quot;]
+    buildLanding[&quot;build-landing&quot;]
+  end
+
+  subgraph generated [&quot;Generated — do not hand-edit&quot;]
+    direction TB
+    engineHtml[&quot;docs/engine/*.html&quot;]
+    blenderHtml[&quot;docs/blender/*.html&quot;]
+    launcherHtml[&quot;docs/launcher/*.html&quot;]
+    metaHtml[&quot;docs/BUILDING-DOCS.html&quot;]
+    indexHtml[&quot;docs/index.html&quot;]
+  end
+
+  subgraph code [&quot;Read at build time&quot;]
+    direction TB
+    engineSrc[&quot;packages/engine/&quot;]
+    blenderSrc[&quot;blender_addon/&quot;]
+  end
+
+  shell --&gt; buildTrace
+  shared --&gt; buildTrace
+  shared --&gt; buildBlender
+  engineAreas --&gt; buildTrace
+  engineTraces --&gt; buildTrace
+  engineSrc --&gt; buildTrace
+  blenderAreas --&gt; buildBlender
+  blenderTraces --&gt; buildBlender
+  blenderSrc --&gt; buildBlender
+  proseShell --&gt; buildProse
+  proseContent --&gt; buildProse
+  proseManifest --&gt; buildProse
+  buildTrace --&gt; engineHtml
+  buildBlender --&gt; blenderHtml
+  buildProse --&gt; engineHtml
+  buildProse --&gt; launcherHtml
+  buildProse --&gt; metaHtml
+  engineAreas --&gt; buildLanding
+  engineTraces --&gt; buildLanding
+  blenderAreas --&gt; buildLanding
+  blenderTraces --&gt; buildLanding
+  topics --&gt; buildLanding
+  buildTrace --&gt; buildLanding
+  buildBlender --&gt; buildLanding
+  buildProse --&gt; buildLanding
+  buildLanding --&gt; indexHtml</pre>
+<hr>
+<h2>Prose chapters (HTML fragments)</h2>
+<p>Narrative docs (architecture, physics, workflow, launcher guide, …) are <strong>HTML body fragments</strong> edited directly:</p>
+<p><strong><code>scripts/docs/prose/content/engine/01-ARCHITECTURE.html</code></strong> (etc.)</p>
+<p><code>scripts/build-prose-docs.mjs</code> wraps each fragment in <strong><code>docs/_template/prose-shell.html</code></strong> (toolbar, prev/next nav, typography) and writes <strong><code>docs/engine/01-ARCHITECTURE.html</code></strong> (etc.). Register new chapters in <strong><code>scripts/docs/prose/manifest.mjs</code></strong> (<code>PROSE_CHAPTERS</code>) and <strong><code>scripts/docs/topics.mjs</code></strong> (<code>PAGE_TOPICS</code>).</p>
+<p>Fragment files contain only the <code>&lt;article&gt;</code> inner HTML (<code>&lt;h1&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;table&gt;</code>, <code>&lt;pre&gt;</code>, …). Use <code>&lt;pre class=&quot;mermaid&quot;&gt;</code> for diagrams (mermaid.js loads from CDN when present). Link to other chapters with <code>.html</code> paths; contributor meta docs stay <code>.md</code> (<code>STYLE_GUIDE.md</code>, <code>LLM_KERNEL.md</code>, …).</p>
+<hr>
+<h2>Interactive HTML: the shared shell</h2>
+<p>Every diagram and trace page is assembled from one template:</p>
+<p><strong><code>docs/_template/diagram-shell.html</code></strong></p>
+<p>The shell contains the viewer UI (pan/zoom canvas, node panel, toolbar, import/export of diagram JSON). Build scripts inject:</p>
+<ul>
+<li><strong><code>DIAGRAM_DATA</code></strong> — JSON for nodes, edges, title</li>
+<li><strong><code>&lt;title&gt;</code></strong> — page title</li>
+<li><strong>Bottom nav</strong> — links to sibling area/trace pages (engine = blue, Blender = amber)</li>
+<li><strong>Body patches</strong> — resizable side panel; trace pages add a code block panel</li>
+</ul>
+<p>To change viewer behaviour or styling for <strong>all</strong> diagram pages, edit the shell once and run <code>npm run docs:build</code>.</p>
+<p>Assembly lives in <code>scripts/docs/shared.mjs</code> → <code>EmitDiagramPage()</code>.</p>
+<hr>
+<h2>Area diagrams vs code traces</h2>
+<h3>Area diagrams</h3>
+<p>High-level subsystem maps: boxes and arrows, hand-authored content, <strong>no</strong> source extraction.</p>
+<table><thead><tr><th>Side</th><th>Data file</th><th>Output</th></tr></thead><tbody><tr><td>Engine</td><td><code>scripts/docs/engine-areas.mjs</code> → <code>ENGINE_AREA_PAGES</code></td><td><code>docs/engine/index.html</code>, <code>load-pipeline.html</code>, <code>physics.html</code>, …</td></tr><tr><td>Blender</td><td><code>scripts/build-blender-docs.mjs</code> → <code>AREA_PAGES</code></td><td><code>docs/blender/index.html</code>, <code>data-model.html</code>, <code>export.html</code></td></tr></tbody></table>
+<p>Each page entry has:</p>
+<ul>
+<li><strong><code>navLabel</code></strong> (engine only) — short label in the bottom nav</li>
+<li><strong><code>diagram</code></strong> / <strong><code>nodes</code> + <code>edges</code></strong> — graph data (<code>id</code>, <code>x</code>, <code>y</code>, <code>w</code>, <code>h</code>, <code>label</code>, <code>sub</code>, <code>desc</code>, <code>meta</code> rows)</li>
+</ul>
+<p>Blender area pages use helpers <code>N()</code> and <code>E()</code> from <code>shared.mjs</code> for nodes and edges. Engine area pages use plain JSON objects (same shape).</p>
+<h3>Code traces</h3>
+<p>Step-by-step walkthroughs along a feature path. Each step is either:</p>
+<ul>
+<li><strong><code>{ file, symbol, note }</code></strong> — build extracts the function/class from disk</li>
+<li><strong><code>{ title, code, note }</code></strong> — inline snippet (e.g. manifest JSON); no extraction</li>
+</ul>
+<table><thead><tr><th>Side</th><th>Definition</th><th>Source roots</th></tr></thead><tbody><tr><td>Engine</td><td><code>TRACES</code> in <code>scripts/build-trace-docs.mjs</code></td><td><code>packages/engine/</code>, <code>apps/</code> (for examples)</td></tr><tr><td>Blender</td><td><code>TRACES</code> in <code>scripts/build-blender-docs.mjs</code></td><td><code>blender_addon/</code></td></tr></tbody></table>
+<p>Output files are named <strong><code>trace-&lt;id&gt;.html</code></strong> (e.g. <code>trace-physics.html</code>).</p>
+<p>Trace pages use a wider code panel (<code>CODE_PANEL_PATCH_*</code> in <code>shared.mjs</code>). Clicking a step shows the extracted source and file:line.</p>
+<hr>
+<h2>Symbol extraction (anti-rot)</h2>
+<p>Before writing trace HTML, the build <strong>reads the real source</strong> and embeds it in each step:</p>
+<ul>
+<li><strong>TypeScript</strong> — <code>ExtractSymbol()</code> in <code>shared.mjs</code> (functions, classes, <code>const</code> exports; includes JSDoc above the symbol when present)</li>
+<li><strong>Python</strong> — <code>ExtractPySymbol()</code> (function or class body by indentation)</li>
+</ul>
+<p>If a <code>symbol</code> is missing or renamed, the build prints <code>MISSING: …</code>, sets exit code 1, and <strong>does not write</strong> trace pages for that packet. This keeps docs from silently showing stale code.</p>
+<p>After changing a traced function's name or file, update the <code>TRACES</code> array and re-run the appropriate <code>docs:*</code> command.</p>
+<hr>
+<h2>Landing page, topic hub, and search</h2>
+<p><strong><code>docs/index.html</code></strong> is fully generated by <code>scripts/build-landing.mjs</code>.</p>
+<p>It indexes every area diagram, code trace, and prose chapter (from <code>scripts/docs/prose/manifest.mjs</code>), so search stays in sync with the graphs and narrative docs. Features:</p>
+<ul>
+<li><strong>Topic hub</strong> — browse by intent (Physics, Export, Scripting, …) via <code>scripts/docs/topics.mjs</code>; each topic has curated <strong>Start here</strong> links</li>
+<li>Full-text ranking over titles, summaries, and node/step/chapter text</li>
+<li><strong>Synonym map</strong> (<code>SYNONYMS</code> in <code>build-landing.mjs</code>) — e.g. &quot;collision&quot; also matches collider/physics pages; &quot;scale&quot; matches <code>applyObjectScale</code></li>
+<li>Suggestion chips under the search box</li>
+<li><code>?topic=</code> and <code>?q=</code> URL parameters for deep links (e.g. <code>?topic=physics&amp;q=scale</code>)</li>
+</ul>
+<h3>Adding a page to a topic</h3>
+<ol>
+<li>Add or update the page's <code>href</code> in <strong><code>PAGE_TOPICS</code></strong> in</li>
+</ol>
+<p>   <code>scripts/docs/topics.mjs</code> (one or more topic ids).</p>
+<ol>
+<li>If the page should appear in <strong>Start here</strong>, add its <code>href</code> to that topic's</li>
+</ol>
+<p>   <code>startHere</code> array (order matters).</p>
+<ol>
+<li>Run <code>npm run docs:build</code>.</li>
+</ol>
+<p>New prose chapters require an entry in <strong><code>PROSE_CHAPTERS</code></strong> (<code>manifest.mjs</code>) and topic assignment in <strong><code>PAGE_TOPICS</code></strong>. Meta markdown under <code>docs/</code> is not indexed (see <code>KEPT_META_MD</code> in <code>scripts/docs/prose-config.mjs</code>).</p>
+<p>To improve search for a new concept, add synonyms in <code>SYNONYMS</code> or ensure the page's <code>desc</code> / <code>note</code> fields use words people will search for.</p>
+<hr>
+<h2>File reference</h2>
+<table><thead><tr><th>Path</th><th>Role</th></tr></thead><tbody><tr><td><code>scripts/build-docs.mjs</code></td><td>Orchestrator — engine, Blender, prose, landing</td></tr><tr><td><code>scripts/build-prose-docs.mjs</code></td><td>Prose chapter assembly; exports <code>BuildProseDocs</code></td></tr><tr><td><code>scripts/build-trace-docs.mjs</code></td><td>Engine area + trace pages; exports <code>TRACES</code>, <code>BuildEngineDocs</code></td></tr><tr><td><code>scripts/build-blender-docs.mjs</code></td><td>Blender area + trace pages; exports <code>AREA_PAGES</code>, <code>TRACES</code>, <code>BuildBlenderDocs</code></td></tr><tr><td><code>scripts/build-landing.mjs</code></td><td>Searchable <code>docs/index.html</code>; exports <code>BuildLandingPage</code></td></tr><tr><td><code>scripts/docs/prose/manifest.mjs</code></td><td>Prose chapter registry (output paths, prev/next nav)</td></tr><tr><td><code>scripts/docs/prose/content/</code></td><td>Hand-edited HTML body fragments for prose chapters</td></tr><tr><td><code>scripts/docs/topics.mjs</code></td><td>Topic hub categories, start-here links, page → topic map</td></tr><tr><td><code>scripts/docs/shared.mjs</code></td><td>Diagram shell read, page emit, nav HTML, symbol extraction</td></tr><tr><td><code>scripts/docs/engine-areas.mjs</code></td><td>Engine area diagram data only</td></tr><tr><td><code>docs/_template/diagram-shell.html</code></td><td>Shared interactive viewer (CSS + JS)</td></tr><tr><td><code>docs/_template/prose-shell.html</code></td><td>Shared prose chapter layout (CSS + toolbar)</td></tr></tbody></table>
+<hr>
+<h2>Common tasks</h2>
+<h3>Regenerate after a code change</h3>
+<p>If you only changed implementation and trace symbols are unchanged:</p>
+<pre><code class="language-bash">npm run docs:build</code></pre>
+<h3>Add an engine code trace</h3>
+<ol>
+<li>Append an object to <code>TRACES</code> in <code>scripts/build-trace-docs.mjs</code> (<code>id</code>, <code>title</code>,</li>
+</ol>
+<p>   <code>intro</code>, <code>steps</code>).</p>
+<ol>
+<li>Use <code>{ file: &quot;packages/engine/…&quot;, symbol: &quot;FunctionName&quot;, note: &quot;…&quot; }</code> for</li>
+</ol>
+<p>   live extraction.</p>
+<ol>
+<li>Run <code>npm run docs:trace</code> (or <code>docs:build</code>) and fix any <code>MISSING</code> errors.</li>
+<li>Optionally add a prose section in <code>scripts/docs/prose/content/engine/09-FEATURE-TRACES.html</code>.</li>
+</ol>
+<p>The new page appears in the bottom <strong>Traces</strong> nav automatically. The landing page indexes it automatically.</p>
+<h3>Add a Blender code trace</h3>
+<p>Same as above, but edit <code>TRACES</code> in <code>scripts/build-blender-docs.mjs</code> and use <code>blender_addon/…</code> paths. Run <code>npm run docs:blender</code>.</p>
+<h3>Add or edit an area diagram</h3>
+<ul>
+<li><strong>Engine:</strong> edit <code>scripts/docs/engine-areas.mjs</code> (<code>ENGINE_AREA_PAGES</code>).</li>
+<li><strong>Blender:</strong> edit <code>AREA_PAGES</code> in <code>scripts/build-blender-docs.mjs</code>.</li>
+</ul>
+<p>Adjust <code>x</code>/<code>y</code> for layout. Re-run <code>docs:build</code>. Nav labels come from <code>navLabel</code> (engine) or <code>page.title</code> (Blender).</p>
+<h3>Add a prose chapter</h3>
+<ol>
+<li>Create <code>scripts/docs/prose/content/engine/11-MY-TOPIC.html</code> (article body HTML).</li>
+<li>Append an entry to <code>PROSE_CHAPTERS</code> in <code>scripts/docs/prose/manifest.mjs</code>.</li>
+<li>Add <code>href</code> → topics in <code>scripts/docs/topics.mjs</code>; link from <code>00-INDEX.html</code>.</li>
+<li>Run <code>npm run docs:build</code>.</li>
+</ol>
+<h3>Change diagram viewer UI</h3>
+<p>Edit <code>docs/_template/diagram-shell.html</code>, then <code>npm run docs:build</code>.</p>
+<hr>
+<h2>What not to edit</h2>
+<p>These files are <strong>overwritten</strong> on every build:</p>
+<ul>
+<li><code>docs/index.html</code></li>
+<li><code>docs/engine/*.html</code> (including numbered prose chapters)</li>
+<li><code>docs/blender/*.html</code></li>
+<li><code>docs/launcher/*.html</code></li>
+<li><code>docs/BUILDING-DOCS.html</code></li>
+</ul>
+<p><strong>Edit the sources</strong> instead: diagram/trace data in <code>scripts/</code>, prose fragments in <code>scripts/docs/prose/content/</code>. Generated HTML includes a footer pointing at the source fragment.</p>
+<hr>
+<h2>Viewing locally</h2>
+<p>Open <code>docs/index.html</code> in a browser (file:// or via a static server). The playground and launcher can serve <code>/docs</code> after a build. Diagram pages are self-contained single HTML files — no bundler required.</p>
+<hr>
+<h2>Related docs</h2>
+<ul>
+<li><a href="engine/00-INDEX.html">Engine index</a> — runtime overview + prose chapter list</li>
+<li><a href="blender/00-INDEX.md">Blender index</a> — add-on overview</li>
+<li><a href="engine/09-FEATURE-TRACES.html">Feature traces (prose)</a> — parallel text version of trace chains</li>
+<li><a href="STYLE_GUIDE.md">Style guide</a> — code conventions (separate from this build guide)</li>
+</ul>

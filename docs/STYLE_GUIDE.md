@@ -2,7 +2,7 @@
 
 All TypeScript in this project follows C#-inspired conventions for readability.
 Follow these rules when writing or modifying engine code or behaviors. The engine
-guide (`docs/engine/00-INDEX.md`) covers *how the engine works*; this file covers *how
+guide (`docs/engine/00-INDEX.html`) covers *how the engine works*; this file covers *how
 the code is written*.
 
 ---

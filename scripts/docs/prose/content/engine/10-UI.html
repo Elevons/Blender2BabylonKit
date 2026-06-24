@@ -1,0 +1,119 @@
+<h1>10 — UI (2D GUI, particles, MSDF text, 3D GUI)</h1>
+<p>Interactive diagram: <strong>[ui.html](ui.html)</strong> · Traces: <a href="trace-gui.html">2D GUI</a> · <a href="trace-particles.html">Particles</a> · <a href="trace-msdfText.html">MSDF text</a> · <a href="trace-gui3d.html">3D GUI runtime</a> · <a href="../blender/trace-gui3d.html">3D GUI authoring</a></p>
+<p>Engine code lives under <code>packages/engine/src/ui/</code> (2D + 3D GUI + MSDF text) and <code>packages/engine/src/subsystems/particles.ts</code> (particle JSON loading).</p>
+<h2>Overview</h2>
+<p>Three related but distinct UI/media paths share the same loader pattern: <strong>queue async work during the entity pass, settle in {{PH0}}</strong>. 3D GUI is different — it is fully synchronous but deferred to a <strong>post-pass</strong> because panels must exist before child controls and click targets must resolve through the finished <code>Level</code>.</p>
+<pre class="mermaid">flowchart LR
+  subgraph export [Export]
+    GUI_JSON[GUI .json]
+    PART_JSON[Particle .json]
+    MSDF_FONT[MSDF font JSON + PNG]
+    GUI3D[GUI3D_* components]
+  end
+  subgraph manifest [level.scene.json]
+    M_GUI[GUI component]
+    M_PART[PARTICLE component]
+    M_MSDF[MSDF_TEXT component]
+    M_3D[GUI3D_* types]
+  end
+  subgraph load [Runtime load]
+    Apply[ApplyComponents]
+    Final[FinalizeLevel]
+    GUI2D[ApplyGui]
+    PART[ApplyParticles]
+    PARTWIRE[WireParticleEmitterTracking]
+    MSDF[ApplyMsdfText]
+    WIRE[WireMsdfTextRendering]
+    BUILD[BuildGui3DControls]
+  end
+  GUI_JSON --&gt; M_GUI
+  PART_JSON --&gt; M_PART
+  MSDF_FONT --&gt; M_MSDF
+  GUI3D --&gt; M_3D
+  M_GUI --&gt; Apply --&gt; GUI2D --&gt; Final
+  M_PART --&gt; Apply --&gt; PART --&gt; Final --&gt; PARTWIRE
+  M_MSDF --&gt; Apply --&gt; MSDF --&gt; Final --&gt; WIRE
+  M_3D --&gt; Apply --&gt; BUILD --&gt; Final</pre>
+<h2>2D GUI (<code>GUI</code> component)</h2>
+<p>Authored in Blender with a file picker pointing at a layout saved by <a href="https://gui.babylonjs.com">Babylon's GUI Editor</a>. Export copies the JSON into <code>gui/</code> via <code>copy_asset</code> (stable sanitized name; re-export overwrites).</p>
+<table><thead><tr><th>Mode</th><th>Babylon API</th><th>Requirement</th></tr></thead><tbody><tr><td><strong>FULLSCREEN</strong></td><td><code>AdvancedDynamicTexture.CreateFullscreenUI</code></td><td>Any entity node (typically an empty)</td></tr><tr><td><strong>MESH</strong></td><td><code>AdvancedDynamicTexture.CreateForMesh</code></td><td>Entity node must be a mesh</td></tr></tbody></table>
+<p>Runtime: <code>ui/gui2d.ts</code> → <code>ApplyGui</code> → <code>entity.guiTextures</code> + <code>RegisterAttachment</code>. Lookup: <code>entity.GetAttachment(&quot;GUI&quot;)?.texture</code>, <code>entity.GetGui(&quot;hud&quot;)</code> (file stem) → <code>texture.getControlByName(...)</code>.</p>
+<h2>Particles (<code>PARTICLE</code> component)</h2>
+<p>Authored with a file picker for a system saved by <a href="https://particles.babylonjs.com">Babylon's Particle Editor</a> or the Node Particle Editor (<code>.json</code> with <code>BABYLON.NodeParticleSystemSet</code>).</p>
+<h3>Blender authoring</h3>
+<table><thead><tr><th>Field</th><th>Role</th></tr></thead><tbody><tr><td><strong>Particle File</strong></td><td><code>.json</code> copied to <code>particles/</code> on export</td></tr><tr><td><strong>Particle Textures</strong> (list)</td><td>Optional image overrides (see below)</td></tr><tr><td><strong>Use GPU</strong> / <strong>Auto Start</strong> / <strong>Attach to Object</strong> / <strong>Max Particles</strong></td><td>Runtime options (see manifest)</td></tr></tbody></table>
+<p>Each <strong>Particle Textures</strong> row:</p>
+<table><thead><tr><th>Field</th><th>Role</th></tr></thead><tbody><tr><td><strong>Image</strong></td><td>Source file copied into <code>particles/</code> (supports subpaths via <strong>URL in JSON</strong>)</td></tr><tr><td><strong>URL in JSON</strong></td><td>Filename written into the particle JSON (e.g. <code>bubble.png</code>, <code>fx/bubble.png</code>). Empty → exported image basename</td></tr><tr><td><strong>Replace URL</strong></td><td>Only patch blocks whose current URL matches. Empty → auto (first empty block, or the only block)</td></tr></tbody></table>
+<p>Export calls <code>export/particles.py</code> → <code>export_particle_system</code>: copies the JSON, copies texture images, then patches <code>ParticleTextureSourceBlock.url</code> in the <strong>exported</strong> copy (the manifest still only references <code>particles/&lt;stem&gt;.json</code>).</p>
+<h3>Runtime load</h3>
+<p><code>subsystems/particles.ts</code> → <code>LoadParticleSystems</code> (legacy <code>ParticleSystem</code> / GPU, or <code>NodeParticleSystemSet.buildAsync</code>). Before build, <code>ResolveNodeParticleSetTextureUrls</code> rewrites bare filenames in the JSON to absolute URLs beside the file (<code>rootUrl</code>). Options: GPU when supported, <code>autoStart</code>, <code>attachToEntity</code>, optional <code>capacity</code> override.</p>
+<p>When <code>attachToEntity</code> is on:</p>
+<table><thead><tr><th>Entity node</th><th>Emitter</th><th>Follows at runtime</th></tr></thead><tbody><tr><td><strong>Mesh</strong></td><td>the mesh</td><td>yes (Babylon mesh emitter)</td></tr><tr><td><strong>Empty</strong> (<code>TransformNode</code>)</td><td>owned <code>Vector3</code> on the attachment</td><td>yes — <code>WireParticleEmitterTracking</code> copies <code>getAbsolutePosition()</code> each frame before particle sim (<code>level.particleEmitterManager</code>)</td></tr></tbody></table>
+<p>Already-spawned particles still simulate in <strong>world space</strong> unless the particle file sets <code>isLocal: true</code> (local / emitter space in the Particle Editor).</p>
+<p>Lookup: <code>entity.GetAttachment(&quot;PARTICLE&quot;)?.system</code>, <code>entity.GetParticles(&quot;fire&quot;)</code>.</p>
+<h2>MSDF text (<code>MSDF_TEXT</code> component)</h2>
+<p>Authored in Blender with paragraph <strong>Text</strong>, a BMFont <strong>Font JSON</strong>, and the paired glyph atlas <strong>Font Texture</strong> PNG. Generate assets with <a href="https://msdf-bmfont.donmccurdy.com/">msdf-bmfont</a> or <a href="https://github.com/Chlumsky/msdfgen">msdfgen</a>; export copies both into <code>fonts/</code> via <code>copy_asset</code>.</p>
+<p>Runtime: <code>ui/msdfText.ts</code> → <code>FontAsset</code> (cached per scene) + <code>TextRenderer.CreateTextRendererAsync</code> → parent to <code>entity.node</code> → <code>addParagraph</code> with authored align/wrap/stroke/billboard options → <code>entity.textRenderers</code> + <code>RegisterAttachment</code>. After <code>SettleTasks</code>, <code>WireMsdfTextRendering</code> hooks <code>scene.onAfterRenderObservable</code> to call <code>renderer.render(view, projection)</code> for every label (<code>level.msdfTextManager</code>, disposed with the level).</p>
+<p>Lookup: <code>entity.GetAttachment(&quot;MSDF_TEXT&quot;)?.renderer</code>, <code>entity.GetTextRenderer(&quot;roboto-regular&quot;)</code> (JSON file stem). Dynamic copy: <code>clearParagraphs()</code> then <code>addParagraph(...)</code>. Depends on <code>@babylonjs/addons</code> (peer dep, like <code>@babylonjs/gui</code>).</p>
+<h2>3D GUI (<code>GUI3D_*</code> components)</h2>
+<p>No external editor — Blender is the layout tool. <strong>One component per Babylon control type</strong>:</p>
+<table><thead><tr><th>Component</th><th>Babylon class</th><th>Role</th></tr></thead><tbody><tr><td><code>GUI3D_BUTTON</code></td><td><code>Button3D</code></td><td>Text/image on a 3D plate</td></tr><tr><td><code>GUI3D_HOLO</code></td><td><code>HolographicButton</code></td><td>MRTK-style + tooltip</td></tr><tr><td><code>GUI3D_TOUCH_HOLO</code></td><td><code>TouchHolographicButton</code></td><td>+ XR near-touch</td></tr><tr><td><code>GUI3D_MESH</code></td><td><code>MeshButton3D</code></td><td>Entity mesh is the control</td></tr><tr><td><code>GUI3D_STACK</code></td><td><code>StackPanel3D</code></td><td>Row/column layout</td></tr><tr><td><code>GUI3D_SPHERE</code></td><td><code>SpherePanel</code></td><td>Children on a sphere</td></tr><tr><td><code>GUI3D_CYLINDER</code></td><td><code>CylinderPanel</code></td><td>Children on a cylinder</td></tr><tr><td><code>GUI3D_PLANE</code></td><td><code>PlanePanel</code></td><td>Children on a plane</td></tr><tr><td><code>GUI3D_SCATTER</code></td><td><code>ScatterPanel</code></td><td>Randomized scatter layout</td></tr></tbody></table>
+<h3>Hierarchy (Blender parenting)</h3>
+<pre class="mermaid">flowchart TB
+  Panel[Panel empty\nGUI3D_CYLINDER]
+  B1[Button child\nGUI3D_HOLO]
+  B2[Button child\nGUI3D_BUTTON]
+  Panel --&gt; B1
+  Panel --&gt; B2
+  Panel --&gt;|BuildPanels| BP[Babylon panel\nlinkToTransformNode]
+  B1 --&gt;|parentPanel.addControl| BC1[Control in panel layout]
+  B2 --&gt;|parentPanel.addControl| BC2[Control in panel layout]
+  BP --&gt; BC1
+  BP --&gt; BC2</pre>
+<p>Parent button objects under the panel empty (Ctrl+P). Child transforms express <strong>membership only</strong> — the panel arranges controls at runtime. Standalone buttons (no panel parent) are added to the manager root and <code>linkToTransformNode</code>'d to follow their anchor. <code>GUI3D_MESH</code> keeps the mesh's own world placement.</p>
+<h3>Click events</h3>
+<p>Each button's <strong>On Click Events</strong> list (target + message) mirrors trigger collider rows. At runtime <code>WireClickEvents</code> subscribes to <code>onPointerClickObservable</code> and calls <code>target.SendMessage(message, buttonEntity)</code> — behaviors handle it via <code>OnMessage</code>, same as trigger volumes.</p>
+<h3>Build order (critical)</h3>
+<pre class="mermaid">sequenceDiagram
+  participant FL as FinalizeLevel
+  participant B as BuildGui3DControls
+  participant P as CreateGui3DPanel
+  participant C as CreateGui3DControl
+  participant A as ApplyControlContent
+  participant W as WireClickEvents
+  FL-&gt;&gt;B: after BuildConstraints
+  B-&gt;&gt;P: panels: addControl then linkToTransformNode
+  B-&gt;&gt;C: controls: addControl to panel or manager
+  C-&gt;&gt;A: content AFTER addControl
+  A-&gt;&gt;W: click → OnMessage</pre>
+<p>Babylon silently drops button content set before <code>addControl</code> — see <code>ui/gui3d/controls.ts</code>.</p>
+<h3>Runtime API</h3>
+<ul>
+<li><code>level.gui3DManager</code> — shared manager (disposed with level)</li>
+<li><code>entity.controls3D</code> — every control/panel owned by this entity</li>
+<li><code>entity.GetAttachmentsOfType(&quot;GUI3D_BUTTON&quot;)</code> — component rows with <code>control</code> ref</li>
+<li><code>entity.GetControl3D(&quot;StartButton&quot;)</code> — named after the Blender object</li>
+</ul>
+<h2>Loader integration</h2>
+<p>In <code>ApplyComponents</code> (<code>entityBuilder.ts</code>):</p>
+<ul>
+<li><code>GUI</code> → <code>context.guiTasks.push(ApplyGui(...))</code></li>
+<li><code>PARTICLE</code> → <code>context.particleTasks.push(ApplyParticles(...))</code></li>
+<li><code>MSDF_TEXT</code> → <code>context.msdfTextTasks.push(ApplyMsdfText(...))</code></li>
+<li><code>GUI3D_*</code> → <code>context.gui3dRegistrations.push({ entity, component, parentId })</code></li>
+</ul>
+<p>In <code>FinalizeLevel</code> (<code>LevelLoader.ts</code>):</p>
+<ol>
+<li><code>SettleTasks</code> for audio, GUI, particle, and MSDF text promises (<code>allSettled</code>)</li>
+<li><code>WireParticleEmitterTracking</code> → <code>level.particleEmitterManager</code> (when any</li>
+</ol>
+<p>   empty-node emitters exist)</p>
+<ol>
+<li><code>WireMsdfTextRendering</code> → <code>level.msdfTextManager</code> (when any labels exist)</li>
+<li><code>WireTriggerEvents</code></li>
+<li><code>BuildConstraints</code></li>
+<li><code>BuildGui3DControls</code> → <code>level.gui3DManager</code></li>
+<li><code>level.Begin()</code></li>
+</ol>
+<h2>Blender add-on</h2>
+<table><thead><tr><th>Concern</th><th>Module</th></tr></thead><tbody><tr><td>Component types + fields</td><td><code>components/component.py</code> (<code>BJSParticleTexture</code> rows on <code>BJSComponent.particle_textures</code>)</td></tr><tr><td>Particle texture UI</td><td><code>ui/component_draw.py</code> (<code>_draw_particle_textures</code>)</td></tr><tr><td>Texture row operators</td><td><code>operators/components.py</code> (<code>bjs.particle_texture_add/remove</code>)</td></tr><tr><td>Panel + click-event UI</td><td><code>ui/component_draw.py</code> (<code>_draw_click_events</code>)</td></tr><tr><td>Click row operators</td><td><code>operators/components.py</code> (<code>bjs.gui3d_event_add/remove</code>)</td></tr><tr><td>Serialize + copy assets</td><td><code>export/components.py</code> + <code>export/particles.py</code> (<code>export_particle_system</code>) + <code>export/assets.py</code></td></tr><tr><td>Validation</td><td><code>export/validate.py</code> (<code>_check_media</code>, <code>_check_gui3d</code>)</td></tr></tbody></table>

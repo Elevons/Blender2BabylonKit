@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 05 — Physics</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    margin: 0 -4px 8px;
+    background: linear-gradient(#0c0c0a 70%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  #toolbar a {
+    color: #8fa3ff;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  #toolbar a:hover { background: #1a2040; }
+  #toolbar .sep { color: #3a3850; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html">← Search</a>
+    <span class="sep">|</span>
+    <a href="00-INDEX.html">Engine index</a>
+    <span class="sep">|</span>
+    <a href="index.html">Diagrams</a>
+    <span class="sep">|</span>
+    <a href="../blender/index.html">Blender docs</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="04-SCRIPTING.html">Prev</a> <span class="dim">·</span> <a href="06-RENDERING.html">Next →</a></p>
+  <article><h1>05 — Physics: bodies, constraints, triggers</h1>
+<p>All in <code>subsystems/physics.ts</code>, <code>constraints.ts</code>, <code>triggers.ts</code>. Havok <strong>V2</strong>. <code>EnableHavokPhysics(scene)</code> must run before <code>Load</code>.</p>
+<h2>Bodies (<code>BuildPhysics</code>)</h2>
+<p>One or more COLLIDER components and/or one RIGIDBODY → one node-attached <code>PhysicsBody</code>: collider-only = static/trigger; rigidbody-only = dynamic + auto-fit box; both = shape from collider(s), dynamics from body.</p>
+<h3>Multiple colliders (compound body)</h3>
+<p>An entity may carry <strong>more than one</strong> enabled COLLIDER component. Export writes each as its own manifest row; at load time <code>ClassifyComponents</code> collects them all and <code>BuildPhysics</code> builds a <strong><code>PhysicsShapeContainer</code></strong> (Havok compound shape): each collider becomes a child shape with its own center/size/rotation, material, and trigger flag. One <code>PhysicsBody</code>, one <code>entity.body</code>; each collider still gets its own <code>RegisterAttachment</code> row (same <code>body</code> ref).</p>
+<p>Authoring tips (the N-panel shows a compound-body notice when count &gt; 1):</p>
+<ul>
+<li>Prefer <strong>manual</strong> offsets/sizes per shape — auto-fit colliders each fit the <strong>full</strong> mesh bounds, which is rarely what you want for head+body volumes.</li>
+<li>Trigger events from every trigger collider are <strong>merged</strong> onto the one body; entering any child shape can fire any authored reaction.</li>
+<li>Mixed trigger/non-trigger colliders on one entity are allowed (per-child flags); the validator warns because it can be surprising.</li>
+</ul>
+<p>Single-collider paths below are unchanged.</p>
+<h3>Motion types</h3>
+<table><thead><tr><th>Manifest <code>bodyType</code></th><th>Havok <code>PhysicsMotionType</code></th><th>Role</th></tr></thead><tbody><tr><td><code>STATIC</code></td><td><code>STATIC</code></td><td>Never moves; still collides (terrain, walls).</td></tr><tr><td><code>DYNAMIC</code></td><td><code>DYNAMIC</code></td><td>Fully simulated — forces, collisions, mass.</td></tr><tr><td><code>ANIMATED</code></td><td><code>ANIMATED</code></td><td>Driven by animation or code; pushes dynamic bodies and constraints but is not pushed by collisions. Use for elevators, moving platforms, or behaviors that set <code>node</code> transforms each frame.</td></tr></tbody></table>
+<p>Mass applies only to <code>DYNAMIC</code> bodies. Dynamic bodies may also enable <strong>Start Asleep</strong>.</p>
+<h3>Center of mass</h3>
+<p>For <strong>Dynamic</strong> rigid bodies only. The collision shape defines contact; center of mass defines how the body tips under gravity and impulses. After the shape is built, <code>ApplyMassProperties</code> calls Havok <code>setMassProperties</code> with the authored mass and an optional <code>centerOfMass</code> override in the entity's local space.</p>
+<table><thead><tr><th>Blender</th><th>Manifest</th><th>Runtime</th></tr></thead><tbody><tr><td><strong>Auto-Fit Center of Mass</strong> (default on)</td><td><code>centerOfMassAutoFit: true</code></td><td><code>ComputeLocalBounds(node).center</code> — same owned-mesh AABB rule as collider auto-fit</td></tr><tr><td><strong>Center of Mass</strong> (when auto-fit off)</td><td><code>centerOfMassAutoFit: false</code>, <code>centerOfMass: [x,z,−y]</code></td><td>Custom offset, axis-converted at export like collider <code>center</code></td></tr><tr><td>*(field omitted — older levels)*</td><td>—</td><td>Mass only; Havok derives CoM from the collision shape geometry</td></tr></tbody></table>
+<p><strong>Fit CoM to Bounds</strong> snapshots the mesh AABB center into the custom field and turns off auto-fit (same workflow as <strong>Fit to Bounds</strong> on colliders). Auto-fit CoM tracks visible mesh geometry, which can differ from a hand-tuned collider — useful when tipping behavior should follow visuals, not collider volume.</p>
+<h3>Start asleep</h3>
+<p>Dynamic rigid bodies may set <code>startAsleep: true</code> (<strong>Start Asleep</strong> in Blender). The loader passes this to <code>PhysicsBody</code>'s <code>startsAsleep</code> constructor argument (and <code>PhysicsAggregate.startAsleep</code> on auto-fit mesh paths). Bodies begin with physics calculations skipped until a collision or applied force wakes them — a <strong>performance hint</strong> for scenes where bodies are at rest on load, not a guarantee (nearby awake bodies can wake them). The engine also puts resting bodies to sleep automatically when appropriate.</p>
+<p>Three shape paths for <strong>one</strong> collider (each its own builder); <strong>two or more</strong> colliders always use the compound container (<code>BuildCompoundBody</code> → <code>BuildColliderShape</code> per row):</p>
+<ul>
+<li><strong>Auto-fit primitive</strong> (<code>BuildAutoFitBody</code>): real mesh → <code>PhysicsAggregate</code> sizes it; multi-material <strong>wrapper</strong> (TransformNode, one child mesh per material) → <code>FitColliderShape</code> fits box/sphere/capsule/cylinder to the local bounds, because an aggregate would call <code>getTotalVertices</code> on the non-mesh node and crash.</li>
+<li><strong>CONVEX / MESH</strong> (<code>BuildGeometryShapeBody</code>): real hull/triangle shapes; a wrapper's submeshes are cloned, baked into the wrapper frame, merged (<code>MergeChildrenIntoLocalMesh</code>), fed to the shape, then disposed. Fitted-box fallback on failure. MESH shapes can't be DYNAMIC (Havok) — the validator warns; use CONVEX for movers.</li>
+<li><strong>Manual primitive</strong> (<code>BuildManualShape</code>): hand-authored Babylon-space center/size/radius/height/rotation (converted at export; the Blender viewport preview matches). <strong>Apply Object Scale</strong> is on by default: collider dimensions are multiplied by this entity's <strong>local</strong> scale at load (<code>applyObjectScale</code> in the manifest; omit the field or set true). Parent scale is already applied through the world transform — only local scale is baked to avoid double-scaling child colliders under a scaled parent. Turn off in Blender to opt out. Manual primitives and auto-fit bounds are multiplied; CONVEX / MESH shapes bake local scale into mesh vertices before the hull/triangle shape is built.</li>
+</ul>
+<h3>The owned-meshes rule &lt;a name=&quot;owned-meshes&quot;&gt;&lt;/a&gt;</h3>
+<p>Two kinds of &quot;children&quot; look identical in the scene graph: glTF <strong>material submeshes</strong> (<code>_primitive0…</code>, no GUID) and <strong>author-parented child entities</strong> (have a GUID). <code>OwnedColliderMeshes(node)</code> includes a descendant only if no node on its path up to the owner carries <code>bjs_id</code> — so a collider spans its own multi-material geometry but never a parented child's. All three shape paths and the <code>hasGeometry</code> check route through it (fixed v0.29.1).</p>
+<h3>Why right-handed import &lt;a name=&quot;right-handed&quot;&gt;&lt;/a&gt;</h3>
+<p>Babylon's default left-handed glTF path parents content under a <code>__root__</code> carrying a reflection (negative-determinant) transform. Havok places bodies by decomposing world matrices, and a reflection decomposes like a 180° rotation → mis-oriented colliders (the original kit-breaking bug). <code>LevelLoader</code> sets <code>useRightHandedSystem = true</code> *before* the append, so no mirror exists and one node-attached body path is sound. <code>NeutralizeGltfRoot</code> only warns if a mirrored root reappears.</p>
+<h2>Constraints (<code>BuildConstraints</code>) &lt;a name=&quot;constraints&quot;&gt;&lt;/a&gt;</h2>
+<p>CONSTRAINT components become joints in <code>FinalizeLevel</code> (both bodies must exist):</p>
+<table><thead><tr><th><code>constraintType</code></th><th>Havok joint</th></tr></thead><tbody><tr><td>FIXED</td><td><code>LockConstraint</code></td></tr><tr><td>BALL</td><td><code>BallAndSocketConstraint</code></td></tr><tr><td>HINGE / SLIDER / SPRING / CUSTOM</td><td><code>Physics6DoFConstraint</code></td></tr></tbody></table>
+<p>For 6DoF types, the constraint frame's <strong>X</strong> = the authored axis; Y/Z follow from a perpendicular pair (<code>ComputeConstraintFrame</code>). Preset mapping:</p>
+<ul>
+<li><strong>HINGE</strong> — locks linear + ANGULAR_Y/Z; frees or limits <strong>ANGULAR_X</strong> (degrees→radians). Optional velocity motor.</li>
+<li><strong>SLIDER</strong> — locks everything except <strong>LINEAR_X</strong> (meters). Optional motor.</li>
+<li><strong>SPRING</strong> — locks all rotation + linear Y/Z; <strong>LINEAR_X</strong> sprung within limits (stiffness/damping on the limit row).</li>
+<li><strong>CUSTOM</strong> — manifest <code>axes[]</code> lists each of the six DOFs as <code>free</code>, <code>locked</code>, <code>limited</code>, or <code>spring</code> (<code>BuildCustomAxisLimits</code>). Angular limits are authored in degrees, converted at runtime. Use for combined joints (e.g. trailer hitch: ANGULAR_X free for pitch, LINEAR_Y spring for vertical compliance) — stacking two preset constraints on the same body pair over-constrains rotation.</li>
+</ul>
+<p><code>ComputeConstraintFrame</code> derives the target-side pivot/axes from <strong>live world transforms</strong>, pinning the as-placed relative pose — nothing snaps on load. <strong>Apply Object Scale</strong> is on by default: authored pivot and linear limits are multiplied by the owner's <strong>local</strong> scale (parent scale comes from the world transform). Turn off in Blender to opt out. Angular limits stay in degrees. Motors (<code>setAxisMotorType(VELOCITY)</code> + target + max force) apply to HINGE/SLIDER presets only. <strong><code>collision</code></strong> (Blender <strong>Bodies Collide</strong>, default off) maps to Havok's pairwise <code>isCollisionsEnabled</code> on the joint — when off, the two connected bodies should not generate contact impulses against each other (overlap can still cause constraint solver fighting; keep colliders separated or use auto-fit sizes that don't intersect). Joints land in <code>level.constraints</code>, disposed with the level.</p>
+<h2>Trigger messaging (<code>WireTriggerEvents</code>) &lt;a name=&quot;triggers&quot;&gt;&lt;/a&gt;</h2>
+<p>Trigger colliders may carry authored events (target GUID, message, optional tag filter). One <code>HavokPlugin.onTriggerCollisionObservable</code> observer dispatches <code>TRIGGER_ENTERED</code>: trigger body → registration; entering body → <code>metadata.bjsEntity</code>; tag gate; then <code>target.SendMessage(message, enterer)</code> → <a href="04-SCRIPTING.html">{{PH4}}</a>. Havok gotcha: MESH-shaped triggers never fire (validator warns). Observer stored on <code>level.triggerObserver</code>, removed on dispose.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/05-PHYSICS.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

@@ -5,7 +5,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BJS Level Kit — UI (2D GUI, particles, 3D GUI)</title>
+<title>BJS Level Kit — UI (2D GUI, particles, MSDF, 3D GUI)</title>
 <style>
 /* ─────────────────────────────────────────────
    RESET & BASE
@@ -68,6 +68,7 @@ html, body {
 .tb:hover    { border-color: #c8a84a; color: #e0c878; }
 .tb.on       { border-color: #c8a84a; color: #f0d060; background: #1c1b0e; }
 .tb:disabled { opacity: .3; cursor: default; }
+a.tb         { text-decoration: none; display: inline-block; }
 
 /* Vertical rule between toolbar groups */
 .tsep {
@@ -249,10 +250,14 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">UI</span><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">UI</span><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
 <div id="app">
 
   <div id="toolbar">
+    <div class="tg">
+      <a class="tb" href="../index.html" title="Back to documentation search">← Search</a>
+    </div>
+    <div class="tsep"></div>
     <div class="tg">
       <span class="tlbl">file</span>
       <input id="title-bar" value="untitled diagram" spellcheck="false" title="Click to rename">
@@ -303,7 +308,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Babylon Level Kit — UI (2D GUI, particles, 3D GUI)","nodes":[{"id":1,"x":40,"y":60,"w":150,"h":40,"label":"GUI component","sub":"2D — Blender","desc":"References a .json from Babylon's GUI Editor. FULLSCREEN = HUD overlay; MESH = projected onto this entity's mesh surface (needs a mesh). File copied to gui/ next to the export.","meta":[["Editor","gui.babylonjs.com"],["Validator","MESH mode needs mesh"]]},{"id":2,"x":300,"y":60,"w":150,"h":40,"label":"ApplyGui","sub":"ui/gui2d.ts","desc":"CreateForMesh or CreateFullscreenUI, then parseFromURLAsync. Texture name = file stem → entity.GetGui(\"hud\"). Queued as an async task during ApplyComponents.","meta":[["Peer dep","@babylonjs/gui"],["Storage","entity.guiTextures"]]},{"id":3,"x":40,"y":200,"w":150,"h":40,"label":"PARTICLE component","sub":"Blender","desc":"References a .json from Babylon's Particle or Node Particle Editor. GPU, autoStart, attachToEntity, capacity. Particle Textures list: copy images + patch JSON URL on export.","meta":[["Editor","particles.babylonjs.com"],["Validator","missing file warn"]]},{"id":12,"x":170,"y":200,"w":150,"h":40,"label":"export_particle_system","sub":"export/particles.py","desc":"Copy particle JSON + Particle Textures images into particles/; patch ParticleTextureSourceBlock.url in the exported JSON (URL in JSON / Replace URL).","meta":[["Export","serialize_components"],["Images","beside JSON"]]},{"id":4,"x":300,"y":200,"w":150,"h":40,"label":"ApplyParticles","sub":"subsystems/particles.ts","desc":"LoadParticleSystems + ResolveNodeParticleSetTextureUrls (rootUrl). attachToEntity: mesh or owned Vector3 + emptyEmitter. Queued async; settled in FinalizeLevel.","meta":[["Storage","entity.particleSystems"],["Lookup","GetParticles(stem)"]]},{"id":11,"x":560,"y":200,"w":150,"h":40,"label":"WireParticleEmitterTracking","sub":"subsystems/particles.ts","desc":"After SettleTasks: CollectEmptyParticleEmitters → level.particleEmitterManager. Each frame (insertFirst onBeforeRender) copies getAbsolutePosition() into the owned Vector3 emitter for empty nodes.","meta":[["Meshes","use mesh emitter directly"],["Disposal","level.particleEmitterManager"]]},{"id":5,"x":40,"y":380,"w":150,"h":40,"label":"GUI3D_* components","sub":"9 control/panel types","desc":"One component per Babylon 3D control: Button3D, Holographic/TouchHolographic, MeshButton3D, plus Stack/Sphere/Cylinder/Plane/Scatter panels. Buttons carry On Click events (target + message). Panels lay out Blender child objects.","meta":[["No external editor","Blender is the editor"],["Images","gui/ via _copy_asset"]]},{"id":6,"x":300,"y":340,"w":150,"h":40,"label":"gui3dRegistrations","sub":"entity pass","desc":"Each GUI3D component queued with {entity, component, parentId}. parentId = manifest parent GUID so a button finds its panel. Built only in FinalizeLevel (panels + click targets must exist).","meta":[["File","loader/context.ts"]]},{"id":7,"x":560,"y":300,"w":150,"h":40,"label":"BuildGui3DControls","sub":"ui/gui3d/builder.ts","desc":"One GUI3DManager per level. Panels first (addControl → linkToTransformNode). Controls: parent panel addControl OR manager root + link. blockLayout while batching children. ApplyControlContent AFTER addControl.","meta":[["Disposal","level.gui3DManager"]]},{"id":8,"x":560,"y":400,"w":150,"h":40,"label":"WireClickEvents","sub":"ui/gui3d/events.ts","desc":"onPointerClickObservable → targetEntity.SendMessage(message, buttonEntity). Same OnMessage hook trigger colliders use — zero sender-side code.","meta":[["Requires","click target GUID in manifest"]]},{"id":9,"x":820,"y":340,"w":150,"h":40,"label":"entity.controls3D","sub":"runtime","desc":"Every panel/control created for this entity. GetControl3D(name) for scripts — exact match, then contains. HolographicButton.text, visibility, hover observables, etc.","meta":[["Hierarchy","Blender parenting = panel children"]]},{"id":10,"x":300,"y":480,"w":150,"h":40,"label":"SettleTasks","sub":"FinalizeLevel","desc":"Promise.allSettled for audioTasks, guiTasks, particleTasks, msdfTextTasks — one bad JSON logs a warning; the level still loads. Particle/MSDF wire hooks run immediately after.","meta":[["File","core/LevelLoader.ts"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"manifest"},{"id":101,"src":2,"tgt":10,"label":"async"},{"id":102,"src":3,"tgt":12,"label":"export"},{"id":110,"src":12,"tgt":4,"label":"manifest"},{"id":103,"src":4,"tgt":10,"label":"async"},{"id":109,"src":10,"tgt":11,"label":"wire"},{"id":104,"src":5,"tgt":6,"label":"export"},{"id":105,"src":6,"tgt":7,"label":"post-pass"},{"id":106,"src":7,"tgt":8,"label":"controls"},{"id":107,"src":7,"tgt":9,"label":"register"},{"id":108,"src":8,"tgt":9,"label":"OnMessage"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — UI (2D GUI, particles, MSDF, 3D GUI)","nodes":[{"id":1,"x":40,"y":60,"w":150,"h":40,"label":"GUI component","sub":"2D — Blender","desc":"References a .json from Babylon's GUI Editor. FULLSCREEN = HUD overlay; MESH = projected onto this entity's mesh surface (needs a mesh). File copied to gui/ next to the export.","meta":[["Editor","gui.babylonjs.com"],["Validator","MESH mode needs mesh"]]},{"id":2,"x":300,"y":60,"w":150,"h":40,"label":"ApplyGui","sub":"ui/gui2d.ts","desc":"CreateForMesh or CreateFullscreenUI, then parseFromURLAsync. Texture name = file stem → entity.GetGui(\"hud\"). Queued as an async task during ApplyComponents.","meta":[["Peer dep","@babylonjs/gui"],["Storage","entity.guiTextures"]]},{"id":3,"x":40,"y":200,"w":150,"h":40,"label":"PARTICLE component","sub":"Blender","desc":"References a .json from Babylon's Particle or Node Particle Editor. GPU, autoStart, attachToEntity, capacity. Particle Textures list: copy images + patch JSON URL on export.","meta":[["Editor","particles.babylonjs.com"],["Validator","missing file warn"]]},{"id":12,"x":170,"y":200,"w":150,"h":40,"label":"export_particle_system","sub":"export/particles.py","desc":"Copy particle JSON + Particle Textures images into particles/; patch ParticleTextureSourceBlock.url in the exported JSON (URL in JSON / Replace URL).","meta":[["Export","serialize_components"],["Images","beside JSON"]]},{"id":4,"x":300,"y":200,"w":150,"h":40,"label":"ApplyParticles","sub":"subsystems/particles.ts","desc":"LoadParticleSystems + ResolveNodeParticleSetTextureUrls (rootUrl). attachToEntity: mesh or owned Vector3 + emptyEmitter. Queued async; settled in FinalizeLevel.","meta":[["Storage","entity.particleSystems"],["Lookup","GetParticles(stem)"]]},{"id":11,"x":560,"y":200,"w":150,"h":40,"label":"WireParticleEmitterTracking","sub":"subsystems/particles.ts","desc":"After SettleTasks: CollectEmptyParticleEmitters → level.particleEmitterManager. Each frame (insertFirst onBeforeRender) copies getAbsolutePosition() into the owned Vector3 emitter for empty nodes.","meta":[["Meshes","use mesh emitter directly"],["Disposal","level.particleEmitterManager"]]},{"id":5,"x":40,"y":380,"w":150,"h":40,"label":"GUI3D_* components","sub":"9 control/panel types","desc":"One component per Babylon 3D control: Button3D, Holographic/TouchHolographic, MeshButton3D, plus Stack/Sphere/Cylinder/Plane/Scatter panels. Buttons carry On Click events (target + message). Panels lay out Blender child objects.","meta":[["No external editor","Blender is the editor"],["Images","gui/ via _copy_asset"]]},{"id":6,"x":300,"y":340,"w":150,"h":40,"label":"gui3dRegistrations","sub":"entity pass","desc":"Each GUI3D component queued with {entity, component, parentId}. parentId = manifest parent GUID so a button finds its panel. Built only in FinalizeLevel (panels + click targets must exist).","meta":[["File","loader/context.ts"]]},{"id":7,"x":560,"y":300,"w":150,"h":40,"label":"BuildGui3DControls","sub":"ui/gui3d/builder.ts","desc":"One GUI3DManager per level. Panels first (addControl → linkToTransformNode). Controls: parent panel addControl OR manager root + link. blockLayout while batching children. ApplyControlContent AFTER addControl.","meta":[["Disposal","level.gui3DManager"]]},{"id":8,"x":560,"y":400,"w":150,"h":40,"label":"WireClickEvents","sub":"ui/gui3d/events.ts","desc":"onPointerClickObservable → targetEntity.SendMessage(message, buttonEntity). Same OnMessage hook trigger colliders use — zero sender-side code.","meta":[["Requires","click target GUID in manifest"]]},{"id":9,"x":820,"y":340,"w":150,"h":40,"label":"entity.controls3D","sub":"runtime","desc":"Every panel/control created for this entity. GetControl3D(name) for scripts — exact match, then contains. HolographicButton.text, visibility, hover observables, etc.","meta":[["Hierarchy","Blender parenting = panel children"]]},{"id":10,"x":300,"y":480,"w":150,"h":40,"label":"SettleTasks","sub":"FinalizeLevel","desc":"Promise.allSettled for audioTasks, guiTasks, particleTasks, msdfTextTasks — one bad JSON logs a warning; the level still loads. Particle and MSDF wire hooks run immediately after.","meta":[["File","core/LevelLoader.ts"]]},{"id":13,"x":40,"y":520,"w":150,"h":40,"label":"MSDF_TEXT component","sub":"Blender","desc":"bmfont JSON + glyph atlas PNG copied to fonts/ with stable names. Resolution-independent 3D labels via @babylonjs/addons TextRenderer.","meta":[["Export","copy_asset → fonts/"],["Validator","missing font files"]]},{"id":14,"x":300,"y":520,"w":150,"h":40,"label":"ApplyMsdfText","sub":"ui/msdfText.ts","desc":"FontAsset cached per scene; TextRenderer.CreateTextRendererAsync; parent = entity.node. Queued async during ApplyComponents.","meta":[["Storage","entity.textRenderers"],["Lookup","GetTextRenderer(stem)"]]},{"id":15,"x":560,"y":520,"w":150,"h":40,"label":"WireMsdfTextRendering","sub":"ui/msdfText.ts","desc":"After SettleTasks: CollectTextRenderers → level.msdfTextManager (onAfterRenderObservable draw pass).","meta":[["Disposal","level.msdfTextManager"]]},{"id":16,"x":820,"y":480,"w":150,"h":40,"label":"Behaviors","sub":"OnMessage target","desc":"WireClickEvents and trigger colliders both fan out to behavior.OnMessage(message, source) — zero sender-side gameplay code.","meta":[["See","scripting.html"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"manifest"},{"id":101,"src":2,"tgt":10,"label":"async"},{"id":102,"src":3,"tgt":12,"label":"export"},{"id":110,"src":12,"tgt":4,"label":"manifest"},{"id":103,"src":4,"tgt":10,"label":"async"},{"id":109,"src":10,"tgt":11,"label":"wire"},{"id":111,"src":13,"tgt":14,"label":"manifest"},{"id":112,"src":14,"tgt":10,"label":"async"},{"id":113,"src":10,"tgt":15,"label":"wire"},{"id":104,"src":5,"tgt":6,"label":"manifest"},{"id":105,"src":6,"tgt":7,"label":"finalize"},{"id":106,"src":7,"tgt":8,"label":"controls"},{"id":107,"src":7,"tgt":9,"label":"register"},{"id":108,"src":8,"tgt":16,"label":"OnMessage"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -436,19 +441,9 @@ function nodeBounds(padding = 0) {
 }
 
 /**
- * Compute the quadratic-bezier geometry for an edge.
- * Returns { x1, y1, x2, y2, cpx, cpy, mx, my }  (mx/my = midpoint for label placement)
+ * Compute straight-line geometry for an edge.
+ * Returns { x1, y1, x2, y2, mx, my }  (mx/my = midpoint for label placement)
  * or null if either endpoint node is missing from the nodes array.
- *
- * Geometry overview:
- *
- *   source centre ──► unit vector ──► x1/y1 (point on source box wall)
- *                                         ↓  curve
- *   target centre ◄── unit vector ◄── x2/y2 (point on target box wall, + arrowhead gap)
- *                          ↑
- *                     control point lifted above the straight midpoint
- *                     by 18% of the horizontal separation, giving a
- *                     gentle arc that grows with distance.
  */
 function edgeEP(e) {
   const src = nodes.find(n => n.id === e.src);
@@ -464,14 +459,6 @@ function edgeEP(e) {
   const unitX  = dx / length;
   const unitY  = dy / length;
 
-  // Straight-line midpoint between the two centres
-  const midX = (nodeCentreX(src) + nodeCentreX(tgt)) / 2;
-  const midY = (nodeCentreY(src) + nodeCentreY(tgt)) / 2;
-
-  // Arc height: lift the control point above the midpoint.
-  // Using horizontal separation (dx) means wider edges arc higher.
-  const arcLift       = Math.abs(dx) * 0.18;
-  const labelLift     = Math.abs(dx) * 0.09;  // label sits halfway up the arc
   const ARROWHEAD_GAP = 7;
 
   // Where the line exits the source box wall
@@ -485,8 +472,8 @@ function edgeEP(e) {
   return {
     x1: startX,  y1: startY,
     x2: endX,    y2: endY,
-    cpx: midX,   cpy: midY - arcLift,
-    mx:  midX,   my:  midY - labelLift,
+    mx: (startX + endX) / 2,
+    my: (startY + endY) / 2,
   };
 }
 
@@ -815,17 +802,17 @@ function draw() {
     const isAdjacent   = selNodeId && (e.src === selNodeId || e.tgt === selNodeId);
     const lit          = isSelected || isAdjacent;
 
-    // Curve
+    // Straight edge
     ctx.strokeStyle = lit ? '#c8a84a' : '#3a3428';
     ctx.lineWidth   = (lit ? 1.8 : 1) / zoom;
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(ep.x1, ep.y1);
-    ctx.quadraticCurveTo(ep.cpx, ep.cpy, ep.x2, ep.y2);
+    ctx.lineTo(ep.x2, ep.y2);
     ctx.stroke();
 
     // Arrowhead (small filled triangle at the tip)
-    const arrowAngle = Math.atan2(ep.y2 - ep.cpy, ep.x2 - ep.cpx);
+    const arrowAngle = Math.atan2(ep.y2 - ep.y1, ep.x2 - ep.x1);
     const arrowSize  = 9 / zoom;
     ctx.fillStyle = lit ? '#c8a84a' : '#3a3428';
     ctx.beginPath();

@@ -1,0 +1,40 @@
+<h1>01 — Architecture</h1>
+<h2>The core idea: two artifacts</h2>
+<blockquote><p>If glTF can already express it, the glb owns it and the engine writes no code for it. If it can't, it goes in the manifest and a small subsystem applies it.</p></blockquote>
+<table><thead><tr><th>Artifact</th><th>Carries</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>level.glb</code></td><td>geometry, transforms, hierarchy, materials, lights, cameras, animation clips</td><td>Babylon's glTF importer</td></tr><tr><td><code>level.scene.json</code></td><td>components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), per-light/camera/scene settings, <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>, schema <strong>v4</strong></td><td>our <code>LevelLoader</code></td></tr></tbody></table>
+<p>The manifest never duplicates the glb — it only adds. This is why there's a <code>subsystems/physics.ts</code> but no <code>meshes.ts</code>: meshes ride entirely in the glb.</p>
+<h2>Entity identity (GUIDs)</h2>
+<p>Every addressable Blender object gets a GUID in a custom property (<code>bjs_id</code>, defined once as <code>ID_KEY</code> on both sides). The exporter writes it into the glTF node's <code>extras</code>; the manifest references the same GUID. At load it surfaces at <code>node.metadata.gltf.extras.bjs_id</code> (via the <code>ExtrasAsMetadata</code> loader extension) and the loader matches manifest entity → glb node by GUID, name as a legacy fallback. A GUID is what makes an object an *entity*; pure geometry without one just lives in the glb. GUIDs are auto-assigned to anything that needs to be findable: objects with components, lights, cameras, and any object referenced by an entity field, trigger event, or constraint target.</p>
+<p><strong>Visibility</strong> uses the same extras channel: viewport-hidden objects (Blender eye icon / <code>hide_viewport</code>, but still render-enabled) get a transient <code>bjs_visible: false</code> (<code>VISIBLE_KEY</code>) stamped into glTF extras at export; the loader's <code>ApplyNodeVisibility</code> sets <code>node.isVisible = false</code> and disables child lights/cameras. Render-disabled objects (<code>hide_render</code>, camera icon) are skipped entirely — no glb geometry and no manifest entry (<code>use_renderable=True</code> on the glTF exporter matches the manifest filter).</p>
+<p>The GUID is also the discriminator for two subtle cases: multi-material submeshes have <strong>no</strong> GUID (so they're &quot;owned&quot; by their wrapper — see <a href="05-PHYSICS.html#owned-meshes">Physics</a>), while real parented children <strong>do</strong> (so they're excluded from a parent's collider).</p>
+<h2>Monorepo layout</h2>
+<pre><code>bjs-level-kit/
+  package.json            # npm workspaces root: dev / typecheck / create
+  packages/engine/        # &quot;@bjs/engine&quot; — the runtime, shared by every app
+    src/
+      index.ts            #   public barrel (apps import &quot;@bjs/engine&quot;)
+      core/               #   types.ts (schema) · attachments.ts · Entity.ts · Level.ts · LevelLoader.ts
+                          #   loader/ (manifest · nodeResolution · entityBuilder · sceneSettings)
+      scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts
+      input/              #   InputManager · maps/actions/bindings · @inputMap
+      subsystems/         #   physics lights cameras/ shadows constraints audio
+                          #   triggers environment fog atmosphere postprocess animation
+  apps/                   # each game is an app; engine reaches it via symlink
+    playground/           #   the dev/test app (Vite); template for npm run create
+  blender_addon/          # the editor half (Python, Blender 4.2+ extension)
+  scripts/create-app.mjs  # scaffolds apps/&lt;name&gt;
+  docs/                   # this documentation, plans, specs</code></pre>
+<p>Apps declare <code>&quot;@bjs/engine&quot;: &quot;*&quot;</code>; <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code> (no publishing, no copying). The engine ships TS source (<code>exports</code> → <code>src/index.ts</code>); Vite compiles it across the link and hot-reloads engine edits into running apps. Engine and Blender add-on versions move in lockstep.</p>
+<h2>End-to-end data flow</h2>
+<pre><code>Blender scene (objects + components + GUIDs)
+   │  Export Level / Live Link            [02-BLENDER-ADDON.md]
+   ▼
+level.glb  +  level.scene.json  (+ audio/ files, env textures)
+   │  Vite dev server serves apps/&lt;app&gt;/public/levels/
+   ▼
+LevelLoader.Load(manifestUrl)             [03-LOAD-PIPELINE.md]
+   │  InputManager.LoadAsset → appendSceneAsync (right-handed) → GUID index
+   │  → per-entity pass → second pass (refs, camera targets) → FinalizeLevel
+   ▼
+Level (entities, update loop) ── behaviors run OnStart/OnUpdate
+                                          [04-SCRIPTING.md]</code></pre>

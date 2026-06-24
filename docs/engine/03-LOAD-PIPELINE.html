@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 03 — Load Pipeline</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    margin: 0 -4px 8px;
+    background: linear-gradient(#0c0c0a 70%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  #toolbar a {
+    color: #8fa3ff;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  #toolbar a:hover { background: #1a2040; }
+  #toolbar .sep { color: #3a3850; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html">← Search</a>
+    <span class="sep">|</span>
+    <a href="00-INDEX.html">Engine index</a>
+    <span class="sep">|</span>
+    <a href="index.html">Diagrams</a>
+    <span class="sep">|</span>
+    <a href="../blender/index.html">Blender docs</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="02-BLENDER-ADDON.html">Prev</a> <span class="dim">·</span> <a href="04-SCRIPTING.html">Next →</a></p>
+  <article><h1>03 — The Load Pipeline</h1>
+<p><code>LevelLoader.Load(manifestUrl)</code> (<code>packages/engine/src/core/LevelLoader.ts</code>) is the orchestrator; each stage lives in <code>core/loader/</code> (<code>manifest.ts</code>, <code>nodeResolution.ts</code>, <code>entityBuilder.ts</code>, <code>sceneSettings.ts</code>, <code>context.ts</code>).</p>
+<ol>
+<li><strong><code>FetchAndValidateManifest</code></strong> (<code>loader/manifest.ts</code>) — clear errors for the</li>
+</ol>
+<p>   two classic failures: HTTP 404, and the dev server returning <code>index.html</code>    (HTML, not JSON).</p>
+<ol>
+<li><strong>Load input</strong> — `InputManager.LoadAsset(manifest.scene.inputActions ??</li>
+</ol>
+<p>   DEFAULT_INPUT_ASSET, manifest.scene.defaultInputMap ?? &quot;Player&quot;)<code> so    </code>@inputMap<code> fields and the scene-default </code>behavior.input` fallback can be    injected before behaviors are built.</p>
+<ol>
+<li><strong>Append the glb</strong> — <code>scene.useRightHandedSystem = true</code> is set *first* so</li>
+</ol>
+<p>   the loader skips the handedness-mirroring <code>__root__</code> transform (the old    collider-orientation bug; full story in <a href="05-PHYSICS.html#right-handed">Physics</a>).    <code>NeutralizeGltfRoot</code> (<code>loader/nodeResolution.ts</code>) remains as a guard that    warns if a mirrored root ever reappears. Requires the <code>ExtrasAsMetadata</code>    loader extension import — without it <code>node.metadata</code> stays empty and GUID    matching silently fails.</p>
+<ol>
+<li><strong><code>ApplyNodeVisibility</code></strong> (<code>loader/nodeResolution.ts</code>) — for each glTF node</li>
+</ol>
+<p>   whose extras carry <code>bjs_visible: false</code> (Blender viewport-hidden), set    <code>node.isVisible = false</code> and disable descendant lights/cameras. Render-disabled    objects never reach this step — they were omitted at export.</p>
+<ol>
+<li><strong><code>BuildIdIndex</code></strong> (<code>loader/nodeResolution.ts</code>) — walk every transform node</li>
+</ol>
+<p>   + mesh, map <code>metadata.gltf.extras.bjs_id</code> → node.</p>
+<ol>
+<li><strong><code>ProcessEntity</code></strong> (<code>loader/entityBuilder.ts</code>) per manifest entity:</li>
+</ol>
+<p>   - resolve node (GUID first, name fallback), create <code>Entity</code>, register in      <code>level.entities</code>, back-reference <code>node.metadata.bjsEntity = entity</code>;    - <strong><code>ApplyComponents</code></strong> → <code>ClassifyComponents</code> sorts the component array,      then: physics body from COLLIDER(s)/RIGIDBODY (<code>BuildPhysics</code> → compound      <code>PhysicsShapeContainer</code> when multiple colliders, else single-shape paths →      <code>RegisterAttachment</code> per collider/rigidbody row), trigger-event      registrations queued, AUDIO/GUI/PARTICLE async tasks queued, GUI3D      registrations queued (with manifest <code>parent</code> GUID for panel nesting),      <code>InstantiateScripts</code> builds behaviors (<code>RegisterAttachment</code> per SCRIPT),      applies <code>@exposed</code> values, and <code>InjectInputMaps</code> (entity refs deferred as      <code>PendingRef</code>s); TAG rows register during classification;    - <code>ProcessLightForEntity</code> / <code>ProcessCameraForEntity</code> (typed camera override      via <code>BuildTypedCamera</code>; FOLLOW/ARC/OFFSET target bindings queued by      <code>QueueCameraTargets</code> — GEOSPATIAL resolves pose immediately).</p>
+<ol>
+<li><strong>Second pass</strong> — now every entity exists: <code>ResolveObjectReferences</code></li>
+</ol>
+<p>   (entity-typed <code>@exposed</code> fields + list slots) and <code>ResolveCameraTargets</code>    (FOLLOW lockedTarget / ARC re-pivot / OFFSET per-frame updater).</p>
+<ol>
+<li><strong><code>FinalizeLevel</code></strong> — shadows (<code>SetupShadows</code>), scene block</li>
+</ol>
+<p>   (<code>await ApplySceneSettings</code> → clear/ambient, async <code>ApplyEnvironment</code> + fog),    <strong><code>ApplyAtmosphere</code></strong> when the manifest includes <code>scene.atmosphere</code> (SUN lamp    → <code>@babylonjs/addons/atmosphere</code>; sets <code>level.atmosphere</code>),    <code>ApplyAutoPlayAnimations</code> (stop the glTF loader's auto-started groups, start    the chosen clips), <code>SettleTasks</code> for audio/GUI/particle/MSDF text promises    (<code>Promise.allSettled</code> so one bad file logs instead of rejecting the load),    <code>WireParticleEmitterTracking</code> (empty-node particle emitters →    <code>level.particleEmitterManager</code>), <code>WireMsdfTextRendering</code> (when any MSDF    labels exist), wire trigger events (<code>WireTriggerEvents</code> →    <code>level.triggerObserver</code>), build    constraints (<code>BuildConstraints</code> → <code>level.constraints</code> + CONSTRAINT rows on    owner entities), build 3D GUI (<code>BuildGui3DControls</code> → <code>level.gui3DManager</code> +    GUI3D_* rows on owning entities), then <strong><code>level.Begin()</code></strong>    (behaviors' <code>OnStart</code>, including any runtime camera creation), then    <strong><code>ApplyPostProcessing</code></strong> (default pipeline + SSAO on <code>scene.activeCamera</code>),    and if <code>debugColliders</code> *and* the export's Debug Build flag allow, show    collider wireframes.</p>
+<p>See <a href="10-UI.html">10 — UI</a> for the 2D GUI, particle, and 3D GUI pipelines.</p>
+<p><code>EnableHavokPhysics(scene)</code> must run before <code>Load</code> — bodies are built in step 5.</p>
+<p><strong><code>Level</code></strong> (<code>core/Level.ts</code>) is the runtime container: <code>entities</code> map, <code>ById</code>/<code>ByTag</code>, <code>activeCamera</code>, <code>shadowGenerators</code>, <code>constraints</code>, <code>post</code>, <code>atmosphere</code>, <code>particleEmitterManager</code>, <code>msdfTextManager</code>, <code>debugEnabled</code>, <code>ShowColliders</code>, <code>AddUpdater</code>. <code>Begin</code> attaches <a href="04-SCRIPTING.html#input">Input</a>, runs every <code>OnStart</code>, then drives <code>RunFrame</code> each render: <code>InputManager.Process</code> first, all <code>OnUpdate(deltaSeconds)</code>, registered updaters, then <code>InputManager.EndFrame</code> last (so <code>WasPressed</code> edges last one full frame). <code>Dispose</code> detaches input, removes observers, disposes constraints and sounds, clears <code>entity.attachments</code>, runs <code>OnDestroy</code>.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/03-LOAD-PIPELINE.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

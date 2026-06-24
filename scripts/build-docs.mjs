@@ -8,12 +8,15 @@
  * Engine data: scripts/docs/engine-areas.mjs + build-trace-docs.mjs traces
  * Blender data: build-blender-docs.mjs area + trace definitions
  * Landing:  scripts/build-landing.mjs → docs/index.html (searchable index)
+ * Prose:    scripts/docs/prose/content/*.html → docs/engine|launcher chapter pages
  */
 import { BuildEngineDocs } from "./build-trace-docs.mjs";
 import { BuildBlenderDocs } from "./build-blender-docs.mjs";
+import { BuildProseDocs } from "./build-prose-docs.mjs";
 import { BuildLandingPage } from "./build-landing.mjs";
 
 BuildEngineDocs();
 BuildBlenderDocs();
+BuildProseDocs();
 BuildLandingPage();
 console.log("docs:build complete");

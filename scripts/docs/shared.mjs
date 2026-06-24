@@ -49,7 +49,10 @@ export function BuildEngineNav(currentFile, areaNav, traceNav)
   return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
     + 'background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;'
     + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;">' + areaNav.map(link).join("")
+    + '<div style="display:flex;gap:2px;justify-content:center;">'
+    + '<a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a>'
+    + '<span style="width:1px;background:#2a3050;margin:0 2px;"></span>'
+    + areaNav.map(link).join("")
     + '<a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div>'
     + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;">'
     + '<span style="color:#6c7396;padding:2px 6px;">Traces:</span>' + traceNav.map(link).join("") + '</div></div>';
@@ -64,6 +67,8 @@ export function BuildBlenderNav(currentFile, areaNav, traceNav)
     + 'background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;'
     + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
     + '<div style="display:flex;gap:2px;justify-content:center;">'
+    + '<a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a>'
+    + '<span style="width:1px;background:#553f28;margin:0 2px;"></span>'
     + '<span style="color:#967a52;padding:2px 6px;">Blender:</span>' + areaNav.map(link).join("")
     + '<a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div>'
     + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;">'

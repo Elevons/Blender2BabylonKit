@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 07 — Audio & Animation</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    margin: 0 -4px 8px;
+    background: linear-gradient(#0c0c0a 70%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  #toolbar a {
+    color: #8fa3ff;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  #toolbar a:hover { background: #1a2040; }
+  #toolbar .sep { color: #3a3850; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html">← Search</a>
+    <span class="sep">|</span>
+    <a href="00-INDEX.html">Engine index</a>
+    <span class="sep">|</span>
+    <a href="index.html">Diagrams</a>
+    <span class="sep">|</span>
+    <a href="../blender/index.html">Blender docs</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="06-RENDERING.html">Prev</a> <span class="dim">·</span> <a href="08-WORKFLOW.html">Next →</a></p>
+  <article><h1>07 — Audio &amp; Animation</h1>
+<h2>Audio (<code>subsystems/audio.ts</code>)</h2>
+<p>AUDIO components (file, volume, loop, autoPlay, spatial + maxDistance, playbackRate) become <strong>audio engine v2</strong> <code>StaticSound</code>s — the legacy <code>Sound</code> class is deprecated. One engine, created lazily (<code>CreateAudioEngineAsync</code>); sounds via <code>CreateSoundAsync</code> with <code>spatialEnabled</code> set at creation (avoids first-use latency), then <code>sound.spatial.attach(entity.node)</code> so 3D sounds follow their entity. Sound names = file stem (<code>audio/door.mp3</code> → <code>&quot;door&quot;</code>), reachable via <code>entity.GetSound</code> or <code>entity.GetAttachment(&quot;AUDIO&quot;)?.sound</code>. Browser autoplay policy: auto-play sounds await <code>audioEngine.unlockAsync()</code> (resolves on the first user gesture) without blocking the load — creation promises are collected during the entity pass and settled in <code>FinalizeLevel</code> so a bad file logs instead of failing the level. The exporter copies sound files into <code>audio/</code> next to the manifest. Sounds are disposed with the level.</p>
+<h2>Animation (<code>subsystems/animation.ts</code>)</h2>
+<p>NLA strips export as glTF animations → global <code>AnimationGroup</code>s. <code>FindAnimationGroups</code> scopes them to an entity <strong>by membership</strong>: a group belongs to a node if any targeted animation targets the node or a descendant — no reliance on globally-unique names. <code>ApplyAutoPlayAnimations</code> first stops the glTF loader's auto-started groups, then plays each entity's chosen clip (exact name, contains, else first) with its loop/speed. Runtime control: <code>entity.animations</code>, <code>entity.GetAnimation(&quot;Walk&quot;)?.start(true)</code> — see the <code>ClipSwitcher</code> behavior for clip cycling.</p>
+<h3>The skinned-mesh rule (important)</h3>
+<p>For rigged characters, <strong>everything goes on the armature object</strong> — GUID, Animation settings, Script components. Two glTF facts make the mesh object a trap: (1) a skinned mesh's own node transform is *ignored* (joints define the final pose), so a script moving the mesh entity moves nothing visible; (2) skeletal clips target the <strong>joint nodes under the armature</strong>, so clip scoping on the mesh entity finds zero clips. Both failures are silent, so the <a href="08-WORKFLOW.html#validator">validator</a> warns when components or autoplay sit on a skinned mesh. (An animation *state machine* was prototyped and deliberately reverted — see <a href="../DEVELOPMENT_PLAN.md">DEVELOPMENT_PLAN</a> for the revival constraints.)</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/07-AUDIO-ANIMATION.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

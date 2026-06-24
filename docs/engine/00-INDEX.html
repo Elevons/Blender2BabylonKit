@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — Engine (Runtime) Documentation</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    margin: 0 -4px 8px;
+    background: linear-gradient(#0c0c0a 70%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  #toolbar a {
+    color: #8fa3ff;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  #toolbar a:hover { background: #1a2040; }
+  #toolbar .sep { color: #3a3850; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html">← Search</a>
+    <span class="sep">|</span>
+    <a href="00-INDEX.html">Engine index</a>
+    <span class="sep">|</span>
+    <a href="index.html">Diagrams</a>
+    <span class="sep">|</span>
+    <a href="../blender/index.html">Blender docs</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-ARCHITECTURE.html">Next →</a></p>
+  <article><h1>Babylon Level Kit — Engine (Runtime) Documentation</h1>
+<p>The runtime half of the kit, current as of <strong>v0.32.0</strong>. The interactive version is the HTML diagram set in this folder — open <strong>[index.html](index.html)</strong> and use the bottom nav (an area row for the subsystem diagrams + a <strong>Traces</strong> row for code walk-throughs; &quot;Blender docs →&quot; jumps to the editor packet).</p>
+<blockquote><p><strong>Looking for something specific?</strong> Open the searchable landing page at <strong>[../index.html](../index.html)</strong> and type a term (e.g. *collision*, *export*, *input*) to surface the relevant pages from both the engine and Blender sides.</p></blockquote>
+<h2>What the runtime does</h2>
+<p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports — <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything it can't) — and turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb, indexes nodes by GUID, builds an <code>Entity</code> per manifest entry, applies components through small subsystems (physics, lights, cameras, audio, …), then runs your <code>Behavior</code> scripts. See <a href="01-ARCHITECTURE.html">Architecture</a> for the two-artifact split and <a href="02-BLENDER-ADDON.html">Blender Add-on</a> for the editor side.</p>
+<h2>The interactive pages</h2>
+<p>Area diagrams (clickable node graphs): <strong>[index.html](index.html)</strong> (engine overview) · <strong>[load-pipeline.html](load-pipeline.html)</strong> · <strong>[scripting.html](scripting.html)</strong> · <strong>[physics.html](physics.html)</strong> · <strong>[rendering.html](rendering.html)</strong> · <strong>[audio-animation.html](audio-animation.html)</strong> · <strong>[ui.html](ui.html)</strong> · <strong>[workflow.html](workflow.html)</strong> · <strong>[blender-addon.html](blender-addon.html)</strong> (the editor, from the runtime's point of view).</p>
+<p>Code traces (each node is a step; click for the explanation + the actual current TypeScript source): <strong>Load</strong> (manifest → <code>Level</code>) · <strong>Physics</strong> (collider → Havok body) · <strong>@exposed</strong> (field → Blender → instance) · <strong>Triggers</strong> (On-Enter → <code>OnMessage</code>) · <strong>Constraints</strong> (component → joint) · <strong>Audio</strong> · <strong>Input</strong> (key → action → behavior) · <strong>Live Link</strong> · <strong>2D GUI</strong> · <strong>Particles</strong> · <strong>MSDF text</strong> · <strong>3D GUI</strong> · <strong>Atmosphere</strong> (SUN lamp → physical sky).</p>
+<h2>The prose chapters</h2>
+<ol>
+<li><a href="01-ARCHITECTURE.html">Architecture</a> — two artifacts, GUID identity, monorepo, data flow</li>
+<li><a href="02-BLENDER-ADDON.html">Blender Add-on</a> — the editor half + export pipeline</li>
+<li><a href="03-LOAD-PIPELINE.html">Load Pipeline</a> — <code>LevelLoader.Load</code>, the passes, <code>FinalizeLevel</code></li>
+<li><a href="04-SCRIPTING.html">Scripting</a> — <code>Entity</code>, <code>Behavior</code>, <code>@exposed</code>, <code>@inputMap</code>, Input</li>
+<li><a href="05-PHYSICS.html">Physics</a> — bodies, constraints, triggers, right-handed import</li>
+<li><a href="06-RENDERING.html">Rendering</a> — lights, cameras, shadows, environment, atmosphere, scene look</li>
+<li><a href="07-AUDIO-ANIMATION.html">Audio &amp; Animation</a> — sounds, NLA clips, the skinned-mesh rule</li>
+<li><a href="08-WORKFLOW.html">Workflow</a> — Live Link, the validator, Debug Build, tooling, <a href="../launcher/00-INDEX.html">Babylon Launcher</a></li>
+<li><a href="09-FEATURE-TRACES.html">Feature Traces</a> — every feature's Blender → runtime file/function chain</li>
+<li><a href="10-UI.html">UI</a> — 2D GUI, particles, MSDF text, 3D GUI</li>
+</ol>
+<h2>Regenerating</h2>
+<p><code>npm run docs:build</code> regenerates both packets from the shared shell template (<code>docs/_template/diagram-shell.html</code>) and rebuilds the searchable landing page. <code>npm run docs:trace</code> rebuilds only this folder; it re-extracts every trace's source from <code>packages/engine/</code>. A renamed/deleted symbol fails the build loudly — the anti-rot guard. (The Blender packet alone is <code>npm run docs:blender</code>.)</p>
+<p>Full build pipeline, file layout, and how to add traces or diagrams: <strong><a href="../BUILDING-DOCS.html">Building the documentation</a></strong>.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/00-INDEX.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 09 — Feature Traces</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    margin: 0 -4px 8px;
+    background: linear-gradient(#0c0c0a 70%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  #toolbar a {
+    color: #8fa3ff;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  #toolbar a:hover { background: #1a2040; }
+  #toolbar .sep { color: #3a3850; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html">← Search</a>
+    <span class="sep">|</span>
+    <a href="00-INDEX.html">Engine index</a>
+    <span class="sep">|</span>
+    <a href="index.html">Diagrams</a>
+    <span class="sep">|</span>
+    <a href="../blender/index.html">Blender docs</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="08-WORKFLOW.html">Prev</a> <span class="dim">·</span> <a href="10-UI.html">Next →</a></p>
+  <article><h1>09 — Feature Traces</h1>
+<p>The exact file/function chain for each feature, Blender click → runtime effect. Format: <code>blender_addon/…</code> → manifest → <code>packages/engine/src/…</code>.</p>
+<h3>GUID / entity identity</h3>
+<p><code>core/ids.ensure_object_id</code> (custom prop <code>bjs_id</code>) → glTF node <code>extras</code> → manifest <code>entities[].id</code> → the loader's <code>BuildIdIndex</code> (<code>core/loader/nodeResolution.ts</code>) reads <code>metadata.gltf.extras.bjs_id</code> (needs <code>ExtrasAsMetadata</code> import) → <code>ProcessEntity</code> matches GUID-first → <code>Entity</code> in <code>level.entities</code>, node gets <code>metadata.bjsEntity</code> back-reference.</p>
+<h3>Viewport visibility (eye icon)</h3>
+<p><code>export/level._stamp_viewport_visibility</code> (transient <code>obj[&quot;bjs_visible&quot;] = False</code> when <code>hide_viewport</code> and still renderable) → glTF node <code>extras.bjs_visible</code> → <code>ApplyNodeVisibility</code> (<code>core/loader/nodeResolution.ts</code>) sets <code>node.isVisible = false</code> and disables descendant lights/cameras. Render-disabled objects (<code>hide_render</code>) never get this far — <code>_is_renderable</code> drops them from glb and manifest. Behaviors can toggle <code>entity.node.isVisible</code> at runtime.</p>
+<h3>Tag</h3>
+<p>TAG component (<code>components/</code> → <code>export/components.serialize_components</code>) → manifest <code>{type:&quot;TAG&quot;, tag}</code> → <code>entityBuilder.ClassifyComponents</code> sets <code>entity.tag</code> and <code>RegisterAttachment({type:&quot;TAG&quot;, data})</code> → query <code>level.ByTag(&quot;Enemy&quot;)</code> or <code>entity.HasAttachment(&quot;TAG&quot;)</code>.</p>
+<h3>Collider / RigidBody</h3>
+<p>N-panel fields (+ <code>viewport/collider_preview.py</code> wireframe per manual collider, Blender space; compound-body notice when count &gt; 1) → <code>serialize_components</code> converts center/size/rotation to Y-up (one dict per COLLIDER row); <strong>Apply Object Scale</strong> (<code>collider_apply_scale</code> → manifest <code>applyObjectScale</code>, default <strong>on</strong> at runtime via <code>ApplyObjectScaleEnabled</code> in <code>core/nodeScale.ts</code> — omit field or <code>true</code>); CONSTRAINT rows export the same <code>applyObjectScale</code> flag; DYNAMIC rigid bodies also export <code>centerOfMassAutoFit</code> and optional <code>centerOfMass</code> → manifest COLLIDER/RIGIDBODY → <code>entityBuilder.ClassifyComponents</code> collects <strong>all</strong> colliders → <code>physics.BuildPhysics</code>: single collider → shape path chosen (auto-fit aggregate | wrapper fit | convex/mesh merge | manual); multiple colliders → <code>PhysicsShapeContainer</code> compound (<code>BuildCompoundBody</code>); all geometry gathered via <code>OwnedColliderMeshes</code> (excludes child entities by GUID) → <code>ApplyMassProperties</code> (<code>ResolveCenterOfMass</code> + <code>setMassProperties</code>) → one <code>PhysicsBody</code> on the node → <code>entity.body</code> + <code>RegisterAttachment</code> per COLLIDER and/or RIGIDBODY row (same <code>body</code> ref when both). Sound because of right-handed import (<a href="05-PHYSICS.html#right-handed">why</a>). Manual path + scale behavior: <a href="05-PHYSICS.html">05-PHYSICS.md</a>. Debug view: <strong>C</strong> → <code>Level.ShowColliders</code> → PhysicsViewer.</p>
+<h3>Script + @exposed values</h3>
+<p>&quot;Open Script…&quot; stores the filename stem; <strong>Sync</strong> → <code>core/script_parse.py</code> regex-reads <code>@exposed</code> fields → <code>BJSExposedVar</code> rows → edits serialize into <code>vars</code> → manifest SCRIPT → <code>InstantiateScripts</code> (<code>core/loader/entityBuilder.ts</code>) → <code>BehaviorRegistry.Create(stem)</code> (registered by <code>AutoRegisterBehaviors</code> from <code>import.meta.glob</code>) → inject <code>entity</code>/<code>scene</code> → <code>ApplyExposedVars</code> (coerce vector3/color; entity refs → <code>PendingRef</code>) → <code>RegisterAttachment({type:&quot;SCRIPT&quot;, data, behavior})</code> → second pass <code>ResolveObjectReferences</code> → <code>Level.Begin</code> calls <code>OnStart</code>.</p>
+<h3>Entity reference field</h3>
+<p>Object picker (<code>BJSExposedVar.obj_val</code>) → <code>ensure_object_id(target)</code> + force-include via <code>iter_referenced_objects</code> → manifest <code>vars.field = guid</code> → <code>PendingRef</code> → <code>ResolveObjectReferences</code> assigns the <code>Entity</code> (or list slot by index) before <code>OnStart</code>.</p>
+<h3>Light / Shadows</h3>
+<p>Lamp (auto-derived; no component) → <code>export</code> writes <code>light</code> block (+ <code>shadow</code> when Cast Shadows) → <code>lights.ApplyBlenderLight</code> (parent-chain find; color exact, intensity scaled) → casting lights collected → <code>shadows.SetupShadows</code> in <code>FinalizeLevel</code> → <code>level.shadowGenerators</code>.</p>
+<h3>Camera (+ typed override)</h3>
+<p>Camera object → <code>camera</code> block (clip/FOV/active) → <code>cameras.ApplyBlenderCamera</code> onto the glb FreeCamera; active → <code>scene.activeCamera</code>. CAMERA component → <code>BuildTypedCamera</code> per-type builder → target bindings via <code>QueueCameraTargets</code> (FOLLOW / ARC / OFFSET only) → second pass <code>ResolveCameraTargets</code> (FOLLOW lockedTarget / ARC re-pivot / OFFSET <code>AddUpdater</code>). GEOSPATIAL skips the target pass — <code>BuildGeospatialCamera</code> derives <code>center</code> / <code>yaw</code> / <code>pitch</code> / <code>radius</code> from the exported pose and <code>planetRadius</code>.</p>
+<h3>Atmosphere</h3>
+<p>Babylon Scene › Atmosphere (<code>ui/scene_panels.py</code>) edits <code>scene.bjs_scene.atmosphere</code> (<code>scene/atmosphere.py</code>) → <code>export/atmosphere.serialize_atmosphere</code> (optional <code>sunLightId</code> GUID; scattering tuning) → manifest <code>scene.atmosphere</code> → <code>LevelLoader.FinalizeLevel</code>: <code>ApplySceneSettings</code> (env skybox forced off at export when atmosphere is on) → <code>ApplyAtmosphere</code> (<code>subsystems/atmosphere.ts</code>: resolves SUN → <code>DirectionalLight</code>, optional π intensity for PBR, <code>@babylonjs/addons/atmosphere</code>) → <code>level.atmosphere</code> (disposed with the level). Time of day follows the sun lamp's direction in Blender. See <a href="06-RENDERING.html">Rendering — Atmosphere</a>.</p>
+<h3>Post-processing</h3>
+<p>Babylon Scene › Post-Processing (<code>ui/post_panels.py</code>) edits <code>scene.bjs_scene.post</code> (<code>scene/post_processing.py</code>) → <code>export/post_processing.serialize_post_processing</code> (LUTs via <code>copy_asset</code> → <code>post/</code>) → manifest <code>scene.postProcessing</code> → <code>LevelLoader.FinalizeLevel</code>: <code>ApplySceneSettings</code> (clear/ambient, env, fog) → <code>ApplyAtmosphere</code> (when enabled) → … → <code>Level.Begin</code> (runtime cameras) → <code>ApplyPostProcessing</code> (<code>subsystems/postprocess.ts</code>: Default Pipeline + SSAO2 on <code>scene.activeCamera</code>) → <code>level.post</code>. See <a href="06-RENDERING.html">Rendering — Scene look</a>.</p>
+<h3>Animation autoplay</h3>
+<p>NLA strips → <code>export/animation.serialize_animation</code> → <code>animation</code> block → <code>FindAnimationGroups</code> (node-membership scoping) → <code>ApplyAutoPlayAnimations</code> (stop loader-auto groups, start chosen clip). Skinned characters: author on the <strong>armature</strong> (<a href="07-AUDIO-ANIMATION.html">rule</a>).</p>
+<h3>Audio</h3>
+<p>AUDIO component → <code>export/assets.copy_asset</code> → <code>audio/&lt;file&gt;</code> + manifest → <code>audio.ApplyAudio</code> (engine v2 <code>CreateSoundAsync</code>, spatial attach) → promises settled in <code>FinalizeLevel</code>; autoplay waits <code>unlockAsync</code> → <code>entity.sounds</code>, <code>RegisterAttachment({type:&quot;AUDIO&quot;, data, sound})</code>, <code>GetSound(stem)</code>.</p>
+<h3>Trigger event → OnMessage</h3>
+<p>Is Trigger + <strong>On Enter Events</strong> rows (<code>BJSTriggerEvent</code>) → manifest <code>collider.events[{target guid, message, filterTag}]</code> → registration queued in <code>ApplyComponents</code> → <code>triggers.WireTriggerEvents</code> (one <code>onTriggerCollisionObservable</code>) → on TRIGGER_ENTERED: body→entity via <code>metadata.bjsEntity</code>, tag gate → <code>target.SendMessage</code> → behavior <code>OnMessage</code>.</p>
+<h3>Constraint</h3>
+<p>CONSTRAINT fields → <code>serialize_components</code> (pivot/axis → Y-up; target GUID force-included; CUSTOM also exports <code>axes[]</code> per 6DoF row) → <code>constraints.BuildConstraints</code> in <code>FinalizeLevel</code>: <code>ComputeConstraintFrame</code> from live world transforms (pins as-placed pose) → Lock/BallAndSocket or 6DoF with <code>BuildAxisLimits</code> (presets) or <code>BuildCustomAxisLimits</code> (CUSTOM) → optional <code>ApplyMotor</code> (HINGE/SLIDER only) → <code>ownerBody.addConstraint</code> → <code>level.constraints</code> + <code>RegisterAttachment</code> on owner (<code>{type:&quot;CONSTRAINT&quot;, data, constraint}</code>).</p>
+<h3>Input action</h3>
+<p>Blender <strong>Input Actions</strong> panel (maps &gt; actions &gt; bindings + <strong>Scene Default</strong> map picker) → <code>input_actions/serialize.serialize_input_asset</code> + <code>defaultInputMap</code> → manifest <code>scene.inputActions</code> / <code>scene.defaultInputMap</code> → <code>InputManager.LoadAsset</code> (loader, before behaviors) → <code>@inputMap(&quot;Name&quot;)</code> fields injected per behavior; scripts without <code>@inputMap</code> receive the scene default on <code>behavior.input</code> → <code>Level.Begin</code> → <code>InputManager.Attach</code> (keyboard observable + enable maps); <code>RunFrame</code> → <code>InputManager.Process</code> FIRST (gamepad poll, actions evaluate, started/performed/canceled fire) → behaviors poll <code>ReadValue/ReadVector2/IsPressed/WasPressedThisFrame</code> → <code>InputManager.EndFrame</code> last (edge clear); <code>Dispose</code> → <code>Detach</code>.</p>
+<h3>Live Link</h3>
+<p>Export remembers path (<code>scene.bjs_live_link_path</code>) → Ctrl+S → <code>export/live_link._on_save_post</code> → <code>validate</code> + <code>export_level</code> (side files overwrite stable paths via <code>begin_asset_export</code> / <code>unique_asset_path</code>) → manifest write → Vite <code>ReloadOnLevelExport</code> watches all of <code>public/levels/</code> (<code>path.resolve</code> path matching; 50ms debounce) → full page reload.</p>
+<h3>Debug Build</h3>
+<p>Checkbox (<code>scene.bjs_debug_build</code>) → manifest top-level <code>&quot;debug&quot;</code> → <code>level.debugEnabled</code> (missing = true) → gates <strong>C</strong>/<strong>I</strong> in <code>main.ts</code> and the <code>debugColliders</code> option.</p>
+<h3>2D GUI (GUI Editor JSON)</h3>
+<p>GUI component (<code>components/</code> → <code>export/assets.copy_asset</code> to <code>gui/</code>) → manifest <code>{type:&quot;GUI&quot;, file, mode, …}</code> → <code>ApplyComponents</code> queues <code>ApplyGui</code> (<code>ui/gui2d.ts</code>) → <code>SettleTasks</code> in <code>FinalizeLevel</code> → <code>entity.guiTextures</code>, <code>RegisterAttachment({type:&quot;GUI&quot;, data, texture})</code>, <code>GetGui(stem)</code>. Trace: <a href="trace-gui.html">trace-gui.html</a>.</p>
+<h3>Particles (Particle / Node Particle Editor JSON)</h3>
+<p>PARTICLE component → <code>export_particle_system</code> (<code>export/particles.py</code>: copy JSON, copy <strong>Particle Textures</strong> images, patch <code>ParticleTextureSourceBlock.url</code> in the exported file) → manifest → <code>ApplyParticles</code> (<code>subsystems/particles.ts</code>: <code>ResolveNodeParticleSetTextureUrls</code> + legacy or <code>NodeParticleSystemSet</code>) → mesh emitter or owned <code>Vector3</code> + optional <code>emptyEmitter</code> → <code>SettleTasks</code> → <code>WireParticleEmitterTracking</code> (<code>level.particleEmitterManager</code>, empties only) → <code>entity.particleSystems</code>, <code>RegisterAttachment</code>, <code>GetParticles(stem)</code>. Trace: <a href="trace-particles.html">trace-particles.html</a> · Blender: <a href="../blender/trace-particles.html">../blender/trace-particles.html</a>.</p>
+<h3>3D GUI (buttons + panels)</h3>
+<p>Nine <code>GUI3D_*</code> types → <code>serialize_components</code> (layout fields, click events, button images via <code>copy_asset</code>; click targets force-included) → registrations queued with <code>parentId</code> → <code>BuildGui3DControls</code> in <code>FinalizeLevel</code> (panels first, <code>blockLayout</code>, content after <code>addControl</code>) → <code>RegisterAttachment</code> per panel/control → <code>WireClickEvents</code> → <code>OnMessage</code> on target. Trace: <a href="trace-gui3d.html">trace-gui3d.html</a> · Blender: <a href="../blender/trace-gui3d.html">../blender/trace-gui3d.html</a>. Full write-up: <a href="10-UI.html">10-UI.md</a>.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/09-FEATURE-TRACES.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

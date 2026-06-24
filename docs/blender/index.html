@@ -68,6 +68,7 @@ html, body {
 .tb:hover    { border-color: #c8a84a; color: #e0c878; }
 .tb.on       { border-color: #c8a84a; color: #f0d060; background: #1c1b0e; }
 .tb:disabled { opacity: .3; cursor: default; }
+a.tb         { text-decoration: none; display: inline-block; }
 
 /* Vertical rule between toolbar groups */
 .tsep {
@@ -249,10 +250,14 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><span style="color:#967a52;padding:2px 6px;">Blender:</span><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Overview</span><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Overview</span><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a></div></div>
 <div id="app">
 
   <div id="toolbar">
+    <div class="tg">
+      <a class="tb" href="../index.html" title="Back to documentation search">← Search</a>
+    </div>
+    <div class="tsep"></div>
     <div class="tg">
       <span class="tlbl">file</span>
       <input id="title-bar" value="untitled diagram" spellcheck="false" title="Click to rename">
@@ -303,7 +308,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Blender — Add-on overview","nodes":[{"id":1,"x":300,"y":40,"w":160,"h":44,"label":"__init__.py","sub":"registration","desc":"Extension entry point. register()/unregister() call each subpackage's register() in dependency order — components & scene first (their PropertyGroups are referenced everywhere), then input_actions, export, operators, ui, viewport. Reloads submodules so edits land mid-session.","meta":[["Blender","4.2+ extension"],["Order","data → ui"]]},{"id":2,"x":40,"y":60,"w":160,"h":44,"label":"core/","sub":"ids + TS parsing","desc":"Pure helpers, nothing registered. ids.py owns ID_KEY ('bjs_id'), VISIBLE_KEY ('bjs_visible'), and ensure_object_id(); script_parse.py regex-reads @exposed(...) and @inputMap(\"...\") from behavior TypeScript — THE cross-language contract.","meta":[["Files","ids · script_parse"]]},{"id":3,"x":40,"y":180,"w":160,"h":44,"label":"components/","sub":"per-object data","desc":"The component model on every Object: BJSComponent (one group switched by comp_type), exposed vars + list items, trigger/click events, light-shadow & animation blocks, and the copy/paste clipboard. constants.py isolates every enum table.","meta":[["Key class","BJSComponent"],["On","Object.bjs_components"]]},{"id":4,"x":40,"y":300,"w":160,"h":44,"label":"scene/","sub":"scene settings","desc":"BJSSceneSettings on Scene.bjs_scene: clear/ambient, environment (World texture via scene/environment.py find_world_env_node, or useDefault flag via use_default_environment), Show Skybox (IBL without visible background when off; forced off when Atmosphere on), Skybox Ignores Fog (mesh.applyFog = false when on), fog, Atmosphere (scene/atmosphere.py — SUN lamp, scattering), freeze shadows; post-processing lives on the nested bjs_scene.post block (scene/post_processing.py) — MSAA, FXAA, bloom, SSAO, image processing (tone mapping type, exposure, contrast, vignette, color grading, curves), sharpen, DOF, chromatic aberration, grain, glow.","meta":[["On","Scene.bjs_scene.post"]]},{"id":5,"x":40,"y":420,"w":160,"h":44,"label":"input_actions/","sub":"Input Actions asset","desc":"The asset end-to-end: data model (maps/actions/bindings), the built-in Player defaults, JSON serialize/apply (+ friendly-key aliases), and every bjs.input_* operator.","meta":[["Export keys","inputActions + defaultInputMap"]]},{"id":6,"x":300,"y":200,"w":160,"h":44,"label":"operators/","sub":"the verbs","desc":"Component verbs (add/remove/duplicate/move/copy/cut/paste, Assign GUID, Fit Collider, Pin Inspector), exposed-list items (add, resize-to-count, add-selected for entity lists), script pick + Sync, and Validate / Export. Pure behavior — every UI button routes here, and the stack verbs resolve their target through core/inspector.py so they honor the pin.","meta":[["Export op","BJS_OT_export"]]},{"id":7,"x":300,"y":340,"w":160,"h":44,"label":"ui/","sub":"panels + menus","desc":"All presentation. Viewport **Babylon Object** N-panel = the selected object — or a PINNED object — with components + light/camera/animation child panels. Viewport **Babylon Scene** N-panel = scene-wide (rendering, fog, atmosphere, post-processing sub-panels via post_panels.py, Input Actions, export via draw_export_controls()).","meta":[["Object","Babylon Object"],["Scene","Babylon Scene"]]},{"id":8,"x":560,"y":110,"w":160,"h":44,"label":"export/","sub":"the pipeline","desc":"The output half. level.py orchestrates the glb + schema-v4 manifest (begin_asset_export resets copy reservations each pass); components / datablocks / animation / scene serialize each block (Blender→Babylon axis swap happens here); assets.py copies media with stable sanitized names (re-export overwrites; _2 only on same-pass collision); validate.py pre-flights; live_link.py re-exports on Ctrl+S.","meta":[["Output","glb + scene.json"],["Schema","v4"]]},{"id":9,"x":560,"y":320,"w":160,"h":44,"label":"viewport/","sub":"viewport gizmo","desc":"GPU overlays. collider_preview.py draws manual colliders in the 3D view in Blender space, so the preview matches the body export produces.","meta":[["Draw","POST_VIEW handler"]]}],"edges":[{"id":100,"src":1,"tgt":3,"label":"registers"},{"id":101,"src":1,"tgt":7,"label":""},{"id":102,"src":1,"tgt":6,"label":""},{"id":103,"src":7,"tgt":6,"label":"buttons"},{"id":104,"src":7,"tgt":3,"label":"draws"},{"id":105,"src":7,"tgt":4,"label":"draws"},{"id":106,"src":7,"tgt":5,"label":"edits"},{"id":107,"src":6,"tgt":8,"label":"Export / Validate"},{"id":108,"src":6,"tgt":2,"label":"Sync"},{"id":109,"src":8,"tgt":3,"label":"reads"},{"id":110,"src":8,"tgt":4,"label":"reads"},{"id":111,"src":8,"tgt":5,"label":"serializes"},{"id":112,"src":8,"tgt":2,"label":"GUIDs"},{"id":113,"src":3,"tgt":9,"label":"values"}]};
+const DIAGRAM_DATA = {"title":"Blender — Add-on overview","nodes":[{"id":1,"x":300,"y":40,"w":160,"h":44,"label":"__init__.py","sub":"registration","desc":"Extension entry point. register()/unregister() call each subpackage's register() in dependency order — components & scene first (their PropertyGroups are referenced everywhere), then input_actions, export, operators, ui, viewport. Reloads submodules so edits land mid-session.","meta":[["Blender","4.2+ extension"],["Order","data → ui"]]},{"id":2,"x":40,"y":60,"w":160,"h":44,"label":"core/","sub":"ids + TS parsing","desc":"Pure helpers, nothing registered. ids.py owns ID_KEY ('bjs_id'), VISIBLE_KEY ('bjs_visible'), and ensure_object_id(); script_parse.py regex-reads @exposed(...) and @inputMap(\"...\") from behavior TypeScript — THE cross-language contract.","meta":[["Files","ids · script_parse"]]},{"id":3,"x":40,"y":180,"w":160,"h":44,"label":"components/","sub":"per-object data","desc":"The component model on every Object: BJSComponent (one group switched by comp_type), exposed vars + list items, trigger/click events, light-shadow & animation blocks, and the copy/paste clipboard. constants.py isolates every enum table.","meta":[["Key class","BJSComponent"],["On","Object.bjs_components"],["Types","incl. MSDF_TEXT"]]},{"id":4,"x":40,"y":300,"w":160,"h":44,"label":"scene/","sub":"scene settings","desc":"BJSSceneSettings on Scene.bjs_scene: clear/ambient, environment (World texture via scene/environment.py find_world_env_node, or useDefault flag via use_default_environment), Show Skybox (IBL without visible background when off; forced off when Atmosphere on), Skybox Ignores Fog (mesh.applyFog = false when on), fog, Atmosphere (scene/atmosphere.py — SUN lamp, scattering), freeze shadows; post-processing lives on the nested bjs_scene.post block (scene/post_processing.py) — MSAA, FXAA, bloom, SSAO, image processing (tone mapping type, exposure, contrast, vignette, color grading, curves), sharpen, DOF, chromatic aberration, grain, glow.","meta":[["On","Scene.bjs_scene.post"]]},{"id":5,"x":40,"y":420,"w":160,"h":44,"label":"input_actions/","sub":"Input Actions asset","desc":"The asset end-to-end: data model (maps/actions/bindings), the built-in Player defaults, JSON serialize/apply (+ friendly-key aliases), and every bjs.input_* operator.","meta":[["Export keys","inputActions + defaultInputMap"]]},{"id":6,"x":300,"y":200,"w":160,"h":44,"label":"operators/","sub":"the verbs","desc":"Component/script/export operators in operators/ (components.py, scripts.py, export_ops.py). Input Actions operators live in input_actions/operators.py — those buttons route there, not through operators/.","meta":[["Export op","BJS_OT_export"]]},{"id":7,"x":300,"y":340,"w":160,"h":44,"label":"ui/","sub":"panels + menus","desc":"All presentation. Viewport **Babylon Object** N-panel = the selected object — or a PINNED object — with components + light/camera/animation child panels. Viewport **Babylon Scene** N-panel = scene-wide (rendering, fog, atmosphere, post-processing sub-panels via post_panels.py, Input Actions, export via draw_export_controls()).","meta":[["Object","Babylon Object"],["Scene","Babylon Scene"]]},{"id":8,"x":560,"y":110,"w":160,"h":44,"label":"export/","sub":"the pipeline","desc":"The output half. level.py orchestrates the glb + schema-v4 manifest (begin_asset_export resets copy reservations each pass); components / datablocks / animation / scene serialize each block (Blender→Babylon axis swap happens here); assets.py copies media with stable sanitized names (re-export overwrites; _2 only on same-pass collision); validate.py pre-flights; live_link.py re-exports on Ctrl+S.","meta":[["Output","glb + scene.json"],["Schema","v4"]]},{"id":9,"x":560,"y":320,"w":160,"h":44,"label":"viewport/","sub":"viewport gizmo","desc":"GPU overlays. collider_preview.py draws manual colliders in the 3D view in Blender space, so the preview matches the body export produces.","meta":[["Draw","POST_VIEW handler"]]}],"edges":[{"id":100,"src":1,"tgt":3,"label":"registers"},{"id":101,"src":1,"tgt":4,"label":"registers"},{"id":102,"src":1,"tgt":5,"label":"registers"},{"id":114,"src":1,"tgt":6,"label":"registers"},{"id":115,"src":1,"tgt":7,"label":"registers"},{"id":116,"src":1,"tgt":8,"label":"registers"},{"id":117,"src":1,"tgt":9,"label":"registers"},{"id":103,"src":7,"tgt":6,"label":"buttons"},{"id":104,"src":7,"tgt":3,"label":"draws"},{"id":105,"src":7,"tgt":4,"label":"draws"},{"id":106,"src":7,"tgt":5,"label":"edits"},{"id":118,"src":7,"tgt":5,"label":"input_* buttons"},{"id":107,"src":6,"tgt":8,"label":"Export"},{"id":119,"src":6,"tgt":8,"label":"Validate"},{"id":108,"src":6,"tgt":2,"label":"Sync"},{"id":109,"src":8,"tgt":3,"label":"reads"},{"id":110,"src":8,"tgt":4,"label":"reads"},{"id":111,"src":8,"tgt":5,"label":"serializes"},{"id":112,"src":8,"tgt":2,"label":"GUIDs"},{"id":113,"src":3,"tgt":9,"label":"collider fields"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -436,19 +441,9 @@ function nodeBounds(padding = 0) {
 }
 
 /**
- * Compute the quadratic-bezier geometry for an edge.
- * Returns { x1, y1, x2, y2, cpx, cpy, mx, my }  (mx/my = midpoint for label placement)
+ * Compute straight-line geometry for an edge.
+ * Returns { x1, y1, x2, y2, mx, my }  (mx/my = midpoint for label placement)
  * or null if either endpoint node is missing from the nodes array.
- *
- * Geometry overview:
- *
- *   source centre ──► unit vector ──► x1/y1 (point on source box wall)
- *                                         ↓  curve
- *   target centre ◄── unit vector ◄── x2/y2 (point on target box wall, + arrowhead gap)
- *                          ↑
- *                     control point lifted above the straight midpoint
- *                     by 18% of the horizontal separation, giving a
- *                     gentle arc that grows with distance.
  */
 function edgeEP(e) {
   const src = nodes.find(n => n.id === e.src);
@@ -464,14 +459,6 @@ function edgeEP(e) {
   const unitX  = dx / length;
   const unitY  = dy / length;
 
-  // Straight-line midpoint between the two centres
-  const midX = (nodeCentreX(src) + nodeCentreX(tgt)) / 2;
-  const midY = (nodeCentreY(src) + nodeCentreY(tgt)) / 2;
-
-  // Arc height: lift the control point above the midpoint.
-  // Using horizontal separation (dx) means wider edges arc higher.
-  const arcLift       = Math.abs(dx) * 0.18;
-  const labelLift     = Math.abs(dx) * 0.09;  // label sits halfway up the arc
   const ARROWHEAD_GAP = 7;
 
   // Where the line exits the source box wall
@@ -485,8 +472,8 @@ function edgeEP(e) {
   return {
     x1: startX,  y1: startY,
     x2: endX,    y2: endY,
-    cpx: midX,   cpy: midY - arcLift,
-    mx:  midX,   my:  midY - labelLift,
+    mx: (startX + endX) / 2,
+    my: (startY + endY) / 2,
   };
 }
 
@@ -815,17 +802,17 @@ function draw() {
     const isAdjacent   = selNodeId && (e.src === selNodeId || e.tgt === selNodeId);
     const lit          = isSelected || isAdjacent;
 
-    // Curve
+    // Straight edge
     ctx.strokeStyle = lit ? '#c8a84a' : '#3a3428';
     ctx.lineWidth   = (lit ? 1.8 : 1) / zoom;
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(ep.x1, ep.y1);
-    ctx.quadraticCurveTo(ep.cpx, ep.cpy, ep.x2, ep.y2);
+    ctx.lineTo(ep.x2, ep.y2);
     ctx.stroke();
 
     // Arrowhead (small filled triangle at the tip)
-    const arrowAngle = Math.atan2(ep.y2 - ep.cpy, ep.x2 - ep.cpx);
+    const arrowAngle = Math.atan2(ep.y2 - ep.y1, ep.x2 - ep.x1);
     const arrowSize  = 9 / zoom;
     ctx.fillStyle = lit ? '#c8a84a' : '#3a3428';
     ctx.beginPath();

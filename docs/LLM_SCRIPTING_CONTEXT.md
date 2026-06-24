@@ -3,8 +3,8 @@
 Context for an LLM **generating a behavior script** for this engine (runtime
 **v0.32.0**). Each behavior is one self-contained `.ts` file the runtime loads
 and runs per-frame. This file is the **behavior authoring contract** — you do
-not need engine internals to write one. Deeper docs: `docs/engine/04-SCRIPTING.md`,
-`docs/STYLE_GUIDE.md`, and the full packet at `docs/engine/00-INDEX.md`.
+not need engine internals to write one. Deeper docs: `docs/engine/04-SCRIPTING.html`,
+`docs/STYLE_GUIDE.md`, and the full packet at `docs/engine/00-INDEX.html`.
 
 **Terminology:** a **component** is authored *data* on an entity (TAG, COLLIDER,
 SCRIPT, …) serialized from Blender; a **behavior** is a runtime *script class*
@@ -307,7 +307,7 @@ settings, and won't survive level reload. Use `list_scene_entities` to see
 enabled **atmosphere** / **post-processing** and which entity is the sun lamp
 when grounding `@exposed` picks.
 
-Runtime detail: `docs/engine/06-RENDERING.md` (Atmosphere + post-processing).
+Runtime detail: `docs/engine/06-RENDERING.html` (Atmosphere + post-processing).
 
 ## Physics
 
@@ -599,12 +599,12 @@ export default class HoverBob extends Behavior
 
 | Topic | Doc |
 |---|---|
-| Full scripting chapter | `docs/engine/04-SCRIPTING.md` |
-| Physics (bodies, triggers, constraints) | `docs/engine/05-PHYSICS.md` |
-| Load order / when `OnStart` runs / visibility | `docs/engine/03-LOAD-PIPELINE.md` |
-| Cameras (component types, Geospatial) | `docs/engine/06-RENDERING.md` |
-| Scene look / atmosphere / post-processing (bloom, SSAO) | `docs/engine/06-RENDERING.md` · `get_scripting_context(section="scene-look")` |
-| Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.md` |
+| Full scripting chapter | `docs/engine/04-SCRIPTING.html` |
+| Physics (bodies, triggers, constraints) | `docs/engine/05-PHYSICS.html` |
+| Load order / when `OnStart` runs / visibility | `docs/engine/03-LOAD-PIPELINE.html` |
+| Cameras (component types, Geospatial) | `docs/engine/06-RENDERING.html` |
+| Scene look / atmosphere / post-processing (bloom, SSAO) | `docs/engine/06-RENDERING.html` · `get_scripting_context(section="scene-look")` |
+| Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.html` |
 | 2D GUI, particles, 3D GUI | `docs/engine/10-UI.md` |
 | Code style | `docs/STYLE_GUIDE.md` |
 | Prefabs + `level.Spawn()` (planned) | `docs/PREFAB_SPEC.md` |

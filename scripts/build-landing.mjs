@@ -4,10 +4,9 @@
  *
  *   npm run docs:build   (runs this last)  ·  node scripts/build-landing.mjs
  *
- * Indexes every engine + Blender area diagram and code trace, then emits a
- * self-contained search page. Typing a term (e.g. "collision", "export")
- * ranks the pages from BOTH sides by relevance. The index is derived from the
- * same data the diagrams are built from, so it never goes stale.
+ * Indexes engine + Blender area diagrams, code traces, and prose chapters;
+ * emits a topic hub + search page. The index is derived from build data so it
+ * stays in sync with the diagrams.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -19,13 +18,14 @@ import {
   AREA_PAGES as BLENDER_AREA_PAGES,
   TRACES as BLENDER_TRACES,
 } from "./build-blender-docs.mjs";
+import { TOPICS, TopicsForHref } from "./docs/topics.mjs";
+import { PROSE_CHAPTERS } from "./docs/prose/manifest.mjs";
+import { ReadProseFragment, StripHtml } from "./build-prose-docs.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // ---------------------------------------------------------------------------
-// Query-side synonyms — so a search term surfaces the right pages even when
-// the page uses different vocabulary ("collision" → collider/physics, etc.).
-// Multi-word values are matched as substrings against each page's search text.
+// Query-side synonyms
 // ---------------------------------------------------------------------------
 
 const SYNONYMS = {
@@ -82,22 +82,30 @@ const SYNONYMS = {
   atmosphere: ["sky", "aerial perspective", "sun", "rayleigh", "scattering", "rendering", "environment"],
   rayleigh: ["atmosphere", "scattering", "sky"],
   scattering: ["atmosphere", "mie", "rayleigh", "sky"],
+  scale: ["applyobjectscale", "collider_apply_scale", "object scale", "apply object scale"],
+  default: ["manifest", "property", "enabled"],
+  modify: ["behavior", "export", "serialize", "change"],
+  change: ["behavior", "export", "serialize", "modify"],
 };
 
-// Suggested chips shown under the search box (term + what it surfaces).
 const SUGGESTIONS = [
   "collision", "export", "input", "audio", "constraints",
   "scripting", "animation", "gui", "live link", "lighting",
 ];
 
 // ---------------------------------------------------------------------------
-// Index extraction — every page becomes one search entry.
+// Index extraction
 // ---------------------------------------------------------------------------
 
 function metaText(meta)
 {
   if (!Array.isArray(meta)) { return ""; }
   return meta.map((row) => Array.isArray(row) ? row.join(" ") : String(row)).join(" ");
+}
+
+function withTopics(entry)
+{
+  return { ...entry, topics: TopicsForHref(entry.href) };
 }
 
 function areaEntry(side, file, title, nodes)
@@ -107,14 +115,14 @@ function areaEntry(side, file, title, nodes)
     title,
     ...nodes.flatMap((n) => [n.label, n.sub, n.desc, metaText(n.meta)]),
   ].join(" ").toLowerCase();
-  return {
+  return withTopics({
     side,
     kind: "area",
     href: `${side}/${file}`,
     title,
-    summary: "Diagram · " + labels.join(" · "),
+    summary: "Diagram · " + labels.slice(0, 8).join(" · ") + (labels.length > 8 ? " · …" : ""),
     text,
-  };
+  });
 }
 
 function traceEntry(side, trace)
@@ -124,14 +132,48 @@ function traceEntry(side, trace)
     trace.intro,
     ...trace.steps.flatMap((s) => [s.symbol, s.title, s.file, s.note]),
   ].filter(Boolean).join(" ").toLowerCase();
-  return {
+  return withTopics({
     side,
     kind: "trace",
     href: `${side}/trace-${trace.id}.html`,
     title: trace.title,
     summary: trace.intro || "Step-by-step code trace.",
     text,
-  };
+  });
+}
+
+function proseEntry(chapter)
+{
+  const html = ReadProseFragment(chapter.fragment);
+  const plain = StripHtml(html);
+
+  let title = chapter.title;
+  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1)
+  {
+    title = StripHtml(h1[1])
+      .replace(/^\d+\s*[—–-]\s*/, "")
+      .trim();
+  }
+
+  const summary = plain
+    .replace(title, "")
+    .trim()
+    .slice(0, 200);
+
+  return withTopics({
+    side: chapter.side,
+    kind: "prose",
+    href: chapter.href,
+    title,
+    summary: summary || "Prose chapter.",
+    text: plain.toLowerCase(),
+  });
+}
+
+function proseEntries()
+{
+  return PROSE_CHAPTERS.filter((ch) => ch.layout !== "meta").map(proseEntry);
 }
 
 function BuildIndex()
@@ -155,13 +197,13 @@ function BuildIndex()
   {
     entries.push(traceEntry("blender", trace));
   }
+  entries.push(...proseEntries());
 
   return entries;
 }
 
 // ---------------------------------------------------------------------------
-// Client search script. Plain string (no backticks / ${}) so it can be safely
-// embedded inside the page template literal below.
+// Client script — plain string (no backticks) for safe embedding.
 // ---------------------------------------------------------------------------
 
 const CLIENT_JS = [
@@ -169,6 +211,39 @@ const CLIENT_JS = [
   "  var box = document.getElementById('q');",
   "  var out = document.getElementById('results');",
   "  var count = document.getElementById('count');",
+  "  var topicBar = document.getElementById('topic-bar');",
+  "  var topicBlurb = document.getElementById('topic-blurb');",
+  "  var activeTopic = null;",
+  "",
+  "  function topicDef(id) {",
+  "    for (var i = 0; i < TOPICS.length; i++) { if (TOPICS[i].id === id) { return TOPICS[i]; } }",
+  "    return null;",
+  "  }",
+  "",
+  "  function syncUrl() {",
+  "    var params = new URLSearchParams(window.location.search);",
+  "    if (activeTopic) { params.set('topic', activeTopic); } else { params.delete('topic'); }",
+  "    var q = box.value.trim();",
+  "    if (q) { params.set('q', q); } else { params.delete('q'); }",
+  "    var qs = params.toString();",
+  "    history.replaceState(null, '', qs ? ('?' + qs) : window.location.pathname);",
+  "  }",
+  "",
+  "  function setTopic(id) {",
+  "    activeTopic = id || null;",
+  "    Array.prototype.forEach.call(document.querySelectorAll('.topic-card'), function (el) {",
+  "      el.classList.toggle('on', el.getAttribute('data-topic') === activeTopic);",
+  "    });",
+  "    if (topicBlurb) {",
+  "      var def = activeTopic ? topicDef(activeTopic) : null;",
+  "      topicBlurb.innerHTML = def",
+  "        ? '<strong>' + def.label + '</strong> — ' + def.blurb",
+  "        : 'Pick a topic above, or search across all docs.';",
+  "      topicBlurb.style.display = 'block';",
+  "    }",
+  "    syncUrl();",
+  "    run();",
+  "  }",
   "",
   "  function expand(tokens) {",
   "    var terms = [];",
@@ -194,9 +269,14 @@ const CLIENT_JS = [
   "    return total;",
   "  }",
   "",
+  "  function inTopic(entry) {",
+  "    if (!activeTopic) { return true; }",
+  "    return entry.topics && entry.topics.indexOf(activeTopic) !== -1;",
+  "  }",
+  "",
   "  function badge(entry) {",
   "    var side = '<span class=\"badge ' + entry.side + '\">' + entry.side + '</span>';",
-  "    var kind = '<span class=\"badge kind\">' + entry.kind + '</span>';",
+  "    var kind = '<span class=\"badge kind-' + entry.kind + '\">' + entry.kind + '</span>';",
   "    return side + kind;",
   "  }",
   "",
@@ -212,29 +292,65 @@ const CLIENT_JS = [
   "    return '<h2 class=\"group\">' + title + '</h2>' + items.map(card).join('');",
   "  }",
   "",
+  "  function byHref(href) {",
+  "    for (var i = 0; i < INDEX.length; i++) { if (INDEX[i].href === href) { return INDEX[i]; } }",
+  "    return null;",
+  "  }",
+  "",
+  "  function startHereSection(def) {",
+  "    if (!def || !def.startHere || !def.startHere.length) { return ''; }",
+  "    var html = '<h2 class=\"group\">Start here</h2>';",
+  "    def.startHere.forEach(function (href) {",
+  "      var e = byHref(href);",
+  "      if (e) { html += card(e); }",
+  "    });",
+  "    return html;",
+  "  }",
+  "",
+  "  function browsePool() {",
+  "    return INDEX.filter(inTopic);",
+  "  }",
+  "",
   "  function browse() {",
-  "    count.textContent = INDEX.length + ' pages';",
-  "    var eng = INDEX.filter(function (e) { return e.side === 'engine'; });",
-  "    var bl = INDEX.filter(function (e) { return e.side === 'blender'; });",
-  "    out.innerHTML = group('Engine (runtime)', eng) + group('Blender (add-on)', bl);",
+  "    var pool = browsePool();",
+  "    var def = activeTopic ? topicDef(activeTopic) : null;",
+  "    var startHrefs = def ? def.startHere : [];",
+  "    var rest = pool.filter(function (e) { return startHrefs.indexOf(e.href) === -1; });",
+  "",
+  "    if (activeTopic) {",
+  "      count.textContent = pool.length + ' pages in this topic';",
+  "      var diagrams = rest.filter(function (e) { return e.kind !== 'prose'; });",
+  "      var prose = rest.filter(function (e) { return e.kind === 'prose'; });",
+  "      out.innerHTML = startHereSection(def)",
+  "        + group('Diagrams & traces', diagrams)",
+  "        + group('Prose chapters', prose);",
+  "      return;",
+  "    }",
+  "",
+  "    count.textContent = 'Pick a topic above, or search — ' + INDEX.length + ' pages indexed';",
+  "    out.innerHTML = '<p class=\"hint\">Select a topic to see curated starting points, or type in the search box.</p>';",
   "  }",
   "",
   "  function search(query) {",
   "    var tokens = query.toLowerCase().split(/[^a-z0-9+]+/).filter(Boolean);",
   "    if (!tokens.length) { browse(); return; }",
   "    var terms = expand(tokens);",
-  "    var ranked = INDEX.map(function (e) { return { e: e, s: score(e, terms) }; })",
+  "    var ranked = INDEX.filter(inTopic).map(function (e) { return { e: e, s: score(e, terms) }; })",
   "      .filter(function (r) { return r.s > 0; })",
   "      .sort(function (a, b) { return b.s - a.s; });",
-  "    count.textContent = ranked.length + (ranked.length === 1 ? ' match' : ' matches');",
+  "    count.textContent = ranked.length + (ranked.length === 1 ? ' match' : ' matches')",
+  "      + (activeTopic ? ' in topic' : '');",
   "    if (!ranked.length) {",
-  "      out.innerHTML = '<p class=\"empty\">No pages matched \"' + query + '\". Try a broader term like \"physics\" or \"input\".</p>';",
+  "      out.innerHTML = '<p class=\"empty\">No pages matched \"' + query + '\"' +",
+  "        (activeTopic ? ' in this topic' : '') + '. Try a broader term or clear the topic filter.</p>';",
   "      return;",
   "    }",
-  "    out.innerHTML = ranked.map(function (r) { return card(r.e); }).join('');",
+  "    var def = activeTopic ? topicDef(activeTopic) : null;",
+  "    out.innerHTML = (def ? startHereSection(def) : '')",
+  "      + ranked.map(function (r) { return card(r.e); }).join('');",
   "  }",
   "",
-  "  function run() { search(box.value); }",
+  "  function run() { syncUrl(); search(box.value); }",
   "  box.addEventListener('input', run);",
   "  box.addEventListener('keydown', function (e) {",
   "    if (e.key === 'Enter') {",
@@ -251,22 +367,58 @@ const CLIENT_JS = [
   "    });",
   "  });",
   "",
+  "  Array.prototype.forEach.call(document.querySelectorAll('.topic-card'), function (el) {",
+  "    el.addEventListener('click', function () {",
+  "      var id = el.getAttribute('data-topic');",
+  "      setTopic(activeTopic === id ? null : id);",
+  "    });",
+  "  });",
+  "",
+  "  var clearBtn = document.getElementById('topic-clear');",
+  "  if (clearBtn) {",
+  "    clearBtn.addEventListener('click', function () { setTopic(null); });",
+  "  }",
+  "",
   "  var params = new URLSearchParams(window.location.search);",
   "  if (params.get('q')) { box.value = params.get('q'); }",
+  "  if (params.get('topic')) { activeTopic = params.get('topic'); }",
+  "  Array.prototype.forEach.call(document.querySelectorAll('.topic-card'), function (el) {",
+  "    el.classList.toggle('on', el.getAttribute('data-topic') === activeTopic);",
+  "  });",
+  "  if (topicBlurb) {",
+  "    var initDef = activeTopic ? topicDef(activeTopic) : null;",
+  "    topicBlurb.innerHTML = initDef",
+  "      ? '<strong>' + initDef.label + '</strong> — ' + initDef.blurb",
+  "      : 'Pick a topic above, or search across all docs.';",
+  "  }",
   "  run();",
   "  box.focus();",
   "})();",
 ].join("\n");
 
 // ---------------------------------------------------------------------------
-// Page template.
+// Page template
 // ---------------------------------------------------------------------------
+
+function topicCardsHtml()
+{
+  return TOPICS.map((t) =>
+    `<button type="button" class="topic-card" data-topic="${t.id}">${t.label}</button>`
+  ).join("");
+}
 
 function Page(index)
 {
   const chips = SUGGESTIONS
-    .map((s) => `<button class="chip" data-term="${s}">${s}</button>`)
+    .map((s) => `<button type="button" class="chip" data-term="${s}">${s}</button>`)
     .join("");
+
+  const topicPayload = TOPICS.map((t) => ({
+    id: t.id,
+    label: t.label,
+    blurb: t.blurb,
+    startHere: t.startHere,
+  }));
 
   return `<!DOCTYPE html>
 <!-- Generated by scripts/build-landing.mjs — edit there, then npm run docs:build. -->
@@ -283,11 +435,35 @@ function Page(index)
     min-height: 100vh; padding: 48px 20px 80px;
   }
   .wrap { max-width: 860px; margin: 0 auto; }
-  header { text-align: center; margin-bottom: 28px; }
+  header { text-align: center; margin-bottom: 22px; }
   h1 { font-size: 26px; font-weight: 700; letter-spacing: .01em; color: #f0ead8; }
   .tag { margin-top: 8px; color: #6c7396; font-size: 13px; line-height: 1.5; }
   .tag b.eng { color: #8fa3ff; } .tag b.bl { color: #f0cda8; }
-  .search { margin: 26px 0 14px; }
+  #topic-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    margin: 20px 0 10px;
+  }
+  .topic-card {
+    background: #131319; border: 1px solid #2a2838; color: #9aa0c0;
+    font: 12px ui-monospace, monospace; padding: 8px 12px; border-radius: 8px;
+    cursor: pointer; transition: all .12s;
+  }
+  .topic-card:hover { border-color: #4f6df5; color: #cdd5ff; }
+  .topic-card.on {
+    background: #1a2040; border-color: #4f6df5; color: #e8ecff;
+    box-shadow: 0 0 0 2px #4f6df533;
+  }
+  #topic-blurb {
+    text-align: center; color: #8b91ad; font-size: 12.5px; line-height: 1.55;
+    margin: 8px 4px 4px; min-height: 1.4em;
+  }
+  #topic-blurb strong { color: #c8d0f0; font-weight: 600; }
+  #topic-clear {
+    display: block; margin: 4px auto 0; background: none; border: none;
+    color: #565d7a; font: 11px inherit; cursor: pointer; text-decoration: underline;
+  }
+  #topic-clear:hover { color: #8b91ad; }
+  .search { margin: 20px 0 14px; }
   #q {
     width: 100%; padding: 16px 18px; font-size: 17px; font-family: inherit;
     color: #f0ead8; background: #15151b; border: 1px solid #2e2c3f;
@@ -303,6 +479,7 @@ function Page(index)
   }
   .chip:hover { border-color: #4f6df5; color: #cdd5ff; }
   #count { color: #565d7a; font-size: 12px; margin: 14px 2px 6px; display: block; }
+  .hint { color: #6c7396; font-size: 13px; padding: 12px 2px 8px; line-height: 1.5; }
   .group {
     font-size: 12px; text-transform: uppercase; letter-spacing: .12em;
     color: #6c7396; margin: 22px 2px 10px; font-weight: 600;
@@ -318,7 +495,7 @@ function Page(index)
   .card.engine:hover { border-color: #4f6df5; }
   .card.blender { border-left-color: #e08a3c; }
   .card.blender:hover { border-color: #e08a3c; }
-  .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
   .card-title { font-size: 15px; font-weight: 600; color: #f0ead8; }
   .card-sum { color: #8b91ad; font-size: 12.5px; line-height: 1.5; }
   .badge {
@@ -327,7 +504,9 @@ function Page(index)
   }
   .badge.engine { background: #4f6df5; color: #fff; }
   .badge.blender { background: #e08a3c; color: #2a1c0e; }
-  .badge.kind { background: #23222e; color: #8b91ad; }
+  .badge.kind-area { background: #23222e; color: #8b91ad; }
+  .badge.kind-trace { background: #1e2a1e; color: #8aad8b; }
+  .badge.kind-prose { background: #2a2420; color: #c0a878; }
   .empty { color: #8b91ad; padding: 20px 2px; font-size: 14px; }
   footer {
     text-align: center; margin-top: 40px; padding-top: 22px;
@@ -342,13 +521,17 @@ function Page(index)
 <div class="wrap">
   <header>
     <h1>Babylon Level Kit — Documentation</h1>
-    <p class="tag">Search across <b class="eng">Engine (runtime)</b> and
-      <b class="bl">Blender (add-on)</b> docs. Try a feature, a concept, or a symbol.</p>
+    <p class="tag">Browse by topic or search across <b class="eng">Engine</b>,
+      <b class="bl">Blender</b>, and <b>prose chapters</b>.</p>
   </header>
+
+  <div id="topic-bar">${topicCardsHtml()}</div>
+  <p id="topic-blurb">Pick a topic above, or search across all docs.</p>
+  <button type="button" id="topic-clear">Clear topic filter</button>
 
   <div class="search">
     <input id="q" type="search" autocomplete="off" spellcheck="false"
-      placeholder="Search the docs — e.g. collision, export, input…">
+      placeholder="Search the docs — e.g. collision, scale, export…">
   </div>
   <div class="chips">${chips}</div>
 
@@ -357,7 +540,8 @@ function Page(index)
 
   <footer>
     Browse directly: <a href="engine/index.html">Engine overview →</a> ·
-    <a class="bl" href="blender/index.html">Blender overview →</a><br>
+    <a class="bl" href="blender/index.html">Blender overview →</a> ·
+    <a href="BUILDING-DOCS.html">Building the docs →</a><br>
     Regenerate with <code>npm run docs:build</code>.
   </footer>
 </div>
@@ -365,6 +549,7 @@ function Page(index)
 <script>
 const INDEX = ${JSON.stringify(index)};
 const SYN = ${JSON.stringify(SYNONYMS)};
+const TOPICS = ${JSON.stringify(topicPayload)};
 ${CLIENT_JS}
 </script>
 </body>
@@ -377,7 +562,8 @@ export function BuildLandingPage()
   const index = BuildIndex();
   const outPath = path.join(ROOT, "docs", "index.html");
   fs.writeFileSync(outPath, Page(index));
-  console.log(`landing page: docs/index.html (${index.length} pages indexed)`);
+  const prose = index.filter((e) => e.kind === "prose").length;
+  console.log(`landing page: docs/index.html (${index.length} pages indexed, ${prose} prose)`);
 }
 
 if (import.meta.url === new URL(process.argv[1], "file:").href)

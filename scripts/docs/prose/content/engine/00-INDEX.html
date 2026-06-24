@@ -1,0 +1,24 @@
+<h1>Babylon Level Kit — Engine (Runtime) Documentation</h1>
+<p>The runtime half of the kit, current as of <strong>v0.32.0</strong>. The interactive version is the HTML diagram set in this folder — open <strong>[index.html](index.html)</strong> and use the bottom nav (an area row for the subsystem diagrams + a <strong>Traces</strong> row for code walk-throughs; &quot;Blender docs →&quot; jumps to the editor packet).</p>
+<blockquote><p><strong>Looking for something specific?</strong> Open the searchable landing page at <strong>[../index.html](../index.html)</strong> and type a term (e.g. *collision*, *export*, *input*) to surface the relevant pages from both the engine and Blender sides.</p></blockquote>
+<h2>What the runtime does</h2>
+<p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports — <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything it can't) — and turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb, indexes nodes by GUID, builds an <code>Entity</code> per manifest entry, applies components through small subsystems (physics, lights, cameras, audio, …), then runs your <code>Behavior</code> scripts. See <a href="01-ARCHITECTURE.html">Architecture</a> for the two-artifact split and <a href="02-BLENDER-ADDON.html">Blender Add-on</a> for the editor side.</p>
+<h2>The interactive pages</h2>
+<p>Area diagrams (clickable node graphs): <strong>[index.html](index.html)</strong> (engine overview) · <strong>[load-pipeline.html](load-pipeline.html)</strong> · <strong>[scripting.html](scripting.html)</strong> · <strong>[physics.html](physics.html)</strong> · <strong>[rendering.html](rendering.html)</strong> · <strong>[audio-animation.html](audio-animation.html)</strong> · <strong>[ui.html](ui.html)</strong> · <strong>[workflow.html](workflow.html)</strong> · <strong>[blender-addon.html](blender-addon.html)</strong> (the editor, from the runtime's point of view).</p>
+<p>Code traces (each node is a step; click for the explanation + the actual current TypeScript source): <strong>Load</strong> (manifest → <code>Level</code>) · <strong>Physics</strong> (collider → Havok body) · <strong>@exposed</strong> (field → Blender → instance) · <strong>Triggers</strong> (On-Enter → <code>OnMessage</code>) · <strong>Constraints</strong> (component → joint) · <strong>Audio</strong> · <strong>Input</strong> (key → action → behavior) · <strong>Live Link</strong> · <strong>2D GUI</strong> · <strong>Particles</strong> · <strong>MSDF text</strong> · <strong>3D GUI</strong> · <strong>Atmosphere</strong> (SUN lamp → physical sky).</p>
+<h2>The prose chapters</h2>
+<ol>
+<li><a href="01-ARCHITECTURE.html">Architecture</a> — two artifacts, GUID identity, monorepo, data flow</li>
+<li><a href="02-BLENDER-ADDON.html">Blender Add-on</a> — the editor half + export pipeline</li>
+<li><a href="03-LOAD-PIPELINE.html">Load Pipeline</a> — <code>LevelLoader.Load</code>, the passes, <code>FinalizeLevel</code></li>
+<li><a href="04-SCRIPTING.html">Scripting</a> — <code>Entity</code>, <code>Behavior</code>, <code>@exposed</code>, <code>@inputMap</code>, Input</li>
+<li><a href="05-PHYSICS.html">Physics</a> — bodies, constraints, triggers, right-handed import</li>
+<li><a href="06-RENDERING.html">Rendering</a> — lights, cameras, shadows, environment, atmosphere, scene look</li>
+<li><a href="07-AUDIO-ANIMATION.html">Audio &amp; Animation</a> — sounds, NLA clips, the skinned-mesh rule</li>
+<li><a href="08-WORKFLOW.html">Workflow</a> — Live Link, the validator, Debug Build, tooling, <a href="../launcher/00-INDEX.html">Babylon Launcher</a></li>
+<li><a href="09-FEATURE-TRACES.html">Feature Traces</a> — every feature's Blender → runtime file/function chain</li>
+<li><a href="10-UI.html">UI</a> — 2D GUI, particles, MSDF text, 3D GUI</li>
+</ol>
+<h2>Regenerating</h2>
+<p><code>npm run docs:build</code> regenerates both packets from the shared shell template (<code>docs/_template/diagram-shell.html</code>) and rebuilds the searchable landing page. <code>npm run docs:trace</code> rebuilds only this folder; it re-extracts every trace's source from <code>packages/engine/</code>. A renamed/deleted symbol fails the build loudly — the anti-rot guard. (The Blender packet alone is <code>npm run docs:blender</code>.)</p>
+<p>Full build pipeline, file layout, and how to add traces or diagrams: <strong><a href="../BUILDING-DOCS.html">Building the documentation</a></strong>.</p>
