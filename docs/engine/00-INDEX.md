@@ -57,3 +57,6 @@ Havok body) · **@exposed** (field → Blender → instance) · **Triggers**
 `npm run docs:trace` rebuilds only this folder; it re-extracts every trace's
 source from `packages/engine/`. A renamed/deleted symbol fails the build loudly
 — the anti-rot guard. (The Blender packet alone is `npm run docs:blender`.)
+
+Full build pipeline, file layout, and how to add traces or diagrams:
+**[Building the documentation](../BUILDING-DOCS.md)**.

@@ -1,4 +1,8 @@
-Volumetric lights are roughly implemented and only support one instance
+Volumetric lighting needs to be re-implemented
 Atmosphere barely tested
 Geospatial Camera barely tested
 SDF Text not tested
+NLA/Animations not tested
+Particles are still spawned even if the emitter is set to off
+Colliders are still spawned even if the layer is turned off
+Maybe remove "apply scale" flag for colliders and constraints and make it automatic

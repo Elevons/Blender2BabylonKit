@@ -5,7 +5,7 @@
 ## Live Link <a name="live-link"></a>
 
 The save-to-see loop. Export once (the operator remembers the path per-scene),
-tick **Live Link** in the Export panel, then every **Ctrl+S** re-exports
+tick **Live Link** in **Babylon Scene › Export**, then every **Ctrl+S** re-exports
 (`export/live_link.py`, a `save_post` handler — no timers/sockets; failures never
 break the save). On the runtime side, the Vite plugin `ReloadOnLevelExport`
 (`apps/<app>/vite.config.ts`) watches **all files** under `public/levels/` (glb,
@@ -19,13 +19,27 @@ Re-exports are **idempotent for side files**: `export_level` calls
 `env/<name>.hdr`, `audio/…`, etc. instead of accumulating `_2`, `_3`, … copies
 when the manifest path is unchanged.
 
+## Object visibility <a name="visibility"></a>
+
+Blender's outliner has two independent toggles:
+
+| Icon | Property | In the exported level |
+|---|---|---|
+| Eye | `hide_viewport` | Present but starts invisible (`bjs_visible: false` in glTF extras → `node.isVisible = false` at load) |
+| Camera | `hide_render` | Absent — skipped by `_is_renderable` in export and `use_renderable=True` on the glTF exporter |
+
+Use **render-disable** for editor-only objects that should never ship. Use
+**viewport-hide** for level content you want present (physics, scripts, references)
+but off until gameplay or a behavior sets `entity.node.isVisible = true`.
+
 ## The validator <a name="validator"></a>
 
 `export/validate.py`, run by the **Validate** button, by Export, and by every Live
 Link export. Checks: missing/empty script files · entity references to
 render-disabled objects · MESH collider + DYNAMIC body · MESH-shaped triggers
 (never fire in Havok) · trigger events on non-trigger colliders / without a
-target · constraints missing a target or physics on either end · components or
+target · mixed trigger/non-trigger colliders on one entity (compound body) ·
+constraints missing a target or physics on either end · components or
 animation autoplay on a **skinned mesh** (belongs on the armature —
 [why](07-AUDIO-ANIMATION.md)) · AREA lights · duplicate GUIDs · audio file
 missing · no active camera · **Input Actions** (duplicate map/action names,

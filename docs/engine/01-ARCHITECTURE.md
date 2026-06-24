@@ -27,6 +27,14 @@ without one just lives in the glb. GUIDs are auto-assigned to anything that
 needs to be findable: objects with components, lights, cameras, and any object
 referenced by an entity field, trigger event, or constraint target.
 
+**Visibility** uses the same extras channel: viewport-hidden objects (Blender
+eye icon / `hide_viewport`, but still render-enabled) get a transient
+`bjs_visible: false` (`VISIBLE_KEY`) stamped into glTF extras at export; the
+loader's `ApplyNodeVisibility` sets `node.isVisible = false` and disables
+child lights/cameras. Render-disabled objects (`hide_render`, camera icon) are
+skipped entirely — no glb geometry and no manifest entry (`use_renderable=True`
+on the glTF exporter matches the manifest filter).
+
 The GUID is also the discriminator for two subtle cases: multi-material
 submeshes have **no** GUID (so they're "owned" by their wrapper — see
 [Physics](05-PHYSICS.md#owned-meshes)), while real parented children **do**

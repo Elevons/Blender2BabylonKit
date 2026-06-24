@@ -11,7 +11,7 @@ import os
 
 import bpy
 
-from ..core.ids import ID_KEY, ensure_object_id
+from ..core.ids import ID_KEY, VISIBLE_KEY, ensure_object_id
 from .animation import serialize_animation, nla_clip_names
 from .assets import begin_asset_export
 from .components import serialize_components, iter_referenced_objects
@@ -28,6 +28,14 @@ def _is_renderable(obj):
     return not obj.hide_render
 
 
+def _is_viewport_hidden(obj):
+    """True when the eye icon is off, including collection / hierarchy visibility."""
+    visible_get = getattr(obj, "visible_get", None)
+    if visible_get is not None:
+        return not visible_get()
+    return obj.hide_viewport
+
+
 def _referenced_ids(context):
     """GUIDs of objects referenced by any ENTITY exposed var (scalar or list)."""
     ids = set()
@@ -37,11 +45,6 @@ def _referenced_ids(context):
                 rid = ref.get(ID_KEY)
                 if rid:
                     ids.add(rid)
-    volumetricLightSource = context.scene.bjs_scene.post.vls_light_source
-    if volumetricLightSource is not None:
-        lightSourceId = volumetricLightSource.get(ID_KEY)
-        if lightSourceId:
-            ids.add(lightSourceId)
     return ids
 
 
@@ -71,15 +74,12 @@ def _ensure_entity_ids(context):
         if not _is_renderable(obj):
             continue
         if (len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}
-                or nla_clip_names(obj)):
+                or nla_clip_names(obj) or _is_viewport_hidden(obj)):
             ensure_object_id(obj)
         for comp in obj.bjs_components:
             for ref in iter_referenced_objects(comp):
                 if _is_renderable(ref):
                     ensure_object_id(ref)
-    volumetricLightSource = context.scene.bjs_scene.post.vls_light_source
-    if volumetricLightSource is not None and _is_renderable(volumetricLightSource):
-        ensure_object_id(volumetricLightSource)
 
 
 def _build_manifest(context, glb_filename, output_dir):
@@ -94,11 +94,24 @@ def _build_manifest(context, glb_filename, output_dir):
         animation = serialize_animation(obj)
         is_referenced = obj.get(ID_KEY) in referenced
         has_id = bool(obj.get(ID_KEY))
+        viewport_hidden = _is_viewport_hidden(obj)
         # A GUID is an explicit "make this addressable" marker (e.g. Assign GUID
         # on a bare empty), so include it even with nothing else on it.
         if (not comps and not light and not camera and not animation
                 and not is_referenced and not has_id):
-            continue  # pure geometry needs no manifest entry; it lives in the glb
+            if not viewport_hidden:
+                continue  # pure geometry needs no manifest entry; it lives in the glb
+            obj_id = ensure_object_id(obj)
+            parent = obj.parent
+            parent_id = parent.get(ID_KEY) if parent else None
+            entities.append({
+                "id": obj_id,
+                "name": obj.name,
+                "parent": parent_id,
+                "components": [],
+                "visible": False,
+            })
+            continue
         obj_id = ensure_object_id(obj)  # guarantee a GUID exists
         parent = obj.parent
         parent_id = parent.get(ID_KEY) if parent else None
@@ -108,6 +121,8 @@ def _build_manifest(context, glb_filename, output_dir):
             "parent": parent_id,         # parent GUID if the parent has one, else null
             "components": comps,
         }
+        if viewport_hidden:
+            entity["visible"] = False
         if light:
             entity["light"] = light      # auto-derived from the Blender lamp, not a component
         if camera:
@@ -121,6 +136,25 @@ def _build_manifest(context, glb_filename, output_dir):
         "scene": serialize_scene(context, output_dir),
         "entities": entities,
     }
+
+
+def _stamp_viewport_visibility(context):
+    """Write viewport-hidden state into glTF extras (transient — cleared after export)."""
+    stamped = []
+    for obj in context.scene.objects:
+        if not _is_renderable(obj):
+            continue
+        if _is_viewport_hidden(obj):
+            # Int 0 — some glTF exporter versions omit boolean false from extras.
+            obj[VISIBLE_KEY] = 0
+            stamped.append(obj)
+    return stamped
+
+
+def _clear_viewport_visibility(stamped):
+    for obj in stamped:
+        if VISIBLE_KEY in obj:
+            del obj[VISIBLE_KEY]
 
 
 def _export_glb(glb_path):
@@ -155,7 +189,9 @@ def export_level(context, filepath):
     begin_asset_export()
     _dedupe_entity_ids(context)   # duplicated objects get fresh GUIDs
     _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
+    visibility_stamped = _stamp_viewport_visibility(context)
     _export_glb(glb_path)
+    _clear_viewport_visibility(visibility_stamped)
 
     manifest = _build_manifest(context, glb_filename, os.path.dirname(glb_path))
     manifest["debug"] = bool(getattr(context.scene, "bjs_debug_build", True))

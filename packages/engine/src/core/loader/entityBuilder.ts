@@ -30,7 +30,7 @@ import { ApplyAudio } from "../../subsystems/audio";
 import { ApplyGui } from "../../ui/gui2d";
 import { ApplyParticles } from "../../subsystems/particles";
 import { ApplyMsdfText } from "../../ui/msdfText";
-import { FindNodeByName } from "./nodeResolution";
+import { FindNodeByName, HideEntityNode } from "./nodeResolution";
 import type { LoadContext } from "./context";
 
 /**
@@ -42,7 +42,7 @@ import type { LoadContext } from "./context";
 
 /** An entity's components, sorted by kind for the apply steps. */
 function ClassifyComponents(entity: Entity, components: Component[]): {
-  collider: ColliderComponent | undefined;
+  colliders: ColliderComponent[];
   body: RigidBodyComponent | undefined;
   scripts: ScriptComponent[];
   audioComponents: AudioComponent[];
@@ -53,7 +53,7 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
   gui3dComponents: Gui3DComponent[];
 }
 {
-  let collider: ColliderComponent | undefined;
+  const colliders: ColliderComponent[] = [];
   let body: RigidBodyComponent | undefined;
   const scripts: ScriptComponent[] = [];
   const audioComponents: AudioComponent[] = [];
@@ -72,7 +72,7 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
         RegisterAttachment(entity, { type: "TAG", data: component });
         break;
       case "COLLIDER":
-        collider = component;
+        colliders.push(component);
         break;
       case "RIGIDBODY":
         body = component;
@@ -110,7 +110,7 @@ function ClassifyComponents(entity: Entity, components: Component[]): {
   }
 
   return {
-    collider, body, scripts, audioComponents, constraintComponents,
+    colliders, body, scripts, audioComponents, constraintComponents,
     guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
   };
 }
@@ -192,7 +192,7 @@ function InstantiateScripts(
 }
 
 /**
- * Interpret an entity's components: build one physics body from any COLLIDER /
+ * Interpret an entity's components: build one physics body from any COLLIDER(s) /
  * RIGIDBODY, register authored trigger reactions, queue sound creation, set the
  * tag, and instantiate SCRIPT behaviors (deferring their entity references).
  * Returns the deferred references for the second pass.
@@ -206,18 +206,18 @@ function ApplyComponents(
 ): PendingRef[]
 {
   const {
-    collider, body, scripts, audioComponents, constraintComponents,
+    colliders, body, scripts, audioComponents, constraintComponents,
     guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
   } = ClassifyComponents(entity, entityData.components);
 
-  if (collider !== undefined || body !== undefined)
+  if (colliders.length > 0 || body !== undefined)
   {
-    const physicsBody = BuildPhysics(entity.node, collider, body, scene);
+    const physicsBody = BuildPhysics(entity.node, colliders, body, scene);
     entity.body = physicsBody;
 
     if (physicsBody !== undefined)
     {
-      if (collider !== undefined)
+      for (const collider of colliders)
       {
         RegisterAttachment(entity, { type: "COLLIDER", data: collider, body: physicsBody });
       }
@@ -229,10 +229,14 @@ function ApplyComponents(
   }
 
   // Authored trigger reactions need the plugin observable; wired in a post-pass.
-  if (collider !== undefined && collider.isTrigger
-      && collider.events !== undefined && collider.events.length > 0)
+  const triggerEvents = colliders.flatMap((collider) =>
+    collider.isTrigger && collider.events !== undefined && collider.events.length > 0
+      ? collider.events
+      : []
+  );
+  if (triggerEvents.length > 0)
   {
-    context.triggerRegistrations.push({ sourceEntity: entity, events: collider.events });
+    context.triggerRegistrations.push({ sourceEntity: entity, events: triggerEvents });
   }
 
   // Sound creation is async (fetch + decode); collected and awaited after the loop.
@@ -348,6 +352,11 @@ export function ProcessEntity(
   const entity = new Entity(entityData.id, entityData.name, resolvedNode);
   context.level.entities.set(entityKey, entity);
   resolvedNode.metadata = { ...(resolvedNode.metadata ?? {}), bjsEntity: entity };
+
+  if (entityData.visible === false)
+  {
+    HideEntityNode(scene, resolvedNode);
+  }
 
   context.pendingReferences.push(
     ...ApplyComponents(entity, entityData, scene, registry, context)

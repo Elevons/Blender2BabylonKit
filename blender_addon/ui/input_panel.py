@@ -1,9 +1,9 @@
 """The "Input Actions" editor — a three-level editor for the scene's Input
 Actions asset (Action Maps > Actions > Bindings).
 
-It now lives in Properties > Scene > Babylon, next to the other scene-wide
-settings. The draw code is a mixin (BJSInputMapDrawMixin) so a viewport copy
-can be re-added with a few lines if you ever miss the N-panel version.
+It lives in the "Babylon Scene" N-panel, next to the other scene-wide
+settings. The draw code is a mixin (BJSInputMapDrawMixin) so a second copy
+can be added elsewhere with a few lines if needed.
 
 The data model lives in input_actions/properties.py and the operators in
 input_actions/operators.py.
@@ -139,10 +139,9 @@ class BJS_PT_input_map(BJSInputMapDrawMixin, Panel):
     map; scripts without @inputMap receive the scene Default Map."""
     bl_label = "Input Actions"
     bl_idname = "BJS_PT_input_map"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
-    bl_parent_id = "BJS_PT_scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):

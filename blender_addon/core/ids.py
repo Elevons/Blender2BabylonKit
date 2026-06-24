@@ -12,6 +12,12 @@ import uuid
 # Custom-property key under which each object's stable GUID is stored.
 ID_KEY = "bjs_id"
 
+# glTF extras key for viewport-hidden objects (eye icon). Render-disabled objects
+# are omitted from the export entirely; this only marks exported objects that
+# should start invisible in Babylon. Stored as int 0 at export (bool false is
+# dropped by some glTF exporter versions).
+VISIBLE_KEY = "bjs_visible"
+
 
 def ensure_object_id(obj):
     """Return obj's GUID, generating and storing one if it doesn't have it yet."""

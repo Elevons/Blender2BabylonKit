@@ -62,11 +62,6 @@ interface PostProcessingJson
 {
   defaultPipeline?: boolean;
   ssao?: boolean;
-  volumetricLightScattering?: {
-    enabled?: boolean;
-    lightSource?: string | null;
-    samples?: number;
-  };
   bloom?: { enabled?: boolean };
   sharpen?: { enabled?: boolean };
   depthOfField?: { enabled?: boolean };
@@ -265,39 +260,6 @@ function SummarizePostProcessing(
   if (post.colorCurves?.enabled === true)
   {
     enabled.push("colorCurves");
-  }
-
-  const volumetricLightScattering = post.volumetricLightScattering;
-  if (volumetricLightScattering !== undefined && volumetricLightScattering.enabled === true)
-  {
-    let label = "volumetricLightScattering";
-    if (volumetricLightScattering.samples !== undefined)
-    {
-      label += `(samples=${volumetricLightScattering.samples})`;
-    }
-    if (
-      volumetricLightScattering.lightSource !== undefined &&
-      volumetricLightScattering.lightSource !== null
-    )
-    {
-      let lightSourceName: string | undefined;
-      for (const entity of entities)
-      {
-        if (entity.id === volumetricLightScattering.lightSource)
-        {
-          lightSourceName = entity.name;
-          break;
-        }
-      }
-      label += lightSourceName !== undefined
-        ? ` lightSource=${lightSourceName}`
-        : ` lightSource=${volumetricLightScattering.lightSource}`;
-    }
-    else
-    {
-      label += " lightSource=default";
-    }
-    enabled.push(label);
   }
 
   return enabled.length > 0 ? enabled : undefined;

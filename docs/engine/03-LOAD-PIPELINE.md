@@ -20,13 +20,18 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    warns if a mirrored root ever reappears. Requires the `ExtrasAsMetadata`
    loader extension import — without it `node.metadata` stays empty and GUID
    matching silently fails.
-4. **`BuildIdIndex`** (`loader/nodeResolution.ts`) — walk every transform node
+4. **`ApplyNodeVisibility`** (`loader/nodeResolution.ts`) — for each glTF node
+   whose extras carry `bjs_visible: false` (Blender viewport-hidden), set
+   `node.isVisible = false` and disable descendant lights/cameras. Render-disabled
+   objects never reach this step — they were omitted at export.
+5. **`BuildIdIndex`** (`loader/nodeResolution.ts`) — walk every transform node
    + mesh, map `metadata.gltf.extras.bjs_id` → node.
-5. **`ProcessEntity`** (`loader/entityBuilder.ts`) per manifest entity:
+6. **`ProcessEntity`** (`loader/entityBuilder.ts`) per manifest entity:
    - resolve node (GUID first, name fallback), create `Entity`, register in
      `level.entities`, back-reference `node.metadata.bjsEntity = entity`;
    - **`ApplyComponents`** → `ClassifyComponents` sorts the component array,
-     then: physics body from COLLIDER/RIGIDBODY (`BuildPhysics` →
+     then: physics body from COLLIDER(s)/RIGIDBODY (`BuildPhysics` → compound
+     `PhysicsShapeContainer` when multiple colliders, else single-shape paths →
      `RegisterAttachment` per collider/rigidbody row), trigger-event
      registrations queued, AUDIO/GUI/PARTICLE async tasks queued, GUI3D
      registrations queued (with manifest `parent` GUID for panel nesting),
@@ -36,10 +41,10 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    - `ProcessLightForEntity` / `ProcessCameraForEntity` (typed camera override
      via `BuildTypedCamera`; FOLLOW/ARC/OFFSET target bindings queued by
      `QueueCameraTargets` — GEOSPATIAL resolves pose immediately).
-6. **Second pass** — now every entity exists: `ResolveObjectReferences`
+7. **Second pass** — now every entity exists: `ResolveObjectReferences`
    (entity-typed `@exposed` fields + list slots) and `ResolveCameraTargets`
    (FOLLOW lockedTarget / ARC re-pivot / OFFSET per-frame updater).
-7. **`FinalizeLevel`** — shadows (`SetupShadows`), scene block
+8. **`FinalizeLevel`** — shadows (`SetupShadows`), scene block
    (`await ApplySceneSettings` → clear/ambient, async `ApplyEnvironment` + fog),
    **`ApplyAtmosphere`** when the manifest includes `scene.atmosphere` (SUN lamp
    → `@babylonjs/addons/atmosphere`; sets `level.atmosphere`),
@@ -54,8 +59,7 @@ the orchestrator; each stage lives in `core/loader/` (`manifest.ts`,
    owner entities), build 3D GUI (`BuildGui3DControls` → `level.gui3DManager` +
    GUI3D_* rows on owning entities), then **`level.Begin()`**
    (behaviors' `OnStart`, including any runtime camera creation), then
-   **`ApplyPostProcessing`** (default pipeline + SSAO + volumetric light
-   scattering on `scene.activeCamera`),
+   **`ApplyPostProcessing`** (default pipeline + SSAO on `scene.activeCamera`),
    and if `debugColliders` *and* the export's Debug Build flag allow, show
    collider wireframes.
 

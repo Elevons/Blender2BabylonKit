@@ -1,5 +1,5 @@
-"""All UI: menus, the viewport "Babylon" N-panel (per-object inspector), and
-the Properties > Scene "Babylon" panel (all scene-wide settings).
+"""All UI: menus, the viewport "Babylon Object" N-panel (per-object inspector),
+and the viewport "Babylon Scene" N-panel (all scene-wide settings).
 
 Pure presentation — data lives in components/, scene/ and input_actions/;
 behavior lives in operators/.
@@ -7,14 +7,13 @@ behavior lives in operators/.
 
 import bpy
 
-from . import menus, view3d_panels, scene_panels, input_panel
+from . import menus, view3d_panels, scene_panels
 
 # Parents must register before children (bl_parent_id).
 classes = (
     menus.classes
     + view3d_panels.classes
     + scene_panels.classes
-    + input_panel.classes
 )
 
 

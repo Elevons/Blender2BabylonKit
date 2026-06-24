@@ -1,4 +1,4 @@
-"""Properties > Scene > Babylon > Post-Processing sub-panels."""
+"""Babylon Scene N-panel > Post-Processing sub-panels."""
 
 import bpy
 from bpy.types import Panel
@@ -11,10 +11,9 @@ def _post(context):
 class BJS_PT_scene_post(Panel):
     bl_label = "Post-Processing"
     bl_idname = "BJS_PT_scene_post"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
-    bl_parent_id = "BJS_PT_scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw_header(self, context):
@@ -37,9 +36,9 @@ class BJS_PT_scene_post(Panel):
 class BJS_PT_scene_post_bloom(Panel):
     bl_label = "Bloom"
     bl_idname = "BJS_PT_scene_post_bloom"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -60,9 +59,9 @@ class BJS_PT_scene_post_bloom(Panel):
 class BJS_PT_scene_post_ssao(Panel):
     bl_label = "SSAO"
     bl_idname = "BJS_PT_scene_post_ssao"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -83,9 +82,9 @@ class BJS_PT_scene_post_ssao(Panel):
 class BJS_PT_scene_post_image(Panel):
     bl_label = "Image Processing"
     bl_idname = "BJS_PT_scene_post_image"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -110,9 +109,9 @@ class BJS_PT_scene_post_image(Panel):
 class BJS_PT_scene_post_vignette(Panel):
     bl_label = "Vignette"
     bl_idname = "BJS_PT_scene_post_vignette"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post_image"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -133,9 +132,9 @@ class BJS_PT_scene_post_vignette(Panel):
 class BJS_PT_scene_post_color_grading(Panel):
     bl_label = "Color Grading"
     bl_idname = "BJS_PT_scene_post_color_grading"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post_image"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -153,9 +152,9 @@ class BJS_PT_scene_post_color_grading(Panel):
 class BJS_PT_scene_post_color_curves(Panel):
     bl_label = "Color Curves"
     bl_idname = "BJS_PT_scene_post_color_curves"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post_image"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -196,9 +195,9 @@ class BJS_PT_scene_post_color_curves(Panel):
 class BJS_PT_scene_post_sharpen(Panel):
     bl_label = "Sharpen"
     bl_idname = "BJS_PT_scene_post_sharpen"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -217,9 +216,9 @@ class BJS_PT_scene_post_sharpen(Panel):
 class BJS_PT_scene_post_dof(Panel):
     bl_label = "Depth of Field"
     bl_idname = "BJS_PT_scene_post_dof"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -240,9 +239,9 @@ class BJS_PT_scene_post_dof(Panel):
 class BJS_PT_scene_post_chromatic(Panel):
     bl_label = "Chromatic Aberration"
     bl_idname = "BJS_PT_scene_post_chromatic"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -263,9 +262,9 @@ class BJS_PT_scene_post_chromatic(Panel):
 class BJS_PT_scene_post_grain(Panel):
     bl_label = "Grain"
     bl_idname = "BJS_PT_scene_post_grain"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -284,9 +283,9 @@ class BJS_PT_scene_post_grain(Panel):
 class BJS_PT_scene_post_glow(Panel):
     bl_label = "Glow Layer"
     bl_idname = "BJS_PT_scene_post_glow"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
     bl_parent_id = "BJS_PT_scene_post"
     bl_options = {'DEFAULT_CLOSED'}
 
@@ -302,39 +301,6 @@ class BJS_PT_scene_post_glow(Panel):
         col.prop(p, "glow_intensity")
 
 
-class BJS_PT_scene_post_vls(Panel):
-    bl_label = "Volumetric Light Scattering"
-    bl_idname = "BJS_PT_scene_post_vls"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "scene"
-    bl_parent_id = "BJS_PT_scene_post"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    def draw_header(self, context):
-        self.layout.prop(_post(context), "use_vls", text="")
-
-    def draw(self, context):
-        p = _post(context)
-        self.layout.active = p.use_vls
-        col = self.layout.column()
-        col.use_property_split = True
-        col.prop(p, "vls_light_source")
-        col.prop(p, "vls_samples")
-        col.prop(p, "vls_post_ratio")
-        col.prop(p, "vls_pass_ratio")
-        col.prop(p, "vls_invert")
-        col.prop(p, "vls_use_custom_position")
-        if p.vls_use_custom_position:
-            col.prop(p, "vls_custom_position")
-        col.separator()
-        col.label(text="Scattering")
-        col.prop(p, "vls_exposure")
-        col.prop(p, "vls_decay")
-        col.prop(p, "vls_weight")
-        col.prop(p, "vls_density")
-
-
 classes = (
     BJS_PT_scene_post,
     BJS_PT_scene_post_bloom,
@@ -348,5 +314,4 @@ classes = (
     BJS_PT_scene_post_chromatic,
     BJS_PT_scene_post_grain,
     BJS_PT_scene_post_glow,
-    BJS_PT_scene_post_vls,
 )

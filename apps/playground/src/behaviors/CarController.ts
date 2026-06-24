@@ -38,6 +38,9 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 5, label: "Place Hold (s)" })
   holdSeconds = 0.5;
 
+  @exposed({ min: 0, max: 1, label: "Turn Ratio" })
+  turnRatio = 0.5;
+
   @exposed({ label: "Body", type: "entity" })
   body: Entity | null = null;
 
@@ -85,22 +88,42 @@ export default class CarController extends Behavior
     const right = this.player.FindAction("Right")?.IsPressed() === true;
 
     // Speeds per wheel: [FL, FR, RL, RR]
-    // Each active input contributes its direction vector, then we average.
+    // Outer wheels spin at full speed; inner wheels spin at turnRatio × speed.
+    // turnRatio = 1 → all wheels equal (wide arc). turnRatio = 0 → inner wheels locked (sharp pivot).
     const s = this.speed;
-    const contributions: number[] = [0, 0, 0, 0];
-    let active = 0;
 
-    if (forward)  { contributions[0] += s; contributions[1] += s; contributions[2] += s; contributions[3] += s; active++; }
-    if (backward) { contributions[0] -= s; contributions[1] -= s; contributions[2] -= s; contributions[3] -= s; active++; }
-    if (left)     { contributions[1] += backward ? -s : s; contributions[3] += backward ? -s : s; active++; }
-    if (right)    { contributions[0] += backward ? -s : s; contributions[2] += backward ? -s : s; active++; }
+    let speeds: number[] = [0, 0, 0, 0];
 
-    // Wheels are held still while placing so they don't spin mid-air.
-    const speeds = this.isPlacing
-      ? [0, 0, 0, 0]
-      : active > 0
-        ? contributions.map(v => Math.round(v / active * 100) / 100)
-        : [0, 0, 0, 0];
+    if (!this.isPlacing) {
+      const dir = forward ? 1 : backward ? -1 : 0;
+      const turning = left || right;
+
+      // Outer wheels always spin at full speed; direction defaults to +1 for tank-turning.
+      const outerSpeed = (dir !== 0 ? dir : 1) * s;
+
+      if (turning) {
+        if (dir !== 0) {
+          // Forward/Backward + Turn → differential: inner wheels same direction, slower.
+          const innerSpeed = outerSpeed * this.turnRatio;
+          if (left) {
+            speeds = [innerSpeed, outerSpeed, innerSpeed, outerSpeed];
+          } else {
+            speeds = [outerSpeed, innerSpeed, outerSpeed, innerSpeed];
+          }
+        } else {
+          // Left/Right alone → tank controls: inner wheels spin opposite.
+          const innerSpeed = outerSpeed * this.turnRatio;
+          if (left) {
+            speeds = [-innerSpeed, outerSpeed, -innerSpeed, outerSpeed];
+          } else {
+            speeds = [outerSpeed, -innerSpeed, outerSpeed, -innerSpeed];
+          }
+        }
+      } else if (dir !== 0) {
+        // Straight forward/backward
+        speeds = [outerSpeed, outerSpeed, outerSpeed, outerSpeed];
+      }
+    }
 
     // Apply each wheel's speed
     for (let i = 0; i < this.hinges.length; i++)

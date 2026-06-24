@@ -57,20 +57,31 @@ def _check_entity_refs(obj, warnings):
 
 def _check_physics(obj, warnings):
     """A MESH-shaped collider on a DYNAMIC rigid body is a Havok limitation —
-    the body won't move. CONVEX is the moving-body shape."""
-    collider = None
+    the body won't move. CONVEX is the moving-body shape. Multiple colliders on
+    one entity are combined into a compound shape at runtime."""
+    colliders = []
     body = None
     for comp in obj.bjs_components:
+        if not comp.enabled:
+            continue
         if comp.comp_type == 'COLLIDER':
-            collider = comp
+            colliders.append(comp)
         elif comp.comp_type == 'RIGIDBODY':
             body = comp
 
-    if (collider is not None and body is not None
-            and collider.collider_shape == 'MESH' and body.body_type == 'DYNAMIC'):
-        warnings.append(
-            f"{obj.name}: MESH collider + DYNAMIC body — Havok can't move mesh "
-            f"shapes; use CONVEX")
+    for collider in colliders:
+        if (body is not None and collider.collider_shape == 'MESH'
+                and body.body_type == 'DYNAMIC'):
+            warnings.append(
+                f"{obj.name}: MESH collider + DYNAMIC body — Havok can't move mesh "
+                f"shapes; use CONVEX")
+
+    if len(colliders) > 1:
+        triggers = [c.is_trigger for c in colliders]
+        if any(triggers) and not all(triggers):
+            warnings.append(
+                f"{obj.name}: mixed trigger/non-trigger colliders on one entity — "
+                f"each shape keeps its own trigger flag in the compound body")
 
 
 def _check_triggers(obj, warnings):
@@ -318,20 +329,6 @@ def _check_active_camera(scene, warnings):
             "fallback orbit camera")
 
 
-def _check_volumetric_light_scattering(scene, warnings):
-    """Volumetric light scattering sources must be renderable or the runtime falls back."""
-    post = scene.bjs_scene.post
-    if not post.use_vls:
-        return
-    lightSource = post.vls_light_source
-    if lightSource is None:
-        return
-    if not _is_renderable(lightSource):
-        warnings.append(
-            f"Volumetric Light Scattering light source '{lightSource.name}' is "
-            f"render-disabled and won't be exported")
-
-
 def _check_atmosphere(scene, warnings):
     """Atmosphere needs at least one exported SUN lamp (or a valid Sun Light pick)."""
     atmosphere = scene.bjs_scene.atmosphere
@@ -379,7 +376,6 @@ def validate_scene(context):
     _check_input_map(scene, warnings)
     _check_duplicate_guids(scene, warnings)
     _check_active_camera(scene, warnings)
-    _check_volumetric_light_scattering(scene, warnings)
     _check_atmosphere(scene, warnings)
 
     return warnings

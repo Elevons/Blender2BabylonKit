@@ -10,17 +10,18 @@ export that produces the [two artifacts](01-ARCHITECTURE.md).
 
 Split by **object vs scene**:
 
-- **3D viewport N-panel, "Babylon" tab** (`ui/view3d_panels.py`) — the selected
-  object: component stack, light/camera/animation child panels, compact Export
-  block. The pin button in the Components header locks the inspector to one
-  object (`WindowManager.bjs_pinned_object`) so you can change the viewport
+- **3D viewport N-panel, "Babylon Object" tab** (`ui/view3d_panels.py`) — the selected
+  object: component stack, light/camera/animation child panels. When an object has **two or more** enabled Collider components, the
+  panel shows a compound-body notice; each collider header is numbered
+  (`Collider 1/3`, …) and its body repeats the hint. The pin button in the
+  Components header locks the inspector to one object (`WindowManager.bjs_pinned_object`) so you can change the viewport
   selection while editing — every component verb resolves its target through
   `core/inspector.py:inspector_object()`, so they all act on the pinned object.
-- **Properties › Scene › "Babylon"** (`ui/scene_panels.py` + `ui/input_panel.py`)
-  — scene-wide: rendering (clear/ambient, **Default Environment**, **Show
-  Skybox**, freeze shadows), fog, **Atmosphere**, post-processing, **Input Actions**, and the same
-  Export controls. Both export blocks call `ui/common.py:draw_export_controls()`
-  so they cannot drift.
+- **3D viewport N-panel, "Babylon Scene" tab** (`ui/scene_panels.py` +
+  `ui/post_panels.py` + `ui/input_panel.py`) — scene-wide: rendering
+  (clear/ambient, **Default Environment**, **Show Skybox**, freeze shadows), fog,
+  **Atmosphere**, post-processing, **Input Actions**, and Export (Live Link /
+  Debug Build / Validate via `ui/common.py:draw_export_controls()`).
 
 ### Exposed lists (`@exposed({ type: "list" })`)
 
@@ -39,7 +40,7 @@ switch the panel away.
 | Package | Single purpose |
 |---|---|
 | `__init__.py` | extension registration order + dev-reload of submodules |
-| `core/` | pure helpers, nothing registered: `ids.py` (GUIDs), `script_parse.py` (`@exposed` / `@inputMap` regex parsing) |
+| `core/` | pure helpers, nothing registered: `ids.py` (GUIDs + `VISIBLE_KEY`), `script_parse.py` (`@exposed` / `@inputMap` regex parsing) |
 | `components/` | per-object data model: `component.py` (`BJSComponent`, trigger/click events), `exposed_vars.py`, `object_settings.py`, `clipboard.py`, `constants.py` (all enums) |
 | `scene/` | scene-wide render settings on `Scene.bjs_scene` (`settings.py`, `environment.py` for World Output texture discovery, `atmosphere.py` for physical sky, `post_processing.py` for the nested `post` block) |
 | `input_actions/` | the Input Actions asset end-to-end: `properties.py`, `defaults.py`, `serialize.py`, `operators.py` |
@@ -56,15 +57,20 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
 1. **Validate** (`export/validate.py:validate_scene`) — warnings surface in the report.
 2. **GUID pass** (`export/level.py`) — `ensure_object_id` (`core/ids.py`) for
    every object that needs one, including *referenced* objects (entity fields,
-   camera targets, trigger/click targets, constraint targets, VLS light source)
+   camera targets, trigger/click targets, constraint targets)
    so references always resolve. Duplicated GUIDs (copy-pasted objects) are re-issued.
-3. **Write the glb** via Blender's glTF exporter (+Y-up), GUIDs in node extras.
-4. **Build the manifest** — per entity: `serialize_components`
+3. **Stamp viewport visibility** — `_stamp_viewport_visibility` writes transient
+   `bjs_visible: 0` into glTF extras for renderable objects hidden in the viewport
+   (`visible_get()`, including collection hierarchy); cleared after the glb is written.
+4. **Write the glb** via Blender's glTF exporter (+Y-up, `use_renderable=True` skips
+   render-disabled objects, GUIDs + visibility in node extras).
+5. **Build the manifest** — per renderable entity: `serialize_components`
+   (viewport-hidden entities also get `"visible": false` in the manifest)
    (`export/components.py`; one dict per component), plus auto-derived
    `light` / `camera` / `animation` blocks; plus the scene block
    (`export/scene.py`); plus the top-level `"debug"` flag (Debug Build checkbox,
    owned by `export/live_link.py`). Schema `"version": 4`.
-5. **Copy side files** — `begin_asset_export()` then `copy_asset` /
+6. **Copy side files** — `begin_asset_export()` then `copy_asset` /
    `save_image_asset` (`export/assets.py`): World environment texture when
    `find_world_env_node` (`scene/environment.py`) finds one on the active World
    Output chain (sanitized filename under `env/`); **Default Environment** sets
@@ -78,7 +84,14 @@ Rule of thumb: `core/`, `components/`, `scene/`, `input_actions/` own *data*;
    reservations so **re-exports overwrite** the same sanitized name (Live Link
    safe). `_2`, `_3`, … suffixes apply only when two *different* sources
    collide on the same sanitized name in a single export.
-6. Remember the path for [Live Link](08-WORKFLOW.md#live-link).
+7. Remember the path for [Live Link](08-WORKFLOW.md#live-link).
+
+### Object visibility (eye vs camera icon)
+
+| Blender toggle | Property | Export behavior |
+|---|---|---|
+| Eye (viewport) | `visible_get()` false | Included in glb; `"visible": false` in manifest + `bjs_visible` in node extras |
+| Camera (render) | `hide_render` | Excluded from glb and manifest (`_is_renderable`) |
 
 ### Axis conversions (Blender Z-up → Babylon Y-up)
 

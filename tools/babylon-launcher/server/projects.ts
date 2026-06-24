@@ -28,9 +28,42 @@ export interface DevServerStatus
   pid?: number;
   url?: string;
   managed: boolean;
+  error?: string;
 }
 
 const devProcesses = new Map<string, ChildProcess>();
+
+function AttachDevServerLogs(appName: string, child: ChildProcess): void
+{
+  const prefix = `[${appName}:dev]`;
+  child.stdout?.on("data", (chunk: Buffer) =>
+  {
+    for (const line of chunk.toString().split("\n").filter(Boolean))
+    {
+      console.log(`${prefix} ${line}`);
+    }
+  });
+  child.stderr?.on("data", (chunk: Buffer) =>
+  {
+    for (const line of chunk.toString().split("\n").filter(Boolean))
+    {
+      console.error(`${prefix} ${line}`);
+    }
+  });
+  child.on("exit", (code, signal) =>
+  {
+    devProcesses.delete(appName);
+    if (code !== null && code !== 0)
+    {
+      console.error(`${prefix} exited with code ${code}${signal ? ` (${signal})` : ""}`);
+    }
+  });
+  child.on("error", (error) =>
+  {
+    devProcesses.delete(appName);
+    console.error(`${prefix} failed to start: ${error.message}`);
+  });
+}
 
 async function KillProcessOnPort(port: number): Promise<void>
 {
@@ -79,7 +112,14 @@ export function ListProjects(): ProjectSummary[]
   }
 
   return fs.readdirSync(APPS_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) =>
+    {
+      if (!entry.isDirectory())
+      {
+        return false;
+      }
+      return fs.existsSync(path.join(APPS_DIR, entry.name, "package.json"));
+    })
     .map((entry) =>
     {
       const appDir = path.join(APPS_DIR, entry.name);
@@ -161,11 +201,12 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
     ["run", "dev", "--workspace", `apps/${appName}`],
     {
       cwd: path.resolve(APPS_DIR, ".."),
-      stdio: "ignore",
+      stdio: ["ignore", "pipe", "pipe"],
       detached: true,
       shell: process.platform === "win32",
     },
   );
+  AttachDevServerLogs(appName, child);
   child.unref();
   devProcesses.set(appName, child);
 
@@ -177,9 +218,22 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
     {
       return next;
     }
+    if (child.exitCode !== null)
+    {
+      return {
+        ...next,
+        error: `Dev server exited before port ${next.port} opened (code ${child.exitCode})`,
+      };
+    }
   }
 
-  return GetDevServerStatus(appName);
+  const failed = await GetDevServerStatus(appName);
+  return {
+    ...failed,
+    error: failed.running
+      ? undefined
+      : `Dev server did not start on port ${failed.port} within 10s — check launcher terminal output`,
+  };
 }
 
 export async function StopDevServer(appName: string): Promise<DevServerStatus>

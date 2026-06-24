@@ -148,6 +148,12 @@ class BJSComponent(PropertyGroup):
     collider_rotation: FloatVectorProperty(name="Rotation", size=3, default=(0.0, 0.0, 0.0),
                                            subtype='EULER',
                                            description="Local rotation of the collider, in Blender axes")
+    collider_apply_scale: BoolProperty(
+        name="Apply Object Scale",
+        default=True,
+        description="Multiply collider dimensions by this object's local scale "
+                    "(parent scales use the world transform; not baked twice)",
+    )
 
     # --- RIGIDBODY ---
     body_type:       EnumProperty(name="Body Type", items=BODY_TYPES, default='DYNAMIC')
@@ -272,6 +278,12 @@ class BJSComponent(PropertyGroup):
     con_pivot:  FloatVectorProperty(name="Pivot", size=3, default=(0.0, 0.0, 0.0),
                                     subtype='XYZ',
                                     description="Joint anchor, in this object's local space (Blender axes)")
+    con_apply_scale: BoolProperty(
+        name="Apply Object Scale",
+        default=True,
+        description="Multiply pivot and linear limits by this object's local scale "
+                    "(parent scales use the world transform; not baked twice)",
+    )
     con_axis:   EnumProperty(name="Axis", items=CONSTRAINT_AXES, default='Z',
                              description="Hinge rotation / slide / spring axis (this object's local axes)")
     con_collision: BoolProperty(name="Bodies Collide", default=False,

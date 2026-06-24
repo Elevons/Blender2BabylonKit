@@ -26,7 +26,7 @@ const K_AND_R_BRACE_PATTERN = /\b(if|for|while)\s*\([^)]*\)\s*\{/g;
 const RAW_KEY_PATTERN =
   /\b(KeyW|KeyA|KeyS|KeyD|KeyQ|KeyE|KeyboardEventTypes|onKeyDown|onKeyUp|window\.addEventListener)\b/;
 const SCENE_POST_PROCESS_PATTERN =
-  /\b(VolumetricLightScatteringPostProcess|DefaultRenderingPipeline|SSAO2RenderingPipeline|ApplyPostProcessing|ApplyAtmosphere|@babylonjs\/addons\/atmosphere|TextRenderer|FontAsset|@babylonjs\/addons\/msdfText)\b/;
+  /\b(DefaultRenderingPipeline|SSAO2RenderingPipeline|ApplyPostProcessing|ApplyAtmosphere|@babylonjs\/addons\/atmosphere|TextRenderer|FontAsset|@babylonjs\/addons\/msdfText)\b/;
 
 /**
  * Validate a behavior draft against Blender-parse rules and project conventions.

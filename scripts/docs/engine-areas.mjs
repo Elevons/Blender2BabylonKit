@@ -13,7 +13,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Blender scene",
           "sub": "objects + components",
-          "desc": "Authoring: the viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, MSDF Text, GUI3D_*) to objects. GUIDs (bjs_id) make objects addressable entities.",
+          "desc": "Authoring: the **Babylon Object** viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, MSDF Text, GUI3D_*) to objects. Scene-wide settings (rendering, fog, atmosphere, post, Input Actions, export) live in the **Babylon Scene** N-panel. GUIDs (bjs_id) make objects addressable entities.",
           "meta": [
             [
               "Module",
@@ -153,7 +153,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Physics",
           "sub": "bodies + owned meshes",
-          "desc": "COLLIDER/RIGIDBODY become one Havok V2 body per node. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.",
+          "desc": "COLLIDER/RIGIDBODY become one Havok V2 body per node. Multiple COLLIDER rows → PhysicsShapeContainer compound. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.",
           "meta": [
             [
               "File",
@@ -451,7 +451,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Object UI",
           "sub": "ui/view3d_panels",
-          "desc": "Viewport N-panel 'Babylon': component list with per-type fields, light/camera/animation child panels, and a quick Export block (Export / Live Link / Debug Build / Validate). Scene-wide settings (rendering, fog, atmosphere, post, Input Actions) live under Properties › Scene › Babylon.",
+          "desc": "Viewport N-panel **Babylon Object**: component list with per-type fields, light/camera/animation child panels. Scene-wide settings (rendering, fog, atmosphere, post, Input Actions, export) live in the **Babylon Scene** N-panel (`ui/scene_panels.py`, `ui/post_panels.py`, `ui/input_panel.py`).",
           "meta": [
             [
               "Kind",
@@ -459,7 +459,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Entry",
-              "BJS_PT_components · BJS_PT_export"
+              "BJS_PT_components · BJS_PT_scene_export"
             ]
           ]
         },
@@ -571,7 +571,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene block",
           "sub": "export/scene.py",
-          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/, or useDefault when Default Environment is enabled; createSkybox forced off when Atmosphere is on; skyboxIgnoreFog when skybox on), fog, atmosphere (export/atmosphere.py), post-processing (via export/post_processing.py — default pipeline, SSAO, volumetric light scattering), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/atmosphere.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
+          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/, or useDefault when Default Environment is enabled; createSkybox forced off when Atmosphere is on; skyboxIgnoreFog when skybox on), fog, atmosphere (export/atmosphere.py), post-processing (via export/post_processing.py — default pipeline, SSAO), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/atmosphere.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
           "meta": [
             [
               "Manifest key",
@@ -699,7 +699,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Input Actions",
           "sub": "input_actions/",
-          "desc": "Scene-level Input Actions asset: data model (properties.py), JSON serialize/apply (serialize.py), built-in defaults (defaults.py), operators (operators.py). Edited in Properties › Scene › Babylon via ui/input_panel.py (BJS_PT_input_map). First export seeds defaults when empty.",
+          "desc": "Scene-level Input Actions asset: data model (properties.py), JSON serialize/apply (serialize.py), built-in defaults (defaults.py), operators (operators.py). Edited in the **Babylon Scene** N-panel via ui/input_panel.py (BJS_PT_input_map). First export seeds defaults when empty.",
           "meta": [
             [
               "Modules",
@@ -707,7 +707,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Panel",
-              "Properties › Scene › Babylon"
+              "Babylon Scene › Input Actions"
             ]
           ]
         }
@@ -885,7 +885,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "appendSceneAsync",
           "sub": "step 3 — RIGHT-HANDED",
-          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard. Needs the ExtrasAsMetadata import for GUIDs.",
+          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras. Needs the ExtrasAsMetadata import for GUIDs.",
           "meta": [
             [
               "Why",
@@ -941,7 +941,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyComponents",
           "sub": "per entity",
-          "desc": "ClassifyComponents sorts the array → BuildPhysics (collider/body) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "ClassifyComponents collects all COLLIDER rows → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
           "meta": [
             [
               "Helpers",
@@ -989,7 +989,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 + VolumetricLightScatteringPostProcess on active camera) → debugColliders (gated by Debug Build).",
+          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle promises (allSettled) → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1349,7 +1349,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "BuildPhysics",
           "sub": "dispatch",
-          "desc": "One COLLIDER and/or RIGIDBODY → one node-attached PhysicsBody. collider-only=static/trigger; body-only=dynamic+auto box; both=shape from collider, dynamics from body. bodyType ANIMATED→PhysicsMotionType.ANIMATED; startAsleep on DYNAMIC.",
+          "desc": "One or more COLLIDER components and/or RIGIDBODY → one node-attached PhysicsBody. Multiple colliders → PhysicsShapeContainer compound (BuildCompoundBody). Single collider: collider-only=static/trigger; body-only=dynamic+auto box; both=shape from collider, dynamics from body. bodyType ANIMATED→PhysicsMotionType.ANIMATED; startAsleep on DYNAMIC.",
           "meta": [
             [
               "File",
@@ -1649,7 +1649,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene look",
           "sub": "environment / fog / atmosphere / postprocess",
-          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; waits for texture before skybox; createSkybox off when atmosphere on or IBL-only; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 + VolumetricLightScatteringPostProcess (optional lightSource mesh GUID; default billboard when omitted) → level.post. RetargetPostProcessing if the active camera changes at runtime.",
+          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; waits for texture before skybox; createSkybox off when atmosphere on or IBL-only; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
           "meta": [
             [
               "Attach",
@@ -1657,7 +1657,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Blender",
-              "Properties › Scene › Post-Processing"
+              "Babylon Scene › Post-Processing"
             ]
           ]
         },

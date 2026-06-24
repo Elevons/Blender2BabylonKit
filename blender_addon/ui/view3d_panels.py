@@ -1,21 +1,19 @@
-"""The 3D viewport "Babylon" N-panel tab — everything about the SELECTED OBJECT.
+"""The 3D viewport "Babylon Object" N-panel tab — everything about the SELECTED OBJECT.
 
 Layout:
     Components            (BJS_PT_components — the inspector / component stack)
       ├─ Light            (child panel, lights only)
       ├─ Camera           (child panel, cameras only)
       └─ Animation        (child panel, objects with NLA clips only)
-    Export                (compact copy of the export controls, for convenience)
 
 Scene-wide settings (rendering, fog, post, input actions, export) live in
-Properties > Scene under the "Babylon" panel — see scene_panels.py.
+the "Babylon Scene" N-panel — see scene_panels.py.
 """
 
 import bpy
 from bpy.types import Panel
 
-from .common import draw_export_controls
-from .component_draw import draw_component
+from .component_draw import draw_component, count_enabled_colliders
 from ..core.inspector import inspector_object
 
 
@@ -35,7 +33,7 @@ class BJS_PT_components(Panel):
     bl_idname = "BJS_PT_components"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Babylon"
+    bl_category = "Babylon Object"
 
     def draw(self, context):
         layout = self.layout
@@ -71,6 +69,13 @@ class BJS_PT_components(Panel):
         if len(obj.bjs_components) == 0:
             layout.label(text="No components", icon='DOT')
             return
+
+        collider_count = count_enabled_colliders(obj)
+        if collider_count > 1:
+            box = layout.box()
+            box.label(text=f"{collider_count} colliders → one compound body", icon='MOD_PHYSICS')
+            box.label(text="Each shape is a child in a PhysicsShapeContainer at runtime")
+
         for i, comp in enumerate(obj.bjs_components):
             draw_component(layout, obj, i, comp)
 
@@ -81,7 +86,7 @@ class BJS_PT_light_info(Panel):
     bl_idname = "BJS_PT_light_info"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Babylon"
+    bl_category = "Babylon Object"
     bl_parent_id = "BJS_PT_components"
 
     @classmethod
@@ -137,7 +142,7 @@ class BJS_PT_camera_info(Panel):
     bl_idname = "BJS_PT_camera_info"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Babylon"
+    bl_category = "Babylon Object"
     bl_parent_id = "BJS_PT_components"
 
     @classmethod
@@ -169,7 +174,7 @@ class BJS_PT_animation_info(Panel):
     bl_idname = "BJS_PT_animation_info"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Babylon"
+    bl_category = "Babylon Object"
     bl_parent_id = "BJS_PT_components"
 
     @classmethod
@@ -194,23 +199,9 @@ class BJS_PT_animation_info(Panel):
                          icon='ACTION')
 
 
-class BJS_PT_export(Panel):
-    """Compact export controls in the sidebar (the full set is also in
-    Properties > Scene > Babylon > Export — both draw the same block)."""
-    bl_label = "Export"
-    bl_idname = "BJS_PT_export"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = "Babylon"
-
-    def draw(self, context):
-        draw_export_controls(self.layout, context.scene)
-
-
 classes = (
     BJS_PT_components,
     BJS_PT_light_info,
     BJS_PT_camera_info,
     BJS_PT_animation_info,
-    BJS_PT_export,
 )

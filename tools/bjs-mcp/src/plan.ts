@@ -40,6 +40,7 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["atmosphere", "physical sky", "aerial perspective", "rayleigh", "mie", "skybox", "sky"], section: "scene-look" },
   { keywords: ["volumetric", "light shaft", "god ray", "sun ray", "scattering", "post-processing", "postprocess", "bloom", "ssao", "dof", "vignette"], section: "scene-look" },
   { keywords: ["lifecycle", "onstart", "onupdate", "ondestroy"], section: "lifecycle" },
+  { keywords: ["visible", "visibility", "hidden", "hide", "isvisible", "eye icon", "viewport"], section: "visibility" },
 ];
 
 const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [

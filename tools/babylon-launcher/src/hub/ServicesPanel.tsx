@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { api, type ServicesStatus } from "../api/client";
+import { api, type DevServerStatus, type ServicesStatus } from "../api/client";
 
 interface Props
 {
@@ -67,8 +67,16 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
     setBusy(true);
     try
     {
-      await action();
+      const result = await action();
       await refresh();
+      const devResult = result as { dev?: DevServerStatus } | DevServerStatus | undefined;
+      const devError = devResult && "dev" in (devResult as object)
+        ? (devResult as { dev?: DevServerStatus }).dev?.error
+        : (devResult as DevServerStatus | undefined)?.error;
+      if (devError)
+      {
+        onError(devError);
+      }
     }
     catch (e)
     {

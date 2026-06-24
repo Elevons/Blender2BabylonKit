@@ -261,7 +261,7 @@ server.tool(
 
 server.tool(
   "get_scripting_context",
-  "Return docs/LLM_SCRIPTING_CONTEXT.md — full contract or one section (exposed, input, physics, cameras, scene-look, lifecycle, etc.).",
+  "Return docs/LLM_SCRIPTING_CONTEXT.md — full contract or one section (exposed, input, physics, cameras, scene-look, visibility, lifecycle, etc.).",
   {
     section: z
       .string()

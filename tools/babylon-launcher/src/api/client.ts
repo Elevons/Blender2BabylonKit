@@ -16,6 +16,7 @@ export interface DevServerStatus
   pid?: number;
   url?: string;
   managed?: boolean;
+  error?: string;
 }
 
 export interface McpStatus

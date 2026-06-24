@@ -103,7 +103,12 @@ def _draw_click_events(body, comp, index):
         box.label(text="On click: send Message to Target", icon='INFO')
 
 
-def _component_label(comp):
+def count_enabled_colliders(obj):
+    """How many enabled COLLIDER components are on this object."""
+    return sum(1 for c in obj.bjs_components if c.enabled and c.comp_type == 'COLLIDER')
+
+
+def _component_label(comp, obj=None, index=None):
     """The collapsed-header label: type name, enriched with the key detail."""
     label = comp.comp_type.replace('_', ' ').title()
     if comp.comp_type == 'TAG' and comp.tag:
@@ -127,6 +132,14 @@ def _component_label(comp):
         label = f"Script: {comp.script_name}"
     elif comp.comp_type == 'CAMERA':
         label = f"Camera: {comp.cam_type.title()}"
+    elif comp.comp_type == 'COLLIDER' and obj is not None and index is not None:
+        collider_indices = [
+            i for i, c in enumerate(obj.bjs_components)
+            if c.enabled and c.comp_type == 'COLLIDER'
+        ]
+        if len(collider_indices) > 1 and index in collider_indices:
+            n = collider_indices.index(index) + 1
+            label = f"Collider {n}/{len(collider_indices)}"
     return label
 
 
@@ -135,7 +148,7 @@ def draw_component(layout, obj, index, comp):
     plus the per-type body."""
     hdr, panel = layout.panel_prop(comp, "show_expanded")
     hdr.prop(comp, "enabled", text="")
-    hdr.label(text=_component_label(comp))
+    hdr.label(text=_component_label(comp, obj, index))
     n = len(obj.bjs_components)
     up = hdr.row(align=True)
     up.enabled = index > 0
@@ -162,10 +175,15 @@ def draw_component(layout, obj, index, comp):
         body.prop(comp, "tag")
 
     elif comp.comp_type == 'COLLIDER':
+        if count_enabled_colliders(obj) > 1:
+            info = body.box()
+            info.label(text="Part of a compound body", icon='MOD_PHYSICS')
+            info.label(text="Shapes combine at runtime; use manual center/size per collider")
         body.prop(comp, "collider_shape")
         body.prop(comp, "is_trigger")
         body.prop(comp, "collider_show")
         body.prop(comp, "auto_fit")
+        body.prop(comp, "collider_apply_scale")
         fit = body.operator("bjs.fit_collider", text="Fit to Bounds", icon='SHADING_BBOX')
         fit.index = index
         if not comp.auto_fit:
@@ -314,6 +332,7 @@ def draw_component(layout, obj, index, comp):
         body.prop(comp, "con_type")
         body.prop(comp, "con_target")
         body.prop(comp, "con_pivot")
+        body.prop(comp, "con_apply_scale")
         if comp.con_type in {'HINGE', 'SLIDER', 'SPRING', 'CUSTOM'}:
             body.prop(comp, "con_axis")
         body.prop(comp, "con_collision")

@@ -84,7 +84,7 @@ testing. v0.29 restructured the repo into npm workspaces (`packages/engine` +
 
 ### 1.5a Atmosphere
 - **Steps:** add a **Sun** lamp, aim it (e.g. from above). Enable **Atmosphere**
-  under Properties › Scene › Babylon. Enable **Post-Processing → Default Pipeline**
+  under **Babylon Scene**. Enable **Post-Processing → Default Pipeline**
   and tone mapping. Export and reload.
 - **Expect:** a physically based sky replaces the environment skybox; PBR
   materials show aerial perspective. Console logs `[bjs] atmosphere enabled`.

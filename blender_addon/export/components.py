@@ -106,6 +106,7 @@ def serialize_components(obj, output_dir):
                 "shape": c.collider_shape,
                 "isTrigger": bool(c.is_trigger),
                 "autoFit": bool(c.auto_fit),
+                "applyObjectScale": bool(c.collider_apply_scale),
                 "size": [sx, sz, sy],        # extents: y<->z axes swap
                 "radius": c.collider_radius,
                 "height": c.collider_height,
@@ -171,6 +172,7 @@ def serialize_components(obj, output_dir):
             d.update({
                 "constraintType": c.con_type,
                 "target": ensure_object_id(c.con_target) if c.con_target else None,
+                "applyObjectScale": bool(c.con_apply_scale),
                 "pivot": [px, pz, -py],  # owner-local, converted to Babylon Y-up
                 "axis": _CONSTRAINT_AXIS_TO_BABYLON[c.con_axis],
                 "collision": bool(c.con_collision),

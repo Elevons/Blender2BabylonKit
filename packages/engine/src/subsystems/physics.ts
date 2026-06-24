@@ -17,11 +17,13 @@ import {
   PhysicsShapeCylinder,
   PhysicsShapeConvexHull,
   PhysicsShapeMesh,
+  PhysicsShapeContainer,
   type PhysicsShape,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { ID_KEY } from "../core/types";
 import type { ColliderComponent, RigidBodyComponent } from "../core/types";
+import { LocalScaleAxes, ApplyObjectScaleEnabled } from "../core/nodeScale";
 
 /**
  * Physics subsystem: turns COLLIDER / RIGIDBODY components into Havok V2 bodies.
@@ -164,6 +166,17 @@ function ComputeLocalBounds(node: TransformNode): LocalBounds
   };
 }
 
+/** Scale a local AABB by the node's local scale (for applyObjectScale auto-fit). */
+function ScaleLocalBounds(bounds: LocalBounds, node: TransformNode): LocalBounds
+{
+  const { sx, sy, sz } = LocalScaleAxes(node);
+
+  return {
+    center: new Vector3(bounds.center.x * sx, bounds.center.y * sy, bounds.center.z * sz),
+    size: new Vector3(bounds.size.x * sx, bounds.size.y * sy, bounds.size.z * sz),
+  };
+}
+
 /**
  * Auto-fit a primitive shape to a node's whole hierarchy, in the node's local
  * space. Used when the entity node is a TransformNode wrapping child meshes
@@ -176,7 +189,11 @@ function FitColliderShape(
   scene: Scene
 ): PhysicsShape
 {
-  const { center, size } = ComputeLocalBounds(node);
+  let { center, size } = ComputeLocalBounds(node);
+  if (ApplyObjectScaleEnabled(collider?.applyObjectScale))
+  {
+    ({ center, size } = ScaleLocalBounds({ center, size }, node));
+  }
 
   switch (collider?.shape)
   {
@@ -272,13 +289,37 @@ function MergeChildrenIntoLocalMesh(node: TransformNode): Mesh | undefined
 /**
  * Build a real CONVEX_HULL or MESH shape from a node's geometry. A single mesh
  * feeds its own geometry directly; a multi-material wrapper is merged first.
- * Returns undefined if there is no usable geometry.
+ * When applyObjectScale is on, local scale is baked into vertices (same rule as
+ * manual primitives). Returns undefined if there is no usable geometry.
  */
+function BakeColliderScaleIntoMesh(
+  mesh: Mesh,
+  node: TransformNode,
+  collider: ColliderComponent | undefined
+): { mesh: Mesh; disposeSource: boolean }
+{
+  if (!ApplyObjectScaleEnabled(collider?.applyObjectScale))
+  {
+    return { mesh, disposeSource: false };
+  }
+
+  const { sx, sy, sz } = LocalScaleAxes(node);
+  const scaled = mesh.clone(`${mesh.name}__colliderScale`, null);
+  if (scaled === null)
+  {
+    return { mesh, disposeSource: false };
+  }
+
+  scaled.bakeTransformIntoVertices(Matrix.Scaling(sx, sy, sz));
+  return { mesh: scaled, disposeSource: true };
+}
+
 function BuildHullOrMeshShape(
   node: TransformNode,
   isMesh: boolean,
   kind: "CONVEX" | "MESH",
-  scene: Scene
+  scene: Scene,
+  collider?: ColliderComponent
 ): PhysicsShape | undefined
 {
   const makeShape = (sourceMesh: Mesh): PhysicsShape =>
@@ -288,7 +329,15 @@ function BuildHullOrMeshShape(
 
   if (isMesh)
   {
-    return makeShape(node as Mesh);
+    const { mesh: sourceMesh, disposeSource } = BakeColliderScaleIntoMesh(
+      node as Mesh, node, collider
+    );
+    const shape = makeShape(sourceMesh);
+    if (disposeSource)
+    {
+      sourceMesh.dispose();
+    }
+    return shape;
   }
 
   const mergedMesh = MergeChildrenIntoLocalMesh(node);
@@ -298,9 +347,53 @@ function BuildHullOrMeshShape(
   }
 
   mergedMesh.setEnabled(false);
-  const shape = makeShape(mergedMesh);
-  mergedMesh.dispose(); // the shape has copied the geometry into Havok
+  const { mesh: sourceMesh, disposeSource } = BakeColliderScaleIntoMesh(mergedMesh, node, collider);
+  if (disposeSource)
+  {
+    mergedMesh.dispose();
+  }
+
+  const shape = makeShape(sourceMesh);
+  sourceMesh.dispose();
   return shape;
+}
+
+/** Multiply manual collider dimensions by the entity node's scale when authored. */
+function ApplyObjectScaleToCollider(
+  collider: ColliderComponent,
+  node: TransformNode
+): ColliderComponent
+{
+  if (!ApplyObjectScaleEnabled(collider.applyObjectScale))
+  {
+    return collider;
+  }
+
+  const { sx, sy, sz } = LocalScaleAxes(node);
+
+  const scaled: ColliderComponent = {
+    ...collider,
+    size: [collider.size[0] * sx, collider.size[1] * sy, collider.size[2] * sz],
+    center: [collider.center[0] * sx, collider.center[1] * sy, collider.center[2] * sz],
+    radius: collider.radius,
+    height: collider.height,
+  };
+
+  switch (collider.shape)
+  {
+    case "SPHERE":
+      scaled.radius = collider.radius * Math.max(sx, sy, sz);
+      break;
+    case "CAPSULE":
+    case "CYLINDER":
+      scaled.radius = collider.radius * Math.max(sx, sz);
+      scaled.height = collider.height * sy;
+      break;
+    default:
+      break;
+  }
+
+  return scaled;
 }
 
 /** Build a hand-authored primitive shape from Babylon-space (Y-up) dimensions. */
@@ -341,25 +434,43 @@ function BuildManualShape(collider: ColliderComponent, scene: Scene): PhysicsSha
 /** Everything the per-case body builders share, computed once in BuildPhysics. */
 interface BodyBuildInput {
   node: TransformNode;
-  collider: ColliderComponent | undefined;
+  colliders: ColliderComponent[];
   scene: Scene;
   motion: PhysicsMotionType;
   mass: number;
   friction: number;
   restitution: number;
-  isTrigger: boolean;
   isMesh: boolean;
   hasGeometry: boolean;
   startAsleep: boolean;
 }
 
+/** Apply material and trigger flag to one collider shape (required on container children). */
+function ConfigureColliderShape(
+  shape: PhysicsShape,
+  collider: ColliderComponent,
+  friction: number,
+  restitution: number
+): void
+{
+  shape.material = { friction, restitution };
+  if (collider.isTrigger)
+  {
+    shape.isTrigger = true;
+  }
+}
+
 /** Apply shared material/trigger settings to a freshly built shape. */
 function ConfigureShape(shape: PhysicsShape, input: BodyBuildInput): void
 {
-  shape.material = { friction: input.friction, restitution: input.restitution };
-  if (input.isTrigger)
+  const collider = input.colliders[0];
+  if (collider !== undefined)
   {
-    shape.isTrigger = true;
+    ConfigureColliderShape(shape, collider, input.friction, input.restitution);
+  }
+  else
+  {
+    shape.material = { friction: input.friction, restitution: input.restitution };
   }
 }
 
@@ -420,7 +531,7 @@ function ApplyMassProperties(
 /** Gather the shared per-body inputs (dynamics, material, geometry facts) once. */
 function BuildBodyInput(
   node: TransformNode,
-  collider: ColliderComponent | undefined,
+  colliders: ColliderComponent[],
   body: RigidBodyComponent | undefined,
   scene: Scene
 ): BodyBuildInput
@@ -429,13 +540,12 @@ function BuildBodyInput(
 
   return {
     node,
-    collider,
+    colliders,
     scene,
     motion: MotionTypeFor(body),
     mass: body !== undefined && body.bodyType === "DYNAMIC" ? body.mass : 0,
     friction: body?.friction ?? 0.5,
     restitution: body?.restitution ?? 0.2,
-    isTrigger: collider !== undefined && collider.isTrigger,
     isMesh,
     hasGeometry: isMesh || OwnedColliderMeshes(node).length > 0,
     startAsleep: body?.startAsleep === true,
@@ -446,27 +556,54 @@ function BuildBodyInput(
  * CONVEX / MESH case: geometry-derived (manual size/center don't apply), with a
  * fitted-box fallback if the hull/mesh can't be built.
  */
-function BuildGeometryShapeBody(input: BodyBuildInput, kind: "CONVEX" | "MESH"): PhysicsBody | undefined
+function BuildGeometryColliderShape(
+  node: TransformNode,
+  collider: ColliderComponent,
+  isMesh: boolean,
+  hasGeometry: boolean,
+  scene: Scene
+): PhysicsShape | undefined
 {
-  if (!input.hasGeometry)
+  if (!hasGeometry)
   {
-    console.warn(`[bjs] "${input.node.name}" has no mesh geometry for a ${kind} collider.`);
+    console.warn(`[bjs] "${node.name}" has no mesh geometry for a ${collider.shape} collider.`);
     return undefined;
   }
 
   let shape: PhysicsShape | undefined;
   try
   {
-    shape = BuildHullOrMeshShape(input.node, input.isMesh, kind, input.scene);
+    shape = BuildHullOrMeshShape(
+      node, isMesh, collider.shape as "CONVEX" | "MESH", scene, collider
+    );
   }
   catch (error)
   {
-    console.warn(`[bjs] ${kind} shape failed for "${input.node.name}"; using a box.`, error);
+    console.warn(`[bjs] ${collider.shape} shape failed for "${node.name}"; using a box.`, error);
   }
 
   if (shape === undefined)
   {
-    shape = FitColliderShape(input.node, { ...(input.collider as ColliderComponent), shape: "BOX" }, input.scene);
+    shape = FitColliderShape(node, { ...collider, shape: "BOX" }, scene);
+  }
+
+  return shape;
+}
+
+function BuildGeometryShapeBody(input: BodyBuildInput, kind: "CONVEX" | "MESH"): PhysicsBody | undefined
+{
+  const collider = input.colliders[0];
+  if (collider === undefined)
+  {
+    return undefined;
+  }
+
+  const shape = BuildGeometryColliderShape(
+    input.node, collider, input.isMesh, input.hasGeometry, input.scene
+  );
+  if (shape === undefined)
+  {
+    return undefined;
   }
 
   return AttachShape(shape, input);
@@ -485,7 +622,9 @@ function BuildAutoFitBody(input: BodyBuildInput, shapeKind: ColliderComponent["s
     return undefined;
   }
 
-  if (input.isMesh)
+  const collider = input.colliders[0];
+
+  if (input.isMesh && !ApplyObjectScaleEnabled(collider?.applyObjectScale))
   {
     const aggregate = new PhysicsAggregate(
       input.node,
@@ -499,7 +638,7 @@ function BuildAutoFitBody(input: BodyBuildInput, shapeKind: ColliderComponent["s
       input.scene
     );
 
-    if (input.isTrigger && aggregate.shape)
+    if (collider?.isTrigger === true && aggregate.shape)
     {
       aggregate.shape.isTrigger = true;
     }
@@ -507,7 +646,84 @@ function BuildAutoFitBody(input: BodyBuildInput, shapeKind: ColliderComponent["s
     return aggregate.body;
   }
 
-  return AttachShape(FitColliderShape(input.node, input.collider, input.scene), input);
+  return AttachShape(FitColliderShape(input.node, input.colliders[0], input.scene), input);
+}
+
+/** Build one authored collider as a standalone PhysicsShape (for compound bodies). */
+function BuildColliderShape(
+  node: TransformNode,
+  collider: ColliderComponent,
+  input: BodyBuildInput
+): PhysicsShape | undefined
+{
+  const { shape } = collider;
+  if (shape === "CONVEX" || shape === "MESH")
+  {
+    return BuildGeometryColliderShape(node, collider, input.isMesh, input.hasGeometry, input.scene);
+  }
+
+  if (collider.autoFit)
+  {
+    if (!input.hasGeometry)
+    {
+      console.warn(`[bjs] "${node.name}" has no mesh geometry to fit a collider.`);
+      return undefined;
+    }
+
+    return FitColliderShape(node, collider, input.scene);
+  }
+
+  return BuildManualShape(ApplyObjectScaleToCollider(collider, node), input.scene);
+}
+
+/** Combine multiple COLLIDER components into one body via PhysicsShapeContainer. */
+function BuildCompoundBody(input: BodyBuildInput): PhysicsBody | undefined
+{
+  const container = new PhysicsShapeContainer(input.scene);
+
+  for (const collider of input.colliders)
+  {
+    const shape = BuildColliderShape(input.node, collider, input);
+    if (shape === undefined)
+    {
+      continue;
+    }
+
+    ConfigureColliderShape(shape, collider, input.friction, input.restitution);
+    container.addChild(shape);
+  }
+
+  if (container.getNumChildren() === 0)
+  {
+    console.warn(`[bjs] "${input.node.name}" has ${input.colliders.length} colliders but none could be built.`);
+    return undefined;
+  }
+
+  const physicsBody = new PhysicsBody(input.node, input.motion, input.startAsleep, input.scene);
+  physicsBody.shape = container;
+  return physicsBody;
+}
+
+/** Build one physics body from a single collider (or rigidbody-only auto-fit). */
+function BuildSingleColliderBody(input: BodyBuildInput): PhysicsBody | undefined
+{
+  const collider = input.colliders[0];
+  const shapeKind = collider?.shape ?? "BOX";
+
+  if (shapeKind === "CONVEX" || shapeKind === "MESH")
+  {
+    return BuildGeometryShapeBody(input, shapeKind);
+  }
+
+  if (collider === undefined || collider.autoFit)
+  {
+    return BuildAutoFitBody(input, shapeKind);
+  }
+
+  return AttachShape(
+    BuildManualShape(ApplyObjectScaleToCollider(collider, input.node), input.scene),
+    input
+  );
 }
 
 /** Apply motion type and damping (the RIGIDBODY's dynamics) to a built body. */
@@ -527,11 +743,12 @@ function ApplyBodyDynamics(
 }
 
 /**
- * Combine a COLLIDER and/or RIGIDBODY component into a single Havok physics body
- * on the given node. Either may be absent:
+ * Combine one or more COLLIDER components and/or a RIGIDBODY into a single Havok
+ * physics body on the given node. Either may be absent:
  *   collider only  -> static (or trigger) body
  *   rigidbody only -> dynamic body, auto-fit box collider
- *   both           -> shape from collider, dynamics from rigidbody
+ *   both           -> shape from collider(s), dynamics from rigidbody
+ *   multiple colliders -> PhysicsShapeContainer compound body
  *
  * The body is attached directly to the entity node. This relies on the level
  * being imported right-handed (LevelLoader sets scene.useRightHandedSystem), so
@@ -540,7 +757,7 @@ function ApplyBodyDynamics(
  */
 export function BuildPhysics(
   node: TransformNode,
-  collider: ColliderComponent | undefined,
+  colliders: ColliderComponent[],
   body: RigidBodyComponent | undefined,
   scene: Scene
 ): PhysicsBody | undefined
@@ -556,22 +773,11 @@ export function BuildPhysics(
     return undefined;
   }
 
-  const shapeKind = collider?.shape ?? "BOX";
-  const input = BuildBodyInput(node, collider, body, scene);
+  const input = BuildBodyInput(node, colliders, body, scene);
 
-  let physicsBody: PhysicsBody | undefined;
-  if (shapeKind === "CONVEX" || shapeKind === "MESH")
-  {
-    physicsBody = BuildGeometryShapeBody(input, shapeKind);
-  }
-  else if (collider === undefined || collider.autoFit)
-  {
-    physicsBody = BuildAutoFitBody(input, shapeKind);
-  }
-  else
-  {
-    physicsBody = AttachShape(BuildManualShape(collider, scene), input);
-  }
+  const physicsBody = colliders.length > 1
+    ? BuildCompoundBody(input)
+    : BuildSingleColliderBody(input);
 
   if (physicsBody === undefined)
   {

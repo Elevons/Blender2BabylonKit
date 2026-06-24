@@ -1,6 +1,5 @@
 """Serialize the manifest postProcessing block from Blender scene settings."""
 
-from ..core.ids import ensure_object_id
 from .assets import copy_asset
 
 
@@ -30,47 +29,11 @@ def _color_curves_block(s):
     }
 
 
-def _volumetric_light_scattering_ratio(post_settings):
-    if post_settings.vls_pass_ratio != post_settings.vls_post_ratio:
-        return {
-            "postProcessRatio": post_settings.vls_post_ratio,
-            "passRatio": post_settings.vls_pass_ratio,
-        }
-    return post_settings.vls_post_ratio
-
-
-def _volumetric_light_scattering_block(post_settings):
-    ratio = _volumetric_light_scattering_ratio(post_settings)
-    data = {
-        "enabled": True,
-        "samples": post_settings.vls_samples,
-        "ratio": ratio,
-        "invert": bool(post_settings.vls_invert),
-        "exposure": post_settings.vls_exposure,
-        "decay": post_settings.vls_decay,
-        "weight": post_settings.vls_weight,
-        "density": post_settings.vls_density,
-    }
-    if post_settings.vls_light_source is not None:
-        data["lightSource"] = ensure_object_id(post_settings.vls_light_source)
-    if post_settings.vls_use_custom_position:
-        positionX, positionY, positionZ = post_settings.vls_custom_position
-        data["useCustomMeshPosition"] = True
-        data["customMeshPosition"] = [positionX, positionZ, -positionY]  # Blender Z-up -> Babylon Y-up
-    return data
-
-
 def serialize_post_processing(scene_settings, output_dir):
     """Build the manifest postProcessing object, or None when disabled."""
     s = scene_settings.post
-    if not s.use_pipeline and not s.use_vls:
-        return None
-
     if not s.use_pipeline:
-        data = {"defaultPipeline": False}
-        if s.use_vls:
-            data["volumetricLightScattering"] = _volumetric_light_scattering_block(s)
-        return data
+        return None
 
     color_grading = None
     if s.use_color_grading and s.color_grading_file:
@@ -165,8 +128,5 @@ def serialize_post_processing(scene_settings, output_dir):
 
     if s.use_color_curves:
         data["colorCurves"] = _color_curves_block(s)
-
-    if s.use_vls:
-        data["volumetricLightScattering"] = _volumetric_light_scattering_block(s)
 
     return data

@@ -10,6 +10,9 @@
  */
 export const ID_KEY = "bjs_id";
 
+/** glTF extras key for viewport-hidden objects. Must match the Blender add-on's VISIBLE_KEY. */
+export const VISIBLE_KEY = "bjs_visible";
+
 // ---- Manifest schema (mirrors the Blender exporter output) ----
 
 export interface TagComponent {
@@ -22,6 +25,8 @@ export interface ColliderComponent {
   shape: "BOX" | "SPHERE" | "CAPSULE" | "CYLINDER" | "CONVEX" | "MESH";
   isTrigger: boolean;
   autoFit: boolean;
+  /** Default on. Bakes this entity's local scale into authored data; parent scale uses the world matrix. */
+  applyObjectScale?: boolean;
   size: [number, number, number];
   radius: number;
   height: number;
@@ -118,6 +123,8 @@ export interface ConstraintComponent {
   constraintType: "FIXED" | "BALL" | "HINGE" | "SLIDER" | "SPRING" | "CUSTOM";
   /** GUID of the other body's entity (null = unset). */
   target: string | null;
+  /** Default on. Bakes this entity's local scale into authored pivot/limits; parent scale uses the world matrix. */
+  applyObjectScale?: boolean;
   /** Joint anchor in the OWNER's local space, already converted to Babylon Y-up. */
   pivot: [number, number, number];
   /** Frame X axis in the owner's local space (Babylon Y-up unit vector). */
@@ -356,6 +363,8 @@ export interface EntityData {
   name: string;
   parent: string | null;
   components: Component[];
+  /** False when Blender viewport-hidden (eye icon). Omitted when visible. */
+  visible?: boolean;
   light?: LightInfo;   // auto-derived from a Blender lamp; not a component
   camera?: CameraInfo; // auto-derived from a Blender camera; not a component
   animation?: AnimationInfo; // NLA clips + autoplay; not a component
@@ -492,23 +501,6 @@ export interface SsaoInfo {
   maxZ?: number;
 }
 
-export interface VolumetricLightScatteringInfo {
-  enabled: boolean;
-  /** Entity GUID of the light-source mesh (omit for a runtime default billboard). */
-  lightSource?: string | null;
-  samples?: number;
-  /** Output scale, or `{ postProcessRatio, passRatio }` for split quality. */
-  ratio?: number | { postProcessRatio: number; passRatio: number };
-  invert?: boolean;
-  useCustomMeshPosition?: boolean;
-  /** Babylon Y-up world position. */
-  customMeshPosition?: [number, number, number];
-  exposure?: number;
-  decay?: number;
-  weight?: number;
-  density?: number;
-}
-
 export interface PostProcessingInfo {
   defaultPipeline?: boolean;
   fxaa?: boolean;
@@ -528,7 +520,6 @@ export interface PostProcessingInfo {
   vignette?: VignetteInfo;
   colorGrading?: ColorGradingInfo;
   colorCurves?: ColorCurvesInfo;
-  volumetricLightScattering?: VolumetricLightScatteringInfo;
 }
 
 export interface SceneInfo {

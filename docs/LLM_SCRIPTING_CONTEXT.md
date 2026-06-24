@@ -96,6 +96,14 @@ entity.GetControl3D(name): Control3D | undefined             // exact match, the
 entity.SendMessage(message, source): void              // deliver to all its behaviors' OnMessage
 ```
 
+`entity.node.isVisible` mirrors Blender's **viewport** visibility (eye icon): objects
+hidden in the viewport export with `bjs_visible: false` in glTF extras and load with
+`isVisible = false` (child lights/cameras are disabled too). Toggle at runtime with
+`entity.node.isVisible = true` (if the object is a lamp, also
+`this.scene.getLightByName(this.entity.name)?.setEnabled(true)`). **Render-disabled**
+objects (camera icon / `hide_render`) are **not exported at all** — they won't exist in
+the level.
+
 ### Component queries (`attachments`)
 
 At load time each successfully applied **component** becomes one row on
@@ -171,6 +179,33 @@ Options object: `{ min?, max?, step?, label?, type?, options?, of? }`.
 - `vector3`/`color` values arrive as Babylon `Vector3`/`Color3` at runtime (coerced
   from arrays); plain arrays stay arrays.
 
+## Visibility
+
+Blender has two outliner toggles; only one maps to runtime hiding:
+
+| Blender toggle | Property | Export / runtime |
+|---|---|---|
+| **Eye** (viewport) | `hide_viewport` | Exported; loads with `entity.node.isVisible = false` |
+| **Camera** (render) | `hide_render` | Omitted from the `.glb` and manifest entirely |
+
+Viewport-hidden objects still exist as entities (physics, scripts, references resolve).
+Export writes `"visible": false` on manifest entities (check `.scene.json`) and
+`bjs_visible: 0` in glTF extras (collection / hierarchy visibility via
+`visible_get()`, not just the per-object eye flag). Use the eye icon for props you want in the level but off until a behavior reveals them.
+Use render-disable for editor-only helpers (rigs, guides, blocking meshes) that should
+never ship.
+
+```ts
+// Reveal on trigger enter (sender is the trigger entity)
+OnMessage(message: string, _source: Entity): void
+{
+  if (message === "reveal")
+  {
+    this.node.isVisible = true;
+  }
+}
+```
+
 ## Reaching other objects
 
 Prefer an `@exposed({ type: "entity" })` field (the author picks the target in
@@ -229,7 +264,7 @@ For a **script-built** orbit around a moving entity (not a globe), see the
 `camera-follow` recipe — it creates a `UniversalCamera` and sets
 `scene.activeCamera`. Only one active camera per scene.
 
-Post-processing (bloom, SSAO, volumetric light scattering, etc.) attaches to
+Post-processing (bloom, SSAO, etc.) attaches to
 `scene.activeCamera` **after** all `OnStart` hooks run. If your behavior creates
 or swaps the active camera in `OnStart`, the exported stack is already on
 whichever camera is active at that moment — you do not get a `Level` handle to
@@ -239,28 +274,19 @@ post-processing in Blender when possible.
 ## Scene look & post-processing
 
 Scene-wide rendering (environment, fog, atmosphere, post-processing) is **not** a behavior
-concern — it is authored under **Properties › Scene › Babylon** and exported in
+concern — it is authored under **Babylon Scene** and exported in
 `manifest.scene`. Behaviors do not receive `level.post`, `level.atmosphere`, or a `Level` handle.
 
 | Effect | Author in Blender | Behavior role |
 |---|---|---|
 | Environment / IBL | Rendering › Environment | None — IBL only when Atmosphere replaces the skybox |
 | **Atmosphere** (physical sky) | Atmosphere (SUN lamp + scattering) | None — time of day follows the sun lamp direction |
-| Fog | Scene › Fog | None |
+| Fog | Babylon Scene › Fog | None |
 | Default pipeline (bloom, DOF, …) | Post-Processing › Default Pipeline | None |
 | SSAO | Post-Processing › SSAO | None |
-| **Volumetric light scattering** | Post-Processing › Volumetric Light Scattering | None — pick a **Light Source** mesh (sun billboard); empty = default billboard |
-
-**Volumetric light scattering** creates light shafts from a mesh light source via
-Babylon's `VolumetricLightScatteringPostProcess`. Author the sun (or floor glow)
-as a mesh with an emissive/diffuse material in Blender, assign it as **Light
-Source**, enable the panel, and export. The manifest block is
-`scene.postProcessing.volumetricLightScattering` (`lightSource` GUID, `samples`,
-`ratio`, `invert`, optional `customMeshPosition`, `exposure`/`decay`/`weight`/
-`density`). It works with or without Default Pipeline.
 
 **Atmosphere** (`@babylonjs/addons/atmosphere`) provides a physically based sky and
-aerial perspective. Author under **Properties › Scene › Babylon › Atmosphere**:
+aerial perspective. Author under **Babylon Scene › Atmosphere**:
 enable the panel, add or pick a **Sun Light** (Blender **Sun** lamp), tune
 scattering if needed. Export writes `scene.atmosphere` (`sunLightId` GUID when
 picked, `pbrSunIntensity`, `useLuts`, `multiScatteringIntensity`,
@@ -275,11 +301,11 @@ Do **not** import `Atmosphere` from `@babylonjs/addons/atmosphere` (or
 `level.atmosphere`. PBR integration is automatic; you do not wire sky shaders in
 script code.
 
-Do **not** instantiate `VolumetricLightScatteringPostProcess` (or other scene
+Do **not** instantiate `DefaultRenderingPipeline` (or other scene
 post stacks) inside behaviors — that duplicates the loader, fights the exported
 settings, and won't survive level reload. Use `list_scene_entities` to see
 enabled **atmosphere** / **post-processing** and which entity is the sun lamp
-or VLS light source when grounding `@exposed` picks.
+when grounding `@exposed` picks.
 
 Runtime detail: `docs/engine/06-RENDERING.md` (Atmosphere + post-processing).
 
@@ -318,6 +344,11 @@ entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylon
   tipping without resizing the collider.
 - MESH-shaped colliders can't be DYNAMIC (Havok limitation) — author CONVEX for
   moving bodies.
+- **Multiple Collider components** on one entity combine into one compound body
+  (`PhysicsShapeContainer`). `entity.body` is shared; `GetAttachment("COLLIDER")`
+  returns the first row — use `entity.attachments.filter(a => a.type === "COLLIDER")`
+  to inspect each authored shape. Prefer manual offsets per collider; auto-fit
+  on each row fits the full mesh bounds.
 - **Joints are authored in Blender, not in behavior scripts.** There is no
   `@exposed` for constraints — add a **Constraint** component in the N-panel.
   The loader builds them in a post-pass and stores them on the `Level` object
@@ -570,9 +601,9 @@ export default class HoverBob extends Behavior
 |---|---|
 | Full scripting chapter | `docs/engine/04-SCRIPTING.md` |
 | Physics (bodies, triggers, constraints) | `docs/engine/05-PHYSICS.md` |
-| Load order / when `OnStart` runs | `docs/engine/03-LOAD-PIPELINE.md` |
+| Load order / when `OnStart` runs / visibility | `docs/engine/03-LOAD-PIPELINE.md` |
 | Cameras (component types, Geospatial) | `docs/engine/06-RENDERING.md` |
-| Scene look / atmosphere / post-processing (VLS, bloom, SSAO) | `docs/engine/06-RENDERING.md` · `get_scripting_context(section="scene-look")` |
+| Scene look / atmosphere / post-processing (bloom, SSAO) | `docs/engine/06-RENDERING.md` · `get_scripting_context(section="scene-look")` |
 | Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.md` |
 | 2D GUI, particles, 3D GUI | `docs/engine/10-UI.md` |
 | Code style | `docs/STYLE_GUIDE.md` |

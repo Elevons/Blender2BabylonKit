@@ -6,11 +6,8 @@ import {
   DefaultRenderingPipeline,
   DepthOfFieldEffectBlurLevel,
   ImageProcessingConfiguration,
-  Mesh,
   SSAO2RenderingPipeline,
   Texture,
-  Vector3,
-  VolumetricLightScatteringPostProcess,
 } from "@babylonjs/core";
 import type {
   ChromaticAberrationInfo,
@@ -23,10 +20,8 @@ import type {
   SharpenInfo,
   SsaoInfo,
   VignetteInfo,
-  VolumetricLightScatteringInfo,
 } from "../core/types";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
-import type { Level } from "../core/Level";
 
 const TONE_MAPPING_TYPES = {
   STANDARD: ImageProcessingConfiguration.TONEMAPPING_STANDARD,
@@ -328,108 +323,9 @@ function ApplySsaoSettings(ssao: SSAO2RenderingPipeline, settings: SsaoInfo): vo
   }
 }
 
-/** Resolve an entity's export mesh for use as a VLS light-source billboard. */
-function ResolveEntityMesh(level: Level, guid: string): Mesh | null
-{
-  const entity = level.ById(guid);
-  if (entity === undefined)
-  {
-    console.warn(`[bjs] volumetric light scattering: light source entity not found (${guid})`);
-    return null;
-  }
-
-  const node = entity.node;
-  if (node instanceof Mesh)
-  {
-    return node;
-  }
-
-  for (const child of node.getChildMeshes(false))
-  {
-    if (child instanceof Mesh)
-    {
-      return child;
-    }
-  }
-
-  console.warn(
-    `[bjs] volumetric light scattering: entity "${entity.name}" has no mesh for the light source`
-  );
-  return null;
-}
-
-/** Apply manifest tuning fields onto a VolumetricLightScatteringPostProcess. */
-function ApplyVolumetricLightScatteringSettings(
-  volumetricLightScattering: VolumetricLightScatteringPostProcess,
-  settings: VolumetricLightScatteringInfo
-): void
-{
-  if (settings.invert !== undefined)
-  {
-    volumetricLightScattering.invert = settings.invert;
-  }
-  if (settings.exposure !== undefined)
-  {
-    volumetricLightScattering.exposure = settings.exposure;
-  }
-  if (settings.decay !== undefined)
-  {
-    volumetricLightScattering.decay = settings.decay;
-  }
-  if (settings.weight !== undefined)
-  {
-    volumetricLightScattering.weight = settings.weight;
-  }
-  if (settings.density !== undefined)
-  {
-    volumetricLightScattering.density = settings.density;
-  }
-  if (settings.useCustomMeshPosition === true && settings.customMeshPosition !== undefined)
-  {
-    const [positionX, positionY, positionZ] = settings.customMeshPosition;
-    volumetricLightScattering.useCustomMeshPosition = true;
-    volumetricLightScattering.setCustomMeshPosition(new Vector3(positionX, positionY, positionZ));
-  }
-}
-
-/** Create VolumetricLightScatteringPostProcess on the active camera. */
-function BuildVolumetricLightScattering(
-  scene: Scene,
-  camera: Camera,
-  level: Level | undefined,
-  settings: VolumetricLightScatteringInfo
-): VolumetricLightScatteringPostProcess
-{
-  const engine = scene.getEngine();
-  const ratio = settings.ratio ?? 1.0;
-  const samples = settings.samples ?? 100;
-
-  let lightMesh: Mesh | undefined;
-  if (settings.lightSource !== undefined && settings.lightSource !== null && level !== undefined)
-  {
-    lightMesh = ResolveEntityMesh(level, settings.lightSource) ?? undefined;
-  }
-
-  const volumetricLightScattering = new VolumetricLightScatteringPostProcess(
-    "bjsVLS",
-    ratio,
-    camera,
-    lightMesh,
-    samples,
-    Texture.BILINEAR_SAMPLINGMODE,
-    engine,
-    false,
-    scene
-  );
-
-  ApplyVolumetricLightScatteringSettings(volumetricLightScattering, settings);
-  return volumetricLightScattering;
-}
-
 export interface PostProcessingHandles {
   pipeline?: DefaultRenderingPipeline;
   ssao?: SSAO2RenderingPipeline;
-  volumetricLightScattering?: VolumetricLightScatteringPostProcess;
 }
 
 /** Move the default rendering pipeline onto a different camera. */
@@ -465,8 +361,7 @@ export function ApplyPostProcessing(
   scene: Scene,
   activeCamera: Camera | null,
   postProcessingInfo: PostProcessingInfo,
-  baseUrl = "",
-  level?: Level
+  baseUrl = ""
 ): PostProcessingHandles
 {
   const targetCameras = activeCamera ? [activeCamera] : scene.cameras;
@@ -492,18 +387,6 @@ export function ApplyPostProcessing(
       enabled: true,
       ...postProcessingInfo.ssaoSettings,
     });
-  }
-
-  const volumetricLightScatteringSettings = postProcessingInfo.volumetricLightScattering;
-  if (
-    volumetricLightScatteringSettings !== undefined &&
-    volumetricLightScatteringSettings.enabled === true &&
-    activeCamera !== null
-  )
-  {
-    handles.volumetricLightScattering = BuildVolumetricLightScattering(
-      scene, activeCamera, level, volumetricLightScatteringSettings
-    );
   }
 
   return handles;

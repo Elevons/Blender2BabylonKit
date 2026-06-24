@@ -14,6 +14,11 @@ from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Euler
 
 from ..core.bounds import compute_local_bounds
+from ..core.collider_scale import (
+    manual_collider_dimensions,
+    object_world_matrix_for_collider,
+    scaled_fit_bounds,
+)
 
 _handle = None
 _COLOR = (0.3, 0.9, 1.0, 0.9)   # cyan
@@ -109,14 +114,18 @@ def _capsule(center, radius, height):
     return pts
 
 
-def _local_geometry(obj, comp, depsgraph=None):
+def _local_geometry(obj, comp, eval_obj, depsgraph=None):
     """Local-space line segments for a collider, or None if the mesh is the shape."""
     shape = comp.collider_shape
     if shape in {'CONVEX', 'MESH'}:
-        return None  # the mesh itself is the collider; no separate wireframe
+        # Hull/mesh colliders use geometry at runtime; preview with a scaled AABB.
+        center, size = compute_local_bounds(obj, depsgraph)
+        center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)
+        return _box_edges(center, size)
 
     if comp.auto_fit:
         center, size = compute_local_bounds(obj, depsgraph)
+        center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)
         if shape == 'SPHERE':
             return _sphere(center, max(size) / 2)
         if shape == 'CYLINDER':
@@ -127,17 +136,17 @@ def _local_geometry(obj, comp, depsgraph=None):
 
     # Manual: build around the origin, then rotate and offset (matches the runtime
     # shape, which is centered at `center` with the collider's rotation).
+    center, size, radius, height = manual_collider_dimensions(obj, comp, eval_obj)
     origin = Vector((0.0, 0.0, 0.0))
     if shape == 'SPHERE':
-        pts = _sphere(origin, comp.collider_radius)
+        pts = _sphere(origin, radius)
     elif shape == 'CYLINDER':
-        pts = _cylinder(origin, comp.collider_radius, comp.collider_height)
+        pts = _cylinder(origin, radius, height)
     elif shape == 'CAPSULE':
-        pts = _capsule(origin, comp.collider_radius, comp.collider_height)
+        pts = _capsule(origin, radius, height)
     else:
-        pts = _box_edges(origin, comp.collider_size)
+        pts = _box_edges(origin, size)
     rot = Euler(comp.collider_rotation, 'XYZ').to_matrix()
-    center = Vector(comp.collider_center)
     return [(rot @ p) + center for p in pts]
 
 
@@ -151,13 +160,13 @@ def _draw():
     points = []
     for obj in selected:
         eval_obj = obj.evaluated_get(depsgraph)
-        mw = eval_obj.matrix_world
         for comp in obj.bjs_components:
             if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:
                 continue
-            local = _local_geometry(obj, comp, depsgraph)
+            local = _local_geometry(obj, comp, eval_obj, depsgraph)
             if not local:
                 continue
+            mw = object_world_matrix_for_collider(obj, eval_obj, comp.collider_apply_scale)
             points.extend(mw @ p for p in local)
 
     if not points:

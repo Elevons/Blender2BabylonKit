@@ -1,5 +1,5 @@
-import type { Scene, TransformNode } from "@babylonjs/core";
-import { ID_KEY } from "../types";
+import type { Scene, TransformNode, Node } from "@babylonjs/core";
+import { ID_KEY, VISIBLE_KEY } from "../types";
 
 /**
  * Node resolution: match manifest entities back to the glTF nodes Babylon
@@ -50,6 +50,73 @@ export function FindNodeByName(scene: Scene, name: string): TransformNode | null
  * guard: if a mirrored root ever reappears (negative determinant), physics
  * orientation is broken again and we want a loud, specific warning.
  */
+function IsDescendantOf(node: Node, ancestor: Node): boolean
+{
+  let parent: Node | null = node.parent;
+  while (parent !== null)
+  {
+    if (parent === ancestor)
+    {
+      return true;
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
+function IsMarkedHiddenInExtras(extras: Record<string, unknown> | undefined): boolean
+{
+  const marked = extras?.[VISIBLE_KEY];
+  return marked === false || marked === 0;
+}
+
+/** Hide a loaded node and its descendants; disable child lights/cameras. */
+export function HideEntityNode(scene: Scene, root: TransformNode): void
+{
+  root.isVisible = false;
+
+  for (const descendant of root.getDescendants(false))
+  {
+    descendant.isVisible = false;
+  }
+
+  for (const light of scene.lights)
+  {
+    if (IsDescendantOf(light, root))
+    {
+      light.setEnabled(false);
+    }
+  }
+  for (const camera of scene.cameras)
+  {
+    if (IsDescendantOf(camera, root))
+    {
+      camera.isVisible = false;
+    }
+  }
+}
+
+/** Hide glTF nodes whose extras carry `bjs_visible` (Blender viewport-hidden). */
+export function ApplyNodeVisibility(scene: Scene): void
+{
+  const consider = (candidateNode: TransformNode): void =>
+  {
+    if (IsMarkedHiddenInExtras(candidateNode.metadata?.gltf?.extras))
+    {
+      HideEntityNode(scene, candidateNode);
+    }
+  };
+
+  for (const transformNode of scene.transformNodes)
+  {
+    consider(transformNode);
+  }
+  for (const mesh of scene.meshes)
+  {
+    consider(mesh as unknown as TransformNode);
+  }
+}
+
 export function NeutralizeGltfRoot(scene: Scene): void
 {
   const rootNode = scene.getNodeByName("__root__") as TransformNode | null;

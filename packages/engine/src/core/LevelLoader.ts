@@ -23,7 +23,7 @@ import {
   WireParticleEmitterTracking,
 } from "../subsystems/particles";
 import { FetchAndValidateManifest, GetDirectory } from "./loader/manifest";
-import { NeutralizeGltfRoot } from "./loader/nodeResolution";
+import { ApplyNodeVisibility, NeutralizeGltfRoot } from "./loader/nodeResolution";
 import { CreateLoadContext, type LoadContext } from "./loader/context";
 import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
@@ -101,6 +101,7 @@ export class LevelLoader
     this.scene.useRightHandedSystem = true;
     await appendSceneAsync(baseUrl + manifest.glb, this.scene);
     NeutralizeGltfRoot(this.scene);
+    ApplyNodeVisibility(this.scene);
 
     const context = CreateLoadContext(this.scene, baseUrl, defaultInputMap);
 
@@ -201,8 +202,7 @@ export class LevelLoader
         this.scene,
         this.scene.activeCamera,
         postProcessing,
-        context.baseUrl,
-        context.level
+        context.baseUrl
       );
     }
 

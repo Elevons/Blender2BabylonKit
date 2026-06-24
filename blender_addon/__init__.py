@@ -12,14 +12,14 @@ Where things are:
     input_actions/  the Input Actions asset: data, defaults, JSON I/O, operators
     export/         everything that writes the .glb + .scene.json (+ live link)
     operators/      component / script / export operators
-    ui/             all panels and menus (viewport N-panel + Properties > Scene)
+    ui/             all panels and menus (viewport N-panels)
     viewport/       GPU overlays (collider wireframe preview)
 
 Where the UI is:
-    3D viewport N-panel "Babylon" tab   -> the selected object (components,
-                                           light/camera/animation, quick export)
-    Properties > Scene > "Babylon"      -> the scene (rendering, fog,
-                                           post-processing, input actions, export)
+    3D viewport N-panel "Babylon Object" tab -> the selected object (components,
+                                               light/camera/animation)
+    3D viewport N-panel "Babylon Scene" tab  -> the scene (rendering, fog,
+                                               post-processing, input actions, export)
 """
 
 # Re-import every package submodule cleanly on addon reload (F8 / Reload

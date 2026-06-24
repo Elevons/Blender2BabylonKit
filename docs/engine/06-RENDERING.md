@@ -111,7 +111,7 @@ Image-based lighting comes from `scene.environmentTexture`. Without an
 `environment` block in the manifest, PBR materials get no cubemap — only direct
 lamps and the optional `ambientColor` fill.
 
-**Authoring (Properties › Scene › Babylon › Rendering › Environment):**
+**Authoring (Babylon Scene › Rendering › Environment):**
 
 | Blender setting | Manifest | Runtime |
 |---|---|---|
@@ -184,7 +184,7 @@ physically based sky and aerial perspective. It automatically integrates with
 `PBRMaterial` for consistent lighting. Requires WebGL 2 or WebGPU — the runtime
 calls `Atmosphere.IsSupported(engine)` and logs a warning if unsupported.
 
-**Authoring (Properties › Scene › Babylon › Atmosphere):**
+**Authoring (Babylon Scene › Atmosphere):**
 
 | Blender setting | Manifest | Runtime |
 |---|---|---|
@@ -231,7 +231,7 @@ Omit `"atmosphere"` (or set it to `null`) when the panel header is off.
 ### Post-processing (`subsystems/postprocess.ts`)
 
 Handles land on `level.post` (`PostProcessingHandles`: `pipeline?`,
-`ssao?`, `volumetricLightScattering?`). Use `RetargetPostProcessing(handles, camera)`
+`ssao?`). Use `RetargetPostProcessing(handles, camera)`
 if gameplay swaps the active camera later (default pipeline only today).
 
 When `scene.postProcessing.defaultPipeline` is true, the runtime builds Babylon's
@@ -253,32 +253,11 @@ When `scene.postProcessing.defaultPipeline` is true, the runtime builds Babylon'
 | Color grading LUT | `colorGrading.{enabled,file}` | `.3dl` or `.png` under `post/` |
 | Color curves | `colorCurves.{enabled,globalHue?,…}` | Global / highlights / midtones / shadows |
 | SSAO | `ssao`, `ssaoSettings?` | Separate `SSAO2RenderingPipeline` (`radius`, `totalStrength`, `samples`, `maxZ`) |
-| Volumetric light scattering | `volumetricLightScattering.{enabled,…}` | Separate `VolumetricLightScatteringPostProcess` on the active camera; does **not** require Default Pipeline |
-
-**Volumetric light scattering** (`volumetricLightScattering`) uses Babylon's
-`VolumetricLightScatteringPostProcess` — light shafts from a mesh light source
-(typically a sun billboard). Enable it in **Properties › Scene › Babylon ›
-Post-Processing › Volumetric Light Scattering**; it can run with or without
-Default Pipeline. Omit `lightSource` (or leave the Blender picker empty) and the
-runtime creates a default billboard. The light-source object is force-included
-in the export GUID pass like other entity references.
-
-| VLS key | Notes |
-|---|---|
-| `lightSource` | Entity GUID of the light-source mesh; omit for default billboard |
-| `samples` | Ray-march quality (default 100) |
-| `ratio` | Output scale (`1.0`) or `{ postProcessRatio, passRatio }` for split quality |
-| `invert` | `true` = rays downward; `false` = upward |
-| `useCustomMeshPosition` | Scatter from `customMeshPosition` instead of the mesh |
-| `customMeshPosition` | Babylon Y-up world position |
-| `exposure`, `decay`, `weight`, `density` | Scattering tuning (Babylon defaults: 0.3, 0.96815, 0.58767, 0.926) |
-
-Set the light-source material's diffuse color/texture in Blender — Babylon 9
-deprecated `useDiffuseColor` on the post-process itself.
 
 **Not yet implemented** (separate Babylon pipelines, not part of the default
 stack): SSR, TAA, motion blur, IBL shadows, frame-graph
-`FrameGraphVolumetricLightingTask` (Babylon 9's directional-light volume path).
+`FrameGraphVolumetricLightingTask` (Babylon 9's directional-light volume path;
+requires a frame graph render pipeline).
 
 #### Manifest example
 
@@ -301,30 +280,7 @@ stack): SSR, TAA, motion blur, IBL shadows, frame-graph
   "glow": { "enabled": false, "blurKernelSize": 16, "intensity": 1 },
   "vignette": { "enabled": false, "weight": 1.5 },
   "colorGrading": { "enabled": false, "file": "post/LateSunset.3dl" },
-  "colorCurves": { "enabled": false, "globalHue": 30 },
-  "volumetricLightScattering": {
-    "enabled": true,
-    "lightSource": "<guid-of-sun-billboard>",
-    "samples": 100,
-    "ratio": { "postProcessRatio": 1.0, "passRatio": 0.5 },
-    "invert": false,
-    "exposure": 0.3,
-    "decay": 0.96815,
-    "weight": 0.58767,
-    "density": 0.926
-  }
-}
-```
-
-VLS-only (no Default Pipeline):
-
-```json
-"postProcessing": {
-  "defaultPipeline": false,
-  "volumetricLightScattering": {
-    "enabled": true,
-    "samples": 75
-  }
+  "colorCurves": { "enabled": false, "globalHue": 30 }
 }
 ```
 
@@ -333,21 +289,20 @@ Omit optional effect blocks when disabled; older manifests with only
 
 ### Blender UI
 
-**Properties › Scene › Babylon › Rendering › Environment** (`ui/scene_panels.py`).
+**Babylon Scene › Rendering › Environment** (`ui/scene_panels.py`).
 **Default Environment** (IBL without a World texture), **Show Skybox**
 (IBL-only background when off), and **Skybox Ignores Fog** (disabled when Show
 Skybox is off). The panel previews the texture on the active World Output chain
 via `scene/environment.py`.
 
-**Properties › Scene › Babylon › Atmosphere** (`ui/scene_panels.py`).
+**Babylon Scene › Atmosphere** (`ui/scene_panels.py`).
 Physically based sky settings on `scene.bjs_scene.atmosphere`
 (`scene/atmosphere.py`). Export serialization is in `export/atmosphere.py`.
 
-**Properties › Scene › Babylon › Post-Processing** (`ui/post_panels.py`).
+**Babylon Scene › Post-Processing** (`ui/post_panels.py`).
 Settings live on `scene.bjs_scene.post` (`scene/post_processing.py`). Export
 serialization is in `export/post_processing.py` (LUT files copied via
-`copy_asset` → `post/`; VLS light-source objects force-included via
-`export/level.py`). Exposure/contrast export as `1.0` when tone mapping
+`copy_asset` → `post/`). Exposure/contrast export as `1.0` when tone mapping
 is off so stale panel values do not crush the image.
 
 Continue: [Audio & Animation →](07-AUDIO-ANIMATION.md)

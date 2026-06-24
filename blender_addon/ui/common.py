@@ -1,8 +1,4 @@
-"""Shared draw helpers used by more than one panel.
-
-The export controls appear twice (3D viewport sidebar and Properties > Scene),
-so they are drawn by one function here — the two panels can never drift apart.
-"""
+"""Shared draw helpers used by more than one panel."""
 
 import bpy
 

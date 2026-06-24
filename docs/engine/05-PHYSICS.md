@@ -7,9 +7,29 @@ All in `subsystems/physics.ts`, `constraints.ts`, `triggers.ts`. Havok **V2**.
 
 ## Bodies (`BuildPhysics`)
 
-One COLLIDER and/or RIGIDBODY → one node-attached `PhysicsBody`:
-collider-only = static/trigger; rigidbody-only = dynamic + auto-fit box; both =
-shape from collider, dynamics from body.
+One or more COLLIDER components and/or one RIGIDBODY → one node-attached
+`PhysicsBody`: collider-only = static/trigger; rigidbody-only = dynamic +
+auto-fit box; both = shape from collider(s), dynamics from body.
+
+### Multiple colliders (compound body)
+
+An entity may carry **more than one** enabled COLLIDER component. Export writes
+each as its own manifest row; at load time `ClassifyComponents` collects them
+all and `BuildPhysics` builds a **`PhysicsShapeContainer`** (Havok compound
+shape): each collider becomes a child shape with its own center/size/rotation,
+material, and trigger flag. One `PhysicsBody`, one `entity.body`; each collider
+still gets its own `RegisterAttachment` row (same `body` ref).
+
+Authoring tips (the N-panel shows a compound-body notice when count > 1):
+
+- Prefer **manual** offsets/sizes per shape — auto-fit colliders each fit the
+  **full** mesh bounds, which is rarely what you want for head+body volumes.
+- Trigger events from every trigger collider are **merged** onto the one body;
+  entering any child shape can fire any authored reaction.
+- Mixed trigger/non-trigger colliders on one entity are allowed (per-child
+  flags); the validator warns because it can be surprising.
+
+Single-collider paths below are unchanged.
 
 ### Motion types
 
@@ -43,7 +63,9 @@ useful when tipping behavior should follow visuals, not collider volume.
 
 Dynamic rigid bodies may set `startAsleep: true` (**Start Asleep** in Blender). The loader passes this to `PhysicsBody`'s `startsAsleep` constructor argument (and `PhysicsAggregate.startAsleep` on auto-fit mesh paths). Bodies begin with physics calculations skipped until a collision or applied force wakes them — a **performance hint** for scenes where bodies are at rest on load, not a guarantee (nearby awake bodies can wake them). The engine also puts resting bodies to sleep automatically when appropriate.
 
-Three shape paths (each its own builder):
+Three shape paths for **one** collider (each its own builder); **two or more**
+colliders always use the compound container (`BuildCompoundBody` →
+`BuildColliderShape` per row):
 
 - **Auto-fit primitive** (`BuildAutoFitBody`): real mesh → `PhysicsAggregate`
   sizes it; multi-material **wrapper** (TransformNode, one child mesh per
@@ -57,7 +79,14 @@ Three shape paths (each its own builder):
   warns; use CONVEX for movers.
 - **Manual primitive** (`BuildManualShape`): hand-authored Babylon-space
   center/size/radius/height/rotation (converted at export; the Blender
-  viewport preview matches).
+  viewport preview matches). **Apply Object Scale** is on by default: collider
+  dimensions are multiplied by this entity's **local** scale at load
+  (`applyObjectScale` in the manifest; omit the field or set true). Parent scale
+  is already applied through the world transform — only local scale is baked to
+  avoid double-scaling child colliders under a scaled parent. Turn off in Blender
+  to opt out. Manual primitives and auto-fit bounds are multiplied; CONVEX /
+  MESH shapes bake local scale into mesh vertices before the hull/triangle shape
+  is built.
 
 ### The owned-meshes rule <a name="owned-meshes"></a>
 
@@ -105,6 +134,9 @@ from a perpendicular pair (`ComputeConstraintFrame`). Preset mapping:
 
 `ComputeConstraintFrame` derives the target-side pivot/axes from **live world
 transforms**, pinning the as-placed relative pose — nothing snaps on load.
+**Apply Object Scale** is on by default: authored pivot and linear limits are
+multiplied by the owner's **local** scale (parent scale comes from the world
+transform). Turn off in Blender to opt out. Angular limits stay in degrees.
 Motors (`setAxisMotorType(VELOCITY)` + target + max force) apply to HINGE/SLIDER
 presets only. **`collision`** (Blender **Bodies Collide**, default off) maps to
 Havok's pairwise `isCollisionsEnabled` on the joint — when off, the two

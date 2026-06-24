@@ -12,8 +12,8 @@ for code walk-throughs; "Runtime docs →" jumps to the engine packet).
 
 ## What the add-on does
 
-Blender is the editor. The add-on adds **Babylon** panels — viewport N-panel
-for the selected object, Properties › Scene › Babylon for scene-wide settings
+Blender is the editor. The add-on adds two viewport N-panel tabs — **Babylon
+Object** for the selected object, **Babylon Scene** for scene-wide settings
 (Input Actions, rendering, export) — and writes the two artifacts the
 [runtime](../engine/00-INDEX.md) consumes: `level.glb` (what glTF can express)
 and `level.scene.json` (everything else). See
@@ -39,3 +39,6 @@ Link** · **Collider preview** · **3D GUI** (GUI3D_* authoring → manifest).
 this folder; it re-extracts every trace's source from `blender_addon/`. A
 renamed/deleted function fails the build loudly — the anti-rot guard. (The
 runtime packet alone is `npm run docs:trace`.)
+
+Full build pipeline, file layout, and how to add traces or diagrams:
+**[Building the documentation](../BUILDING-DOCS.md)**.

@@ -12,6 +12,14 @@ manifest `entities[].id` → the loader's `BuildIdIndex` (`core/loader/nodeResol
 `ProcessEntity` matches GUID-first → `Entity` in `level.entities`, node gets
 `metadata.bjsEntity` back-reference.
 
+### Viewport visibility (eye icon)
+`export/level._stamp_viewport_visibility` (transient `obj["bjs_visible"] = False`
+when `hide_viewport` and still renderable) → glTF node `extras.bjs_visible` →
+`ApplyNodeVisibility` (`core/loader/nodeResolution.ts`) sets `node.isVisible =
+false` and disables descendant lights/cameras. Render-disabled objects
+(`hide_render`) never get this far — `_is_renderable` drops them from glb and
+manifest. Behaviors can toggle `entity.node.isVisible` at runtime.
+
 ### Tag
 TAG component (`components/` → `export/components.serialize_components`) → manifest
 `{type:"TAG", tag}` → `entityBuilder.ClassifyComponents` sets `entity.tag` and
@@ -19,12 +27,16 @@ TAG component (`components/` → `export/components.serialize_components`) → m
 `entity.HasAttachment("TAG")`.
 
 ### Collider / RigidBody
-N-panel fields (+ `viewport/collider_preview.py` wireframe, Blender space) →
-`serialize_components` converts center/size/rotation to Y-up; DYNAMIC rigid
-bodies also export `centerOfMassAutoFit` and optional `centerOfMass` → manifest
-COLLIDER/RIGIDBODY → `physics.BuildPhysics`: shape path chosen
-(auto-fit aggregate | wrapper fit | convex/mesh merge | manual), all geometry
-gathered via `OwnedColliderMeshes` (excludes child entities by GUID) →
+N-panel fields (+ `viewport/collider_preview.py` wireframe per manual collider,
+Blender space; compound-body notice when count > 1) →
+`serialize_components` converts center/size/rotation to Y-up (one dict per
+COLLIDER row); DYNAMIC rigid bodies also export `centerOfMassAutoFit` and
+optional `centerOfMass` → manifest COLLIDER/RIGIDBODY →
+`entityBuilder.ClassifyComponents` collects **all** colliders →
+`physics.BuildPhysics`: single collider → shape path chosen (auto-fit aggregate
+| wrapper fit | convex/mesh merge | manual); multiple colliders →
+`PhysicsShapeContainer` compound (`BuildCompoundBody`); all geometry gathered
+via `OwnedColliderMeshes` (excludes child entities by GUID) →
 `ApplyMassProperties` (`ResolveCenterOfMass` + `setMassProperties`) → one
 `PhysicsBody` on the node → `entity.body` + `RegisterAttachment` per COLLIDER
 and/or RIGIDBODY row (same `body` ref when both). Sound because of right-handed
@@ -63,7 +75,7 @@ pass `ResolveCameraTargets` (FOLLOW lockedTarget / ARC re-pivot / OFFSET
 `center` / `yaw` / `pitch` / `radius` from the exported pose and `planetRadius`.
 
 ### Atmosphere
-Properties › Scene › Atmosphere (`ui/scene_panels.py`) edits
+Babylon Scene › Atmosphere (`ui/scene_panels.py`) edits
 `scene.bjs_scene.atmosphere` (`scene/atmosphere.py`) →
 `export/atmosphere.serialize_atmosphere` (optional `sunLightId` GUID; scattering
 tuning) → manifest `scene.atmosphere` → `LevelLoader.FinalizeLevel`:
@@ -74,15 +86,14 @@ tuning) → manifest `scene.atmosphere` → `LevelLoader.FinalizeLevel`:
 lamp's direction in Blender. See [Rendering — Atmosphere](06-RENDERING.md).
 
 ### Post-processing
-Properties › Scene › Post-Processing (`ui/post_panels.py`) edits
+Babylon Scene › Post-Processing (`ui/post_panels.py`) edits
 `scene.bjs_scene.post` (`scene/post_processing.py`) →
 `export/post_processing.serialize_post_processing` (LUTs via `copy_asset` →
-`post/`; VLS `lightSource` GUID + axis-converted `customMeshPosition`) → manifest
+`post/`) → manifest
 `scene.postProcessing` → `LevelLoader.FinalizeLevel`:
 `ApplySceneSettings` (clear/ambient, env, fog) → `ApplyAtmosphere` (when
 enabled) → … → `Level.Begin` (runtime cameras) → `ApplyPostProcessing` (`subsystems/postprocess.ts`: Default Pipeline
-+ SSAO2 + `VolumetricLightScatteringPostProcess` on `scene.activeCamera`,
-resolving `lightSource` via `level.ById`) → `level.post`. See
++ SSAO2 on `scene.activeCamera`) → `level.post`. See
 [Rendering — Scene look](06-RENDERING.md).
 
 ### Animation autoplay

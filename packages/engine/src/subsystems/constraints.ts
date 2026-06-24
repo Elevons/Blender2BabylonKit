@@ -2,6 +2,7 @@ import {
   Scene,
   Vector3,
   Quaternion,
+  Matrix,
   LockConstraint,
   BallAndSocketConstraint,
   Physics6DoFConstraint,
@@ -15,6 +16,12 @@ import type { Entity } from "../core/Entity";
 import type { ConstraintAxisName, ConstraintComponent } from "../core/types";
 import type { Level } from "../core/Level";
 import { RegisterAttachment } from "../core/attachments";
+import {
+  LocalScaleAxes,
+  ApplyObjectScaleEnabled,
+  DistanceScaleAlongLocalAxis,
+  WorldMatrixForScaledPhysics,
+} from "../core/nodeScale";
 
 /**
  * Constraints subsystem: turns CONSTRAINT components into Havok V2 joints in a
@@ -58,6 +65,40 @@ function PerpendicularOf(axis: Vector3): Vector3
   return Vector3.Cross(axis, candidate).normalize();
 }
 
+function ConstraintFrameAxisVector(
+  component: ConstraintComponent,
+  frameAxis: ConstraintAxisName
+): Vector3
+{
+  const axisA = Vector3.FromArray(component.axis).normalize();
+  if (frameAxis === "LINEAR_X" || frameAxis === "ANGULAR_X")
+  {
+    return axisA;
+  }
+
+  const perpA = PerpendicularOf(axisA);
+  if (frameAxis === "LINEAR_Y" || frameAxis === "ANGULAR_Y")
+  {
+    return perpA;
+  }
+
+  return Vector3.Cross(axisA, perpA).normalize();
+}
+
+function LinearLimitScale(
+  ownerNode: TransformNode,
+  component: ConstraintComponent,
+  frameAxis: ConstraintAxisName
+): number
+{
+  if (!ApplyObjectScaleEnabled(component.applyObjectScale))
+  {
+    return 1;
+  }
+
+  return DistanceScaleAlongLocalAxis(ownerNode, ConstraintFrameAxisVector(component, frameAxis));
+}
+
 /**
  * Derive the shared constraint frame from the owner's authored pivot/axis and
  * the two bodies' live world transforms. Everything is computed via the world
@@ -72,16 +113,27 @@ function ComputeConstraintFrame(
   ownerNode.computeWorldMatrix(true);
   targetNode.computeWorldMatrix(true);
 
+  const applyScale = ApplyObjectScaleEnabled(component.applyObjectScale);
+  let pivotA = Vector3.FromArray(component.pivot);
+  if (applyScale)
+  {
+    const { sx, sy, sz } = LocalScaleAxes(ownerNode);
+    pivotA = new Vector3(pivotA.x * sx, pivotA.y * sy, pivotA.z * sz);
+  }
+
+  const ownerWorld = WorldMatrixForScaledPhysics(ownerNode, applyScale);
+  const worldPivot = Vector3.TransformCoordinates(
+    applyScale ? pivotA : Vector3.FromArray(component.pivot),
+    ownerWorld
+  );
+
+  const targetWorldInv = Matrix.Invert(
+    WorldMatrixForScaledPhysics(targetNode, applyScale)
+  );
+  const pivotB = Vector3.TransformCoordinates(worldPivot, targetWorldInv);
+
   const ownerRotation = ownerNode.absoluteRotationQuaternion;
   const inverseTargetRotation = Quaternion.Inverse(targetNode.absoluteRotationQuaternion);
-
-  // Pivot: owner-local -> world -> target-local.
-  const pivotA = Vector3.FromArray(component.pivot);
-  const worldPivot = Vector3.TransformCoordinates(pivotA, ownerNode.getWorldMatrix());
-  const pivotB = Vector3.TransformCoordinates(
-    worldPivot,
-    targetNode.getWorldMatrix().clone().invert()
-  );
 
   // Axis + a perpendicular: owner-local -> world -> each body's local frame.
   const axisA = Vector3.FromArray(component.axis).normalize();
@@ -121,7 +173,10 @@ function IsAngularAxis(name: ConstraintAxisName): boolean
 }
 
 /** CUSTOM: map authored per-axis rows to Havok 6DoF limits (FREE = omitted). */
-function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFLimit[]
+function BuildCustomAxisLimits(
+  component: ConstraintComponent,
+  ownerNode: TransformNode
+): Physics6DoFLimit[]
 {
   const limits: Physics6DoFLimit[] = [];
   const degreesToRadians = Math.PI / 180;
@@ -152,11 +207,12 @@ function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFLimit
       continue;
     }
 
-    const scale = IsAngularAxis(axisConfig.axis) ? degreesToRadians : 1;
+    const isAngular = IsAngularAxis(axisConfig.axis);
+    const unitScale = isAngular ? 1 : LinearLimitScale(ownerNode, component, axisConfig.axis);
     const linearLimit: Physics6DoFLimit = {
       axis: physicsAxis,
-      minLimit: (axisConfig.min ?? 0) * scale,
-      maxLimit: (axisConfig.max ?? 0) * scale,
+      minLimit: (axisConfig.min ?? 0) * (isAngular ? degreesToRadians : unitScale),
+      maxLimit: (axisConfig.max ?? 0) * (isAngular ? degreesToRadians : unitScale),
     };
 
     if (axisConfig.mode === "spring")
@@ -175,15 +231,19 @@ function BuildCustomAxisLimits(component: ConstraintComponent): Physics6DoFLimit
  * The per-type 6DoF limit set. The constraint frame's X is the authored axis,
  * so HINGE frees/limits ANGULAR_X and SLIDER/SPRING free/limit LINEAR_X.
  */
-function BuildAxisLimits(component: ConstraintComponent): Physics6DoFLimit[]
+function BuildAxisLimits(
+  component: ConstraintComponent,
+  ownerNode: TransformNode
+): Physics6DoFLimit[]
 {
   if (component.constraintType === "CUSTOM")
   {
-    return BuildCustomAxisLimits(component);
+    return BuildCustomAxisLimits(component, ownerNode);
   }
 
   const limits: Physics6DoFLimit[] = [];
   const degreesToRadians = Math.PI / 180;
+  const linearScale = LinearLimitScale(ownerNode, component, "LINEAR_X");
 
   if (component.constraintType === "HINGE")
   {
@@ -215,8 +275,8 @@ function BuildAxisLimits(component: ConstraintComponent): Physics6DoFLimit[]
     {
       const linearLimit: Physics6DoFLimit = {
         axis: PhysicsConstraintAxis.LINEAR_X,
-        minLimit: component.min,
-        maxLimit: component.max,
+        minLimit: component.min * linearScale,
+        maxLimit: component.max * linearScale,
       };
 
       if (component.constraintType === "SPRING")
@@ -242,6 +302,7 @@ function AllowConstraintCollisions(component: ConstraintComponent): boolean
 function CreateConstraint(
   frame: ConstraintFrame,
   component: ConstraintComponent,
+  ownerNode: TransformNode,
   scene: Scene
 ): PhysicsConstraint
 {
@@ -278,7 +339,7 @@ function CreateConstraint(
         perpAxisB: frame.perpAxisB,
         collision: allowCollision,
       },
-      BuildAxisLimits(component),
+      BuildAxisLimits(component, ownerNode),
       scene
     );
   }
@@ -294,19 +355,24 @@ function CreateConstraint(
       perpAxisB: frame.perpAxisB,
       collision: allowCollision,
     },
-    [],
+    BuildAxisLimits(component, ownerNode),
     scene
   );
 }
 
 /** Drive a hinge/slider joint at the authored target speed. */
-function ApplyMotor(constraint: Physics6DoFConstraint, component: ConstraintComponent): void
+function ApplyMotor(
+  constraint: Physics6DoFConstraint,
+  component: ConstraintComponent,
+  ownerNode: TransformNode
+): void
 {
   const isHinge = component.constraintType === "HINGE";
   const motorAxis = isHinge ? PhysicsConstraintAxis.ANGULAR_X : PhysicsConstraintAxis.LINEAR_X;
+  const linearScale = LinearLimitScale(ownerNode, component, "LINEAR_X");
   const targetSpeed = isHinge
     ? component.motorSpeed * (Math.PI / 180) // deg/s -> rad/s
-    : component.motorSpeed;
+    : component.motorSpeed * linearScale;
 
   constraint.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
   constraint.setAxisMotorTarget(motorAxis, targetSpeed);
@@ -352,7 +418,7 @@ export function BuildConstraints(
     }
 
     const frame = ComputeConstraintFrame(ownerEntity.node, targetEntity.node, component);
-    const constraint = CreateConstraint(frame, component, scene);
+    const constraint = CreateConstraint(frame, component, ownerEntity.node, scene);
     ownerEntity.body.addConstraint(targetEntity.body, constraint);
     // Havok reads options.collision during addConstraint; re-apply so FIXED/BALL
     // and any plugin init quirks can't leave the wrong pairwise-collision state.
@@ -360,7 +426,7 @@ export function BuildConstraints(
 
     if (component.motor && constraint instanceof Physics6DoFConstraint)
     {
-      ApplyMotor(constraint, component);
+      ApplyMotor(constraint, component, ownerEntity.node);
     }
 
     constraints.push(constraint);
