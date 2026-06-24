@@ -165,6 +165,8 @@ class BJSComponent(PropertyGroup):
     start_asleep:    BoolProperty(name="Start Asleep", default=False,
                                  description="Begin in sleep mode for bodies at rest "
                                              "(performance hint; not guaranteed to stay asleep)")
+    cog_show:        BoolProperty(name="Show Preview", default=True,
+                                 description="Draw the center of mass in the viewport (when selected)")
     cog_auto_fit:    BoolProperty(name="Auto-Fit Center of Mass",
                                   description="Compute center of mass from the mesh bounding box at runtime",
                                   default=True)

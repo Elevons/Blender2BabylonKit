@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,7 +205,7 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="07-AUDIO-ANIMATION.html">Prev</a> <span class="dim">·</span> <a href="09-FEATURE-TRACES.html">Next →</a></p>
@@ -210,7 +228,7 @@
 <h2>Monorepo &amp; scaffolder</h2>
 <p>See <a href="01-ARCHITECTURE.html#monorepo-layout">Architecture</a> for the layout. Daily commands (repo root): <code>npm install</code> (links workspaces) · <code>npm run dev</code> (playground) · <code>npm run dev --workspace apps/&lt;name&gt;</code> · <code>npm run launcher:dev</code> (project hub) · <code>npm run typecheck</code> (tsc over the engine package and the app) · <code>npm run create -- --name my-game [--title &quot;…&quot;] [--level Arena]</code> (stamps <code>apps/my-game</code> from the playground template — own <code>main.ts</code>/<code>behaviors</code>/empty <code>public/levels/</code>; the engine is <strong>not</strong> copied, it's the shared symlinked package). The launcher wizard calls the same <code>create-app.mjs</code> script via <code>POST /api/projects</code>.</p>
 <h2>Versioning &amp; artifacts</h2>
-<p>Engine <code>package.json</code>(s) and <code>blender_addon/blender_manifest.toml</code> move in lockstep. Two distributables: <code>babylon_level_kit_extension.zip</code> (install in Blender) and <code>bjs-level-kit.zip</code> (the repo, sans node_modules). Manifest schema is <strong>v4</strong>; additive optional fields don't bump it. Manual verification lives in <a href="../TEST_PLAN.md">TEST_PLAN</a>; forward work in <a href="../DEVELOPMENT_PLAN.md">DEVELOPMENT_PLAN</a>.</p>
+<p>Engine <code>package.json</code>(s) and <code>blender_addon/blender_manifest.toml</code> move in lockstep (currently <strong>engine v0.31.1 · Blender add-on v0.32.0</strong>). Two distributables: <code>babylon_level_kit_extension.zip</code> (install in Blender) and <code>bjs-level-kit.zip</code> (the repo, sans node_modules). Manifest schema is <strong>v4</strong>; additive optional fields don't bump it.</p>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/engine/08-WORKFLOW.html</code>, then <code>npm run docs:build</code>.

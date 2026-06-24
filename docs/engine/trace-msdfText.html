@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">MSDF text</span><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #6b7fff;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Node materials</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">MSDF text</span><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-lights.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Lights</a><a href="trace-cameras.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Cameras</a><a href="trace-shadows.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Shadows</a><a href="trace-post.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Post-processing</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — MSDF text: font assets → TextRenderer","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. copy_asset","sub":"assets.py","desc":"EXPORT — BMFont JSON + glyph atlas PNG copied to fonts/ with stable sanitized names; re-exports overwrite.","meta":[["File","blender_addon/export/assets.py"],["Line","75"]],"code":"def copy_asset(filepath, output_dir, subdir):\n    \"\"\"Copy an authored asset file into <output_dir>/<subdir>/ (like env textures)\n    and return its manifest-relative path, or None if the source is missing.\"\"\"\n    src = bpy.path.abspath(filepath)\n    if not os.path.isfile(src):\n        return None\n    dest_dir = os.path.join(output_dir, subdir)\n    os.makedirs(dest_dir, exist_ok=True)\n    filename = sanitize_asset_filename(os.path.basename(src))\n    dest, filename = unique_asset_path(dest_dir, filename, src)\n    if os.path.normpath(src) != os.path.normpath(dest):\n        shutil.copy2(src, dest)\n    return subdir + \"/\" + filename","file":"blender_addon/export/assets.py","line":75},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ApplyComponents","sub":"entityBuilder.ts","desc":"LOAD — each MSDF_TEXT component queues an ApplyMsdfText promise (font fetch + async shader compile).","meta":[["File","packages/engine/src/core/loader/entityBuilder.ts"],["Line","194"]],"code":"/**\n * Interpret an entity's components: build one physics body from any COLLIDER(s) /\n * RIGIDBODY, register authored trigger reactions, queue sound creation, set the\n * tag, and instantiate SCRIPT behaviors (deferring their entity references).\n * Returns the deferred references for the second pass.\n */\nfunction ApplyComponents(\n  entity: Entity,\n  entityData: EntityData,\n  scene: Scene,\n  registry: BehaviorRegistry,\n  context: LoadContext\n): PendingRef[]\n{\n  const {\n    colliders, body, scripts, audioComponents, constraintComponents,\n    guiComponents, particleComponents, msdfTextComponents, gui3dComponents,\n  } = ClassifyComponents(entity, entityData.components);\n\n  if (colliders.length > 0 || body !== undefined)\n  {\n    const physicsBody = BuildPhysics(entity.node, colliders, body, scene);\n    entity.body = physicsBody;\n\n    if (physicsBody !== undefined)\n    {\n      for (const collider of colliders)\n      {\n        RegisterAttachment(entity, { type: \"COLLIDER\", data: collider, body: physicsBody });\n      }\n      if (body !== undefined)\n      {\n        RegisterAttachment(entity, { type: \"RIGIDBODY\", data: body, body: physicsBody });\n      }\n    }\n  }\n\n  // Authored trigger reactions need the plugin observable; wired in a post-pass.\n  const triggerEvents = colliders.flatMap((collider) =>\n    collider.isTrigger && collider.events !== undefined && collider.events.length > 0\n      ? collider.events\n      : []\n  );\n  if (triggerEvents.length > 0)\n  {\n    context.triggerRegistrations.push({ sourceEntity: entity, events: triggerEvents });\n  }\n\n  // Sound creation is async (fetch + decode); collected and awaited after the loop.\n  for (const audioComponent of audioComponents)\n  {\n    context.audioTasks.push(ApplyAudio(entity, audioComponent, context.baseUrl));\n  }\n\n  // Joints need BOTH bodies to exist; built in a post-pass (FinalizeLevel).\n  for (const constraintComponent of constraintComponents)\n  {\n    context.constraintRegistrations.push({ ownerEntity: entity, component: constraintComponent });\n  }\n\n  // GUI layouts and particle systems are fetched/parsed from JSON; collect the\n  // promises and settle them after the entity loop (like audio).\n  for (const guiComponent of guiComponents)\n  {\n    context.guiTasks.push(ApplyGui(entity, guiComponent, context.baseUrl));\n  }\n\n  for (const particleComponent of particleComponents)\n  {\n    context.particleTasks.push(ApplyParticles(entity, particleComponent, context.baseUrl));\n  }\n\n  for (const msdfTextComponent of msdfTextComponents)\n  {\n    context.msdfTextTasks.push(ApplyMsdfText(entity, msdfTextComponent, context.baseUrl));\n  }\n\n  // 3D GUI needs panels before child controls and resolvable click targets,\n  // so everything is queued and built in a post-pass (FinalizeLevel). The\n  // parent GUID is how a control finds the panel it belongs to.\n  for (const gui3dComponent of gui3dComponents)\n  {\n    context.gui3dRegistrations.push({\n      entity,\n      component: gui3dComponent,\n      parentId: entityData.parent,\n    });\n  }\n\n  return InstantiateScripts(entity, scripts, scene, registry, context.defaultInputMap);\n}","file":"packages/engine/src/core/loader/entityBuilder.ts","line":194},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. ApplyMsdfText","sub":"msdfText.ts","desc":"FontAsset cached per scene; TextRenderer.CreateTextRendererAsync; parent = entity.node; addParagraph with authored options. RegisterAttachment after textRenderers.push.","meta":[["File","packages/engine/src/ui/msdfText.ts"],["Line","97"]],"code":"/**\n * Create a TextRenderer for one MSDF_TEXT component and parent it to the entity.\n * Shader compilation is async; queue the returned promise during entity load.\n */\nexport async function ApplyMsdfText(\n  entity: Entity,\n  component: MsdfTextComponent,\n  baseUrl: string\n): Promise<TextRenderer | undefined>\n{\n  if (component.fontJson === null || component.fontTexture === null)\n  {\n    console.warn(`[bjs] \"${entity.name}\" has MSDF Text with missing font assets`);\n    return undefined;\n  }\n\n  if (component.text.length === 0)\n  {\n    console.warn(`[bjs] \"${entity.name}\" has MSDF Text with no text`);\n    return undefined;\n  }\n\n  const scene = entity.node.getScene();\n  const engine = scene.getEngine();\n\n  let fontAsset: FontAsset;\n  try\n  {\n    fontAsset = await LoadFontAsset(\n      component.fontJson, component.fontTexture, baseUrl, scene\n    );\n  }\n  catch (error)\n  {\n    console.warn(`[bjs] \"${entity.name}\" failed to load MSDF font`, error);\n    return undefined;\n  }\n\n  const unsupported = fontAsset._unsupportedChars(component.text);\n  if (unsupported.length > 0)\n  {\n    console.warn(\n      `[bjs] \"${entity.name}\" MSDF font is missing glyphs for: ${unsupported}`\n    );\n  }\n\n  let textRenderer: TextRenderer;\n  try\n  {\n    textRenderer = await TextRenderer.CreateTextRendererAsync(fontAsset, engine);\n  }\n  catch (error)\n  {\n    console.warn(`[bjs] \"${entity.name}\" failed to create TextRenderer`, error);\n    return undefined;\n  }\n\n  ConfigureTextRenderer(textRenderer, entity, component);\n  textRenderer.addParagraph(component.text, BuildParagraphOptions(component));\n\n  entity.textRenderers.push(textRenderer);\n  RegisterAttachment(entity, { type: \"MSDF_TEXT\", data: component, renderer: textRenderer });\n\n  return textRenderer;\n}","file":"packages/engine/src/ui/msdfText.ts","line":97},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. FinalizeLevel","sub":"LevelLoader.ts","desc":"SettleTasks over msdfTextTasks, then WireMsdfTextRendering → level.msdfTextManager (onAfterRenderObservable draw pass).","meta":[["File","packages/engine/src/core/LevelLoader.ts"],["Line","126"]],"code":"  /**\n   * Everything after the entity passes: shadows, scene-wide render settings,\n   * animations, sound settling, trigger wiring, and starting the update loop.\n   */\n  private async FinalizeLevel(manifest: LevelManifest, context: LoadContext): Promise<void>\n  {\n    if (this.options.shadows !== false && context.shadowLights.length > 0)\n    {\n      // Loader option wins; otherwise the Blender scene's \"Freeze Shadows\" flag.\n      const freeze = this.options.freezeShadows ?? manifest.scene?.freezeShadows ?? false;\n      context.level.shadowGenerators = SetupShadows(this.scene, context.shadowLights, {\n        mapSize: this.options.shadowMapSize,\n        freeze,\n      });\n    }\n\n    if (manifest.scene !== undefined)\n    {\n      await ApplySceneSettings(this.scene, manifest.scene, context.baseUrl, context.level);\n\n      const atmosphereInfo = manifest.scene.atmosphere;\n      if (atmosphereInfo !== undefined && atmosphereInfo !== null)\n      {\n        const hasHdrPipeline = manifest.scene.postProcessing?.defaultPipeline === true;\n        const atmosphere = ApplyAtmosphere(\n          this.scene,\n          atmosphereInfo,\n          manifest.entities,\n          context.idIndex,\n          hasHdrPipeline\n        );\n        if (atmosphere !== null)\n        {\n          context.level.atmosphere = atmosphere;\n        }\n      }\n    }\n\n    ApplyAutoPlayAnimations(this.scene, context.animatedEntities);\n\n    // Asset-backed components (audio, GUI, particles) load in parallel during\n    // the entity loop; settle them now so a bad file logs here rather than as\n    // an unhandled rejection later.\n    await SettleTasks(context.audioTasks, \"sound\");\n    await SettleTasks(context.guiTasks, \"GUI\");\n    await SettleTasks(context.particleTasks, \"particle system\");\n    await SettleTasks(context.msdfTextTasks, \"MSDF text\");\n\n    context.level.particleEmitterManager = WireParticleEmitterTracking(\n      this.scene,\n      CollectEmptyParticleEmitters(context.level.entities.values())\n    );\n\n    context.level.msdfTextManager = WireMsdfTextRendering(\n      this.scene,\n      CollectTextRenderers(context.level.entities.values())\n    );\n\n    context.level.triggerObserver =\n      WireTriggerEvents(this.scene, context.level, context.triggerRegistrations);\n\n    context.level.constraints =\n      BuildConstraints(this.scene, context.level, context.constraintRegistrations);\n\n    context.level.gui3DManager = BuildGui3DControls(\n      this.scene, context.level, context.gui3dRegistrations, context.baseUrl\n    );\n\n    context.level.Begin();\n\n    // Post-processing attaches to cameras; apply after Begin() so behaviors that\n    // create a runtime camera in OnStart (e.g. TrainCamera) receive the stack.\n    const postProcessing = manifest.scene?.postProcessing;\n    if (postProcessing !== undefined && postProcessing !== null)\n    {\n      context.level.post = ApplyPostProcessing(\n        this.scene,\n        this.scene.activeCamera,\n        postProcessing,\n        context.baseUrl\n      );\n    }\n\n    // debugColliders is a dev convenience; a non-debug (\"release\") export wins.\n    if (this.options.debugColliders && context.level.debugEnabled)\n    {\n      context.level.ShowColliders(true);\n    }\n  }","file":"packages/engine/src/core/LevelLoader.ts","line":126},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. GetTextRenderer","sub":"Entity.ts","desc":"RUNTIME — entity.GetAttachment(\"MSDF_TEXT\")?.renderer or GetTextRenderer(\"roboto-regular\") by JSON stem; clearParagraphs/addParagraph for dynamic copy.","meta":[["File","packages/engine/src/core/Entity.ts"],["Line","159"]],"code":"  /** Find one of this entity's MSDF text renderers by font file stem (exact, then contains). */\n  GetTextRenderer(fontName: string): TextRenderer | undefined\n  {\n    const wanted = fontName.toLowerCase();\n    const attachments = this.GetAttachmentsOfType(\"MSDF_TEXT\");\n\n    const exactMatch = attachments.find(\n      (attachment) => FontJsonStem(attachment.data.fontJson).toLowerCase() === wanted\n    );\n    if (exactMatch !== undefined)\n    {\n      return exactMatch.renderer;\n    }\n\n    return attachments.find(\n      (attachment) => FontJsonStem(attachment.data.fontJson).toLowerCase().includes(wanted)\n    )?.renderer;\n  }","file":"packages/engine/src/core/Entity.ts","line":159}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — MSDF text: font assets → TextRenderer","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. copy_asset","sub":"assets.py","desc":"EXPORT — BMFont JSON + glyph atlas PNG copied to fonts/ with stable sanitized names; re-exports overwrite.","meta":[["File","blender_addon/export/assets.py"],["Line","75"],["Diagram","ui.html"]],"code":"def copy_asset(filepath, output_dir, subdir):\n    \"\"\"Copy an authored asset file into <output_dir>/<subdir>/ (like env textures)\n    and return its manifest-relative path, or None if the source is missing.\"\"\"\n    src = bpy.path.abspath(filepath)\n    if not os.path.isfile(src):\n        return None\n    dest_dir = os.path.join(output_dir, subdir)\n    os.makedirs(dest_dir, exist_ok=True)\n    filename = sanitize_asset_filename(os.path.basename(src))\n    dest, filename = unique_asset_path(dest_dir, filename, src)\n    if os.path.normpath(src) != os.path.normpath(dest):\n        shutil.copy2(src, dest)\n    return subdir + \"/\" + filename","file":"blender_addon/export/assets.py","line":75},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ApplyComponents","sub":"entityBuilder.ts","desc":"LOAD — each MSDF_TEXT component queues an ApplyMsdfText promise (font fetch + async shader compile).","meta":[["File","packages/engine/src/core/loader/entityBuilder.ts"],["Line","194"],["Diagram","ui.html"]],"code":"/**\n * Interpret an entity's components: build one physics body from any COLLIDER(s) /\n * RIGIDBODY, register authored trigger reactions, queue sound creation, set the\n * tag, and instantiate SCRIPT behaviors (deferring their entity references).\n * Returns the deferred references for the second pass.\n */\nfunction ApplyComponents(\n  entity: Entity,\n  entityData: EntityData,\n  scene: Scene,\n  registry: BehaviorRegistry,\n  context: LoadContext\n): PendingRef[]\n{\n  const {\n    colliders, body, scripts, audioComponents, constraintComponents,\n    guiComponents, particleComponents, msdfTextComponents, gui3dComponents,\n  } = ClassifyComponents(entity, entityData.components);\n\n  if (colliders.length > 0 || body !== undefined)\n  {\n    const physicsBody = BuildPhysics(entity.node, colliders, body, scene);\n    entity.body = physicsBody;\n\n    if (physicsBody !== undefined)\n    {\n      for (const collider of colliders)\n      {\n        RegisterAttachment(entity, { type: \"COLLIDER\", data: collider, body: physicsBody });\n      }\n      if (body !== undefined)\n      {\n        RegisterAttachment(entity, { type: \"RIGIDBODY\", data: body, body: physicsBody });\n      }\n    }\n  }\n\n  // Authored trigger reactions need the plugin observable; wired in a post-pass.\n  const triggerEvents = colliders.flatMap((collider) =>\n    collider.isTrigger && collider.events !== undefined && collider.events.length > 0\n      ? collider.events\n      : []\n  );\n  if (triggerEvents.length > 0)\n  {\n    context.triggerRegistrations.push({ sourceEntity: entity, events: triggerEvents });\n  }\n\n  // Sound creation is async (fetch + decode); collected and awaited after the loop.\n  for (const audioComponent of audioComponents)\n  {\n    context.audioTasks.push(ApplyAudio(entity, audioComponent, context.baseUrl));\n  }\n\n  // Joints need BOTH bodies to exist; built in a post-pass (FinalizeLevel).\n  for (const constraintComponent of constraintComponents)\n  {\n    context.constraintRegistrations.push({ ownerEntity: entity, component: constraintComponent });\n  }\n\n  // GUI layouts and particle systems are fetched/parsed from JSON; collect the\n  // promises and settle them after the entity loop (like audio).\n  for (const guiComponent of guiComponents)\n  {\n    context.guiTasks.push(ApplyGui(entity, guiComponent, context.baseUrl));\n  }\n\n  for (const particleComponent of particleComponents)\n  {\n    context.particleTasks.push(ApplyParticles(entity, particleComponent, context.baseUrl));\n  }\n\n  for (const msdfTextComponent of msdfTextComponents)\n  {\n    context.msdfTextTasks.push(ApplyMsdfText(entity, msdfTextComponent, context.baseUrl));\n  }\n\n  // 3D GUI needs panels before child controls and resolvable click targets,\n  // so everything is queued and built in a post-pass (FinalizeLevel). The\n  // parent GUID is how a control finds the panel it belongs to.\n  for (const gui3dComponent of gui3dComponents)\n  {\n    context.gui3dRegistrations.push({\n      entity,\n      component: gui3dComponent,\n      parentId: entityData.parent,\n    });\n  }\n\n  return InstantiateScripts(entity, scripts, scene, registry, context.defaultInputMap);\n}","file":"packages/engine/src/core/loader/entityBuilder.ts","line":194},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. ApplyMsdfText","sub":"msdfText.ts","desc":"FontAsset cached per scene; TextRenderer.CreateTextRendererAsync; parent = entity.node; addParagraph with authored options. RegisterAttachment after textRenderers.push.","meta":[["File","packages/engine/src/ui/msdfText.ts"],["Line","97"],["Diagram","ui.html"]],"code":"/**\n * Create a TextRenderer for one MSDF_TEXT component and parent it to the entity.\n * Shader compilation is async; queue the returned promise during entity load.\n */\nexport async function ApplyMsdfText(\n  entity: Entity,\n  component: MsdfTextComponent,\n  baseUrl: string\n): Promise<TextRenderer | undefined>\n{\n  if (component.fontJson === null || component.fontTexture === null)\n  {\n    console.warn(`[bjs] \"${entity.name}\" has MSDF Text with missing font assets`);\n    return undefined;\n  }\n\n  if (component.text.length === 0)\n  {\n    console.warn(`[bjs] \"${entity.name}\" has MSDF Text with no text`);\n    return undefined;\n  }\n\n  const scene = entity.node.getScene();\n  const engine = scene.getEngine();\n\n  let fontAsset: FontAsset;\n  try\n  {\n    fontAsset = await LoadFontAsset(\n      component.fontJson, component.fontTexture, baseUrl, scene\n    );\n  }\n  catch (error)\n  {\n    console.warn(`[bjs] \"${entity.name}\" failed to load MSDF font`, error);\n    return undefined;\n  }\n\n  const unsupported = fontAsset._unsupportedChars(component.text);\n  if (unsupported.length > 0)\n  {\n    console.warn(\n      `[bjs] \"${entity.name}\" MSDF font is missing glyphs for: ${unsupported}`\n    );\n  }\n\n  let textRenderer: TextRenderer;\n  try\n  {\n    textRenderer = await TextRenderer.CreateTextRendererAsync(fontAsset, engine);\n  }\n  catch (error)\n  {\n    console.warn(`[bjs] \"${entity.name}\" failed to create TextRenderer`, error);\n    return undefined;\n  }\n\n  ConfigureTextRenderer(textRenderer, entity, component);\n  textRenderer.addParagraph(component.text, BuildParagraphOptions(component));\n\n  entity.textRenderers.push(textRenderer);\n  RegisterAttachment(entity, { type: \"MSDF_TEXT\", data: component, renderer: textRenderer });\n\n  return textRenderer;\n}","file":"packages/engine/src/ui/msdfText.ts","line":97},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. FinalizeLevel","sub":"LevelLoader.ts","desc":"SettleTasks over msdfTextTasks, then WireMsdfTextRendering → level.msdfTextManager (onAfterRenderObservable draw pass).","meta":[["File","packages/engine/src/core/LevelLoader.ts"],["Line","128"],["Diagram","ui.html"]],"code":"  /**\n   * Everything after the entity passes: shadows, scene-wide render settings,\n   * animations, sound settling, trigger wiring, and starting the update loop.\n   */\n  private async FinalizeLevel(manifest: LevelManifest, context: LoadContext): Promise<void>\n  {\n    if (this.options.shadows !== false && context.shadowLights.length > 0)\n    {\n      // Loader option wins; otherwise the Blender scene's \"Freeze Shadows\" flag.\n      const freeze = this.options.freezeShadows ?? manifest.scene?.freezeShadows ?? false;\n      context.level.shadowGenerators = SetupShadows(this.scene, context.shadowLights, {\n        mapSize: this.options.shadowMapSize,\n        freeze,\n      });\n    }\n\n    if (manifest.scene !== undefined)\n    {\n      await ApplySceneSettings(this.scene, manifest.scene, context.baseUrl, context.level);\n\n      const atmosphereInfo = manifest.scene.atmosphere;\n      if (atmosphereInfo !== undefined && atmosphereInfo !== null)\n      {\n        const hasHdrPipeline = manifest.scene.postProcessing?.defaultPipeline === true;\n        const atmosphere = ApplyAtmosphere(\n          this.scene,\n          atmosphereInfo,\n          manifest.entities,\n          context.idIndex,\n          hasHdrPipeline\n        );\n        if (atmosphere !== null)\n        {\n          context.level.atmosphere = atmosphere;\n        }\n      }\n    }\n\n    ApplyAutoPlayAnimations(this.scene, context.animatedEntities);\n\n    // Asset-backed components (audio, GUI, particles) load in parallel during\n    // the entity loop; settle them now so a bad file logs here rather than as\n    // an unhandled rejection later.\n    await SettleTasks(context.audioTasks, \"sound\");\n    await SettleTasks(context.guiTasks, \"GUI\");\n    await SettleTasks(context.particleTasks, \"particle system\");\n    await SettleTasks(context.msdfTextTasks, \"MSDF text\");\n\n    context.level.particleEmitterManager = WireParticleEmitterTracking(\n      this.scene,\n      CollectEmptyParticleEmitters(context.level.entities.values())\n    );\n\n    context.level.msdfTextManager = WireMsdfTextRendering(\n      this.scene,\n      CollectTextRenderers(context.level.entities.values())\n    );\n\n    context.level.triggerObserver =\n      WireTriggerEvents(this.scene, context.level, context.triggerRegistrations);\n\n    context.level.constraints =\n      BuildConstraints(this.scene, context.level, context.constraintRegistrations);\n\n    context.level.gui3DManager = BuildGui3DControls(\n      this.scene, context.level, context.gui3dRegistrations, context.baseUrl\n    );\n\n    context.level.Begin();\n\n    // Post-processing attaches to cameras; apply after Begin() so behaviors that\n    // create a runtime camera in OnStart (e.g. TrainCamera) receive the stack.\n    const postProcessing = manifest.scene?.postProcessing;\n    if (postProcessing !== undefined && postProcessing !== null)\n    {\n      context.level.post = ApplyPostProcessing(\n        this.scene,\n        this.scene.activeCamera,\n        postProcessing,\n        context.baseUrl\n      );\n    }\n\n    // debugColliders is a dev convenience; a non-debug (\"release\") export wins.\n    if (this.options.debugColliders && context.level.debugEnabled)\n    {\n      context.level.ShowColliders(true);\n    }\n  }","file":"packages/engine/src/core/LevelLoader.ts","line":128},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. GetTextRenderer","sub":"Entity.ts","desc":"RUNTIME — entity.GetAttachment(\"MSDF_TEXT\")?.renderer or GetTextRenderer(\"roboto-regular\") by JSON stem; clearParagraphs/addParagraph for dynamic copy.","meta":[["File","packages/engine/src/core/Entity.ts"],["Line","159"],["Diagram","ui.html"]],"code":"  /** Find one of this entity's MSDF text renderers by font file stem (exact, then contains). */\n  GetTextRenderer(fontName: string): TextRenderer | undefined\n  {\n    const wanted = fontName.toLowerCase();\n    const attachments = this.GetAttachmentsOfType(\"MSDF_TEXT\");\n\n    const exactMatch = attachments.find(\n      (attachment) => FontJsonStem(attachment.data.fontJson).toLowerCase() === wanted\n    );\n    if (exactMatch !== undefined)\n    {\n      return exactMatch.renderer;\n    }\n\n    return attachments.find(\n      (attachment) => FontJsonStem(attachment.data.fontJson).toLowerCase().includes(wanted)\n    )?.renderer;\n  }","file":"packages/engine/src/core/Entity.ts","line":159}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
 </style>
@@ -1133,8 +1179,9 @@ function exportSelf() {
 <style>
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:2; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:2; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
 </style>
 <script>
@@ -1144,14 +1191,17 @@ function exportSelf() {
     __openNodePanel(n);
     if (!n.code) { return; }
     const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
     loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
   };
 </script></body>
 </html>

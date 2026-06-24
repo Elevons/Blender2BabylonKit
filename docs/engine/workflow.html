@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Workflow</span><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Workflow</span><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Babylon Level Kit — Workflow & tooling","nodes":[{"id":1,"x":40,"y":60,"w":150,"h":40,"label":"Live Link loop","sub":"save → see","desc":"Export once (path remembered per scene) → tick Live Link → Ctrl+S re-exports (save_post; begin_asset_export overwrites stable env/audio/gui paths) → Vite plugin watches all files under public/levels/ (path.resolve; 50ms debounce) → full reload. Manifest written after glb so both are ready.","meta":[["Blender","export/live_link.py"],["App","ReloadOnLevelExport in vite.config.ts"]]},{"id":2,"x":40,"y":200,"w":150,"h":40,"label":"Validator","sub":"catch it at export","desc":"Missing scripts · dangling refs · MESH+DYNAMIC · mesh triggers · events on non-triggers · constraint ends without physics · skinned-mesh components · AREA lights · duplicate GUIDs · missing audio · no camera · Input Actions (duplicate names, empty bindings, bad @inputMap, missing Scene Default).","meta":[["Runs","Validate button / Export / Live Link"]]},{"id":3,"x":40,"y":340,"w":150,"h":40,"label":"Debug Build","sub":"release gate","desc":"Export-panel checkbox → manifest 'debug' (missing = true) → level.debugEnabled → gates the C/I keys and the debugColliders option. Untick for release exports.","meta":[["Keys","C colliders · I inspector (lazy import)"]]},{"id":4,"x":360,"y":100,"w":150,"h":40,"label":"Monorepo","sub":"npm workspaces","desc":"packages/engine = '@bjs/engine' shared via symlink; apps/* each a game. Edit the engine once, every app updates instantly (Vite hot-reloads across the link).","meta":[["Install","npm install at the ROOT only"],["Typecheck","npm run typecheck"]]},{"id":5,"x":360,"y":240,"w":150,"h":40,"label":"Scaffolder","sub":"npm run create","desc":"-- --name my-game [--title …] [--level …]: stamps apps/my-game from the playground (own main.ts/behaviors/empty public/levels); the engine is NOT copied.","meta":[["File","scripts/create-app.mjs"]]},{"id":6,"x":360,"y":380,"w":150,"h":40,"label":"Versioning & artifacts","sub":"lockstep","desc":"Engine package.json(s) ↔ blender_manifest.toml. Distributables: extension zip (Blender) + repo zip. Manifest schema v4.","meta":[["Plans","TEST_PLAN / DEVELOPMENT_PLAN in docs/"]]},{"id":7,"x":660,"y":240,"w":150,"h":40,"label":"Per-app dev server","sub":"each app owns one","desc":"npm run dev --workspace apps/<name> (root npm run dev = playground). Imports resolve by Node's upward node_modules walk → the root symlink.","meta":[["Levels","apps/<name>/public/levels/"]]},{"id":8,"x":660,"y":100,"w":150,"h":40,"label":"Runtime load","sub":"main.ts","desc":"LevelLoader.Load after browser reload. debugEnabled from manifest gates C/I keys and the debugColliders loader option.","meta":[["File","packages/engine/src/core/LevelLoader.ts"]]}],"edges":[{"id":100,"src":2,"tgt":1,"label":"warnings on save"},{"id":101,"src":1,"tgt":7,"label":"serves"},{"id":106,"src":1,"tgt":8,"label":"reload → Load"},{"id":102,"src":3,"tgt":8,"label":"debugEnabled"},{"id":103,"src":4,"tgt":5,"label":""},{"id":104,"src":5,"tgt":7,"label":"new app"},{"id":105,"src":4,"tgt":7,"label":"symlink"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Workflow & tooling","nodes":[{"id":1,"x":40,"y":60,"w":150,"h":40,"label":"Live Link loop","sub":"save → see","desc":"Export once (path remembered per scene) → tick Live Link → Ctrl+S re-exports (save_post; begin_asset_export overwrites stable env/audio/gui paths) → Vite plugin watches all files under public/levels/ (path.resolve; 50ms debounce) → full reload. Manifest written after glb so both are ready.","meta":[["Blender","export/live_link.py"],["App","ReloadOnLevelExport in vite.config.ts"]]},{"id":2,"x":40,"y":200,"w":150,"h":40,"label":"Validator","sub":"catch it at export","desc":"Missing scripts · dangling refs · MESH+DYNAMIC · mesh triggers · events on non-triggers · constraint ends without physics · skinned-mesh components · AREA lights · duplicate GUIDs · missing audio · no camera · Input Actions (duplicate names, empty bindings, bad @inputMap, missing Scene Default).","meta":[["Runs","Validate button / Export / Live Link"]]},{"id":3,"x":40,"y":340,"w":150,"h":40,"label":"Debug Build","sub":"release gate","desc":"Export-panel checkbox → manifest 'debug' (missing = true) → level.debugEnabled → gates the C/I keys and the debugColliders option. Untick for release exports.","meta":[["Keys","C colliders · I inspector (lazy import)"]]},{"id":4,"x":360,"y":100,"w":150,"h":40,"label":"Monorepo","sub":"npm workspaces","desc":"packages/engine = '@bjs/engine' shared via symlink; apps/* each a game. Edit the engine once, every app updates instantly (Vite hot-reloads across the link).","meta":[["Install","npm install at the ROOT only"],["Typecheck","npm run typecheck"]]},{"id":5,"x":360,"y":240,"w":150,"h":40,"label":"Scaffolder","sub":"npm run create","desc":"-- --name my-game [--title …] [--level …]: stamps apps/my-game from the playground (own main.ts/behaviors/empty public/levels); the engine is NOT copied.","meta":[["File","scripts/create-app.mjs"]]},{"id":6,"x":360,"y":380,"w":150,"h":40,"label":"Versioning & artifacts","sub":"lockstep","desc":"Engine package.json(s) ↔ blender_manifest.toml (see __KIT_VERSION__ in prose docs). Distributables: extension zip (Blender) + repo zip. Manifest schema v4.","meta":[["Versions","packages/engine + blender_manifest.toml"]]},{"id":7,"x":660,"y":240,"w":150,"h":40,"label":"Per-app dev server","sub":"each app owns one","desc":"npm run dev --workspace apps/<name> (root npm run dev = playground). Imports resolve by Node's upward node_modules walk → the root symlink.","meta":[["Levels","apps/<name>/public/levels/"]]},{"id":8,"x":660,"y":100,"w":150,"h":40,"label":"Runtime load","sub":"main.ts","desc":"LevelLoader.Load after browser reload. debugEnabled from manifest gates C/I keys and the debugColliders loader option.","meta":[["File","packages/engine/src/core/LevelLoader.ts"]]}],"edges":[{"id":100,"src":2,"tgt":1,"label":"warnings on save"},{"id":101,"src":1,"tgt":7,"label":"serves"},{"id":106,"src":1,"tgt":8,"label":"reload → Load"},{"id":102,"src":3,"tgt":8,"label":"debugEnabled"},{"id":103,"src":4,"tgt":5,"label":""},{"id":104,"src":5,"tgt":7,"label":"new app"},{"id":105,"src":4,"tgt":7,"label":"symlink"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
 </style>

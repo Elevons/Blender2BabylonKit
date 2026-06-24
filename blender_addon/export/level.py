@@ -17,6 +17,7 @@ from .assets import begin_asset_export
 from .components import serialize_components, iter_referenced_objects
 from .datablocks import serialize_light, serialize_camera
 from .scene import serialize_scene
+from .materials import serialize_materials
 
 
 SCHEMA_VERSION = 4
@@ -130,12 +131,16 @@ def _build_manifest(context, glb_filename, output_dir):
         if animation:
             entity["animation"] = animation  # NLA clips + autoplay
         entities.append(entity)
-    return {
+    manifest = {
         "version": SCHEMA_VERSION,
         "glb": glb_filename,
         "scene": serialize_scene(context, output_dir),
         "entities": entities,
     }
+    materials = serialize_materials(context, output_dir)
+    if materials:
+        manifest["materials"] = materials
+    return manifest
 
 
 def _stamp_viewport_visibility(context):

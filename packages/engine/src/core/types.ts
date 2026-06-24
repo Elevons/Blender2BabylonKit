@@ -581,11 +581,31 @@ export interface InputActionAssetData {
   maps: InputActionMapData[];
 }
 
+/** One texture slot bound to an NME block at export time. */
+export interface NodeMaterialTextureInfo {
+  blockId: number;
+  blockName?: string;
+  /** Manifest-relative path (e.g. "materials/albedo.png"). */
+  file: string;
+}
+
+/** Blender material → Babylon node material override. */
+export interface NodeMaterialOverrideInfo {
+  /** Blender / glTF material name used for matching at runtime. */
+  name: string;
+  /** Manifest-relative path to the node material JSON. */
+  file: string;
+  /** Optional texture bindings when the JSON omits image data. */
+  textures?: NodeMaterialTextureInfo[];
+}
+
 export interface LevelManifest {
   version: number;
   glb: string;
   /** Exported with "Debug Build" on: enables runtime debug keys. Missing = true. */
   debug?: boolean;
   scene?: SceneInfo;   // optional scene-wide render settings
+  /** Node Material Editor overrides keyed by Blender material name. */
+  materials?: NodeMaterialOverrideInfo[];
   entities: EntityData[];
 }

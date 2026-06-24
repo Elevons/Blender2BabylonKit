@@ -354,6 +354,41 @@ def _check_atmosphere(scene, warnings):
             "in Sun Light")
 
 
+def _check_materials(context, warnings):
+    """Node material JSON and texture overrides must exist on disk."""
+    from .materials import _materials_in_use
+    from ..materials.nme_scan import enumerate_nme_texture_slots
+
+    used = _materials_in_use(context)
+    for mat in bpy.data.materials:
+        if not mat.bjs_nme_file:
+            continue
+        if mat not in used:
+            warnings.append(
+                f"Material '{mat.name}': node material JSON assigned but not "
+                f"used by any exportable mesh")
+            continue
+        if not os.path.isfile(bpy.path.abspath(mat.bjs_nme_file)):
+            warnings.append(
+                f"Material '{mat.name}': node material file not found: "
+                f"{mat.bjs_nme_file}")
+            continue
+
+        slots = enumerate_nme_texture_slots(mat.bjs_nme_file)
+        needs_by_id = {slot["block_id"]: slot["needs_file"] for slot in slots}
+        for tex_i, tex in enumerate(mat.bjs_nme_textures):
+            label = tex.block_name or f"texture {tex_i + 1}"
+            if tex.image_file:
+                if not os.path.isfile(bpy.path.abspath(tex.image_file)):
+                    warnings.append(
+                        f"Material '{mat.name}': {label} image not found: "
+                        f"{tex.image_file}")
+            elif tex.block_id and needs_by_id.get(tex.block_id):
+                warnings.append(
+                    f"Material '{mat.name}': {label} needs an image file "
+                    f"(not embedded in the JSON)")
+
+
 def validate_scene(context):
     """Run every check over the renderable scene. Returns a list of warning
     strings; an empty list means the export looks clean."""
@@ -377,5 +412,6 @@ def validate_scene(context):
     _check_duplicate_guids(scene, warnings)
     _check_active_camera(scene, warnings)
     _check_atmosphere(scene, warnings)
+    _check_materials(context, warnings)
 
     return warnings

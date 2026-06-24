@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Live Link</span><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Export pipeline</a><a href="input-actions.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="scene-settings.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Scene settings</a><a href="validation.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Validation</a><a href="livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Live Link</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Live Link</span><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-cog-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">CoM preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Node materials</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — Live Link: Ctrl+S → re-export","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _on_save_post","sub":"live_link.py","desc":"A @persistent save_post handler: after every .blend save, re-export each scene that opted in.","meta":[["File","blender_addon/export/live_link.py"],["Line","42"]],"code":"def _on_save_post(filepath):\n    \"\"\"Runs after every .blend save; exports scenes that opted in.\"\"\"\n    for scene in bpy.data.scenes:\n        if getattr(scene, \"bjs_live_link\", False):\n            _do_live_export(scene)","file":"blender_addon/export/live_link.py","line":42},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _do_live_export","sub":"live_link.py","desc":"Re-validate + re-export to the remembered path. Wrapped so a failed export logs to the console but never breaks the user's save.","meta":[["File","blender_addon/export/live_link.py"],["Line","22"]],"code":"def _do_live_export(scene):\n    \"\"\"Re-run the last export for this scene; report to the console/status bar.\n    Never raises — a failed live export must not break the user's save.\"\"\"\n    path = scene.bjs_live_link_path\n    if not path:\n        return\n\n    try:\n        warnings = validate.validate_scene(bpy.context)\n        glb_path, json_path, n_entities = bjs_level.export_level(bpy.context, path)\n    except Exception as e:\n        print(f\"[bjs live-link] export failed: {e}\")\n        return\n\n    for w in warnings:\n        print(f\"[bjs live-link] warning: {w}\")\n    print(f\"[bjs live-link] exported {n_entities} entities -> {json_path}\")","file":"blender_addon/export/live_link.py","line":22}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — Live Link: Ctrl+S → re-export","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _on_save_post","sub":"live_link.py","desc":"A @persistent save_post handler: after every .blend save, re-export each scene that opted in.","meta":[["File","blender_addon/export/live_link.py"],["Line","42"],["Diagram","export.html"],["Diagram","livelink.html"],["Diagram","validation.html"]],"code":"def _on_save_post(filepath):\n    \"\"\"Runs after every .blend save; exports scenes that opted in.\"\"\"\n    for scene in bpy.data.scenes:\n        if getattr(scene, \"bjs_live_link\", False):\n            _do_live_export(scene)","file":"blender_addon/export/live_link.py","line":42},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _do_live_export","sub":"live_link.py","desc":"Re-validate + re-export to the remembered path. Wrapped so a failed export logs to the console but never breaks the user's save.","meta":[["File","blender_addon/export/live_link.py"],["Line","22"],["Diagram","export.html"],["Diagram","livelink.html"],["Diagram","validation.html"]],"code":"def _do_live_export(scene):\n    \"\"\"Re-run the last export for this scene; report to the console/status bar.\n    Never raises — a failed live export must not break the user's save.\"\"\"\n    path = scene.bjs_live_link_path\n    if not path:\n        return\n\n    try:\n        warnings = validate.validate_scene(bpy.context)\n        glb_path, json_path, n_entities = bjs_level.export_level(bpy.context, path)\n    except Exception as e:\n        print(f\"[bjs live-link] export failed: {e}\")\n        return\n\n    for w in warnings:\n        print(f\"[bjs live-link] warning: {w}\")\n    print(f\"[bjs live-link] exported {n_entities} entities -> {json_path}\")","file":"blender_addon/export/live_link.py","line":22}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
 </style>
@@ -1133,8 +1179,9 @@ function exportSelf() {
 <style>
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:4; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
 </style>
 <script>
@@ -1144,14 +1191,17 @@ function exportSelf() {
     __openNodePanel(n);
     if (!n.code) { return; }
     const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
     loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
   };
 </script></body>
 </html>

@@ -113,7 +113,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "level.scene.json",
           "sub": "what it can't",
-          "desc": "Components, tags, physics, script bindings + exposed values, trigger events, constraints, audio, GUI/particle JSON refs, 3D GUI button/panel settings, per-light/camera and scene settings, the debug flag.",
+          "desc": "Components, tags, physics, script bindings + exposed values, trigger events, constraints, audio, GUI/particle JSON refs, node material (NME) overrides, 3D GUI button/panel settings, per-light/camera and scene settings, the debug flag.",
           "meta": [
             [
               "Owner",
@@ -133,7 +133,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "LevelLoader.Load",
           "sub": "core/LevelLoader.ts",
-          "desc": "Fetch+validate manifest, LoadAsset (inputActions + defaultInputMap), append glb RIGHT-HANDED, GUID index, per-entity pass, second pass, FinalizeLevel.",
+          "desc": "Fetch+validate manifest, LoadAsset (inputActions + defaultInputMap), append glb RIGHT-HANDED, ApplyNodeVisibility, ApplyNodeMaterials (optional materials[]), GUID index, per-entity pass, second pass, FinalizeLevel.",
           "meta": [
             [
               "Passes",
@@ -502,6 +502,123 @@ export const ENGINE_AREA_PAGES = {
       ]
     }
   },
+  "architecture.html": {
+    "navLabel": "Architecture",
+    "diagram": {
+      "title": "Babylon Level Kit — Architecture (two artifacts)",
+      "nodes": [
+        {
+          "id": 1,
+          "x": 40,
+          "y": 60,
+          "w": 160,
+          "h": 40,
+          "label": "Blender authoring",
+          "sub": "editor half",
+          "desc": "Objects + components in the **Babylon Object** panel; scene-wide settings in **Babylon Scene**. Export / Live Link writes two artifacts beside sidecar media (audio/, gui/, env/, …).",
+          "meta": [
+            ["Add-on", "blender_addon/"],
+            ["Prose", "01-ARCHITECTURE.html"]
+          ]
+        },
+        {
+          "id": 2,
+          "x": 280,
+          "y": 40,
+          "w": 150,
+          "h": 40,
+          "label": "level.glb",
+          "sub": "glTF expresses",
+          "desc": "Meshes, transforms, hierarchy, materials, lights, cameras, animation clips. Multi-material objects → wrapper + child meshes. GUIDs in node extras (bjs_id).",
+          "meta": [
+            ["Consumer", "Babylon glTF importer"],
+            ["Rule", "if glTF can do it, glb owns it"]
+          ]
+        },
+        {
+          "id": 3,
+          "x": 280,
+          "y": 140,
+          "w": 150,
+          "h": 40,
+          "label": "level.scene.json",
+          "sub": "manifest v4",
+          "desc": "Components, tags, physics, scripts + @exposed values, triggers, constraints, audio, GUI/particle refs, per-light/camera + scene block (env, fog, atmosphere, post, inputActions), debug flag.",
+          "meta": [
+            ["Consumer", "LevelLoader"],
+            ["Rule", "never duplicates glb geometry"]
+          ]
+        },
+        {
+          "id": 4,
+          "x": 280,
+          "y": 240,
+          "w": 150,
+          "h": 40,
+          "label": "GUID (bjs_id)",
+          "sub": "identity bridge",
+          "desc": "Custom prop on addressable Blender objects → glTF extras → manifest entities[].id → loader BuildIdIndex (GUID first, name fallback). Multi-material submeshes have no GUID; parented child entities do.",
+          "meta": [
+            ["Key", "ID_KEY = bjs_id"],
+            ["Files", "core/ids.py · nodeResolution.ts"]
+          ]
+        },
+        {
+          "id": 5,
+          "x": 520,
+          "y": 90,
+          "w": 150,
+          "h": 40,
+          "label": "LevelLoader.Load",
+          "sub": "@bjs/engine",
+          "desc": "Fetch manifest → InputManager.LoadAsset → right-handed glb append → entity pass → second pass → FinalizeLevel. Each manifest-only feature routes to a subsystem under packages/engine/src/.",
+          "meta": [
+            ["Diagram", "load-pipeline.html"],
+            ["Trace", "trace-load.html"]
+          ]
+        },
+        {
+          "id": 6,
+          "x": 720,
+          "y": 90,
+          "w": 150,
+          "h": 40,
+          "label": "Level + Entity",
+          "sub": "runtime container",
+          "desc": "entities, ById/ByTag, behaviors, attachments registry, activeCamera, shadowGenerators, post, atmosphere. RunFrame drives input + OnUpdate.",
+          "meta": [
+            ["Files", "core/Level.ts · Entity.ts"],
+            ["Diagram", "scripting.html"]
+          ]
+        },
+        {
+          "id": 7,
+          "x": 40,
+          "y": 200,
+          "w": 160,
+          "h": 40,
+          "label": "Monorepo",
+          "sub": "npm workspaces",
+          "desc": "packages/engine = @bjs/engine (symlinked into apps/*). Blender add-on versions lockstep with engine package.json / blender_manifest.toml. Apps own behaviors/ + public/levels/.",
+          "meta": [
+            ["Template", "apps/playground"],
+            ["Diagram", "workflow.html"]
+          ]
+        }
+      ],
+      "edges": [
+        { "id": 100, "src": 1, "tgt": 2, "label": "glTF export" },
+        { "id": 101, "src": 1, "tgt": 3, "label": "serialize" },
+        { "id": 102, "src": 1, "tgt": 4, "label": "stamps GUIDs" },
+        { "id": 103, "src": 2, "tgt": 4, "label": "extras" },
+        { "id": 104, "src": 3, "tgt": 4, "label": "entities[].id" },
+        { "id": 105, "src": 2, "tgt": 5, "label": "append" },
+        { "id": 106, "src": 3, "tgt": 5, "label": "fetch" },
+        { "id": 107, "src": 5, "tgt": 6, "label": "builds" },
+        { "id": 108, "src": 7, "tgt": 5, "label": "apps import" }
+      ]
+    }
+  },
   "blender-addon.html": {
     "navLabel": "Blender add-on",
     "diagram": {
@@ -731,7 +848,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Sidecar files",
           "sub": "artifact",
-          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (and patched particle JSON). Stable sanitized names; re-export overwrites.",
+          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (patched particle JSON), materials/ (patched NME JSON + texture images). Stable sanitized names; re-export overwrites.",
           "meta": [
             [
               "Copied by",
@@ -751,7 +868,23 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Collider preview",
           "sub": "viewport/collider_preview.py",
-          "desc": "GPU wireframe of manual colliders drawn in the viewport, in Blender space — matches what export converts, so preview == runtime body.",
+          "desc": "GPU wireframe of colliders drawn in the viewport when Show Preview is on, in Blender space — matches what export converts, so preview == runtime body.",
+          "meta": [
+            [
+              "Draw",
+              "SpaceView3D POST_VIEW"
+            ]
+          ]
+        },
+        {
+          "id": 15,
+          "x": 700,
+          "y": 420,
+          "w": 150,
+          "h": 40,
+          "label": "CoM preview",
+          "sub": "viewport/cog_preview.py",
+          "desc": "Amber cross + rings at rigid-body center of mass when Show Preview is on (any body type; export CoM is Dynamic only). Drawn without depth test so it stays visible inside the mesh; size scales with owned-mesh bounds. Auto-fit uses bounds center; manual uses cog_center in Blender space.",
           "meta": [
             [
               "Draw",
@@ -869,7 +1002,13 @@ export const ENGINE_AREA_PAGES = {
           "id": 114,
           "src": 2,
           "tgt": 13,
-          "label": "values"
+          "label": "collider"
+        },
+        {
+          "id": 118,
+          "src": 2,
+          "tgt": 15,
+          "label": "rigidbody CoM"
         },
         {
           "id": 115,
@@ -953,7 +1092,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "appendSceneAsync",
           "sub": "step 3 — RIGHT-HANDED",
-          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras. Needs the ExtrasAsMetadata import for GUIDs.",
+          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras; ApplyNodeMaterials replaces glTF PBR when manifest.materials[] is set. Needs the ExtrasAsMetadata import for GUIDs.",
           "meta": [
             [
               "Why",
@@ -1432,6 +1571,114 @@ export const ENGINE_AREA_PAGES = {
       ]
     }
   },
+  "input.html": {
+    "navLabel": "Input",
+    "diagram": {
+      "title": "Babylon Level Kit — Input",
+      "nodes": [
+        {
+          "id": 1,
+          "x": 40,
+          "y": 80,
+          "w": 150,
+          "h": 40,
+          "label": "Input Actions panel",
+          "sub": "Blender Scene N-panel",
+          "desc": "Scene-level asset: Action Maps > Actions > Bindings + Scene Default map picker. Edited via input_actions/ (properties, serialize, operators) and ui/input_panel.py. First export seeds built-in Player when empty.",
+          "meta": [
+            ["Package", "input_actions/"],
+            ["Panel", "Babylon Scene › Input Actions"]
+          ]
+        },
+        {
+          "id": 2,
+          "x": 280,
+          "y": 80,
+          "w": 150,
+          "h": 40,
+          "label": "serialize_input_asset",
+          "sub": "export/scene.py",
+          "desc": "Writes scene.inputActions + scene.defaultInputMap into the manifest scene block alongside env, fog, atmosphere, and post.",
+          "meta": [
+            ["File", "input_actions/serialize.py"]
+          ]
+        },
+        {
+          "id": 3,
+          "x": 520,
+          "y": 40,
+          "w": 150,
+          "h": 40,
+          "label": "InputManager.LoadAsset",
+          "sub": "step 2 of Load",
+          "desc": "Runs before glb append and InstantiateScripts so maps exist when @inputMap fields and behavior.input are injected.",
+          "meta": [
+            ["File", "src/input/InputManager.ts"]
+          ]
+        },
+        {
+          "id": 4,
+          "x": 520,
+          "y": 160,
+          "w": 150,
+          "h": 40,
+          "label": "InjectInputMaps",
+          "sub": "entity pass",
+          "desc": "@inputMap(\"Name\") on a field → that map; @inputMap() / empty → scene default; no @inputMap fields → behavior.input receives the scene default.",
+          "meta": [
+            ["File", "core/loader/entityBuilder.ts"]
+          ]
+        },
+        {
+          "id": 5,
+          "x": 760,
+          "y": 100,
+          "w": 150,
+          "h": 40,
+          "label": "Level.Begin",
+          "sub": "attach + enable",
+          "desc": "InputManager.Attach: keyboard observable + enable every action map before OnStart runs.",
+          "meta": [
+            ["File", "core/Level.ts"]
+          ]
+        },
+        {
+          "id": 6,
+          "x": 760,
+          "y": 220,
+          "w": 150,
+          "h": 40,
+          "label": "RunFrame loop",
+          "sub": "every frame",
+          "desc": "InputManager.Process FIRST (gamepad poll, actions evaluate, callbacks) → OnUpdate for behaviors → updaters → InputManager.EndFrame LAST so WasPressedThisFrame edges last one frame.",
+          "meta": [
+            ["Polling", "ReadValue / IsPressed / WasPressedThisFrame"]
+          ]
+        },
+        {
+          "id": 7,
+          "x": 280,
+          "y": 220,
+          "w": 150,
+          "h": 40,
+          "label": "@inputMap in behaviors",
+          "sub": "script_parse.py",
+          "desc": "Blender regex-parses @inputMap(\"…\") from behavior .ts — lowercase literal token like @exposed. Create Maps Used by Scripts operator can seed maps from scripts.",
+          "meta": [
+            ["See", "11-INPUT.html prose"]
+          ]
+        }
+      ],
+      "edges": [
+        { "id": 100, "src": 1, "tgt": 2, "label": "export" },
+        { "id": 101, "src": 2, "tgt": 3, "label": "manifest" },
+        { "id": 102, "src": 3, "tgt": 4, "label": "before scripts" },
+        { "id": 103, "src": 7, "tgt": 1, "label": "authoring" },
+        { "id": 104, "src": 4, "tgt": 5, "label": "before Begin" },
+        { "id": 105, "src": 5, "tgt": 6, "label": "each render" }
+      ]
+    }
+  },
   "physics.html": {
     "navLabel": "Physics",
     "diagram": {
@@ -1794,6 +2041,26 @@ export const ENGINE_AREA_PAGES = {
               "load-pipeline.html"
             ]
           ]
+        },
+        {
+          "id": 7,
+          "x": 300,
+          "y": 360,
+          "w": 150,
+          "h": 40,
+          "label": "Node materials",
+          "sub": "subsystems/materials.ts",
+          "desc": "Optional manifest.materials[]: after glTF load, ApplyNodeMaterials matches mesh.material.name to Blender material name, parses NME JSON (materials/), replaces PBR. Texture rows patch JSON on export; runtime urlRewriter + BindManifestTextures fallback.",
+          "meta": [
+            [
+              "Editor",
+              "nme.babylonjs.com"
+            ],
+            [
+              "Blender",
+              "Properties › Material › Babylon"
+            ]
+          ]
         }
       ],
       "edges": [
@@ -1832,6 +2099,12 @@ export const ENGINE_AREA_PAGES = {
           "src": 5,
           "tgt": 6,
           "label": "env · fog · atmosphere · post"
+        },
+        {
+          "id": 106,
+          "src": 7,
+          "tgt": 6,
+          "label": "after glTF load"
         }
       ]
     }
@@ -1965,7 +2238,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "State machine",
-              "prototyped + reverted; see DEVELOPMENT_PLAN"
+              "prototyped + reverted"
             ]
           ]
         }
@@ -2433,11 +2706,11 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Versioning & artifacts",
           "sub": "lockstep",
-          "desc": "Engine package.json(s) ↔ blender_manifest.toml. Distributables: extension zip (Blender) + repo zip. Manifest schema v4.",
+          "desc": "Engine package.json(s) ↔ blender_manifest.toml (see __KIT_VERSION__ in prose docs). Distributables: extension zip (Blender) + repo zip. Manifest schema v4.",
           "meta": [
             [
-              "Plans",
-              "TEST_PLAN / DEVELOPMENT_PLAN in docs/"
+              "Versions",
+              "packages/engine + blender_manifest.toml"
             ]
           ]
         },

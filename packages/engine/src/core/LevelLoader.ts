@@ -29,6 +29,7 @@ import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
 import { ApplyPostProcessing } from "../subsystems/postprocess";
 import { ApplyAtmosphere } from "../subsystems/atmosphere";
+import { ApplyNodeMaterials } from "../subsystems/materials";
 
 /** Await a batch of asset-load promises, logging any that rejected. */
 async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
@@ -102,6 +103,7 @@ export class LevelLoader
     await appendSceneAsync(baseUrl + manifest.glb, this.scene);
     NeutralizeGltfRoot(this.scene);
     ApplyNodeVisibility(this.scene);
+    await ApplyNodeMaterials(this.scene, manifest.materials, baseUrl);
 
     const context = CreateLoadContext(this.scene, baseUrl, defaultInputMap);
 

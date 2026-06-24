@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Scripting</span><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Scripting</span><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Babylon Level Kit — Scripting","nodes":[{"id":1,"x":40,"y":60,"w":150,"h":40,"label":"behaviors/ folder","sub":"one class per file","desc":"THE contract: file named after the class, export default. The filename stem is the registry key Blender stores.","meta":[["Where","apps/<app>/src/behaviors"]]},{"id":2,"x":40,"y":180,"w":150,"h":40,"label":"AutoRegisterBehaviors","sub":"main.ts wiring","desc":"import.meta.glob('./behaviors/*') eagerly loads every file; each registers by stem in the BehaviorRegistry.","meta":[["File","scripting/BehaviorRegistry.ts"]]},{"id":3,"x":40,"y":300,"w":150,"h":40,"label":"BehaviorRegistry","sub":"name → class","desc":"Maps a SCRIPT component's name to a Behavior class. Registers BEHAVIORS, not components — TAG/COLLIDER/etc. are applied directly by the loader.","meta":[["Create","warns on unknown name"]]},{"id":4,"x":280,"y":120,"w":150,"h":40,"label":"Behavior","sub":"scripting/Behavior.ts","desc":"Lifecycle: OnStart (after refs resolve) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase — a lowercase onStart silently never runs.","meta":[["Order","cross-entity OnStart unspecified"]]},{"id":5,"x":280,"y":240,"w":150,"h":40,"label":"@exposed","sub":"scripting/exposed.ts","desc":"Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (core/script_parse.py) → single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.","meta":[["Types","float int bool string vector3 color entity enum list"]]},{"id":6,"x":280,"y":360,"w":150,"h":40,"label":"ApplyExposedVars","sub":"before OnStart","desc":"Writes the manifest's stored values onto the instance. vector3/color arrays coerced; entity refs deferred as PendingRefs; entity lists pre-sized with nulls.","meta":[["Second pass","ResolveObjectReferences"]]},{"id":7,"x":520,"y":180,"w":150,"h":40,"label":"Entity","sub":"core/Entity.ts","desc":"id/name/node/tag, attachments (live component registry), behaviors, body?, animations, sounds. GetAttachment / GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage → every behavior's OnMessage.","meta":[["Back-ref","node.metadata.bjsEntity"]]},{"id":8,"x":520,"y":320,"w":150,"h":40,"label":"Input","sub":"src/input/","desc":"Unity-style: InputManager owns an asset of Action Maps > Actions > Bindings. @inputMap(\"Player\") injects a map handle; actions poll (ReadValue/ReadVector2/IsPressed/WasPressedThisFrame) and fire started/performed/canceled.","meta":[["Defaults","Player map · Move Look Jump Interact Sprint Crouch"]]},{"id":9,"x":760,"y":250,"w":150,"h":40,"label":"Level","sub":"runs them","desc":"Begin → OnStart for all; RunFrame → InputManager.Process, OnUpdate for all, then updaters, then InputManager.EndFrame; Dispose → OnDestroy + teardown.","meta":[["File","core/Level.ts"]]},{"id":10,"x":520,"y":360,"w":150,"h":40,"label":"ResolveObjectReferences","sub":"second pass","desc":"After every entity exists: each PendingRef GUID resolves via level.ById and the real Entity is assigned (or placed into its list slot). Runs before Level.Begin.","meta":[["File","loader/entityBuilder.ts"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"glob"},{"id":101,"src":2,"tgt":3,"label":"by stem"},{"id":102,"src":3,"tgt":4,"label":"Create()"},{"id":103,"src":4,"tgt":5,"label":"fields"},{"id":104,"src":5,"tgt":6,"label":"values"},{"id":105,"src":6,"tgt":10,"label":"defers refs"},{"id":111,"src":10,"tgt":7,"label":"assigns"},{"id":106,"src":4,"tgt":7,"label":"this.entity"},{"id":107,"src":4,"tgt":8,"label":"reads"},{"id":112,"src":5,"tgt":8,"label":"@inputMap"},{"id":108,"src":9,"tgt":4,"label":"lifecycle"},{"id":109,"src":9,"tgt":8,"label":"Process"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Scripting","nodes":[{"id":1,"x":40,"y":60,"w":150,"h":40,"label":"behaviors/ folder","sub":"one class per file","desc":"THE contract: file named after the class, export default. The filename stem is the registry key Blender stores.","meta":[["Where","apps/<app>/src/behaviors"]]},{"id":2,"x":40,"y":180,"w":150,"h":40,"label":"AutoRegisterBehaviors","sub":"main.ts wiring","desc":"import.meta.glob('./behaviors/*') eagerly loads every file; each registers by stem in the BehaviorRegistry.","meta":[["File","scripting/BehaviorRegistry.ts"]]},{"id":3,"x":40,"y":300,"w":150,"h":40,"label":"BehaviorRegistry","sub":"name → class","desc":"Maps a SCRIPT component's name to a Behavior class. Registers BEHAVIORS, not components — TAG/COLLIDER/etc. are applied directly by the loader.","meta":[["Create","warns on unknown name"]]},{"id":4,"x":280,"y":120,"w":150,"h":40,"label":"Behavior","sub":"scripting/Behavior.ts","desc":"Lifecycle: OnStart (after refs resolve) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase — a lowercase onStart silently never runs.","meta":[["Order","cross-entity OnStart unspecified"]]},{"id":5,"x":280,"y":240,"w":150,"h":40,"label":"@exposed","sub":"scripting/exposed.ts","desc":"Decorator records field name + UI hints (WeakMap). Blender regex-parses the source (core/script_parse.py) → single-line literal defaults only; entity fields need type:'entity'; lists start []. Stays lowercase: cross-language contract.","meta":[["Types","float int bool string vector3 color entity enum list"],["Trace","trace-exposed.html"]]},{"id":6,"x":280,"y":360,"w":150,"h":40,"label":"ApplyExposedVars","sub":"before OnStart","desc":"Writes the manifest's stored values onto the instance. vector3/color arrays coerced; entity refs deferred as PendingRefs; entity lists pre-sized with nulls.","meta":[["Second pass","ResolveObjectReferences"],["Trace","trace-exposed.html"]]},{"id":7,"x":520,"y":180,"w":150,"h":40,"label":"Entity","sub":"core/Entity.ts","desc":"id/name/node/tag, attachments (live component registry), behaviors, body?, animations, sounds. GetAttachment / GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage → every behavior's OnMessage.","meta":[["Back-ref","node.metadata.bjsEntity"]]},{"id":8,"x":520,"y":320,"w":150,"h":40,"label":"Input","sub":"src/input/","desc":"Unity-style: InputManager owns an asset of Action Maps > Actions > Bindings. @inputMap(\"Player\") injects a map handle; actions poll (ReadValue/ReadVector2/IsPressed/WasPressedThisFrame) and fire started/performed/canceled.","meta":[["Defaults","Player map · Move Look Jump Interact Sprint Crouch"]]},{"id":9,"x":760,"y":250,"w":150,"h":40,"label":"Level","sub":"runs them","desc":"Begin → OnStart for all; RunFrame → InputManager.Process, OnUpdate for all, then updaters, then InputManager.EndFrame; Dispose → OnDestroy + teardown.","meta":[["File","core/Level.ts"]]},{"id":10,"x":520,"y":360,"w":150,"h":40,"label":"ResolveObjectReferences","sub":"second pass","desc":"After every entity exists: each PendingRef GUID resolves via level.ById and the real Entity is assigned (or placed into its list slot). Runs before Level.Begin.","meta":[["File","loader/entityBuilder.ts"],["Trace","trace-exposed.html"],["Trace","trace-trigger.html"],["Trace","trace-gui3d.html"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"glob"},{"id":101,"src":2,"tgt":3,"label":"by stem"},{"id":102,"src":3,"tgt":4,"label":"Create()"},{"id":103,"src":4,"tgt":5,"label":"fields"},{"id":104,"src":5,"tgt":6,"label":"values"},{"id":105,"src":6,"tgt":10,"label":"defers refs"},{"id":111,"src":10,"tgt":7,"label":"assigns"},{"id":106,"src":4,"tgt":7,"label":"this.entity"},{"id":107,"src":4,"tgt":8,"label":"reads"},{"id":112,"src":5,"tgt":8,"label":"@inputMap"},{"id":108,"src":9,"tgt":4,"label":"lifecycle"},{"id":109,"src":9,"tgt":8,"label":"Process"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
 </style>

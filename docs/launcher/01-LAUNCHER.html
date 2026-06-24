@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }

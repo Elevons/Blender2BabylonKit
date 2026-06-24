@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<!-- Shared interactive diagram viewer shell. Edit this file once, then npm run docs:build.
+     Generated pages: docs/engine/*.html and docs/blender/*.html -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trace — Lights: lamp → faithful Babylon light</title>
+<style>
+/* ─────────────────────────────────────────────
+   RESET & BASE
+   ───────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: #0c0c0a;
+  font-family: monospace;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   APP SHELL  (flex column filling the viewport)
+   ───────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ─────────────────────────────────────────────
+   TOOLBAR
+   ───────────────────────────────────────────── */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: #111109;
+  border-bottom: 1px solid #2a2820;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Button group wrapper */
+.tg { display: flex; align-items: center; gap: 4px; }
+
+/* Muted group label (e.g. "mode", "file") */
+.tlbl {
+  font-size: 9px;
+  color: #4a4838;
+  letter-spacing: .08em;
+  margin-right: 1px;
+}
+
+/* Toolbar button — default state */
+.tb {
+  background: #1a1a12;
+  border: 1px solid #2e2c20;
+  color: #887858;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.tb:hover    { border-color: #c8a84a; color: #e0c878; }
+.tb.on       { border-color: #c8a84a; color: #f0d060; background: #1c1b0e; }
+.tb:disabled { opacity: .3; cursor: default; }
+a.tb         { text-decoration: none; display: inline-block; }
+
+/* Vertical rule between toolbar groups */
+.tsep {
+  width: 1px;
+  height: 18px;
+  background: #2a2820;
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+/* Zoom percentage label — clickable to reset */
+#zoom-lbl {
+  font-size: 10px;
+  color: #5a5040;
+  min-width: 36px;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+#zoom-lbl:hover { color: #a09070; }
+
+/* Editable diagram title in toolbar */
+#title-bar {
+  font-size: 10px;
+  color: #5a5040;
+  padding: 0 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  outline: none;
+  background: transparent;
+}
+#title-bar:hover { border-color: #3a3428; color: #a09070; }
+#title-bar:focus { border-color: #7a6830; color: #c8c09a; background: #161612; }
+
+/* ─────────────────────────────────────────────
+   WORKSPACE  (canvas area + side panel, side by side)
+   ───────────────────────────────────────────── */
+#workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   CANVAS AREA
+   ───────────────────────────────────────────── */
+#ca {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+canvas#cv {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* Minimap overlay — bottom-right corner */
+#minimap {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  width: 130px; height: 86px;
+  background: #111109;
+  border: 1px solid #2a2820;
+  border-radius: 4px;
+  overflow: hidden;
+  pointer-events: none;
+}
+canvas#mm { display: block; width: 100%; height: 100%; }
+
+/* Keyboard shortcut hint — bottom-left corner */
+#hint {
+  position: absolute;
+  bottom: 10px; left: 12px;
+  font-size: 10px;
+  color: #2e2c20;
+  pointer-events: none;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────
+   SIDE PANEL  (slides in from the right edge)
+   ───────────────────────────────────────────── */
+#panel {
+  width: 0;
+  overflow: hidden;
+  background: #111109;
+  border-left: 1px solid #1e1e16;
+  transition: width .18s ease;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
+}
+#panel.open { width: 230px; }
+
+/* Fixed-width inner container prevents layout reflow during slide animation */
+#pi {
+  width: 230px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Panel section label (uppercase, muted) */
+.pl {
+  font-size: 9px;
+  color: #5a5848;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+/* Panel text input and textarea */
+.inp {
+  background: #161612;
+  border: 1px solid #2e2c20;
+  color: #c8c09a;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 5px 8px;
+  border-radius: 4px;
+  width: 100%;
+  outline: none;
+  resize: none;
+}
+.inp:focus { border-color: #7a6830; }
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+
+/* "+ add row" button inside panel */
+.padd {
+  background: #161612;
+  border: 1px solid #2e2c20;
+  color: #887858;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 2px;
+}
+.padd:hover { border-color: #c8a84a; color: #e0c878; }
+
+/* Destructive delete button */
+.pdel {
+  background: #160e0e;
+  border: 1px solid #2e1818;
+  color: #7a3838;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 6px;
+  width: 100%;
+}
+.pdel:hover { border-color: #b03030; color: #d04040; }
+
+/* "✕ close" ghost button at top of panel */
+.pclose {
+  background: none;
+  border: none;
+  color: #4a4838;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: inherit;
+  text-align: left;
+  padding: 0 0 4px;
+}
+.pclose:hover { color: #a09070; }
+
+/* Metadata key/value row */
+.meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
+</style>
+</head>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #6b7fff;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Node materials</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Lights</span><a href="trace-cameras.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Cameras</a><a href="trace-shadows.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Shadows</a><a href="trace-post.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Post-processing</a></div></div>
+<div id="app">
+
+  <div id="toolbar">
+    <div class="tg">
+      <a class="tb" href="../index.html" title="Back to documentation search">← Search</a>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <span class="tlbl">file</span>
+      <input id="title-bar" value="untitled diagram" spellcheck="false" title="Click to rename">
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <span class="tlbl">mode</span>
+      <button class="tb on" id="btn-select" onclick="setMode('select')">Select</button>
+      <button class="tb"    id="btn-node"   onclick="setMode('node')">+ Node</button>
+      <button class="tb"    id="btn-edge"   onclick="setMode('edge')">+ Edge</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" id="btn-undo" onclick="undo()" disabled title="Ctrl+Z">↩ Undo</button>
+      <button class="tb" id="btn-redo" onclick="redo()" disabled title="Ctrl+Y">↪ Redo</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" onclick="zoomBy(-0.15)">−</button>
+      <span id="zoom-lbl" onclick="resetView()" title="Reset zoom">100%</span>
+      <button class="tb" onclick="zoomBy(0.15)">+</button>
+      <button class="tb" onclick="fitView()">Fit</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" onclick="autoLayout()">Auto layout</button>
+      <button class="tb" onclick="deleteSelected()">Delete</button>
+      <button class="tb" onclick="clearAll()">Clear</button>
+    </div>
+    <div class="tsep"></div>
+    <div class="tg">
+      <button class="tb" onclick="exportSelf()" title="Save a self-contained copy of this file with data baked in">&#8595; Save as file</button>
+    </div>
+  </div>
+
+  <div id="workspace">
+    <div id="ca">
+      <canvas id="cv"></canvas>
+      <div id="minimap"><canvas id="mm"></canvas></div>
+      <div id="hint">Double-click canvas to add node &nbsp;·&nbsp; Drag empty space to pan &nbsp;·&nbsp; Scroll to zoom</div>
+    </div>
+    <div id="panel"><div id="pi"></div></div>
+  </div>
+
+</div>
+<script>
+// =============================================================================
+// DATA  —  this block is replaced wholesale on every "Save as file" export.
+//          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
+// =============================================================================
+const DIAGRAM_DATA = {"title":"Trace — Lights: lamp → faithful Babylon light","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. serialize_light","sub":"datablocks.py","desc":"EXPORT — per lamp object: color, intensity, spot cone, shadow block when Cast Shadows is on. Written into entities[].light on the manifest.","meta":[["File","blender_addon/export/datablocks.py"],["Line","6"],["Diagram","rendering.html"]],"code":"def serialize_light(obj):\n    \"\"\"Read the native Blender light datablock so Babylon can mirror it.\"\"\"\n    lamp = obj.data\n    info = {\n        \"type\": lamp.type,                       # POINT / SUN / SPOT / AREA\n        \"color\": list(lamp.color),               # linear RGB\n        \"energy\": lamp.energy,                    # W (point/spot/area) or W/m^2 (sun)\n        \"castShadows\": bool(getattr(lamp, \"use_shadow\", False)),\n    }\n    if lamp.type == 'SPOT':\n        info[\"spotSize\"] = lamp.spot_size        # full cone angle, radians\n        info[\"spotBlend\"] = lamp.spot_blend\n    if lamp.type in {'POINT', 'SPOT'} and getattr(lamp, \"use_custom_distance\", False):\n        info[\"range\"] = lamp.cutoff_distance\n    if info[\"castShadows\"]:\n        sh = obj.bjs_shadow\n        info[\"shadow\"] = {\n            \"mapSize\": sh.map_size,      # 0 = use loader default\n            \"bias\": sh.bias,\n            \"normalBias\": sh.normal_bias,\n            \"darkness\": sh.darkness,\n            \"minZ\": sh.min_z,            # 0 = auto\n            \"maxZ\": sh.max_z,            # 0 = auto\n            \"filter\": sh.filter,         # PCF / PCSS / POISSON / BLUR_ESM / NONE\n            \"forceBackFaces\": bool(sh.force_back_faces),\n            \"frustumEdgeFalloff\": sh.frustum_edge_falloff,\n        }\n    return info","file":"blender_addon/export/datablocks.py","line":6},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ProcessEntity","sub":"entityBuilder.ts","desc":"LOAD — after ApplyComponents, ProcessLightForEntity runs when entityData.light is set.","meta":[["File","packages/engine/src/core/loader/entityBuilder.ts"],["Line","330"],["Diagram","rendering.html"]],"code":"/** Build one entity from its manifest record and apply everything attached. */\nexport function ProcessEntity(\n  entityData: EntityData,\n  scene: Scene,\n  registry: BehaviorRegistry,\n  context: LoadContext\n): void\n{\n  const resolvedNode =\n    (entityData.id.length > 0 ? context.idIndex.get(entityData.id) : undefined) ??\n    FindNodeByName(scene, entityData.name);\n\n  if (resolvedNode === null || resolvedNode === undefined)\n  {\n    console.warn(\n      `[bjs] could not resolve entity \"${entityData.name}\" ` +\n      `(id=${entityData.id.length > 0 ? entityData.id : \"none\"}) to a glTF node - skipping`\n    );\n    return;\n  }\n\n  const entityKey = entityData.id.length > 0 ? entityData.id : entityData.name;\n  const entity = new Entity(entityData.id, entityData.name, resolvedNode);\n  context.level.entities.set(entityKey, entity);\n  resolvedNode.metadata = { ...(resolvedNode.metadata ?? {}), bjsEntity: entity };\n\n  if (entityData.visible === false)\n  {\n    HideEntityNode(scene, resolvedNode);\n  }\n\n  context.pendingReferences.push(\n    ...ApplyComponents(entity, entityData, scene, registry, context)\n  );\n\n  if (entityData.animation !== undefined)\n  {\n    context.animatedEntities.push({ entity, info: entityData.animation });\n  }\n\n  if (entityData.light !== undefined)\n  {\n    ProcessLightForEntity(resolvedNode, entityData.light, scene, context);\n  }\n\n  if (entityData.camera !== undefined)\n  {\n    ProcessCameraForEntity(resolvedNode, entityData, scene, context);\n  }\n}","file":"packages/engine/src/core/loader/entityBuilder.ts","line":330},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. FindLightForNode","sub":"lights.ts","desc":"Walks the entity node's parent chain — the glb orientation-correction node may sit between the GUID node and the actual Light.","meta":[["File","packages/engine/src/subsystems/lights.ts"],["Line","24"],["Diagram","rendering.html"]],"code":"/**\n * The glb already created a Babylon light with the correct, coordinate-converted\n * transform. Blender inserts an orientation-correction node between the object\n * node and the light when exporting +Y-up, so the GUID'd node is an *ancestor*\n * (often grandparent) of the light — walk the whole parent chain rather than\n * assuming a fixed depth.\n */\nexport function FindLightForNode(scene: Scene, entityNode: Node): Light | null\n{\n  for (const light of scene.lights)\n  {\n    let parent: Node | null = light.parent;\n    while (parent !== null)\n    {\n      if (parent === entityNode)\n      {\n        return light;\n      }\n      parent = parent.parent;\n    }\n  }\n\n  return scene.getLightByName(entityNode.name) ?? null;\n}","file":"packages/engine/src/subsystems/lights.ts","line":24},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. ApplyBlenderLight","sub":"lights.ts","desc":"Copies color (exact), intensity (SUN_SCALE / PUNCTUAL_SCALE), spot cone. AREA lamps are unsupported by glTF — validator warns at export.","meta":[["File","packages/engine/src/subsystems/lights.ts"],["Line","49"],["Diagram","rendering.html"]],"code":"/**\n * Copy the Blender lamp's properties onto the existing Babylon light. Position\n * and direction are left untouched (they come from the glb node), so the Blender\n * lamp acts as a live stand-in: move/aim it in Blender, re-export, and Babylon\n * follows.\n */\nexport function ApplyBlenderLight(\n  scene: Scene,\n  entityNode: Node,\n  lightInfo: LightInfo\n): Light | null\n{\n  const light = FindLightForNode(scene, entityNode);\n  if (light === null)\n  {\n    console.warn(\n      `[bjs] no Babylon light for \"${entityNode.name}\" (${lightInfo.type}). ` +\n        `Area lights aren't exported by glTF — use Point/Sun/Spot.`\n    );\n    return null;\n  }\n\n  const lightColor = new Color3(lightInfo.color[0], lightInfo.color[1], lightInfo.color[2]);\n  light.diffuse = lightColor;\n  light.specular = lightColor;\n  light.intensity = MapIntensity(lightInfo);\n\n  console.log(\n    `[bjs] light \"${light.name}\" <- color`, lightInfo.color,\n    `intensity ${light.intensity.toFixed(3)}`\n  );\n\n  if (typeof lightInfo.range === \"number\" && lightInfo.range > 0 && \"range\" in light)\n  {\n    (light as Light & { range: number }).range = lightInfo.range;\n  }\n\n  if (light instanceof SpotLight && typeof lightInfo.spotSize === \"number\")\n  {\n    // Babylon's `angle` is the full cone angle in radians (matches spot_size).\n    light.angle = lightInfo.spotSize;\n    const edgeBlend = lightInfo.spotBlend ?? 0;\n    light.innerAngle = lightInfo.spotSize * (1 - edgeBlend); // hotspot for soft edges\n  }\n\n  return light;\n}","file":"packages/engine/src/subsystems/lights.ts","line":49}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""}]};
+
+// =============================================================================
+// CANVAS & DOM REFERENCES
+// =============================================================================
+const cv   = document.getElementById('cv');   // main diagram canvas
+const ctx  = cv.getContext('2d');
+const mmEl = document.getElementById('mm');   // minimap canvas
+const mctx = mmEl.getContext('2d');
+const ca   = document.getElementById('ca');   // canvas container div
+
+// =============================================================================
+// STATE
+// =============================================================================
+
+// Graph data
+let nodes = [];   // [{ id, x, y, w, h, label, sub, desc, meta:[['k','v']…] }]
+let edges = [];   // [{ id, src, tgt, label }]
+let nid   = 1;    // auto-incrementing id counter for nodes and edges
+
+// Interaction
+let mode      = 'select';  // 'select' | 'node' | 'edge'
+let sel       = null;      // { type:'node'|'edge', id } — currently selected item
+let selNodeId = null;      // id of selected node (drives connected-edge highlight)
+let edgeSrc   = null;      // node id awaiting second click when drawing an edge
+let drag      = null;      // node object currently being dragged
+let dragOffsetX = 0;  // distance from mouse to node origin X at drag start
+let dragOffsetY = 0;  // distance from mouse to node origin Y at drag start
+let isPanning = false;
+let mouseWorld = { x: 0, y: 0 };  // current mouse in world space (used for ghost edge)
+
+// Viewport transform  —  world → screen:  screenX = worldX * zoom + panX
+let panX = 0;
+let panY = 0;
+let zoom = 1;
+
+// =============================================================================
+// HISTORY  (undo / redo)
+// =============================================================================
+const undoStack = [];  // past graph states, oldest → newest
+const redoStack = [];  // states popped by undo, available to redo
+
+/** Serialise the current graph and push it onto the undo stack. */
+function snapshot() {
+  undoStack.push(JSON.stringify({ nodes, edges, nid }));
+  redoStack.length = 0;  // any new action invalidates the redo stack
+  if (undoStack.length > 80) undoStack.shift();
+  refreshUndoRedo();
+}
+
+/** Restore the graph from a serialised snapshot string. */
+const restoreSnapshot = str => {
+  const saved = JSON.parse(str);
+  nodes = saved.nodes; edges = saved.edges; nid = saved.nid;
+};
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify({ nodes, edges, nid }));
+  restoreSnapshot(undoStack.pop());
+  clearSelection(); draw(); refreshUndoRedo();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify({ nodes, edges, nid }));
+  restoreSnapshot(redoStack.pop());
+  clearSelection(); draw(); refreshUndoRedo();
+}
+
+/** Enable/disable the undo and redo toolbar buttons to match stack state. */
+function refreshUndoRedo() {
+  document.getElementById('btn-undo').disabled = !undoStack.length;
+  document.getElementById('btn-redo').disabled = !redoStack.length;
+}
+
+// =============================================================================
+// KEYBOARD SHORTCUTS
+// =============================================================================
+document.addEventListener('keydown', e => {
+  const ctrl   = e.ctrlKey || e.metaKey;
+  const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+
+  if (ctrl && e.key === 'z' && !e.shiftKey)                       { e.preventDefault(); undo(); }
+  if (ctrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey)))   { e.preventDefault(); redo(); }
+  if (ctrl && e.key === 's')                                       { e.preventDefault(); exportSelf(); }
+  if (e.key === 'Escape')                                          { edgeSrc = null; draw(); }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !typing)   { e.preventDefault(); deleteSelected(); }
+});
+
+// =============================================================================
+// MATH & GEOMETRY HELPERS
+// =============================================================================
+
+/** Live canvas pixel dimensions (read each frame — canvas can be resized). */
+const canvasW = () => cv.width;
+const canvasH = () => cv.height;
+
+/** Clamp value between lo and hi. */
+const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
+
+/** Euclidean distance between two points. */
+const dist = (ax, ay, bx, by) => Math.sqrt((bx - ax) ** 2 + (by - ay) ** 2);
+
+/** Convert screen (canvas-pixel) coordinates to world space. */
+const toWorld  = (screenX, screenY) => ({ x: (screenX - panX) / zoom, y: (screenY - panY) / zoom });
+
+/** Convert world coordinates to screen (canvas-pixel) space. */
+const toScreen = (worldX,  worldY)  => ({ x: worldX * zoom + panX,    y: worldY * zoom + panY    });
+
+/** Horizontal centre of a node rectangle. */
+const nodeCentreX = n => n.x + n.w / 2;
+
+/** Vertical centre of a node rectangle. */
+const nodeCentreY = n => n.y + n.h / 2;
+
+/**
+ * Axis-aligned bounding box of all nodes, expanded by `padding` on every side.
+ * Returns { minX, minY, maxX, maxY } or null when there are no nodes.
+ */
+function nodeBounds(padding = 0) {
+  if (!nodes.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x - padding);
+    minY = Math.min(minY, n.y - padding);
+    maxX = Math.max(maxX, n.x + n.w + padding);
+    maxY = Math.max(maxY, n.y + n.h + padding);
+  });
+  return { minX, minY, maxX, maxY };
+}
+
+/**
+ * Compute straight-line geometry for an edge.
+ * Returns { x1, y1, x2, y2, mx, my }  (mx/my = midpoint for label placement)
+ * or null if either endpoint node is missing from the nodes array.
+ */
+function edgeEP(e) {
+  const src = nodes.find(n => n.id === e.src);
+  const tgt = nodes.find(n => n.id === e.tgt);
+  if (!src || !tgt) return null;
+
+  // Vector from source centre to target centre
+  const dx = nodeCentreX(tgt) - nodeCentreX(src);
+  const dy = nodeCentreY(tgt) - nodeCentreY(src);
+
+  // Normalised direction (unit vector)
+  const length = Math.sqrt(dx * dx + dy * dy) || 1;
+  const unitX  = dx / length;
+  const unitY  = dy / length;
+
+  const ARROWHEAD_GAP = 7;
+
+  // Where the line exits the source box wall
+  const startX = nodeCentreX(src) + unitX * src.w / 2;
+  const startY = nodeCentreY(src) + unitY * src.h / 2;
+
+  // Where the line enters the target box wall (pulled back for the arrowhead)
+  const endX = nodeCentreX(tgt) - unitX * (tgt.w / 2 + ARROWHEAD_GAP);
+  const endY = nodeCentreY(tgt) - unitY * (tgt.h / 2 + ARROWHEAD_GAP);
+
+  return {
+    x1: startX,  y1: startY,
+    x2: endX,    y2: endY,
+    mx: (startX + endX) / 2,
+    my: (startY + endY) / 2,
+  };
+}
+
+// =============================================================================
+// HIT TESTING
+// =============================================================================
+
+/**
+ * Return the topmost node whose bounding box contains world point (wx, wy),
+ * or null. Iterates in reverse so later-drawn (visually on top) nodes win.
+ */
+function hitNode(wx, wy) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const withinX = wx >= n.x && wx <= n.x + n.w;
+    const withinY = wy >= n.y && wy <= n.y + n.h;
+    if (withinX && withinY) return n;
+  }
+  return null;
+}
+
+/** Return the first edge whose midpoint is within 14px of (wx, wy), or null. */
+const hitEdge = (wx, wy) => edges.find(e => {
+  const ep = edgeEP(e);
+  return ep && dist(wx, wy, ep.mx, ep.my) < 14;
+}) ?? null;
+
+// =============================================================================
+// VIEWPORT  (zoom, pan, fit)
+// =============================================================================
+
+/** Resize both canvases to fill their container and redraw. */
+function resize() {
+  const bounds  = ca.getBoundingClientRect();
+  cv.width      = bounds.width;
+  cv.height     = bounds.height;
+  mmEl.width    = 130;
+  mmEl.height   = 86;
+  draw();
+}
+new ResizeObserver(resize).observe(ca);
+
+/**
+ * Zoom by `delta` (positive = in, negative = out), pivoting around the
+ * screen point (pivotX, pivotY).  Omit pivot to use the canvas centre.
+ */
+function zoomBy(delta, pivotX = canvasW() / 2, pivotY = canvasH() / 2) {
+  const newZoom = clamp(zoom + delta, 0.1, 4);
+  // Keep the world point under the pivot stationary
+  const worldX = (pivotX - panX) / zoom;
+  const worldY = (pivotY - panY) / zoom;
+  zoom = newZoom;
+  panX = pivotX - worldX * zoom;
+  panY = pivotY - worldY * zoom;
+  document.getElementById('zoom-lbl').textContent = Math.round(zoom * 100) + '%';
+  draw();
+}
+
+/** Reset zoom to 100% with a comfortable top-left origin. */
+function resetView() {
+  zoom = 1; panX = 60; panY = 60;
+  document.getElementById('zoom-lbl').textContent = '100%';
+  draw();
+}
+
+/** Zoom and pan so all nodes fill the canvas with generous padding. */
+function fitView() {
+  const b = nodeBounds(60);
+  if (!b) { resetView(); return; }
+  const boundsW = b.maxX - b.minX;
+  const boundsH = b.maxY - b.minY;
+  zoom = clamp(Math.min(canvasW() / boundsW, canvasH() / boundsH), 0.1, 4);
+  panX = canvasW() / 2 - ((b.minX + b.maxX) / 2) * zoom;
+  panY = canvasH() / 2 - ((b.minY + b.maxY) / 2) * zoom;
+  document.getElementById('zoom-lbl').textContent = Math.round(zoom * 100) + '%';
+  draw();
+}
+
+// =============================================================================
+// INTERACTION MODE
+// =============================================================================
+
+const HINTS = {
+  select: 'Click to select · Drag to move · Double-click canvas to add node · Scroll to zoom · Drag empty space to pan',
+  node:   'Click canvas to place a node · Esc to cancel',
+  edge:   'Click source node, then target node · Esc to cancel',
+};
+
+function setMode(m) {
+  mode = m; edgeSrc = null;
+  ['select', 'node', 'edge'].forEach(x =>
+    document.getElementById('btn-' + x).classList.toggle('on', x === m)
+  );
+  cv.style.cursor = m === 'node' ? 'crosshair' : m === 'edge' ? 'cell' : 'default';
+  document.getElementById('hint').textContent = HINTS[m];
+  draw();
+}
+
+// =============================================================================
+// CANVAS EVENTS
+// =============================================================================
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Extract the canvas-relative world position from a mouse event. */
+function worldFromEvent(e) {
+  const bounds = cv.getBoundingClientRect();
+  return toWorld(e.clientX - bounds.left, e.clientY - bounds.top);
+}
+
+/**
+ * Create a new node object centred on world point (wx, wy).
+ * Does not add it to the nodes array — caller does that.
+ */
+function makeNode(wx, wy) {
+  return {
+    id:    nid++,
+    x:     wx - 55,
+    y:     wy - 19,
+    w:     110,
+    h:     38,
+    label: 'Node ' + (nid - 1),
+    sub:   '',
+    desc:  '',
+    meta:  [],
+  };
+}
+
+// ── mousedown handlers, one per mode ─────────────────────────────────────────
+
+/**
+ * Node mode: clicking empty canvas places a new node.
+ * Clicking an existing node does nothing (avoids accidental stacking).
+ */
+function onMouseDownNodeMode(w) {
+  if (hitNode(w.x, w.y)) return;  // don't stack on top of an existing node
+  snapshot();
+  const n = makeNode(w.x, w.y);
+  nodes.push(n);
+  selectNode(n);
+  draw();
+}
+
+/**
+ * Edge mode: first click records the source, second click on a different
+ * node creates the edge.  Clicking the same node twice cancels.
+ */
+function onMouseDownEdgeMode(w) {
+  const hit = hitNode(w.x, w.y);
+  if (!hit) return;  // must click a node
+
+  if (!edgeSrc) {
+    edgeSrc = hit.id;   // waiting for second click
+  } else if (edgeSrc === hit.id) {
+    edgeSrc = null;     // same node clicked again — cancel
+  } else {
+    snapshot();
+    edges.push({ id: nid++, src: edgeSrc, tgt: hit.id, label: '' });
+    edgeSrc = null;     // edge created
+  }
+  draw();
+}
+
+/**
+ * Select mode: clicking a node selects it and begins a drag.
+ * Clicking an edge selects it.  Clicking empty space clears selection and
+ * starts panning.
+ */
+function onMouseDownSelectMode(w) {
+  const hitN = hitNode(w.x, w.y);
+  if (hitN) {
+    selectNode(hitN);
+    drag = hitN;
+    dragOffsetX = w.x - hitN.x;
+    dragOffsetY = w.y - hitN.y;
+    draw();
+    return;
+  }
+
+  const hitE = hitEdge(w.x, w.y);
+  if (hitE) {
+    selectEdge(hitE);
+    draw();
+    return;
+  }
+
+  // Empty canvas — clear selection and start panning
+  clearSelection();
+  isPanning = true;
+  cv.style.cursor = 'grabbing';
+  draw();
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const bounds = cv.getBoundingClientRect();
+  zoomBy(-e.deltaY * 0.001, e.clientX - bounds.left, e.clientY - bounds.top);
+}, { passive: false });
+
+cv.addEventListener('mousemove', e => {
+  const bounds = cv.getBoundingClientRect();
+  mouseWorld = toWorld(e.clientX - bounds.left, e.clientY - bounds.top);
+
+  if (drag) {
+    drag.x = mouseWorld.x - dragOffsetX;
+    drag.y = mouseWorld.y - dragOffsetY;
+    draw();
+    return;
+  }
+  if (isPanning) {
+    panX += e.movementX;
+    panY += e.movementY;
+    draw();
+    return;
+  }
+  if (mode === 'edge' && edgeSrc) { draw(); return; }  // redraw ghost edge
+  if (mode === 'select') cv.style.cursor = hitNode(mouseWorld.x, mouseWorld.y) ? 'grab' : 'default';
+});
+
+cv.addEventListener('mousedown', e => {
+  if (e.button === 2) return;  // ignore right-click
+
+  // Alt+click or middle-click → pan regardless of mode
+  if (e.altKey || e.button === 1) {
+    isPanning = true;
+    cv.style.cursor = 'grabbing';
+    return;
+  }
+
+  const w = worldFromEvent(e);
+  if (mode === 'node')   onMouseDownNodeMode(w);
+  if (mode === 'edge')   onMouseDownEdgeMode(w);
+  if (mode === 'select') onMouseDownSelectMode(w);
+});
+
+cv.addEventListener('mouseup', () => {
+  if (drag) snapshot();  // commit drag position to history
+  drag = null;
+  isPanning = false;
+  cv.style.cursor = mode === 'node' ? 'crosshair' : mode === 'edge' ? 'cell' : 'default';
+});
+
+cv.addEventListener('mouseleave', () => { drag = null; isPanning = false; });
+
+// Double-click on empty canvas in select mode → quick-add a node
+cv.addEventListener('dblclick', e => {
+  if (mode !== 'select') return;
+  const w = worldFromEvent(e);
+  if (hitNode(w.x, w.y)) return;  // don't trigger on a node
+  snapshot();
+  const n = makeNode(w.x, w.y);
+  nodes.push(n);
+  selectNode(n);
+  draw();
+});
+
+// =============================================================================
+// SELECTION HELPERS
+// =============================================================================
+
+const selectNode  = n => { sel = { type: 'node', id: n.id }; selNodeId = n.id; openNodePanel(n); };
+const selectEdge  = e => { sel = { type: 'edge', id: e.id }; selNodeId = null;  openEdgePanel(e); };
+const clearSelection = () => { sel = null; selNodeId = null; closePanel(); };
+
+// =============================================================================
+// DRAW  —  main render pass (background → edges → nodes → minimap)
+// =============================================================================
+
+/**
+ * Trace a rounded-rectangle path on context c.
+ * Does not stroke or fill — caller decides.
+ */
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y);      c.arcTo(x + w, y,     x + w, y + r,     r);
+  c.lineTo(x + w, y + h - r);  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h);      c.arcTo(x,     y + h, x,     y + h - r, r);
+  c.lineTo(x, y + r);          c.arcTo(x,     y,     x + r, y,         r);
+  c.closePath();
+}
+
+/**
+ * Return text clipped to fit within maxW pixels at the given font size,
+ * appending "…" if truncation is needed.
+ */
+function clipText(text, maxW, c, fs) {
+  c.font = `${fs}px monospace`;
+  if (c.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && c.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvasW(), canvasH());
+
+  // Background
+  ctx.fillStyle = '#0c0c0a';
+  ctx.fillRect(0, 0, canvasW(), canvasH());
+
+  // Dot grid  —  drawn in screen space so it tiles correctly during pan/zoom
+  const DOT_SPACING = 28 * zoom;
+  const dotSize     = Math.max(1, 1.3 * zoom);
+  const gridOffsetX = ((panX % DOT_SPACING) + DOT_SPACING) % DOT_SPACING;
+  const gridOffsetY = ((panY % DOT_SPACING) + DOT_SPACING) % DOT_SPACING;
+  ctx.fillStyle = '#151512';
+  for (let x = gridOffsetX - DOT_SPACING; x < canvasW(); x += DOT_SPACING)
+    for (let y = gridOffsetY - DOT_SPACING; y < canvasH(); y += DOT_SPACING)
+      ctx.fillRect(x, y, dotSize, dotSize);
+
+  // All world-space drawing below this point
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(zoom, zoom);
+
+  // — Edges
+  edges.forEach(e => {
+    const ep = edgeEP(e);
+    if (!ep) return;
+
+    // An edge is "lit" if directly selected, or connects to the selected node
+    const isSelected   = sel && sel.type === 'edge' && sel.id === e.id;
+    const isAdjacent   = selNodeId && (e.src === selNodeId || e.tgt === selNodeId);
+    const lit          = isSelected || isAdjacent;
+
+    // Straight edge
+    ctx.strokeStyle = lit ? '#c8a84a' : '#3a3428';
+    ctx.lineWidth   = (lit ? 1.8 : 1) / zoom;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(ep.x1, ep.y1);
+    ctx.lineTo(ep.x2, ep.y2);
+    ctx.stroke();
+
+    // Arrowhead (small filled triangle at the tip)
+    const arrowAngle = Math.atan2(ep.y2 - ep.y1, ep.x2 - ep.x1);
+    const arrowSize  = 9 / zoom;
+    ctx.fillStyle = lit ? '#c8a84a' : '#3a3428';
+    ctx.beginPath();
+    ctx.moveTo(ep.x2, ep.y2);
+    ctx.lineTo(ep.x2 - arrowSize * Math.cos(arrowAngle - 0.4), ep.y2 - arrowSize * Math.sin(arrowAngle - 0.4));
+    ctx.lineTo(ep.x2 - arrowSize * Math.cos(arrowAngle + 0.4), ep.y2 - arrowSize * Math.sin(arrowAngle + 0.4));
+    ctx.closePath();
+    ctx.fill();
+
+    // Optional edge label
+    if (e.label) {
+      ctx.font      = `${10 / zoom}px monospace`;
+      ctx.fillStyle = '#6a6040';
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, ep.mx, ep.my - 10 / zoom);
+    }
+  });
+
+  // Ghost edge — dashed line from source node to cursor while drawing
+  if (mode === 'edge' && edgeSrc) {
+    const srcNode = nodes.find(n => n.id === edgeSrc);
+    if (srcNode) {
+      ctx.strokeStyle = '#8a7440';
+      ctx.lineWidth   = 1 / zoom;
+      ctx.setLineDash([4 / zoom, 3 / zoom]);
+      ctx.beginPath();
+      ctx.moveTo(nodeCentreX(srcNode), nodeCentreY(srcNode));
+      ctx.lineTo(mouseWorld.x, mouseWorld.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // — Nodes
+  nodes.forEach(n => {
+    const isSelected   = sel && sel.type === 'node' && sel.id === n.id;
+    const isEdgeSource = edgeSrc === n.id;  // highlighted as pending edge source
+
+    ctx.fillStyle   = isSelected ? '#1f1e10' : isEdgeSource ? '#1a1810' : '#161612';
+    ctx.strokeStyle = isSelected ? '#f0d060' : isEdgeSource ? '#c8a84a' : '#3a3428';
+    ctx.lineWidth   = (isSelected ? 1.6 : 1) / zoom;
+    roundRect(ctx, n.x, n.y, n.w, n.h, 5 / zoom);
+    ctx.fill();
+    ctx.stroke();
+
+    // Primary label (shifted up when a sublabel is present)
+    const fontSize  = 11 / zoom;
+    const labelMaxW = n.w - 14 / zoom;
+    const labelY    = n.sub ? n.y + n.h / 2 - 4 / zoom : n.y + n.h / 2;
+    ctx.font      = `500 ${fontSize}px monospace`;
+    ctx.fillStyle = isSelected ? '#f0e080' : '#c8c09a';
+    ctx.textAlign = 'center';
+    ctx.fillText(clipText(n.label, labelMaxW, ctx, fontSize), nodeCentreX(n), labelY);
+
+    // Sublabel
+    if (n.sub) {
+      const subFontSize = 9 / zoom;
+      ctx.font      = `${subFontSize}px monospace`;
+      ctx.fillStyle = '#5a5040';
+      ctx.fillText(clipText(n.sub, labelMaxW, ctx, subFontSize), nodeCentreX(n), n.y + n.h / 2 + 8 / zoom);
+    }
+  });
+
+  ctx.restore();
+  drawMinimap();
+}
+
+// =============================================================================
+// MINIMAP
+// =============================================================================
+
+function drawMinimap() {
+  const MM_W = 130, MM_H = 86;
+  mctx.fillStyle = '#111109';
+  mctx.fillRect(0, 0, MM_W, MM_H);
+  if (!nodes.length) return;
+
+  // Scale all nodes to fit the minimap with a small margin
+  const b        = nodeBounds(20);
+  const boundsW  = b.maxX - b.minX;
+  const boundsH  = b.maxY - b.minY;
+  const mmScale  = Math.min((MM_W - 4) / boundsW, (MM_H - 4) / boundsH);
+  const originX  = 2 + ((MM_W - 4) - boundsW * mmScale) / 2;
+  const originY  = 2 + ((MM_H - 4) - boundsH * mmScale) / 2;
+
+  // World → minimap pixel
+  const toMmX = worldX => originX + (worldX - b.minX) * mmScale;
+  const toMmY = worldY => originY + (worldY - b.minY) * mmScale;
+
+  // Edges (straight lines at minimap scale — curves aren't worth the cost)
+  mctx.strokeStyle = '#2a2820';
+  mctx.lineWidth   = 0.5;
+  edges.forEach(e => {
+    const ep = edgeEP(e);
+    if (!ep) return;
+    mctx.beginPath();
+    mctx.moveTo(toMmX(ep.x1), toMmY(ep.y1));
+    mctx.lineTo(toMmX(ep.x2), toMmY(ep.y2));
+    mctx.stroke();
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const isSelected = sel && sel.type === 'node' && sel.id === n.id;
+    mctx.fillStyle   = isSelected ? '#3a3018' : '#1e1e16';
+    mctx.strokeStyle = isSelected ? '#c8a84a' : '#3a3428';
+    mctx.lineWidth   = 0.5;
+    mctx.beginPath();
+    mctx.rect(toMmX(n.x), toMmY(n.y), n.w * mmScale, n.h * mmScale);
+    mctx.fill();
+    mctx.stroke();
+  });
+
+  // Viewport rectangle
+  mctx.strokeStyle = '#8a7440';
+  mctx.lineWidth   = 1;
+  mctx.strokeRect(
+    toMmX(-panX / zoom), toMmY(-panY / zoom),
+    (canvasW() / zoom) * mmScale, (canvasH() / zoom) * mmScale
+  );
+}
+
+// =============================================================================
+// GRAPH OPERATIONS  (add, delete, layout)
+// =============================================================================
+
+function deleteSelected() {
+  if (!sel) return;
+  snapshot();
+  if (sel.type === 'node') {
+    nodes = nodes.filter(n => n.id !== sel.id);
+    edges = edges.filter(e => e.src !== sel.id && e.tgt !== sel.id);
+  } else {
+    edges = edges.filter(e => e.id !== sel.id);
+  }
+  clearSelection();
+  draw();
+}
+
+function clearAll() {
+  if (!nodes.length && !edges.length) return;
+  snapshot();
+  nodes = []; edges = []; nid = 1;
+  clearSelection();
+  draw();
+}
+
+/**
+ * Assign nodes to columns by longest-path rank in the DAG, then
+ * position them on a grid and fit the viewport.
+ */
+function autoLayout() {
+  if (!nodes.length) return;
+  snapshot();
+
+  // Compute column ranks via iterative relaxation (longest path from any root)
+  const columnRank = {};
+  nodes.forEach(n => { columnRank[n.id] = 0; });
+  let changed = true;
+  while (changed) {
+    changed = false;
+    edges.forEach(e => {
+      const candidateRank = (columnRank[e.src] || 0) + 1;
+      if (candidateRank > (columnRank[e.tgt] || 0)) {
+        columnRank[e.tgt] = candidateRank;
+        changed = true;
+      }
+    });
+  }
+
+  // Group nodes by column and assign grid positions
+  const nodesByColumn = {};
+  nodes.forEach(n => {
+    const col = columnRank[n.id] || 0;
+    (nodesByColumn[col] = nodesByColumn[col] || []).push(n);
+  });
+  Object.entries(nodesByColumn).forEach(([col, colNodes]) => {
+    colNodes.forEach((n, row) => { n.x = 40 + col * 170; n.y = 40 + row * 75; });
+  });
+
+  fitView();
+}
+
+// =============================================================================
+// SIDE PANEL  (node & edge inspectors)
+// =============================================================================
+
+/** Escape HTML special characters for safe innerHTML injection. */
+const esc = s => (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+function openNodePanel(n) {
+  openPanel();
+  document.getElementById('pi').innerHTML = `
+<button class="pclose" onclick="clearSelection();draw()">✕ close</button>
+<div class="pblock">
+  <div class="pl">label</div>
+  <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
+</div>
+<div class="pblock">
+  <div class="pl">sublabel</div>
+  <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
+</div>
+<div class="pdesc">
+  <div class="pl">description</div>
+  <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
+</div>
+<div class="pblock">
+  <div class="pl">metadata</div>
+  <div id="pmr"></div>
+  <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
+</div>
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
+  renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
+}
+
+function renderMeta(n) {
+  const el = document.getElementById('pmr');
+  if (!el) return;
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
+<div class="meta-row">
+  <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
+  ${valCell}
+  <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
+</div>`;
+  }).join('');
+}
+
+function openEdgePanel(e) {
+  openPanel();
+  document.getElementById('pi').innerHTML = `
+<button class="pclose" onclick="clearSelection();draw()">✕ close</button>
+<div>
+  <div class="pl">edge label</div>
+  <input class="inp" value="${esc(e.label)}" placeholder="optional" oninput="updateEdge(${e.id},'label',this.value)">
+</div>
+<button class="pdel" onclick="deleteSelected()">Delete edge</button>`;
+}
+
+const openPanel  = () => document.getElementById('panel').classList.add('open');
+const closePanel = () => document.getElementById('panel').classList.remove('open');
+
+// Panel field updaters — called from inline oninput handlers in the panel HTML
+const findNode = id => nodes.find(n => n.id === id);
+const findEdge = id => edges.find(e => e.id === id);
+
+function updateNode(id, key, value) { const n = findNode(id); if (n) { n[key] = value; draw(); } }
+function updateEdge(id, key, value) { const e = findEdge(id); if (e) { e[key] = value; draw(); } }
+function updateMeta(id, i, key, value) { const n = findNode(id); if (n) n.meta[i][key] = value; }
+function addMeta(id)       { const n = findNode(id); if (!n) return; snapshot(); n.meta.push(['', '']); renderMeta(n); }
+function removeMeta(id, i) { const n = findNode(id); if (!n) return; snapshot(); n.meta.splice(i, 1); renderMeta(n); }
+
+// =============================================================================
+// SELF-EXPORT  —  rewrite this HTML file with current data baked in, download it
+// =============================================================================
+
+function exportSelf() {
+  const title      = document.getElementById('title-bar').value || 'diagram';
+  const data       = { title, nodes, edges, nid };
+  const serialised = JSON.stringify(data);
+
+  // Splice the new data block and title into our own source HTML
+  const source  = document.documentElement.outerHTML;
+  const updated = source
+    .replace(/const DIAGRAM_DATA = \{.*?\};/s, `const DIAGRAM_DATA = ${serialised};`)
+    .replace(/<title>.*?<\/title>/,             `<title>${title}</title>`);
+
+  // Trigger a browser download
+  const blob     = new Blob([updated], { type: 'text/html' });
+  const anchor   = document.createElement('a');
+  const filename = title.replace(/[^a-z0-9_\-\s]/gi, '').trim().replace(/\s+/g, '-').toLowerCase() + '.html';
+  anchor.href     = URL.createObjectURL(blob);
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(anchor.href);
+}
+
+// =============================================================================
+// INIT
+// =============================================================================
+
+(function init() {
+  nodes = DIAGRAM_DATA.nodes || [];
+  edges = DIAGRAM_DATA.edges || [];
+  nid   = DIAGRAM_DATA.nid   || 1;
+
+  const titleInput = document.getElementById('title-bar');
+  titleInput.value = DIAGRAM_DATA.title || 'untitled diagram';
+  document.title   = titleInput.value;
+  titleInput.addEventListener('input', () => { document.title = titleInput.value; });
+
+  resize();
+  setTimeout(fitView, 50);
+  setMode('select');
+})();
+</script>
+
+<style>
+  #panel { position: relative; }
+  #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
+  #pi { width: 100% !important; box-sizing: border-box; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
+  #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
+  #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
+</style>
+<script>
+  (function AttachPanelResizer()
+  {
+    const panel = document.getElementById('panel');
+    if (!panel) { return; }
+    const handle = document.createElement('div');
+    handle.id = 'panel-resizer';
+    panel.appendChild(handle);
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); panel.style.transition = 'none'; e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => { if (!dragging) { return; } const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), window.innerWidth * 0.92); document.documentElement.style.setProperty('--panel-w', w + 'px'); });
+    window.addEventListener('mouseup', () => { if (!dragging) { return; } dragging = false; handle.classList.remove('dragging'); panel.style.transition = ''; });
+  })();
+</script>
+<style>
+  #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
+  .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:2; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
+  .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
+</style>
+<script>
+  const __openNodePanel = openNodePanel;
+  openNodePanel = function(n)
+  {
+    __openNodePanel(n);
+    if (!n.code) { return; }
+    const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
+    const loc = document.createElement('div');
+    loc.className = 'trace-loc';
+    loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
+    const pre = document.createElement('pre');
+    pre.className = 'trace-code';
+    pre.textContent = n.code;
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
+  };
+</script></body>
+</html>

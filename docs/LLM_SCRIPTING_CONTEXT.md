@@ -337,11 +337,13 @@ entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylon
   (`startAsleep` in the manifest). Treat it as a performance hint only — do
   not rely on a body staying asleep.
 - **Center of mass** is authored on the Rigid Body component (Dynamic only):
-  **Auto-Fit Center of Mass** (default) → manifest `centerOfMassAutoFit: true`
-  (runtime uses owned-mesh bounds center); custom offset →
-  `centerOfMassAutoFit: false` + `centerOfMass` in Babylon Y-up. CoM is
-  independent of collider placement — shift it low on a car chassis for stable
-  tipping without resizing the collider.
+  **Show Preview** (default) draws an amber cross in the Blender viewport when the
+  object is selected (`viewport/cog_preview.py`; scales with mesh bounds, no depth
+  test so it stays visible inside solid geometry). **Auto-Fit Center of Mass**
+  (default) → manifest `centerOfMassAutoFit: true` (runtime uses owned-mesh bounds
+  center); custom offset → `centerOfMassAutoFit: false` + `centerOfMass` in
+  Babylon Y-up. CoM is independent of collider placement — shift it low on a car
+  chassis for stable tipping without resizing the collider.
 - MESH-shaped colliders can't be DYNAMIC (Havok limitation) — author CONVEX for
   moving bodies.
 - **Multiple Collider components** on one entity combine into one compound body
@@ -515,6 +517,26 @@ particles stay in world space unless the particle file sets `isLocal: true`.
 `AdvancedDynamicTexture` / GUI control types import from `@babylonjs/gui`;
 `IParticleSystem` imports from `@babylonjs/core`.
 
+## Node materials (NME)
+
+Custom shaders are authored per **Blender Material** on **Properties › Material › Babylon**
+(not per object). Point at a `.json` from the
+[Node Material Editor](https://nme.babylonjs.com); use **Scan Textures** to list
+`ImageSourceBlock` / `TextureBlock` slots, then assign image files for any
+textures not embedded in the JSON. Export copies JSON + images to `materials/`
+and patches URLs in the exported JSON; the manifest gets optional `materials[]`:
+
+```json
+"materials": [
+  { "name": "Water", "file": "materials/water.json",
+    "textures": [{ "blockId": 42, "blockName": "albedo", "file": "materials/albedo.png" }] }
+]
+```
+
+At load, `ApplyNodeMaterials` runs after the glb import and replaces
+`mesh.material` when the glTF material **name** matches. No behavior API —
+meshes using that material pick up the node shader automatically.
+
 ## 3D GUI
 
 3D buttons and panels are authored as **GUI3D_*** components (one per Babylon
@@ -604,7 +626,8 @@ export default class HoverBob extends Behavior
 | Load order / when `OnStart` runs / visibility | `docs/engine/03-LOAD-PIPELINE.html` |
 | Cameras (component types, Geospatial) | `docs/engine/06-RENDERING.html` |
 | Scene look / atmosphere / post-processing (bloom, SSAO) | `docs/engine/06-RENDERING.html` · `get_scripting_context(section="scene-look")` |
+| Node materials (NME JSON, texture overrides) | `docs/engine/06-RENDERING.html` · `docs/engine/trace-materials.html` · `docs/blender/trace-materials.html` |
 | Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.html` |
 | 2D GUI, particles, 3D GUI | `docs/engine/10-UI.md` |
 | Code style | `docs/STYLE_GUIDE.md` |
-| Prefabs + `level.Spawn()` (planned) | `docs/PREFAB_SPEC.md` |
+| Prefabs + `level.Spawn()` (planned) | not documented in-repo |

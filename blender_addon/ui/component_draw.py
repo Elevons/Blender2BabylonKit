@@ -216,6 +216,7 @@ def draw_component(layout, obj, index, comp):
 
     elif comp.comp_type == 'RIGIDBODY':
         body.prop(comp, "body_type")
+        body.prop(comp, "cog_show")
         col = body.column()
         col.enabled = comp.body_type == 'DYNAMIC'
         col.prop(comp, "mass")

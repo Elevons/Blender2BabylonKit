@@ -25,6 +25,7 @@ export * from "./subsystems/postprocess";
 export * from "./subsystems/animation";
 export * from "./subsystems/audio";
 export * from "./subsystems/particles";
+export * from "./subsystems/materials";
 export * from "./subsystems/triggers";
 export * from "./subsystems/constraints";
 

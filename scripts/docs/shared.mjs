@@ -41,38 +41,62 @@ export function EmitDiagramPage({ shell, outPath, pageTitle, diagramData, navHtm
 // Bottom nav (engine packet = blue, blender packet = amber).
 // ---------------------------------------------------------------------------
 
-export function BuildEngineNav(currentFile, areaNav, traceNav)
+export function BuildEngineNav(currentFile, areaNav, traceNav, { highlightDiagrams = null } = {})
 {
-  const link = ([file, label]) => file === currentFile
+  const highlight = highlightDiagrams ? new Set(highlightDiagrams) : null;
+  const areaLink = ([file, label]) =>
+  {
+    if (file === currentFile)
+    {
+      return `<span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`;
+    }
+    const emph = highlight?.has(file)
+      ? "font-weight:600;border-bottom:1px solid #6b7fff;"
+      : "";
+    return `<a href="${file}" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;${emph}">${label}</a>`;
+  };
+  const traceLink = ([file, label]) => file === currentFile
     ? `<span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`
     : `<a href="${file}" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">${label}</a>`;
   return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
     + 'background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;'
     + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;">'
+    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;">'
     + '<a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a>'
     + '<span style="width:1px;background:#2a3050;margin:0 2px;"></span>'
-    + areaNav.map(link).join("")
+    + areaNav.map(areaLink).join("")
     + '<a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div>'
-    + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;">'
-    + '<span style="color:#6c7396;padding:2px 6px;">Traces:</span>' + traceNav.map(link).join("") + '</div></div>';
+    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;">'
+    + '<span style="color:#6c7396;padding:2px 6px;">Traces:</span>' + traceNav.map(traceLink).join("") + '</div></div>';
 }
 
-export function BuildBlenderNav(currentFile, areaNav, traceNav)
+export function BuildBlenderNav(currentFile, areaNav, traceNav, { highlightDiagrams = null } = {})
 {
-  const link = ([file, label]) => file === currentFile
+  const highlight = highlightDiagrams ? new Set(highlightDiagrams) : null;
+  const areaLink = ([file, label]) =>
+  {
+    if (file === currentFile)
+    {
+      return `<span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`;
+    }
+    const emph = highlight?.has(file)
+      ? "font-weight:600;border-bottom:1px solid #e0a060;"
+      : "";
+    return `<a href="${file}" style="color:#f0cda8;text-decoration:none;padding:2px 8px;${emph}">${label}</a>`;
+  };
+  const traceLink = ([file, label]) => file === currentFile
     ? `<span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`
     : `<a href="${file}" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">${label}</a>`;
   return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
     + 'background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;'
     + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;">'
+    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;">'
     + '<a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a>'
     + '<span style="width:1px;background:#553f28;margin:0 2px;"></span>'
-    + '<span style="color:#967a52;padding:2px 6px;">Blender:</span>' + areaNav.map(link).join("")
+    + '<span style="color:#967a52;padding:2px 6px;">Blender:</span>' + areaNav.map(areaLink).join("")
     + '<a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div>'
-    + '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;">'
-    + '<span style="color:#967a52;padding:2px 6px;">Traces:</span>' + traceNav.map(link).join("") + '</div></div>';
+    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;">'
+    + '<span style="color:#967a52;padding:2px 6px;">Traces:</span>' + traceNav.map(traceLink).join("") + '</div></div>';
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +110,14 @@ function LayoutPatch(accent)
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: ${accent}33; }
 </style>
@@ -112,8 +143,9 @@ function CodePanelPatch(accent, tabSize)
 <style>
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:${tabSize}; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:${tabSize}; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
 </style>
 <script>
@@ -123,14 +155,17 @@ function CodePanelPatch(accent, tabSize)
     __openNodePanel(n);
     if (!n.code) { return; }
     const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
     loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
   };
 </script>`;
 }

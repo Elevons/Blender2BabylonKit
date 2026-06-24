@@ -5,8 +5,5 @@
 export const KEPT_META_MD = new Set([
   "LLM_KERNEL.md",
   "LLM_SCRIPTING_CONTEXT.md",
-  "DEVELOPMENT_PLAN.md",
-  "TEST_PLAN.md",
-  "PREFAB_SPEC.md",
   "STYLE_GUIDE.md",
 ]);

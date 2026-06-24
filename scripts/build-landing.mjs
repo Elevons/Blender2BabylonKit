@@ -4,7 +4,7 @@
  *
  *   npm run docs:build   (runs this last)  ·  node scripts/build-landing.mjs
  *
- * Indexes engine + Blender area diagrams, code traces, and prose chapters;
+ * Indexes engine + Blender subsystem diagrams, code traces, and prose chapters;
  * emits a topic hub + search page. The index is derived from build data so it
  * stays in sync with the diagrams.
  */
@@ -58,6 +58,9 @@ const SYNONYMS = {
   animate: ["animation", "clip"],
   particle: ["particles", "emitter"],
   particles: ["particle", "emitter"],
+  nme: ["node material", "shader", "materials"],
+  shader: ["nme", "node material", "materials"],
+  materials: ["nme", "node material", "shader"],
   msdf: ["text", "label", "font", "bmfont", "signed distance"],
   text: ["msdf", "label", "gui"],
   export: ["glb", "manifest", "serialize", "scene.json"],
@@ -83,6 +86,10 @@ const SYNONYMS = {
   rayleigh: ["atmosphere", "scattering", "sky"],
   scattering: ["atmosphere", "mie", "rayleigh", "sky"],
   scale: ["applyobjectscale", "collider_apply_scale", "object scale", "apply object scale"],
+  contributor: ["building", "docs", "maintainer", "trace", "manifest"],
+  building: ["contributor", "docs", "building-docs"],
+  subsystem: ["diagram", "overview", "map"],
+  diagram: ["subsystem", "overview", "map"],
   default: ["manifest", "property", "enabled"],
   modify: ["behavior", "export", "serialize", "change"],
   change: ["behavior", "export", "serialize", "modify"],
@@ -108,7 +115,7 @@ function withTopics(entry)
   return { ...entry, topics: TopicsForHref(entry.href) };
 }
 
-function areaEntry(side, file, title, nodes)
+function diagramEntry(side, file, title, nodes)
 {
   const labels = nodes.map((n) => n.label).filter(Boolean);
   const text = [
@@ -117,10 +124,10 @@ function areaEntry(side, file, title, nodes)
   ].join(" ").toLowerCase();
   return withTopics({
     side,
-    kind: "area",
+    kind: "diagram",
     href: `${side}/${file}`,
     title,
-    summary: "Diagram · " + labels.slice(0, 8).join(" · ") + (labels.length > 8 ? " · …" : ""),
+    summary: "Subsystem diagram · " + labels.slice(0, 8).join(" · ") + (labels.length > 8 ? " · …" : ""),
     text,
   });
 }
@@ -171,6 +178,21 @@ function proseEntry(chapter)
   });
 }
 
+function buildingDocsEntry()
+{
+  const chapter = PROSE_CHAPTERS.find((ch) => ch.href === "BUILDING-DOCS.html");
+  const html = ReadProseFragment(chapter.fragment);
+  const plain = StripHtml(html);
+  return withTopics({
+    side: "engine",
+    kind: "meta",
+    href: "BUILDING-DOCS.html",
+    title: "Building the documentation",
+    summary: "Contributor guide — source map, build commands, adding traces and chapters.",
+    text: plain.toLowerCase(),
+  });
+}
+
 function proseEntries()
 {
   return PROSE_CHAPTERS.filter((ch) => ch.layout !== "meta").map(proseEntry);
@@ -183,7 +205,7 @@ function BuildIndex()
   for (const [file, page] of Object.entries(ENGINE_AREA_PAGES))
   {
     const title = page.diagram.title.replace(/^Babylon Level Kit — /, "");
-    entries.push(areaEntry("engine", file, title, page.diagram.nodes));
+    entries.push(diagramEntry("engine", file, title, page.diagram.nodes));
   }
   for (const trace of ENGINE_TRACES)
   {
@@ -191,13 +213,14 @@ function BuildIndex()
   }
   for (const [file, page] of Object.entries(BLENDER_AREA_PAGES))
   {
-    entries.push(areaEntry("blender", file, page.title, page.nodes));
+    entries.push(diagramEntry("blender", file, page.title, page.nodes));
   }
   for (const trace of BLENDER_TRACES)
   {
     entries.push(traceEntry("blender", trace));
   }
   entries.push(...proseEntries());
+  entries.push(buildingDocsEntry());
 
   return entries;
 }
@@ -274,9 +297,15 @@ const CLIENT_JS = [
   "    return entry.topics && entry.topics.indexOf(activeTopic) !== -1;",
   "  }",
   "",
+  "  function kindLabel(entry) {",
+  "    if (entry.kind === 'diagram') { return 'subsystem'; }",
+  "    if (entry.kind === 'meta') { return 'contributor'; }",
+  "    return entry.kind;",
+  "  }",
+  "",
   "  function badge(entry) {",
   "    var side = '<span class=\"badge ' + entry.side + '\">' + entry.side + '</span>';",
-  "    var kind = '<span class=\"badge kind-' + entry.kind + '\">' + entry.kind + '</span>';",
+  "    var kind = '<span class=\"badge kind-' + entry.kind + '\">' + kindLabel(entry) + '</span>';",
   "    return side + kind;",
   "  }",
   "",
@@ -322,7 +351,7 @@ const CLIENT_JS = [
   "      var diagrams = rest.filter(function (e) { return e.kind !== 'prose'; });",
   "      var prose = rest.filter(function (e) { return e.kind === 'prose'; });",
   "      out.innerHTML = startHereSection(def)",
-  "        + group('Diagrams & traces', diagrams)",
+  "        + group('Subsystem diagrams & traces', diagrams)",
   "        + group('Prose chapters', prose);",
   "      return;",
   "    }",
@@ -405,6 +434,35 @@ function topicCardsHtml()
   return TOPICS.map((t) =>
     `<button type="button" class="topic-card" data-topic="${t.id}">${t.label}</button>`
   ).join("");
+}
+
+function subsystemDiagramsHtml()
+{
+  const engineLinks = Object.entries(ENGINE_AREA_PAGES).map(([file, page]) => {
+    const label = page.navLabel
+      ?? page.diagram.title.replace(/^Babylon Level Kit — /, "");
+    return `<a class="diagram-link engine" href="engine/${file}">${label}</a>`;
+  }).join("");
+
+  const blenderLinks = Object.entries(BLENDER_AREA_PAGES).map(([file, page]) =>
+    `<a class="diagram-link blender" href="blender/${file}">${page.title}</a>`
+  ).join("");
+
+  return `
+  <section class="diagram-index" aria-label="Subsystem diagrams">
+    <h2 class="diagram-index-title">Subsystem diagrams</h2>
+    <p class="diagram-index-blurb">Clickable node maps — jump straight to a topic without searching.</p>
+    <div class="diagram-group">
+      <h3 class="diagram-side eng">Engine <span class="diagram-count">${Object.keys(ENGINE_AREA_PAGES).length}</span></h3>
+      <div class="diagram-links">${engineLinks}</div>
+      <p class="diagram-more"><a href="engine/00-INDEX.html">Engine prose index →</a></p>
+    </div>
+    <div class="diagram-group">
+      <h3 class="diagram-side bl">Blender <span class="diagram-count">${Object.keys(BLENDER_AREA_PAGES).length}</span></h3>
+      <div class="diagram-links">${blenderLinks}</div>
+      <p class="diagram-more"><a class="bl" href="blender/00-INDEX.html">Blender prose index →</a></p>
+    </div>
+  </section>`;
 }
 
 function Page(index)
@@ -504,9 +562,57 @@ function Page(index)
   }
   .badge.engine { background: #4f6df5; color: #fff; }
   .badge.blender { background: #e08a3c; color: #2a1c0e; }
-  .badge.kind-area { background: #23222e; color: #8b91ad; }
+  .badge.kind-diagram { background: #23222e; color: #8b91ad; }
   .badge.kind-trace { background: #1e2a1e; color: #8aad8b; }
   .badge.kind-prose { background: #2a2420; color: #c0a878; }
+  .badge.kind-meta { background: #1e2430; color: #9ab0e0; }
+  .glossary {
+    background: #12111a; border: 1px solid #1e1c28; border-radius: 10px;
+    padding: 14px 18px; margin: 0 0 18px; font-size: 13px; line-height: 1.55; color: #a8adc4;
+  }
+  .glossary dt { color: #cdd5ff; font-weight: 600; margin-top: 8px; }
+  .glossary dt:first-child { margin-top: 0; }
+  .glossary dd { margin: 2px 0 0 0; }
+  .diagram-index {
+    background: #101018; border: 1px solid #1e1c28; border-radius: 12px;
+    padding: 16px 18px 14px; margin: 0 0 20px;
+  }
+  .diagram-index-title {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .1em;
+    color: #9aa0c0; font-weight: 600; margin-bottom: 6px;
+  }
+  .diagram-index-blurb {
+    font-size: 12.5px; color: #6c7396; line-height: 1.5; margin-bottom: 14px;
+  }
+  .diagram-group { margin-bottom: 14px; }
+  .diagram-group:last-child { margin-bottom: 0; }
+  .diagram-side {
+    font-size: 12px; font-weight: 600; margin: 0 0 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .diagram-side.eng { color: #8fa3ff; }
+  .diagram-side.bl { color: #f0cda8; }
+  .diagram-count {
+    font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px;
+    background: #1a1a24; color: #6c7396;
+  }
+  .diagram-links { display: flex; flex-wrap: wrap; gap: 7px; }
+  .diagram-link {
+    display: inline-block; text-decoration: none; font-size: 12px;
+    padding: 6px 11px; border-radius: 8px; border: 1px solid #2a2838;
+    background: #131319; color: #b8bdd8; transition: all .12s;
+  }
+  .diagram-link:hover { transform: translateY(-1px); }
+  .diagram-link.engine:hover { border-color: #4f6df5; color: #e8ecff; }
+  .diagram-link.blender:hover { border-color: #e08a3c; color: #ffe8d0; }
+  .diagram-more { margin: 8px 0 0; font-size: 11.5px; }
+  .diagram-more a { color: #8fa3ff; text-decoration: none; }
+  .diagram-more a.bl { color: #f0cda8; }
+  .diagram-more a:hover { text-decoration: underline; }
+  .contrib-panel {
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid #1d1b27;
+    font-size: 12px; line-height: 1.7;
+  }
   .empty { color: #8b91ad; padding: 20px 2px; font-size: 14px; }
   footer {
     text-align: center; margin-top: 40px; padding-top: 22px;
@@ -522,8 +628,18 @@ function Page(index)
   <header>
     <h1>Babylon Level Kit — Documentation</h1>
     <p class="tag">Browse by topic or search across <b class="eng">Engine</b>,
-      <b class="bl">Blender</b>, and <b>prose chapters</b>.</p>
+      <b class="bl">Blender</b>, <b>prose chapters</b>, and <b>contributor docs</b>.</p>
+    <dl class="glossary">
+      <dt>Subsystem diagram</dt>
+      <dd>Clickable node graph for one slice of the engine or add-on (e.g. <code>physics.html</code>). Not Blender <em>AREA</em> lights.</dd>
+      <dt>Code trace</dt>
+      <dd>Step-by-step walkthrough with live source extracted at build time (<code>trace-*.html</code>).</dd>
+      <dt>Prose chapter</dt>
+      <dd>Longer narrative pages (<code>01-ARCHITECTURE.html</code>, …).</dd>
+    </dl>
   </header>
+
+  ${subsystemDiagramsHtml()}
 
   <div id="topic-bar">${topicCardsHtml()}</div>
   <p id="topic-blurb">Pick a topic above, or search across all docs.</p>
@@ -542,6 +658,13 @@ function Page(index)
     Browse directly: <a href="engine/index.html">Engine overview →</a> ·
     <a class="bl" href="blender/index.html">Blender overview →</a> ·
     <a href="BUILDING-DOCS.html">Building the docs →</a><br>
+    <div class="contrib-panel">
+      <strong>Contributor docs</strong> (markdown, not prose HTML):
+      <a href="BUILDING-DOCS.html">BUILDING-DOCS</a> ·
+      <a href="STYLE_GUIDE.md">STYLE_GUIDE</a> ·
+      <a href="LLM_KERNEL.md">LLM_KERNEL</a> ·
+      <a href="LLM_SCRIPTING_CONTEXT.md">LLM_SCRIPTING_CONTEXT</a>
+    </div>
     Regenerate with <code>npm run docs:build</code>.
   </footer>
 </div>

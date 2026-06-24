@@ -12,6 +12,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ENGINE_AREA_PAGES } from "./docs/engine-areas.mjs";
+import { DiagramsForTrace, FilterNavByHrefs, TracesForDiagram } from "./docs/topics.mjs";
+import { EnrichEngineAreaDiagram, EnrichTraceDiagram } from "./docs/diagram-links.mjs";
 import {
   ReadShell,
   EmitDiagramPage,
@@ -243,6 +245,21 @@ export const TRACES = [
     ],
   },
   {
+    id: "materials",
+    title: "Node materials: NME JSON → mesh override",
+    intro: "Per Blender Material datablock: Node Material Editor JSON replaces glTF PBR at runtime by material name.",
+    steps: [
+      { file: "blender_addon/export/materials.py", symbol: "export_node_material",
+        note: "EXPORT — copy NME JSON to materials/; copy each texture row image; patch_nme_json_textures on ImageSourceBlock / TextureBlock in the exported copy (block_id match; strips embedded base64 when overriding)." },
+      { file: "blender_addon/export/level.py", symbol: "_build_manifest",
+        note: "serialize_materials adds optional top-level manifest.materials[] (name, file, textures[]) for exportable meshes using a Material with bjs_nme_file set." },
+      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "Load",
+        note: "LOAD — after appendSceneAsync + ApplyNodeVisibility, await ApplyNodeMaterials(scene, manifest.materials, baseUrl) before the entity pass." },
+      { file: "packages/engine/src/subsystems/materials.ts", symbol: "ApplyNodeMaterials",
+        note: "NodeMaterial.ParseFromFileAsync with rootUrl + urlRewriter; cache parsed materials per JSON path; replace mesh.material when glTF material.name matches manifest entry; BindManifestTextures fallback when JSON omitted texture data." },
+    ],
+  },
+  {
     id: "msdfText",
     title: "MSDF text: font assets → TextRenderer",
     intro: "Resolution-independent 3D labels via @babylonjs/addons TextRenderer.",
@@ -278,6 +295,68 @@ export const TRACES = [
         note: "RUNTIME — entity.GetAttachmentsOfType(\"GUI3D_HOLO\") for component rows; GetControl3D(\"StartButton\") for stem lookup." },
     ],
   },
+  {
+    id: "lights",
+    title: "Lights: lamp → faithful Babylon light",
+    intro: "No component — glb creates and places the lamp; the loader copies Blender properties onto it via parent-chain lookup.",
+    steps: [
+      { file: "blender_addon/export/datablocks.py", symbol: "serialize_light",
+        note: "EXPORT — per lamp object: color, intensity, spot cone, shadow block when Cast Shadows is on. Written into entities[].light on the manifest." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ProcessEntity",
+        note: "LOAD — after ApplyComponents, ProcessLightForEntity runs when entityData.light is set." },
+      { file: "packages/engine/src/subsystems/lights.ts", symbol: "FindLightForNode",
+        note: "Walks the entity node's parent chain — the glb orientation-correction node may sit between the GUID node and the actual Light." },
+      { file: "packages/engine/src/subsystems/lights.ts", symbol: "ApplyBlenderLight",
+        note: "Copies color (exact), intensity (SUN_SCALE / PUNCTUAL_SCALE), spot cone. AREA lamps are unsupported by glTF — validator warns at export." },
+    ],
+  },
+  {
+    id: "cameras",
+    title: "Cameras: export → faithful or typed override",
+    intro: "Faithful glb FreeCamera by default; an optional CAMERA component rebuilds Universal/Arc/Follow/Geospatial from the exported pose.",
+    steps: [
+      { file: "blender_addon/export/datablocks.py", symbol: "serialize_camera",
+        note: "EXPORT — clip range, FOV/ortho, active flag. Active camera becomes scene.activeCamera at load." },
+      { file: "packages/engine/src/subsystems/cameras/apply.ts", symbol: "ApplyBlenderCamera",
+        note: "LOAD — copies clip and lens onto the glb FreeCamera created by the importer." },
+      { file: "packages/engine/src/subsystems/cameras/typed.ts", symbol: "BuildTypedCamera",
+        note: "When a CAMERA component is present: build the typed camera FROM the faithful pose, copy lens, dispose the original." },
+      { file: "packages/engine/src/subsystems/cameras/targets.ts", symbol: "QueueCameraTargets",
+        note: "FOLLOW / ARC / OFFSET target bindings queued during the entity pass — targets may not exist yet." },
+      { file: "packages/engine/src/subsystems/cameras/targets.ts", symbol: "ResolveCameraTargets",
+        note: "SECOND PASS — lockedTarget, Arc re-pivot, Follow-Offset AddUpdater. GEOSPATIAL skips this pass." },
+    ],
+  },
+  {
+    id: "shadows",
+    title: "Shadows: casting lamp → ShadowGenerator",
+    intro: "One ShadowGenerator per casting light; applied in FinalizeLevel after all bodies exist.",
+    steps: [
+      { file: "blender_addon/export/datablocks.py", symbol: "serialize_light",
+        note: "EXPORT — shadow block (filter, bias, map size, frustum tuning) rides on the light entry when Cast Shadows is enabled." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ProcessEntity",
+        note: "LOAD — casting lights are collected into context.shadowLights during the entity pass." },
+      { file: "packages/engine/src/subsystems/shadows.ts", symbol: "SetupShadows",
+        note: "FINALIZE — one generator per casting lamp; all geometry caster+receiver. Applies normal-bias floor and auto depth-range tuning when Blender left clips at auto." },
+      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "FinalizeLevel",
+        note: "SetupShadows runs early in finalize; level.shadowGenerators exposed for runtime tuning. freezeShadows bakes maps once for static worlds." },
+    ],
+  },
+  {
+    id: "post",
+    title: "Post-processing: panel → DefaultRenderingPipeline",
+    intro: "Scene-wide post stack attached to the active camera after Level.Begin so runtime cameras from OnStart still receive the pipeline.",
+    steps: [
+      { file: "blender_addon/export/post_processing.py", symbol: "serialize_post_processing",
+        note: "EXPORT — scene.postProcessing block: MSAA, FXAA, bloom, DOF, SSAO, tone mapping, LUTs (copied to post/)." },
+      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "FinalizeLevel",
+        note: "Order: scene settings → atmosphere → animations → async tasks → constraints → Begin (OnStart may swap camera) → ApplyPostProcessing." },
+      { file: "packages/engine/src/subsystems/postprocess.ts", symbol: "ApplyPostProcessing",
+        note: "DefaultRenderingPipeline + SSAO2 on scene.activeCamera → level.post. isLinearSpaceComposition follows HDR post flag." },
+      { file: "packages/engine/src/subsystems/postprocess.ts", symbol: "RetargetPostProcessing",
+        note: "If the active camera changes at runtime, retarget the pipeline without rebuilding every effect." },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -295,12 +374,17 @@ export function BuildEngineDocs()
     const pageTitle = file === "index.html"
       ? "BJS Level Kit — Engine overview"
       : `BJS Level Kit — ${page.diagram.title.replace(/^Babylon Level Kit — /, "")}`;
+    const pageTraceNav = FilterNavByHrefs(
+      traceNav,
+      "engine",
+      TracesForDiagram(`engine/${file}`),
+    );
     EmitDiagramPage({
       shell,
       outPath: path.join(OUT_DIR, file),
       pageTitle,
-      diagramData: page.diagram,
-      navHtml: BuildEngineNav(file, areaNav, traceNav),
+      diagramData: EnrichEngineAreaDiagram(page, file, TRACES),
+      navHtml: BuildEngineNav(file, areaNav, pageTraceNav),
       bodyPatch: LAYOUT_PATCH_ENGINE,
     });
   }
@@ -350,12 +434,18 @@ export function BuildEngineDocs()
     }));
 
     const outFile = `trace-${trace.id}.html`;
+    const relatedDiagrams = DiagramsForTrace(`engine/${outFile}`).map((href) => href.replace(/^engine\//, ""));
+    const traceDiagram = EnrichTraceDiagram(
+      { title: "Trace — " + trace.title, nodes, edges },
+      outFile,
+      "engine",
+    );
     EmitDiagramPage({
       shell,
       outPath: path.join(OUT_DIR, outFile),
       pageTitle: `Trace — ${trace.title}`,
-      diagramData: { title: "Trace — " + trace.title, nodes, edges },
-      navHtml: BuildEngineNav(outFile, areaNav, traceNav),
+      diagramData: traceDiagram,
+      navHtml: BuildEngineNav(outFile, areaNav, traceNav, { highlightDiagrams: relatedDiagrams }),
       bodyPatch: CODE_PANEL_PATCH_ENGINE,
     });
     traceFiles.push(outFile);

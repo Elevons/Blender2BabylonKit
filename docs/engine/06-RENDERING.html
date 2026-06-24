@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,11 +205,12 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="05-PHYSICS.html">Prev</a> <span class="dim">·</span> <a href="07-AUDIO-ANIMATION.html">Next →</a></p>
-  <article><h1>06 — Rendering: lights, cameras, shadows, scene look</h1>
+  <article><h1>06 — Rendering: lights, cameras, shadows, scene look, node materials</h1>
+<p class="doc-links">Subsystem diagram: <a href="rendering.html">rendering.html</a> · Code traces: <a href="trace-lights.html">Lights</a> · <a href="trace-cameras.html">Cameras</a> · <a href="trace-shadows.html">Shadows</a> · <a href="trace-post.html">Post-processing</a> · <a href="trace-atmosphere.html">Atmosphere</a> · <a href="trace-materials.html">Node materials</a> · Blender: <a href="../blender/trace-materials.html">NME authoring</a></p>
 <h2>Lights (<code>subsystems/lights.ts</code>)</h2>
 <p>Automatic — no component. The glb creates and places the light; <code>ApplyBlenderLight</code> copies the lamp's properties onto it. Blender inserts an orientation-correction node when exporting +Y-up, so the GUID node is an *ancestor* of the light — <code>FindLightForNode</code> walks the whole parent chain. POINT→Point, SUN→Directional, SPOT→Spot (AREA unsupported by glTF — validator warns). Color exact; intensity approximate (watts don't map cleanly): <code>SUN_SCALE</code> / <code>PUNCTUAL_SCALE</code> at the top of the file are the single tuning point. No fallback light — a dark scene means add a lamp in Blender.</p>
 <h2>Cameras (<code>subsystems/cameras/</code>)</h2>
@@ -266,6 +285,20 @@
   }
 }</code></pre>
 <p>Omit <code>&quot;atmosphere&quot;</code> (or set it to <code>null</code>) when the panel header is off.</p>
+<h2>Node materials (<code>subsystems/materials.ts</code>)</h2>
+<p>Standard glTF PBR from Blender rides in the <code>.glb</code>. For custom shaders authored in the <a href="https://nme.babylonjs.com">Node Material Editor</a>, open <strong>Properties › Material</strong>, select the material in the slot list, and use the <strong>Babylon</strong> panel (per material datablock, not per object). Export copies the JSON to <code>materials/</code> and writes a top-level manifest block:</p>
+<pre><code class="language-json">&quot;materials&quot;: [
+  {
+    &quot;name&quot;: &quot;Water&quot;,
+    &quot;file&quot;: &quot;materials/water.json&quot;,
+    &quot;textures&quot;: [
+      { &quot;blockId&quot;: 42, &quot;blockName&quot;: &quot;albedo&quot;, &quot;file&quot;: &quot;materials/albedo.png&quot; }
+    ]
+  }
+]</code></pre>
+<p><strong>Matching.</strong> Runtime replaces <code>mesh.material</code> when <code>mesh.material.name</code> equals the manifest <code>name</code> (Blender / glTF material name). Parsed node materials are cached per JSON file path so shared materials reuse one instance.</p>
+<p><strong>Textures not in the JSON.</strong> NME files may embed textures as base64, reference external URLs, or omit image data entirely. Use <strong>Scan Textures</strong> in the <strong>Babylon</strong> material panel to list <code>ImageSourceBlock</code> and <code>TextureBlock</code> slots, then pick source images. Export copies them beside the JSON and patches URLs in the exported copy (same pattern as <strong>Particle Textures</strong>). <code>ApplyNodeMaterials</code> also passes a <code>urlRewriter</code> at load time and can bind manifest <code>textures[]</code> when a block still has no texture after parse.</p>
+<p><strong>Workflow.</strong> Save from NME into the level's <code>materials/</code> folder → in Material Properties select the material → <strong>Babylon</strong> panel → pick JSON → Scan Textures → assign any external images → export. Trace: <a href="trace-materials.html">trace-materials.html</a>.</p>
 <h3>Post-processing (<code>subsystems/postprocess.ts</code>)</h3>
 <p>Handles land on <code>level.post</code> (<code>PostProcessingHandles</code>: <code>pipeline?</code>, <code>ssao?</code>). Use <code>RetargetPostProcessing(handles, camera)</code> if gameplay swaps the active camera later (default pipeline only today).</p>
 <p>When <code>scene.postProcessing.defaultPipeline</code> is true, the runtime builds Babylon's <code>DefaultRenderingPipeline</code> (HDR on). Supported effects:</p>

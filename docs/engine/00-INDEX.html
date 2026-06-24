@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,34 +205,58 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-ARCHITECTURE.html">Next →</a></p>
   <article><h1>Babylon Level Kit — Engine (Runtime) Documentation</h1>
-<p>The runtime half of the kit, current as of <strong>v0.32.0</strong>. The interactive version is the HTML diagram set in this folder — open <strong>[index.html](index.html)</strong> and use the bottom nav (an area row for the subsystem diagrams + a <strong>Traces</strong> row for code walk-throughs; &quot;Blender docs →&quot; jumps to the editor packet).</p>
-<blockquote><p><strong>Looking for something specific?</strong> Open the searchable landing page at <strong>[../index.html](../index.html)</strong> and type a term (e.g. *collision*, *export*, *input*) to surface the relevant pages from both the engine and Blender sides.</p></blockquote>
+<p>The runtime half of the kit, current as of <strong>engine v0.31.1 · Blender add-on v0.32.0</strong>. The interactive version is the HTML subsystem diagram set in this folder — open <a href="index.html"><strong>index.html</strong></a> and use the bottom nav (a subsystem-diagram row + a <strong>Traces</strong> row for code walk-throughs; &quot;Blender docs →&quot; jumps to the editor side).</p>
+<blockquote><p><strong>Looking for something specific?</strong> Open the searchable landing page at <a href="../index.html"><strong>index.html</strong></a> and type a term (e.g. <em>collision</em>, <em>export</em>, <em>input</em>) to surface the relevant pages from both the engine and Blender sides.</p></blockquote>
+<h2>Doc types (quick glossary)</h2>
+<ul>
+<li><strong>Subsystem diagram</strong> — clickable node graph for one slice of the engine (e.g. <a href="physics.html">physics.html</a>). Not Blender <em>AREA</em> lights. Click a node to see its description; related <strong>Trace</strong> links in the side panel are added at build time from <code>PAGE_TOPICS</code> (see <a href="../BUILDING-DOCS.html">BUILDING-DOCS</a>).</li>
+<li><strong>Code trace</strong> — step-by-step walkthrough with live source extracted at build time (<code>trace-*.html</code>). The bottom nav highlights the subsystem diagram(s) for the same topic; each step lists matching <strong>Diagram</strong> links.</li>
+<li><strong>Prose chapter</strong> — longer narrative pages like this one (<code>01-ARCHITECTURE.html</code>, …).</li>
+</ul>
 <h2>What the runtime does</h2>
 <p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports — <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything it can't) — and turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb, indexes nodes by GUID, builds an <code>Entity</code> per manifest entry, applies components through small subsystems (physics, lights, cameras, audio, …), then runs your <code>Behavior</code> scripts. See <a href="01-ARCHITECTURE.html">Architecture</a> for the two-artifact split and <a href="02-BLENDER-ADDON.html">Blender Add-on</a> for the editor side.</p>
+<h2>Subsystem map</h2>
+<table><thead><tr><th>Subsystem</th><th>Engine diagram</th><th>Blender diagram</th><th>Prose</th></tr></thead><tbody>
+<tr><td>Architecture / two artifacts</td><td><a href="architecture.html">architecture.html</a></td><td><a href="../blender/export.html">export.html</a></td><td><a href="01-ARCHITECTURE.html">01</a></td></tr>
+<tr><td>Load pipeline</td><td><a href="load-pipeline.html">load-pipeline.html</a></td><td>—</td><td><a href="03-LOAD-PIPELINE.html">03</a></td></tr>
+<tr><td>Blender add-on</td><td><a href="blender-addon.html">blender-addon.html</a></td><td><a href="../blender/index.html">index.html</a></td><td><a href="02-BLENDER-ADDON.html">02</a></td></tr>
+<tr><td>Data model / GUID</td><td><a href="architecture.html">architecture.html</a></td><td><a href="../blender/data-model.html">data-model.html</a></td><td><a href="01-ARCHITECTURE.html">01</a></td></tr>
+<tr><td>Export</td><td><a href="workflow.html">workflow.html</a></td><td><a href="../blender/export.html">export.html</a></td><td><a href="02-BLENDER-ADDON.html">02</a></td></tr>
+<tr><td>Validation</td><td><a href="workflow.html">workflow.html</a></td><td><a href="../blender/validation.html">validation.html</a></td><td><a href="08-WORKFLOW.html">08</a></td></tr>
+<tr><td>Live Link</td><td><a href="workflow.html">workflow.html</a></td><td><a href="../blender/livelink.html">livelink.html</a></td><td><a href="08-WORKFLOW.html">08</a></td></tr>
+<tr><td>Scripting</td><td><a href="scripting.html">scripting.html</a></td><td><a href="../blender/data-model.html">data-model.html</a></td><td><a href="04-SCRIPTING.html">04</a></td></tr>
+<tr><td>Input</td><td><a href="input.html">input.html</a></td><td><a href="../blender/input-actions.html">input-actions.html</a></td><td><a href="11-INPUT.html">11</a></td></tr>
+<tr><td>Physics</td><td><a href="physics.html">physics.html</a></td><td><a href="../blender/data-model.html">data-model.html</a></td><td><a href="05-PHYSICS.html">05</a></td></tr>
+<tr><td>Rendering / scene look</td><td><a href="rendering.html">rendering.html</a></td><td><a href="../blender/scene-settings.html">scene-settings.html</a></td><td><a href="06-RENDERING.html">06</a></td></tr>
+<tr><td>Audio &amp; animation</td><td><a href="audio-animation.html">audio-animation.html</a></td><td><a href="../blender/export.html">export.html</a></td><td><a href="07-AUDIO-ANIMATION.html">07</a></td></tr>
+<tr><td>UI (2D / 3D / particles)</td><td><a href="ui.html">ui.html</a></td><td><a href="../blender/data-model.html">data-model.html</a></td><td><a href="10-UI.html">10</a></td></tr>
+<tr><td>Workflow / tooling</td><td><a href="workflow.html">workflow.html</a></td><td><a href="../blender/livelink.html">livelink.html</a></td><td><a href="08-WORKFLOW.html">08</a></td></tr>
+</tbody></table>
 <h2>The interactive pages</h2>
-<p>Area diagrams (clickable node graphs): <strong>[index.html](index.html)</strong> (engine overview) · <strong>[load-pipeline.html](load-pipeline.html)</strong> · <strong>[scripting.html](scripting.html)</strong> · <strong>[physics.html](physics.html)</strong> · <strong>[rendering.html](rendering.html)</strong> · <strong>[audio-animation.html](audio-animation.html)</strong> · <strong>[ui.html](ui.html)</strong> · <strong>[workflow.html](workflow.html)</strong> · <strong>[blender-addon.html](blender-addon.html)</strong> (the editor, from the runtime's point of view).</p>
-<p>Code traces (each node is a step; click for the explanation + the actual current TypeScript source): <strong>Load</strong> (manifest → <code>Level</code>) · <strong>Physics</strong> (collider → Havok body) · <strong>@exposed</strong> (field → Blender → instance) · <strong>Triggers</strong> (On-Enter → <code>OnMessage</code>) · <strong>Constraints</strong> (component → joint) · <strong>Audio</strong> · <strong>Input</strong> (key → action → behavior) · <strong>Live Link</strong> · <strong>2D GUI</strong> · <strong>Particles</strong> · <strong>MSDF text</strong> · <strong>3D GUI</strong> · <strong>Atmosphere</strong> (SUN lamp → physical sky).</p>
+<p>Subsystem diagrams: <a href="index.html"><strong>index.html</strong></a> (engine overview) · <a href="architecture.html"><strong>architecture.html</strong></a> (two artifacts) · <a href="load-pipeline.html"><strong>load-pipeline.html</strong></a> · <a href="scripting.html"><strong>scripting.html</strong></a> · <a href="input.html"><strong>input.html</strong></a> · <a href="physics.html"><strong>physics.html</strong></a> · <a href="rendering.html"><strong>rendering.html</strong></a> · <a href="audio-animation.html"><strong>audio-animation.html</strong></a> · <a href="ui.html"><strong>ui.html</strong></a> · <a href="workflow.html"><strong>workflow.html</strong></a> · <a href="blender-addon.html"><strong>blender-addon.html</strong></a> (the editor, from the runtime's point of view).</p>
+<p>Code traces (each node is a step; click for the explanation + the actual current TypeScript source): <strong>Load</strong> · <strong>Physics</strong> · <strong>@exposed</strong> · <strong>Triggers</strong> · <strong>Constraints</strong> · <strong>Audio</strong> · <strong>Input</strong> · <strong>Live Link</strong> · <strong>2D GUI</strong> · <strong>Particles</strong> · <strong>MSDF text</strong> · <strong>3D GUI</strong> · <strong>Atmosphere</strong> · <strong>Lights</strong> · <strong>Cameras</strong> · <strong>Shadows</strong> · <strong>Post-processing</strong>.</p>
 <h2>The prose chapters</h2>
 <ol>
 <li><a href="01-ARCHITECTURE.html">Architecture</a> — two artifacts, GUID identity, monorepo, data flow</li>
 <li><a href="02-BLENDER-ADDON.html">Blender Add-on</a> — the editor half + export pipeline</li>
 <li><a href="03-LOAD-PIPELINE.html">Load Pipeline</a> — <code>LevelLoader.Load</code>, the passes, <code>FinalizeLevel</code></li>
-<li><a href="04-SCRIPTING.html">Scripting</a> — <code>Entity</code>, <code>Behavior</code>, <code>@exposed</code>, <code>@inputMap</code>, Input</li>
+<li><a href="04-SCRIPTING.html">Scripting</a> — <code>Entity</code>, <code>Behavior</code>, <code>@exposed</code>, <code>@inputMap</code></li>
 <li><a href="05-PHYSICS.html">Physics</a> — bodies, constraints, triggers, right-handed import</li>
 <li><a href="06-RENDERING.html">Rendering</a> — lights, cameras, shadows, environment, atmosphere, scene look</li>
 <li><a href="07-AUDIO-ANIMATION.html">Audio &amp; Animation</a> — sounds, NLA clips, the skinned-mesh rule</li>
 <li><a href="08-WORKFLOW.html">Workflow</a> — Live Link, the validator, Debug Build, tooling, <a href="../launcher/00-INDEX.html">Babylon Launcher</a></li>
 <li><a href="09-FEATURE-TRACES.html">Feature Traces</a> — every feature's Blender → runtime file/function chain</li>
 <li><a href="10-UI.html">UI</a> — 2D GUI, particles, MSDF text, 3D GUI</li>
+<li><a href="11-INPUT.html">Input</a> — Input Actions, bindings, <code>@inputMap</code>, frame lifecycle</li>
 </ol>
 <h2>Regenerating</h2>
-<p><code>npm run docs:build</code> regenerates both packets from the shared shell template (<code>docs/_template/diagram-shell.html</code>) and rebuilds the searchable landing page. <code>npm run docs:trace</code> rebuilds only this folder; it re-extracts every trace's source from <code>packages/engine/</code>. A renamed/deleted symbol fails the build loudly — the anti-rot guard. (The Blender packet alone is <code>npm run docs:blender</code>.)</p>
-<p>Full build pipeline, file layout, and how to add traces or diagrams: <strong><a href="../BUILDING-DOCS.html">Building the documentation</a></strong>.</p>
+<p><code>npm run docs:build</code> regenerates both sides from the shared shell template (<code>docs/_template/diagram-shell.html</code>) and rebuilds the searchable landing page. <code>npm run docs:trace</code> rebuilds only this folder; it re-extracts every trace's source from <code>packages/engine/</code>. A renamed/deleted symbol fails the build loudly — the anti-rot guard. (The Blender side alone is <code>npm run docs:blender</code>.)</p>
+<p>Full build pipeline, file layout, and how to add traces or subsystem diagrams: <a href="../BUILDING-DOCS.html"><strong>Building the documentation</strong></a>.</p>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/engine/00-INDEX.html</code>, then <code>npm run docs:build</code>.

@@ -595,7 +595,6 @@ addressable" marker; objects without one stay as plain geometry inside the glb.
   mode.
 - No in-Blender play mode — iteration is export → refresh browser. A natural
   extension is a watch script that re-exports on save.
-- Materials beyond what glTF/PBR covers (custom shaders) aren't handled.
 - If `node.metadata` comes back empty, confirm the `ExtrasAsMetadata` import
   wasn't tree-shaken out and that the glb was exported with Custom Properties
   enabled — the loader will have silently used the name fallback.

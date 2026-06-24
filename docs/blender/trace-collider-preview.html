@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Collider preview</span><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="input-actions.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Input Actions</a><a href="scene-settings.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Scene settings</a><a href="validation.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Validation</a><a href="livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Live Link</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Collider preview</span><a href="trace-cog-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">CoM preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Node materials</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — Collider preview: the viewport gizmo","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _draw","sub":"collider_preview.py","desc":"The POST_VIEW draw handler: for each object with a manual collider, build its wireframe in Blender space and batch it to the GPU.","meta":[["File","blender_addon/viewport/collider_preview.py"],["Line","153"]],"code":"def _draw():\n    ctx = bpy.context\n    selected = getattr(ctx, \"selected_objects\", None)\n    if not selected:\n        return\n\n    depsgraph = bpy.context.evaluated_depsgraph_get()\n    points = []\n    for obj in selected:\n        eval_obj = obj.evaluated_get(depsgraph)\n        for comp in obj.bjs_components:\n            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:\n                continue\n            local = _local_geometry(obj, comp, eval_obj, depsgraph)\n            if not local:\n                continue\n            mw = object_world_matrix_for_collider(obj, eval_obj, comp.collider_apply_scale)\n            points.extend(mw @ p for p in local)\n\n    if not points:\n        return\n\n    shader = gpu.shader.from_builtin('UNIFORM_COLOR')\n    gpu.state.blend_set('ALPHA')\n    gpu.state.line_width_set(1.5)\n    gpu.state.depth_test_set('LESS_EQUAL')\n    batch = batch_for_shader(shader, 'LINES', {\"pos\": [(p.x, p.y, p.z) for p in points]})\n    shader.bind()\n    shader.uniform_float(\"color\", _COLOR)\n    batch.draw(shader)\n    gpu.state.depth_test_set('NONE')\n    gpu.state.line_width_set(1.0)\n    gpu.state.blend_set('NONE')","file":"blender_addon/viewport/collider_preview.py","line":153},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _local_geometry","sub":"collider_preview.py","desc":"Produces the shape's edge geometry (box/sphere/capsule/cylinder) in the object's local space — the same center/size/rotation export will convert, so preview == runtime.","meta":[["File","blender_addon/viewport/collider_preview.py"],["Line","117"]],"code":"def _local_geometry(obj, comp, eval_obj, depsgraph=None):\n    \"\"\"Local-space line segments for a collider, or None if the mesh is the shape.\"\"\"\n    shape = comp.collider_shape\n    if shape in {'CONVEX', 'MESH'}:\n        # Hull/mesh colliders use geometry at runtime; preview with a scaled AABB.\n        center, size = compute_local_bounds(obj, depsgraph)\n        center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)\n        return _box_edges(center, size)\n\n    if comp.auto_fit:\n        center, size = compute_local_bounds(obj, depsgraph)\n        center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)\n        if shape == 'SPHERE':\n            return _sphere(center, max(size) / 2)\n        if shape == 'CYLINDER':\n            return _cylinder(center, max(size.x, size.y) / 2, size.z)\n        if shape == 'CAPSULE':\n            return _capsule(center, max(size.x, size.y) / 2, size.z)\n        return _box_edges(center, size)\n\n    # Manual: build around the origin, then rotate and offset (matches the runtime\n    # shape, which is centered at `center` with the collider's rotation).\n    center, size, radius, height = manual_collider_dimensions(obj, comp, eval_obj)\n    origin = Vector((0.0, 0.0, 0.0))\n    if shape == 'SPHERE':\n        pts = _sphere(origin, radius)\n    elif shape == 'CYLINDER':\n        pts = _cylinder(origin, radius, height)\n    elif shape == 'CAPSULE':\n        pts = _capsule(origin, radius, height)\n    else:\n        pts = _box_edges(origin, size)\n    rot = Euler(comp.collider_rotation, 'XYZ').to_matrix()\n    return [(rot @ p) + center for p in pts]","file":"blender_addon/viewport/collider_preview.py","line":117}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — Collider preview: the viewport gizmo","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _draw","sub":"collider_preview.py","desc":"The POST_VIEW draw handler: for each object with a manual collider, build its wireframe in Blender space and batch it to the GPU.","meta":[["File","blender_addon/viewport/collider_preview.py"],["Line","153"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"def _draw():\n    ctx = bpy.context\n    selected = getattr(ctx, \"selected_objects\", None)\n    if not selected:\n        return\n\n    depsgraph = bpy.context.evaluated_depsgraph_get()\n    points = []\n    for obj in selected:\n        eval_obj = obj.evaluated_get(depsgraph)\n        for comp in obj.bjs_components:\n            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:\n                continue\n            local = _local_geometry(obj, comp, eval_obj, depsgraph)\n            if not local:\n                continue\n            mw = object_world_matrix_for_collider(obj, eval_obj, comp.collider_apply_scale)\n            points.extend(mw @ p for p in local)\n\n    if not points:\n        return\n\n    shader = gpu.shader.from_builtin('UNIFORM_COLOR')\n    gpu.state.blend_set('ALPHA')\n    gpu.state.line_width_set(1.5)\n    gpu.state.depth_test_set('LESS_EQUAL')\n    batch = batch_for_shader(shader, 'LINES', {\"pos\": [(p.x, p.y, p.z) for p in points]})\n    shader.bind()\n    shader.uniform_float(\"color\", _COLOR)\n    batch.draw(shader)\n    gpu.state.depth_test_set('NONE')\n    gpu.state.line_width_set(1.0)\n    gpu.state.blend_set('NONE')","file":"blender_addon/viewport/collider_preview.py","line":153},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _local_geometry","sub":"collider_preview.py","desc":"Produces the shape's edge geometry (box/sphere/capsule/cylinder) in the object's local space — the same center/size/rotation export will convert, so preview == runtime.","meta":[["File","blender_addon/viewport/collider_preview.py"],["Line","117"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"def _local_geometry(obj, comp, eval_obj, depsgraph=None):\n    \"\"\"Local-space line segments for a collider, or None if the mesh is the shape.\"\"\"\n    shape = comp.collider_shape\n    if shape in {'CONVEX', 'MESH'}:\n        # Hull/mesh colliders use geometry at runtime; preview with a scaled AABB.\n        center, size = compute_local_bounds(obj, depsgraph)\n        center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)\n        return _box_edges(center, size)\n\n    if comp.auto_fit:\n        center, size = compute_local_bounds(obj, depsgraph)\n        center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)\n        if shape == 'SPHERE':\n            return _sphere(center, max(size) / 2)\n        if shape == 'CYLINDER':\n            return _cylinder(center, max(size.x, size.y) / 2, size.z)\n        if shape == 'CAPSULE':\n            return _capsule(center, max(size.x, size.y) / 2, size.z)\n        return _box_edges(center, size)\n\n    # Manual: build around the origin, then rotate and offset (matches the runtime\n    # shape, which is centered at `center` with the collider's rotation).\n    center, size, radius, height = manual_collider_dimensions(obj, comp, eval_obj)\n    origin = Vector((0.0, 0.0, 0.0))\n    if shape == 'SPHERE':\n        pts = _sphere(origin, radius)\n    elif shape == 'CYLINDER':\n        pts = _cylinder(origin, radius, height)\n    elif shape == 'CAPSULE':\n        pts = _capsule(origin, radius, height)\n    else:\n        pts = _box_edges(origin, size)\n    rot = Euler(comp.collider_rotation, 'XYZ').to_matrix()\n    return [(rot @ p) + center for p in pts]","file":"blender_addon/viewport/collider_preview.py","line":117}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
 </style>
@@ -1133,8 +1179,9 @@ function exportSelf() {
 <style>
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:4; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
 </style>
 <script>
@@ -1144,14 +1191,17 @@ function exportSelf() {
     __openNodePanel(n);
     if (!n.code) { return; }
     const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
     loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
   };
 </script></body>
 </html>

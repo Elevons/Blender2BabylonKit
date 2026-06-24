@@ -1,8 +1,8 @@
 <h1>10 — UI (2D GUI, particles, MSDF text, 3D GUI)</h1>
-<p>Interactive diagram: <strong>[ui.html](ui.html)</strong> · Traces: <a href="trace-gui.html">2D GUI</a> · <a href="trace-particles.html">Particles</a> · <a href="trace-msdfText.html">MSDF text</a> · <a href="trace-gui3d.html">3D GUI runtime</a> · <a href="../blender/trace-gui3d.html">3D GUI authoring</a></p>
+<p class="doc-links">Subsystem diagram: <a href="ui.html">ui.html</a> · Code traces: <a href="trace-gui.html">2D GUI</a> · <a href="trace-particles.html">Particles</a> · <a href="trace-msdfText.html">MSDF text</a> · <a href="trace-gui3d.html">3D GUI runtime</a> · <a href="../blender/trace-gui3d.html">3D GUI authoring</a></p>
 <p>Engine code lives under <code>packages/engine/src/ui/</code> (2D + 3D GUI + MSDF text) and <code>packages/engine/src/subsystems/particles.ts</code> (particle JSON loading).</p>
 <h2>Overview</h2>
-<p>Three related but distinct UI/media paths share the same loader pattern: <strong>queue async work during the entity pass, settle in {{PH0}}</strong>. 3D GUI is different — it is fully synchronous but deferred to a <strong>post-pass</strong> because panels must exist before child controls and click targets must resolve through the finished <code>Level</code>.</p>
+<p>Three related but distinct UI/media paths share the same loader pattern: <strong>queue async work during the entity pass, settle in <code>FinalizeLevel</code></strong>. 3D GUI is different — it is fully synchronous but deferred to a <strong>post-pass</strong> because panels must exist before child controls and click targets must resolve through the finished <code>Level</code>.</p>
 <pre class="mermaid">flowchart LR
   subgraph export [Export]
     GUI_JSON[GUI .json]

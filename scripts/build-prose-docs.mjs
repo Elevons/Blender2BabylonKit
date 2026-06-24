@@ -16,6 +16,7 @@ import {
   ChapterNavHtml,
   ToolbarHtml,
 } from "./docs/prose/manifest.mjs";
+import { ApplyKitVersionPlaceholders } from "./docs/kit-version.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHELL_PATH = path.join(ROOT, "docs", "_template", "prose-shell.html");
@@ -76,7 +77,8 @@ export function BuildProseDocs()
       continue;
     }
 
-    const body = fs.readFileSync(fragmentPath, "utf8");
+    const raw = fs.readFileSync(fragmentPath, "utf8");
+    const body = ApplyKitVersionPlaceholders(raw);
     const outPath = path.join(ROOT, "docs", chapter.href);
     EmitProsePage({ shell, outPath, chapter, body });
     count++;

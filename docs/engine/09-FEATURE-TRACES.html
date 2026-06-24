@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,52 +205,78 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="08-WORKFLOW.html">Prev</a> <span class="dim">·</span> <a href="10-UI.html">Next →</a></p>
   <article><h1>09 — Feature Traces</h1>
-<p>The exact file/function chain for each feature, Blender click → runtime effect. Format: <code>blender_addon/…</code> → manifest → <code>packages/engine/src/…</code>.</p>
-<h3>GUID / entity identity</h3>
+<p>The exact file/function chain for each feature, Blender click → runtime effect. Format: <code>blender_addon/…</code> → manifest → <code>packages/engine/src/…</code>. Interactive code traces are linked where they exist.</p>
+<nav class="feature-toc">
+<ul>
+<li><a href="#guid">GUID / entity identity</a></li>
+<li><a href="#visibility">Viewport visibility</a></li>
+<li><a href="#tag">Tag</a></li>
+<li><a href="#collider">Collider / RigidBody</a></li>
+<li><a href="#script">Script + @exposed</a></li>
+<li><a href="#entity-ref">Entity reference field</a></li>
+<li><a href="#light">Light / Shadows</a></li>
+<li><a href="#camera">Camera</a></li>
+<li><a href="#atmosphere">Atmosphere</a></li>
+<li><a href="#post">Post-processing</a></li>
+<li><a href="#animation">Animation autoplay</a></li>
+<li><a href="#audio">Audio</a></li>
+<li><a href="#trigger">Trigger → OnMessage</a></li>
+<li><a href="#constraint">Constraint</a></li>
+<li><a href="#input">Input action</a></li>
+<li><a href="#livelink">Live Link</a></li>
+<li><a href="#debug">Debug Build</a></li>
+<li><a href="#gui2d">2D GUI</a></li>
+<li><a href="#particles">Particles</a></li>
+<li><a href="#gui3d">3D GUI</a></li>
+</ul>
+</nav>
+<h3 id="guid">GUID / entity identity</h3>
 <p><code>core/ids.ensure_object_id</code> (custom prop <code>bjs_id</code>) → glTF node <code>extras</code> → manifest <code>entities[].id</code> → the loader's <code>BuildIdIndex</code> (<code>core/loader/nodeResolution.ts</code>) reads <code>metadata.gltf.extras.bjs_id</code> (needs <code>ExtrasAsMetadata</code> import) → <code>ProcessEntity</code> matches GUID-first → <code>Entity</code> in <code>level.entities</code>, node gets <code>metadata.bjsEntity</code> back-reference.</p>
-<h3>Viewport visibility (eye icon)</h3>
+<h3 id="visibility">Viewport visibility (eye icon)</h3>
 <p><code>export/level._stamp_viewport_visibility</code> (transient <code>obj[&quot;bjs_visible&quot;] = False</code> when <code>hide_viewport</code> and still renderable) → glTF node <code>extras.bjs_visible</code> → <code>ApplyNodeVisibility</code> (<code>core/loader/nodeResolution.ts</code>) sets <code>node.isVisible = false</code> and disables descendant lights/cameras. Render-disabled objects (<code>hide_render</code>) never get this far — <code>_is_renderable</code> drops them from glb and manifest. Behaviors can toggle <code>entity.node.isVisible</code> at runtime.</p>
-<h3>Tag</h3>
+<h3 id="tag">Tag</h3>
 <p>TAG component (<code>components/</code> → <code>export/components.serialize_components</code>) → manifest <code>{type:&quot;TAG&quot;, tag}</code> → <code>entityBuilder.ClassifyComponents</code> sets <code>entity.tag</code> and <code>RegisterAttachment({type:&quot;TAG&quot;, data})</code> → query <code>level.ByTag(&quot;Enemy&quot;)</code> or <code>entity.HasAttachment(&quot;TAG&quot;)</code>.</p>
-<h3>Collider / RigidBody</h3>
-<p>N-panel fields (+ <code>viewport/collider_preview.py</code> wireframe per manual collider, Blender space; compound-body notice when count &gt; 1) → <code>serialize_components</code> converts center/size/rotation to Y-up (one dict per COLLIDER row); <strong>Apply Object Scale</strong> (<code>collider_apply_scale</code> → manifest <code>applyObjectScale</code>, default <strong>on</strong> at runtime via <code>ApplyObjectScaleEnabled</code> in <code>core/nodeScale.ts</code> — omit field or <code>true</code>); CONSTRAINT rows export the same <code>applyObjectScale</code> flag; DYNAMIC rigid bodies also export <code>centerOfMassAutoFit</code> and optional <code>centerOfMass</code> → manifest COLLIDER/RIGIDBODY → <code>entityBuilder.ClassifyComponents</code> collects <strong>all</strong> colliders → <code>physics.BuildPhysics</code>: single collider → shape path chosen (auto-fit aggregate | wrapper fit | convex/mesh merge | manual); multiple colliders → <code>PhysicsShapeContainer</code> compound (<code>BuildCompoundBody</code>); all geometry gathered via <code>OwnedColliderMeshes</code> (excludes child entities by GUID) → <code>ApplyMassProperties</code> (<code>ResolveCenterOfMass</code> + <code>setMassProperties</code>) → one <code>PhysicsBody</code> on the node → <code>entity.body</code> + <code>RegisterAttachment</code> per COLLIDER and/or RIGIDBODY row (same <code>body</code> ref when both). Sound because of right-handed import (<a href="05-PHYSICS.html#right-handed">why</a>). Manual path + scale behavior: <a href="05-PHYSICS.html">05-PHYSICS.md</a>. Debug view: <strong>C</strong> → <code>Level.ShowColliders</code> → PhysicsViewer.</p>
-<h3>Script + @exposed values</h3>
+<h3 id="collider">Collider / RigidBody</h3>
+<p>N-panel fields (+ <code>viewport/collider_preview.py</code> wireframe per collider with Show Preview on, Blender space; <code>viewport/cog_preview.py</code> amber cross at rigid-body CoM, drawn on top inside the mesh; compound-body notice when count &gt; 1) → <code>serialize_components</code> converts center/size/rotation to Y-up (one dict per COLLIDER row); <strong>Apply Object Scale</strong> (<code>collider_apply_scale</code> → manifest <code>applyObjectScale</code>, default <strong>on</strong> at runtime via <code>ApplyObjectScaleEnabled</code> in <code>core/nodeScale.ts</code> — omit field or <code>true</code>); CONSTRAINT rows export the same <code>applyObjectScale</code> flag; DYNAMIC rigid bodies also export <code>centerOfMassAutoFit</code> and optional <code>centerOfMass</code> → manifest COLLIDER/RIGIDBODY → <code>entityBuilder.ClassifyComponents</code> collects <strong>all</strong> colliders → <code>physics.BuildPhysics</code>: single collider → shape path chosen (auto-fit aggregate | wrapper fit | convex/mesh merge | manual); multiple colliders → <code>PhysicsShapeContainer</code> compound (<code>BuildCompoundBody</code>); all geometry gathered via <code>OwnedColliderMeshes</code> (excludes child entities by GUID) → <code>ApplyMassProperties</code> (<code>ResolveCenterOfMass</code> + <code>setMassProperties</code>) → one <code>PhysicsBody</code> on the node → <code>entity.body</code> + <code>RegisterAttachment</code> per COLLIDER and/or RIGIDBODY row (same <code>body</code> ref when both). Sound because of right-handed import (<a href="05-PHYSICS.html#right-handed">why</a>). Manual path + scale behavior: <a href="05-PHYSICS.html">05 — Physics</a>. Trace: <a href="trace-physics.html">trace-physics</a>. Blender viewport traces: <a href="../blender/trace-collider-preview.html">collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a>. Debug view: <strong>C</strong> → <code>Level.ShowColliders</code> → PhysicsViewer.</p>
+<h3 id="script">Script + @exposed values</h3>
 <p>&quot;Open Script…&quot; stores the filename stem; <strong>Sync</strong> → <code>core/script_parse.py</code> regex-reads <code>@exposed</code> fields → <code>BJSExposedVar</code> rows → edits serialize into <code>vars</code> → manifest SCRIPT → <code>InstantiateScripts</code> (<code>core/loader/entityBuilder.ts</code>) → <code>BehaviorRegistry.Create(stem)</code> (registered by <code>AutoRegisterBehaviors</code> from <code>import.meta.glob</code>) → inject <code>entity</code>/<code>scene</code> → <code>ApplyExposedVars</code> (coerce vector3/color; entity refs → <code>PendingRef</code>) → <code>RegisterAttachment({type:&quot;SCRIPT&quot;, data, behavior})</code> → second pass <code>ResolveObjectReferences</code> → <code>Level.Begin</code> calls <code>OnStart</code>.</p>
-<h3>Entity reference field</h3>
+<h3 id="entity-ref">Entity reference field</h3>
 <p>Object picker (<code>BJSExposedVar.obj_val</code>) → <code>ensure_object_id(target)</code> + force-include via <code>iter_referenced_objects</code> → manifest <code>vars.field = guid</code> → <code>PendingRef</code> → <code>ResolveObjectReferences</code> assigns the <code>Entity</code> (or list slot by index) before <code>OnStart</code>.</p>
-<h3>Light / Shadows</h3>
-<p>Lamp (auto-derived; no component) → <code>export</code> writes <code>light</code> block (+ <code>shadow</code> when Cast Shadows) → <code>lights.ApplyBlenderLight</code> (parent-chain find; color exact, intensity scaled) → casting lights collected → <code>shadows.SetupShadows</code> in <code>FinalizeLevel</code> → <code>level.shadowGenerators</code>.</p>
-<h3>Camera (+ typed override)</h3>
-<p>Camera object → <code>camera</code> block (clip/FOV/active) → <code>cameras.ApplyBlenderCamera</code> onto the glb FreeCamera; active → <code>scene.activeCamera</code>. CAMERA component → <code>BuildTypedCamera</code> per-type builder → target bindings via <code>QueueCameraTargets</code> (FOLLOW / ARC / OFFSET only) → second pass <code>ResolveCameraTargets</code> (FOLLOW lockedTarget / ARC re-pivot / OFFSET <code>AddUpdater</code>). GEOSPATIAL skips the target pass — <code>BuildGeospatialCamera</code> derives <code>center</code> / <code>yaw</code> / <code>pitch</code> / <code>radius</code> from the exported pose and <code>planetRadius</code>.</p>
-<h3>Atmosphere</h3>
+<h3 id="light">Light / Shadows</h3>
+<p>Lamp (auto-derived; no component) → <code>export</code> writes <code>light</code> block (+ <code>shadow</code> when Cast Shadows) → <code>lights.ApplyBlenderLight</code> (parent-chain find; color exact, intensity scaled) → casting lights collected → <code>shadows.SetupShadows</code> in <code>FinalizeLevel</code> → <code>level.shadowGenerators</code>. Traces: <a href="trace-lights.html">lights</a> · <a href="trace-shadows.html">shadows</a>.</p>
+<h3 id="camera">Camera (+ typed override)</h3>
+<p>Camera object → <code>camera</code> block (clip/FOV/active) → <code>cameras.ApplyBlenderCamera</code> onto the glb FreeCamera; active → <code>scene.activeCamera</code>. CAMERA component → <code>BuildTypedCamera</code> per-type builder → target bindings via <code>QueueCameraTargets</code> (FOLLOW / ARC / OFFSET only) → second pass <code>ResolveCameraTargets</code> (FOLLOW lockedTarget / ARC re-pivot / OFFSET <code>AddUpdater</code>). GEOSPATIAL skips the target pass — <code>BuildGeospatialCamera</code> derives <code>center</code> / <code>yaw</code> / <code>pitch</code> / <code>radius</code> from the exported pose and <code>planetRadius</code>. Trace: <a href="trace-cameras.html">trace-cameras</a>.</p>
+<h3 id="atmosphere">Atmosphere</h3>
 <p>Babylon Scene › Atmosphere (<code>ui/scene_panels.py</code>) edits <code>scene.bjs_scene.atmosphere</code> (<code>scene/atmosphere.py</code>) → <code>export/atmosphere.serialize_atmosphere</code> (optional <code>sunLightId</code> GUID; scattering tuning) → manifest <code>scene.atmosphere</code> → <code>LevelLoader.FinalizeLevel</code>: <code>ApplySceneSettings</code> (env skybox forced off at export when atmosphere is on) → <code>ApplyAtmosphere</code> (<code>subsystems/atmosphere.ts</code>: resolves SUN → <code>DirectionalLight</code>, optional π intensity for PBR, <code>@babylonjs/addons/atmosphere</code>) → <code>level.atmosphere</code> (disposed with the level). Time of day follows the sun lamp's direction in Blender. See <a href="06-RENDERING.html">Rendering — Atmosphere</a>.</p>
-<h3>Post-processing</h3>
-<p>Babylon Scene › Post-Processing (<code>ui/post_panels.py</code>) edits <code>scene.bjs_scene.post</code> (<code>scene/post_processing.py</code>) → <code>export/post_processing.serialize_post_processing</code> (LUTs via <code>copy_asset</code> → <code>post/</code>) → manifest <code>scene.postProcessing</code> → <code>LevelLoader.FinalizeLevel</code>: <code>ApplySceneSettings</code> (clear/ambient, env, fog) → <code>ApplyAtmosphere</code> (when enabled) → … → <code>Level.Begin</code> (runtime cameras) → <code>ApplyPostProcessing</code> (<code>subsystems/postprocess.ts</code>: Default Pipeline + SSAO2 on <code>scene.activeCamera</code>) → <code>level.post</code>. See <a href="06-RENDERING.html">Rendering — Scene look</a>.</p>
-<h3>Animation autoplay</h3>
+<h3 id="post">Post-processing</h3>
+<p>Babylon Scene › Post-Processing (<code>ui/post_panels.py</code>) edits <code>scene.bjs_scene.post</code> (<code>scene/post_processing.py</code>) → <code>export/post_processing.serialize_post_processing</code> (LUTs via <code>copy_asset</code> → <code>post/</code>) → manifest <code>scene.postProcessing</code> → <code>LevelLoader.FinalizeLevel</code>: <code>ApplySceneSettings</code> (clear/ambient, env, fog) → <code>ApplyAtmosphere</code> (when enabled) → … → <code>Level.Begin</code> (runtime cameras) → <code>ApplyPostProcessing</code> (<code>subsystems/postprocess.ts</code>: Default Pipeline + SSAO2 on <code>scene.activeCamera</code>) → <code>level.post</code>. See <a href="06-RENDERING.html">Rendering — Scene look</a>. Trace: <a href="trace-post.html">trace-post</a>.</p>
+<h3 id="animation">Animation autoplay</h3>
 <p>NLA strips → <code>export/animation.serialize_animation</code> → <code>animation</code> block → <code>FindAnimationGroups</code> (node-membership scoping) → <code>ApplyAutoPlayAnimations</code> (stop loader-auto groups, start chosen clip). Skinned characters: author on the <strong>armature</strong> (<a href="07-AUDIO-ANIMATION.html">rule</a>).</p>
-<h3>Audio</h3>
+<h3 id="audio">Audio</h3>
 <p>AUDIO component → <code>export/assets.copy_asset</code> → <code>audio/&lt;file&gt;</code> + manifest → <code>audio.ApplyAudio</code> (engine v2 <code>CreateSoundAsync</code>, spatial attach) → promises settled in <code>FinalizeLevel</code>; autoplay waits <code>unlockAsync</code> → <code>entity.sounds</code>, <code>RegisterAttachment({type:&quot;AUDIO&quot;, data, sound})</code>, <code>GetSound(stem)</code>.</p>
-<h3>Trigger event → OnMessage</h3>
+<h3 id="trigger">Trigger event → OnMessage</h3>
 <p>Is Trigger + <strong>On Enter Events</strong> rows (<code>BJSTriggerEvent</code>) → manifest <code>collider.events[{target guid, message, filterTag}]</code> → registration queued in <code>ApplyComponents</code> → <code>triggers.WireTriggerEvents</code> (one <code>onTriggerCollisionObservable</code>) → on TRIGGER_ENTERED: body→entity via <code>metadata.bjsEntity</code>, tag gate → <code>target.SendMessage</code> → behavior <code>OnMessage</code>.</p>
-<h3>Constraint</h3>
+<h3 id="constraint">Constraint</h3>
 <p>CONSTRAINT fields → <code>serialize_components</code> (pivot/axis → Y-up; target GUID force-included; CUSTOM also exports <code>axes[]</code> per 6DoF row) → <code>constraints.BuildConstraints</code> in <code>FinalizeLevel</code>: <code>ComputeConstraintFrame</code> from live world transforms (pins as-placed pose) → Lock/BallAndSocket or 6DoF with <code>BuildAxisLimits</code> (presets) or <code>BuildCustomAxisLimits</code> (CUSTOM) → optional <code>ApplyMotor</code> (HINGE/SLIDER only) → <code>ownerBody.addConstraint</code> → <code>level.constraints</code> + <code>RegisterAttachment</code> on owner (<code>{type:&quot;CONSTRAINT&quot;, data, constraint}</code>).</p>
-<h3>Input action</h3>
-<p>Blender <strong>Input Actions</strong> panel (maps &gt; actions &gt; bindings + <strong>Scene Default</strong> map picker) → <code>input_actions/serialize.serialize_input_asset</code> + <code>defaultInputMap</code> → manifest <code>scene.inputActions</code> / <code>scene.defaultInputMap</code> → <code>InputManager.LoadAsset</code> (loader, before behaviors) → <code>@inputMap(&quot;Name&quot;)</code> fields injected per behavior; scripts without <code>@inputMap</code> receive the scene default on <code>behavior.input</code> → <code>Level.Begin</code> → <code>InputManager.Attach</code> (keyboard observable + enable maps); <code>RunFrame</code> → <code>InputManager.Process</code> FIRST (gamepad poll, actions evaluate, started/performed/canceled fire) → behaviors poll <code>ReadValue/ReadVector2/IsPressed/WasPressedThisFrame</code> → <code>InputManager.EndFrame</code> last (edge clear); <code>Dispose</code> → <code>Detach</code>.</p>
-<h3>Live Link</h3>
+<h3 id="input">Input action</h3>
+<p>Blender <strong>Input Actions</strong> panel (maps &gt; actions &gt; bindings + <strong>Scene Default</strong> map picker) → <code>input_actions/serialize.serialize_input_asset</code> + <code>defaultInputMap</code> → manifest <code>scene.inputActions</code> / <code>scene.defaultInputMap</code> → <code>InputManager.LoadAsset</code> (loader, before behaviors) → <code>@inputMap(&quot;Name&quot;)</code> fields injected per behavior; scripts without <code>@inputMap</code> receive the scene default on <code>behavior.input</code> → <code>Level.Begin</code> → <code>InputManager.Attach</code> (keyboard observable + enable maps); <code>RunFrame</code> → <code>InputManager.Process</code> FIRST (gamepad poll, actions evaluate, started/performed/canceled fire) → behaviors poll <code>ReadValue/ReadVector2/IsPressed/WasPressedThisFrame</code> → <code>InputManager.EndFrame</code> last (edge clear); <code>Dispose</code> → <code>Detach</code>. Prose: <a href="11-INPUT.html">11 — Input</a>. Trace: <a href="trace-input.html">trace-input</a>.</p>
+<h3 id="livelink">Live Link</h3>
 <p>Export remembers path (<code>scene.bjs_live_link_path</code>) → Ctrl+S → <code>export/live_link._on_save_post</code> → <code>validate</code> + <code>export_level</code> (side files overwrite stable paths via <code>begin_asset_export</code> / <code>unique_asset_path</code>) → manifest write → Vite <code>ReloadOnLevelExport</code> watches all of <code>public/levels/</code> (<code>path.resolve</code> path matching; 50ms debounce) → full page reload.</p>
-<h3>Debug Build</h3>
+<h3 id="debug">Debug Build</h3>
 <p>Checkbox (<code>scene.bjs_debug_build</code>) → manifest top-level <code>&quot;debug&quot;</code> → <code>level.debugEnabled</code> (missing = true) → gates <strong>C</strong>/<strong>I</strong> in <code>main.ts</code> and the <code>debugColliders</code> option.</p>
-<h3>2D GUI (GUI Editor JSON)</h3>
+<h3 id="gui2d">2D GUI (GUI Editor JSON)</h3>
 <p>GUI component (<code>components/</code> → <code>export/assets.copy_asset</code> to <code>gui/</code>) → manifest <code>{type:&quot;GUI&quot;, file, mode, …}</code> → <code>ApplyComponents</code> queues <code>ApplyGui</code> (<code>ui/gui2d.ts</code>) → <code>SettleTasks</code> in <code>FinalizeLevel</code> → <code>entity.guiTextures</code>, <code>RegisterAttachment({type:&quot;GUI&quot;, data, texture})</code>, <code>GetGui(stem)</code>. Trace: <a href="trace-gui.html">trace-gui.html</a>.</p>
-<h3>Particles (Particle / Node Particle Editor JSON)</h3>
+<h3 id="particles">Particles (Particle / Node Particle Editor JSON)</h3>
 <p>PARTICLE component → <code>export_particle_system</code> (<code>export/particles.py</code>: copy JSON, copy <strong>Particle Textures</strong> images, patch <code>ParticleTextureSourceBlock.url</code> in the exported file) → manifest → <code>ApplyParticles</code> (<code>subsystems/particles.ts</code>: <code>ResolveNodeParticleSetTextureUrls</code> + legacy or <code>NodeParticleSystemSet</code>) → mesh emitter or owned <code>Vector3</code> + optional <code>emptyEmitter</code> → <code>SettleTasks</code> → <code>WireParticleEmitterTracking</code> (<code>level.particleEmitterManager</code>, empties only) → <code>entity.particleSystems</code>, <code>RegisterAttachment</code>, <code>GetParticles(stem)</code>. Trace: <a href="trace-particles.html">trace-particles.html</a> · Blender: <a href="../blender/trace-particles.html">../blender/trace-particles.html</a>.</p>
-<h3>3D GUI (buttons + panels)</h3>
-<p>Nine <code>GUI3D_*</code> types → <code>serialize_components</code> (layout fields, click events, button images via <code>copy_asset</code>; click targets force-included) → registrations queued with <code>parentId</code> → <code>BuildGui3DControls</code> in <code>FinalizeLevel</code> (panels first, <code>blockLayout</code>, content after <code>addControl</code>) → <code>RegisterAttachment</code> per panel/control → <code>WireClickEvents</code> → <code>OnMessage</code> on target. Trace: <a href="trace-gui3d.html">trace-gui3d.html</a> · Blender: <a href="../blender/trace-gui3d.html">../blender/trace-gui3d.html</a>. Full write-up: <a href="10-UI.html">10-UI.md</a>.</p>
+<h3 id="materials">Node materials (NME JSON)</h3>
+<p>Material datablock (<code>materials/</code> + <strong>Properties › Material › Babylon</strong>) → <code>export_node_material</code> (<code>export/materials.py</code>: copy JSON, copy texture rows, patch <code>ImageSourceBlock</code> / <code>TextureBlock</code>) → manifest <code>materials[]</code> → after glTF load <code>ApplyNodeMaterials</code> (<code>subsystems/materials.ts</code>: <code>NodeMaterial.ParseFromFileAsync</code>, match by material name, shared cache per file). Trace: <a href="trace-materials.html">trace-materials.html</a> · Blender: <a href="../blender/trace-materials.html">../blender/trace-materials.html</a>.</p>
+<h3 id="gui3d">3D GUI (buttons + panels)</h3>
+<p>Nine <code>GUI3D_*</code> types → <code>serialize_components</code> (layout fields, click events, button images via <code>copy_asset</code>; click targets force-included) → registrations queued with <code>parentId</code> → <code>BuildGui3DControls</code> in <code>FinalizeLevel</code> (panels first, <code>blockLayout</code>, content after <code>addControl</code>) → <code>RegisterAttachment</code> per panel/control → <code>WireClickEvents</code> → <code>OnMessage</code> on target. Trace: <a href="trace-gui3d.html">trace-gui3d</a> · Blender: <a href="../blender/trace-gui3d.html">Blender trace-gui3d</a>. Full write-up: <a href="10-UI.html">10 — UI</a>.</p>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/engine/09-FEATURE-TRACES.html</code>, then <code>npm run docs:build</code>.

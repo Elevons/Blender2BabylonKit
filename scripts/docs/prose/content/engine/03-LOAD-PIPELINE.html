@@ -17,6 +17,10 @@
 </ol>
 <p>   whose extras carry <code>bjs_visible: false</code> (Blender viewport-hidden), set    <code>node.isVisible = false</code> and disable descendant lights/cameras. Render-disabled    objects never reach this step — they were omitted at export.</p>
 <ol>
+<li><strong><code>ApplyNodeMaterials</code></strong> (<code>subsystems/materials.ts</code>) — when the manifest</li>
+</ol>
+<p>   includes <code>materials[]</code>, parse each Node Material Editor JSON from <code>materials/</code>    (cached per file) and replace <code>mesh.material</code> on every mesh whose glTF material    <strong>name</strong> matches the Blender material name. Runs after visibility, before entities.</p>
+<ol>
 <li><strong><code>BuildIdIndex</code></strong> (<code>loader/nodeResolution.ts</code>) — walk every transform node</li>
 </ol>
 <p>   + mesh, map <code>metadata.gltf.extras.bjs_id</code> → node.</p>

@@ -7,13 +7,14 @@ behavior lives in operators/.
 
 import bpy
 
-from . import menus, view3d_panels, scene_panels
+from . import menus, view3d_panels, scene_panels, material_panels
 
 # Parents must register before children (bl_parent_id).
 classes = (
     menus.classes
     + view3d_panels.classes
     + scene_panels.classes
+    + material_panels.classes
 )
 
 

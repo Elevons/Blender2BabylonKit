@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Data model</span><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Data model</span><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="input-actions.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="scene-settings.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Scene settings</a><a href="validation.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-cog-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">CoM preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Node materials</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Blender — Data model","nodes":[{"id":1,"x":40,"y":40,"w":160,"h":44,"label":"ensure_object_id","sub":"GUID assignment","desc":"Stamps a unique bjs_id custom property on an object (and re-issues duplicates). This is what promotes a plain object into an addressable entity. ID_KEY is defined here (core/ids.py) and imported by the runtime so both halves agree on the key.","meta":[["Prop","obj['bjs_id']"],["File","core/ids.py"]]},{"id":2,"x":40,"y":170,"w":160,"h":44,"label":"BJSComponent","sub":"one group, many faces","desc":"A single PropertyGroup holding fields for every component type, switched by comp_type (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT/GUI/PARTICLE/MSDF_TEXT/GUI3D_*). One collection of these lives on every object (obj.bjs_components).","meta":[["Switch","comp_type enum"],["File","components/component.py"]]},{"id":3,"x":300,"y":60,"w":160,"h":44,"label":"BJSExposedVar","sub":"script values","desc":"One per @exposed field on a SCRIPT component: name, type, and the value (float/bool/string/vector/color/entity/enum/list). LIST vars also own list_items, list_count (typed resize), and show_expanded (per-list collapse, independent of the component header). Object & enum changes fire update callbacks.","meta":[["Lives in","comp.vars"],["File","components/exposed_vars.py"]]},{"id":4,"x":300,"y":180,"w":160,"h":44,"label":"BJSListItem","sub":"list elements","desc":"Elements of an exposed list field (e.g. entity lists). add_list_item seeds the right value type; the parent var's list_count get/set lets you type a length instead of clicking +, and bjs.list_add_selected drops every selected object into an entity list at once. ui/component_draw.py draws each list in its own collapsible box.","meta":[["Lives in","var.list_items"],["File","components/exposed_vars.py"]]},{"id":5,"x":300,"y":290,"w":160,"h":44,"label":"BJSTriggerEvent","sub":"on-enter / on-click rows","desc":"Trigger collider On Enter reactions AND 3D GUI button On Click reactions: target object + message (+ optional tag filter for triggers). Serialized into collider.events or gui3d events[].","meta":[["Lives in","comp.trigger_events / gui3d_events"],["File","components/component.py"]]},{"id":6,"x":560,"y":110,"w":160,"h":44,"label":"sync_exposed_vars","sub":"reconcile","desc":"Given freshly parsed @exposed fields, add new vars / drop removed ones / keep existing values. Called by the Sync operator (operators/scripts.py) and on script-path change.","meta":[["Pairs with","core/script_parse"],["File","components/exposed_vars.py"]]},{"id":7,"x":560,"y":230,"w":160,"h":44,"label":"BJSLightShadow / BJSAnimationSettings","sub":"per-object blocks","desc":"Shadow parameters per lamp; autoplay clip/loop/speed + the NLA strip list per object. Parallel on Object (obj.bjs_shadow / obj.bjs_animation) — not fields inside BJSComponent.","meta":[["On","Object"],["File","components/object_settings.py"]]},{"id":8,"x":560,"y":350,"w":160,"h":44,"label":"copy_component","sub":"clipboard","desc":"Deep-copies one component group to another (copy/cut/paste, duplicate). _copy_props handles the field-by-field clone.","meta":[["Used by","paste/duplicate ops"],["File","components/clipboard.py"]]}],"edges":[{"id":100,"src":2,"tgt":3,"label":"vars"},{"id":101,"src":3,"tgt":4,"label":"items"},{"id":102,"src":2,"tgt":5,"label":"trigger + gui3d events"},{"id":103,"src":6,"tgt":3,"label":"maintains"},{"id":107,"src":6,"tgt":2,"label":"parsed fields"},{"id":104,"src":2,"tgt":7,"label":"siblings on Object"},{"id":105,"src":8,"tgt":2,"label":"clones"},{"id":106,"src":1,"tgt":3,"label":"stamps bjs_id"}]};
+const DIAGRAM_DATA = {"title":"Blender — Data model","nodes":[{"id":1,"x":40,"y":40,"w":160,"h":44,"label":"ensure_object_id","sub":"GUID assignment","desc":"Stamps a unique bjs_id custom property on an object (and re-issues duplicates). This is what promotes a plain object into an addressable entity. ID_KEY is defined here (core/ids.py) and imported by the runtime so both halves agree on the key.","meta":[["Prop","obj['bjs_id']"],["File","core/ids.py"],["Trace","trace-guid.html"]]},{"id":2,"x":40,"y":170,"w":160,"h":44,"label":"BJSComponent","sub":"one group, many faces","desc":"A single PropertyGroup holding fields for every component type, switched by comp_type (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT/GUI/PARTICLE/MSDF_TEXT/GUI3D_*). One collection of these lives on every object (obj.bjs_components).","meta":[["Switch","comp_type enum"],["File","components/component.py"],["Trace","trace-gui3d.html"],["Trace","trace-particles.html"]]},{"id":3,"x":300,"y":60,"w":160,"h":44,"label":"BJSExposedVar","sub":"script values","desc":"One per @exposed field on a SCRIPT component: name, type, and the value (float/bool/string/vector/color/entity/enum/list). LIST vars also own list_items, list_count (typed resize), and show_expanded (per-list collapse, independent of the component header). Object & enum changes fire update callbacks.","meta":[["Lives in","comp.vars"],["File","components/exposed_vars.py"],["Trace","trace-exposed.html"]]},{"id":4,"x":300,"y":180,"w":160,"h":44,"label":"BJSListItem","sub":"list elements","desc":"Elements of an exposed list field (e.g. entity lists). add_list_item seeds the right value type; the parent var's list_count get/set lets you type a length instead of clicking +, and bjs.list_add_selected drops every selected object into an entity list at once. ui/component_draw.py draws each list in its own collapsible box.","meta":[["Lives in","var.list_items"],["File","components/exposed_vars.py"],["Trace","trace-exposed.html"]]},{"id":5,"x":300,"y":290,"w":160,"h":44,"label":"BJSTriggerEvent","sub":"on-enter / on-click rows","desc":"Trigger collider On Enter reactions AND 3D GUI button On Click reactions: target object + message (+ optional tag filter for triggers). Serialized into collider.events or gui3d events[].","meta":[["Lives in","comp.trigger_events / gui3d_events"],["File","components/component.py"],["Trace","trace-gui3d.html"],["Trace","trace-particles.html"]]},{"id":6,"x":560,"y":110,"w":160,"h":44,"label":"sync_exposed_vars","sub":"reconcile","desc":"Given freshly parsed @exposed fields, add new vars / drop removed ones / keep existing values. Called by the Sync operator (operators/scripts.py) and on script-path change.","meta":[["Pairs with","core/script_parse"],["File","components/exposed_vars.py"],["Trace","trace-exposed.html"]]},{"id":7,"x":560,"y":230,"w":160,"h":44,"label":"BJSLightShadow / BJSAnimationSettings","sub":"per-object blocks","desc":"Shadow parameters per lamp; autoplay clip/loop/speed + the NLA strip list per object. Parallel on Object (obj.bjs_shadow / obj.bjs_animation) — not fields inside BJSComponent.","meta":[["On","Object"],["File","components/object_settings.py"]]},{"id":8,"x":560,"y":350,"w":160,"h":44,"label":"copy_component","sub":"clipboard","desc":"Deep-copies one component group to another (copy/cut/paste, duplicate). _copy_props handles the field-by-field clone.","meta":[["Used by","paste/duplicate ops"],["File","components/clipboard.py"]]}],"edges":[{"id":100,"src":2,"tgt":3,"label":"vars"},{"id":101,"src":3,"tgt":4,"label":"items"},{"id":102,"src":2,"tgt":5,"label":"trigger + gui3d events"},{"id":103,"src":6,"tgt":3,"label":"maintains"},{"id":107,"src":6,"tgt":2,"label":"parsed fields"},{"id":104,"src":2,"tgt":7,"label":"siblings on Object"},{"id":105,"src":8,"tgt":2,"label":"clones"},{"id":106,"src":1,"tgt":3,"label":"stamps bjs_id"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
 </style>

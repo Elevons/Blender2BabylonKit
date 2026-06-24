@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Live Link</span><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #6b7fff;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #6b7fff;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Live Link</span><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Node materials</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-lights.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Lights</a><a href="trace-cameras.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Cameras</a><a href="trace-shadows.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Shadows</a><a href="trace-post.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Post-processing</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — Live Link: Ctrl+S → browser reload","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _on_save_post","sub":"live_link.py","desc":"BLENDER — save_post handler: checkbox on + path remembered → validate + export. Failures log; the save never breaks.","meta":[["File","blender_addon/export/live_link.py"],["Line","42"]],"code":"def _on_save_post(filepath):\n    \"\"\"Runs after every .blend save; exports scenes that opted in.\"\"\"\n    for scene in bpy.data.scenes:\n        if getattr(scene, \"bjs_live_link\", False):\n            _do_live_export(scene)","file":"blender_addon/export/live_link.py","line":42},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ReloadOnLevelExport","sub":"vite.config.ts","desc":"APP — Vite plugin watches all files under public/levels/ (glb, env/, manifest, …); IsLevelAsset uses path.resolve for chokidar paths; 50ms debounced full reload so replaced HDRs refresh even when .scene.json bytes are unchanged.","meta":[["File","apps/playground/vite.config.ts"],["Line","15"]],"code":"/**\n * Reload the browser whenever an exported level changes in public/levels.\n * Vite serves public/ statically without watching it for HMR, so this plugin\n * closes the loop for the Blender add-on's Live Link: save in Blender ->\n * re-export -> full page reload.\n *\n * Watches the whole level folder (glb, env/, manifest, …), not only\n * .scene.json — so a replaced HDR still reloads when manifest bytes are unchanged.\n */\nfunction ReloadOnLevelExport(): Plugin\n{\n  let reloadTimer: ReturnType<typeof setTimeout> | undefined;\n\n  function ScheduleReload(server: ViteDevServer): void\n  {\n    clearTimeout(reloadTimer);\n    // Debounce: one export touches glb, env/, and .scene.json in quick succession.\n    reloadTimer = setTimeout(() =>\n    {\n      server.ws.send({ type: \"full-reload\" });\n    }, 50);\n  }\n\n  return {\n    name: \"bjs-reload-on-level-export\",\n    configureServer(server)\n    {\n      const levelsDir = path.resolve(server.config.root, \"public/levels\");\n      server.watcher.add(levelsDir);\n      const onFsEvent = (changedPath: string): void =>\n      {\n        if (IsLevelAsset(changedPath, server.config.root))\n        {\n          ScheduleReload(server);\n        }\n      };\n      server.watcher.on(\"change\", onFsEvent);\n      server.watcher.on(\"add\", onFsEvent);\n    },\n  };\n}","file":"apps/playground/vite.config.ts","line":15}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — Live Link: Ctrl+S → browser reload","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. _on_save_post","sub":"live_link.py","desc":"BLENDER — save_post handler: checkbox on + path remembered → validate + export. Failures log; the save never breaks.","meta":[["File","blender_addon/export/live_link.py"],["Line","42"],["Diagram","blender-addon.html"],["Diagram","workflow.html"]],"code":"def _on_save_post(filepath):\n    \"\"\"Runs after every .blend save; exports scenes that opted in.\"\"\"\n    for scene in bpy.data.scenes:\n        if getattr(scene, \"bjs_live_link\", False):\n            _do_live_export(scene)","file":"blender_addon/export/live_link.py","line":42},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. ReloadOnLevelExport","sub":"vite.config.ts","desc":"APP — Vite plugin watches all files under public/levels/ (glb, env/, manifest, …); IsLevelAsset uses path.resolve for chokidar paths; 50ms debounced full reload so replaced HDRs refresh even when .scene.json bytes are unchanged.","meta":[["File","apps/playground/vite.config.ts"],["Line","15"],["Diagram","blender-addon.html"],["Diagram","workflow.html"]],"code":"/**\n * Reload the browser whenever an exported level changes in public/levels.\n * Vite serves public/ statically without watching it for HMR, so this plugin\n * closes the loop for the Blender add-on's Live Link: save in Blender ->\n * re-export -> full page reload.\n *\n * Watches the whole level folder (glb, env/, manifest, …), not only\n * .scene.json — so a replaced HDR still reloads when manifest bytes are unchanged.\n */\nfunction ReloadOnLevelExport(): Plugin\n{\n  let reloadTimer: ReturnType<typeof setTimeout> | undefined;\n\n  function ScheduleReload(server: ViteDevServer): void\n  {\n    clearTimeout(reloadTimer);\n    // Debounce: one export touches glb, env/, and .scene.json in quick succession.\n    reloadTimer = setTimeout(() =>\n    {\n      server.ws.send({ type: \"full-reload\" });\n    }, 50);\n  }\n\n  return {\n    name: \"bjs-reload-on-level-export\",\n    configureServer(server)\n    {\n      const levelsDir = path.resolve(server.config.root, \"public/levels\");\n      server.watcher.add(levelsDir);\n      const onFsEvent = (changedPath: string): void =>\n      {\n        if (IsLevelAsset(changedPath, server.config.root))\n        {\n          ScheduleReload(server);\n        }\n      };\n      server.watcher.on(\"change\", onFsEvent);\n      server.watcher.on(\"add\", onFsEvent);\n    },\n  };\n}","file":"apps/playground/vite.config.ts","line":15}],"edges":[{"id":100,"src":1,"tgt":2,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
 </style>
@@ -1133,8 +1179,9 @@ function exportSelf() {
 <style>
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:2; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:2; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
 </style>
 <script>
@@ -1144,14 +1191,17 @@ function exportSelf() {
     __openNodePanel(n);
     if (!n.code) { return; }
     const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
     loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
   };
 </script></body>
 </html>

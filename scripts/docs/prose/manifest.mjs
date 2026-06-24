@@ -101,6 +101,21 @@ export const PROSE_CHAPTERS = [
     title: "10 — UI",
     fragment: "engine/10-UI.html",
     prev: "09-FEATURE-TRACES.html",
+    next: "11-INPUT.html",
+  },
+  {
+    href: "engine/11-INPUT.html",
+    side: "engine",
+    title: "11 — Input",
+    fragment: "engine/11-INPUT.html",
+    prev: "10-UI.html",
+  },
+  // — Blender —
+  {
+    href: "blender/00-INDEX.html",
+    side: "blender",
+    title: "Blender Add-on Documentation",
+    fragment: "blender/00-INDEX.html",
   },
   // — Launcher —
   {
@@ -159,12 +174,24 @@ export function ToolbarHtml(chapter)
       '<a href="../engine/00-INDEX.html">Runtime docs</a>',
     ].join("\n    ");
   }
+  if (chapter.side === "blender")
+  {
+    return [
+      '<a href="../index.html">← Search</a>',
+      '<span class="sep">|</span>',
+      '<a href="00-INDEX.html">Blender index</a>',
+      '<span class="sep">|</span>',
+      '<a href="index.html">Subsystem diagrams</a>',
+      '<span class="sep">|</span>',
+      '<a href="../engine/00-INDEX.html">Runtime docs</a>',
+    ].join("\n    ");
+  }
   return [
     '<a href="../index.html">← Search</a>',
     '<span class="sep">|</span>',
     '<a href="00-INDEX.html">Engine index</a>',
     '<span class="sep">|</span>',
-    '<a href="index.html">Diagrams</a>',
+    '<a href="index.html">Subsystem diagrams</a>',
     '<span class="sep">|</span>',
     '<a href="../blender/index.html">Blender docs</a>',
   ].join("\n    ");

@@ -13,7 +13,7 @@ Where things are:
     export/         everything that writes the .glb + .scene.json (+ live link)
     operators/      component / script / export operators
     ui/             all panels and menus (viewport N-panels)
-    viewport/       GPU overlays (collider wireframe preview)
+    viewport/       GPU overlays (collider wireframe + CoM preview)
 
 Where the UI is:
     3D viewport N-panel "Babylon Object" tab -> the selected object (components,
@@ -36,11 +36,11 @@ if "components" in locals():
     for _name in _names:
         importlib.reload(sys.modules[_name])
 
-from . import components, scene, input_actions, export, operators, ui, viewport
+from . import components, scene, input_actions, materials, export, operators, ui, viewport
 
 # Registration order: data first (properties the UI reads), then behavior,
 # then presentation, then overlays. core/ is pure functions — nothing to register.
-_modules = (components, scene, input_actions, export, operators, ui, viewport)
+_modules = (components, scene, input_actions, materials, export, operators, ui, viewport)
 
 
 def register():

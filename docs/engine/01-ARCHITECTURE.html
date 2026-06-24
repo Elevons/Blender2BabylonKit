@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,14 +205,15 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="00-INDEX.html">Prev</a> <span class="dim">·</span> <a href="02-BLENDER-ADDON.html">Next →</a></p>
   <article><h1>01 — Architecture</h1>
+<p class="doc-links">Subsystem diagram: <a href="architecture.html">architecture.html</a> · Overview: <a href="index.html">index.html</a></p>
 <h2>The core idea: two artifacts</h2>
 <blockquote><p>If glTF can already express it, the glb owns it and the engine writes no code for it. If it can't, it goes in the manifest and a small subsystem applies it.</p></blockquote>
-<table><thead><tr><th>Artifact</th><th>Carries</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>level.glb</code></td><td>geometry, transforms, hierarchy, materials, lights, cameras, animation clips</td><td>Babylon's glTF importer</td></tr><tr><td><code>level.scene.json</code></td><td>components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), per-light/camera/scene settings, <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>, schema <strong>v4</strong></td><td>our <code>LevelLoader</code></td></tr></tbody></table>
+<table><thead><tr><th>Artifact</th><th>Carries</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>level.glb</code></td><td>geometry, transforms, hierarchy, materials (standard PBR), lights, cameras, animation clips</td><td>Babylon's glTF importer</td></tr><tr><td><code>level.scene.json</code></td><td>components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), optional <code>materials[]</code> (Node Material Editor overrides), per-light/camera/scene settings, <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>, schema <strong>v4</strong></td><td>our <code>LevelLoader</code></td></tr></tbody></table>
 <p>The manifest never duplicates the glb — it only adds. This is why there's a <code>subsystems/physics.ts</code> but no <code>meshes.ts</code>: meshes ride entirely in the glb.</p>
 <h2>Entity identity (GUIDs)</h2>
 <p>Every addressable Blender object gets a GUID in a custom property (<code>bjs_id</code>, defined once as <code>ID_KEY</code> on both sides). The exporter writes it into the glTF node's <code>extras</code>; the manifest references the same GUID. At load it surfaces at <code>node.metadata.gltf.extras.bjs_id</code> (via the <code>ExtrasAsMetadata</code> loader extension) and the loader matches manifest entity → glb node by GUID, name as a legacy fallback. A GUID is what makes an object an *entity*; pure geometry without one just lives in the glb. GUIDs are auto-assigned to anything that needs to be findable: objects with components, lights, cameras, and any object referenced by an entity field, trigger event, or constraint target.</p>
@@ -212,6 +231,7 @@
       input/              #   InputManager · maps/actions/bindings · @inputMap
       subsystems/         #   physics lights cameras/ shadows constraints audio
                           #   triggers environment fog atmosphere postprocess animation
+                          #   materials (NME overrides)
   apps/                   # each game is an app; engine reaches it via symlink
     playground/           #   the dev/test app (Vite); template for npm run create
   blender_addon/          # the editor half (Python, Blender 4.2+ extension)

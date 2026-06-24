@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,7 +205,7 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="02-BLENDER-ADDON.html">Prev</a> <span class="dim">·</span> <a href="04-SCRIPTING.html">Next →</a></p>
@@ -209,6 +227,10 @@
 <li><strong><code>ApplyNodeVisibility</code></strong> (<code>loader/nodeResolution.ts</code>) — for each glTF node</li>
 </ol>
 <p>   whose extras carry <code>bjs_visible: false</code> (Blender viewport-hidden), set    <code>node.isVisible = false</code> and disable descendant lights/cameras. Render-disabled    objects never reach this step — they were omitted at export.</p>
+<ol>
+<li><strong><code>ApplyNodeMaterials</code></strong> (<code>subsystems/materials.ts</code>) — when the manifest</li>
+</ol>
+<p>   includes <code>materials[]</code>, parse each Node Material Editor JSON from <code>materials/</code>    (cached per file) and replace <code>mesh.material</code> on every mesh whose glTF material    <strong>name</strong> matches the Blender material name. Runs after visibility, before entities.</p>
 <ol>
 <li><strong><code>BuildIdIndex</code></strong> (<code>loader/nodeResolution.ts</code>) — walk every transform node</li>
 </ol>

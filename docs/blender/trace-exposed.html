@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">@exposed</span><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="input-actions.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Input Actions</a><a href="scene-settings.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Scene settings</a><a href="validation.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Validation</a><a href="livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;border-bottom:1px solid #e0a060;">Live Link</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">@exposed</span><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-cog-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">CoM preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Node materials</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Trace — @exposed: TypeScript → Blender fields","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. parse_exposed","sub":"script_parse.py","desc":"Entry: read a behavior .ts file, scan its @exposed decorators, return field descriptors (name, type, default, options). No TS runtime — pure regex, hence the single-line-literal rule.","meta":[["File","blender_addon/core/script_parse.py"],["Line","184"]],"code":"def parse_exposed(filepath):\n    \"\"\"Return a list of dicts: {name, vtype, default, min, max, label}.\"\"\"\n    if not filepath or not os.path.isfile(filepath):\n        return []\n    try:\n        with open(filepath, \"r\", encoding=\"utf-8\") as f:\n            src = f.read()\n    except OSError:\n        return []\n\n    fields = []\n    seen = set()\n    for arg_src, after in _scan_decorators(src):\n        m = _FIELD.match(src, after)\n        if not m:\n            continue\n        name, default = m.group(1), m.group(2)\n        if name in seen:\n            continue\n        opts = _parse_options(arg_src)\n        type_hint = opts.get(\"type\")\n        elem_type = \"\"\n        options = None\n\n        if type_hint == \"enum\":\n            options = opts.get(\"options\", [])\n            value = _parse_string_literal(default)\n            if value is None:\n                value = options[0] if options else \"\"\n            vtype = \"ENUM\"\n        elif type_hint == \"list\":\n            elem_type = opts.get(\"of\", \"float\")\n            value = _parse_list_default(default, elem_type)\n            vtype = \"LIST\"\n        else:\n            parsed = _parse_default(default, type_hint)\n            if parsed is None:\n                continue\n            vtype, value = parsed\n\n        seen.add(name)\n        fields.append({\n            \"name\": name,\n            \"vtype\": vtype,\n            \"default\": value,\n            \"elem_type\": elem_type.upper(),  # list element type (LIST only)\n            \"options\": options,              # enum choices (ENUM only)\n            \"min\": opts.get(\"min\"),\n            \"max\": opts.get(\"max\"),\n            \"label\": opts.get(\"label\", \"\"),\n        })\n    return fields","file":"blender_addon/core/script_parse.py","line":184},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _scan_decorators","sub":"script_parse.py","desc":"Finds each `@exposed(...)` and the field it annotates, capturing the option blob and the field name + default expression.","meta":[["File","blender_addon/core/script_parse.py"],["Line","37"]],"code":"def _scan_decorators(src):\n    \"\"\"Yield (args_src, index_after_close_paren) for each @exposed(...).\n\n    Scans parentheses with string-literal awareness so labels/values containing\n    '(' or ')' (e.g. label: \"Speed (deg/s)\") don't break parsing — which a\n    naive regex would.\"\"\"\n    token = \"@exposed\"\n    i = 0\n    while True:\n        idx = src.find(token, i)\n        if idx == -1:\n            return\n        j = idx + len(token)\n        while j < len(src) and src[j].isspace():\n            j += 1\n        if j >= len(src) or src[j] != '(':\n            i = idx + len(token)\n            continue\n        depth, k, in_str = 0, j, None\n        while k < len(src):\n            c = src[k]\n            if in_str:\n                if c == '\\\\':\n                    k += 2\n                    continue\n                if c == in_str:\n                    in_str = None\n            elif c in \"\\\"'`\":\n                in_str = c\n            elif c == '(':\n                depth += 1\n            elif c == ')':\n                depth -= 1\n                if depth == 0:\n                    break\n            k += 1\n        yield (src[j + 1:k], k + 1)\n        i = k + 1","file":"blender_addon/core/script_parse.py","line":37},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _parse_default","sub":"script_parse.py","desc":"Turns a literal default ([0,1,0], 5, \"idle\", true) into a Python value of the right type for the Blender property.","meta":[["File","blender_addon/core/script_parse.py"],["Line","131"]],"code":"def _parse_default(literal, type_hint):\n    \"\"\"Return (vtype, value) or None if unparseable.\"\"\"\n    lit = literal.strip()\n\n    # Object references default to null; the type hint is required to know it's\n    # an entity (a bare `= null` carries no type information on its own).\n    if type_hint in (\"entity\", \"node\", \"object\"):\n        return (\"ENTITY\", None)\n\n    if lit in (\"true\", \"false\"):\n        return (\"BOOL\", lit == \"true\")\n\n    if lit.startswith(\"[\"):\n        nums = re.findall(r'-?\\d+(?:\\.\\d+)?', lit)[:3]\n        vals = [float(n) for n in nums]\n        vals += [0.0] * (3 - len(vals))\n        return (\"COLOR\" if type_hint == \"color\" else \"VECTOR3\", vals[:3])\n\n    if lit and lit[0] in \"\\\"'`\":\n        return (\"STRING\", lit.strip(\"\\\"'`\"))\n\n    num = lit.split(\"//\")[0].strip()\n    try:\n        return (\"FLOAT\", float(num))\n    except ValueError:\n        return None","file":"blender_addon/core/script_parse.py","line":131},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. BJS_OT_sync_vars","sub":"scripts.py","desc":"The Sync button: re-parse the script and reconcile the component's vars (add new, drop removed, keep existing values).","meta":[["File","blender_addon/operators/scripts.py"],["Line","60"]],"code":"class BJS_OT_sync_vars(Operator):\n    \"\"\"Re-read @exposed variables from the script file (after editing it).\"\"\"\n    bl_idname = \"bjs.sync_vars\"\n    bl_label = \"Sync Variables\"\n    bl_options = {'REGISTER', 'UNDO'}\n\n    comp_index: IntProperty()\n\n    def execute(self, context):\n        obj = inspector_object(context)\n        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):\n            return {'CANCELLED'}\n        comp = obj.bjs_components[self.comp_index]\n        if not comp.script_path:\n            self.report({'WARNING'}, \"Pick a script first\")\n            return {'CANCELLED'}\n        n = _sync_component_vars(comp)\n        self.report({'INFO'}, f\"Synced {n} variable(s)\")\n        return {'FINISHED'}","file":"blender_addon/operators/scripts.py","line":60},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. sync_exposed_vars","sub":"exposed_vars.py","desc":"The reconcile itself — the function Sync and the script-path callback share.","meta":[["File","blender_addon/components/exposed_vars.py"],["Line","147"]],"code":"def sync_exposed_vars(comp, fields):\n    \"\"\"Reconcile a component's exposed_vars with freshly parsed `fields`,\n    preserving existing values where the name and type still match.\"\"\"\n    existing = {v.name: v for v in comp.exposed_vars}\n    keep = {f[\"name\"] for f in fields}\n\n    # Prune vars no longer exposed by the script.\n    for i in range(len(comp.exposed_vars) - 1, -1, -1):\n        if comp.exposed_vars[i].name not in keep:\n            comp.exposed_vars.remove(i)\n\n    for f in fields:\n        v = existing.get(f[\"name\"])\n        new_type = f[\"vtype\"]\n        new_elem = f.get(\"elem_type\") or 'FLOAT'\n        # A list whose element type changed must be rebuilt; same for any type swap.\n        recreate = (\n            v is None\n            or v.vtype != new_type\n            or (new_type == 'LIST' and v.elem_type != new_elem)\n        )\n        if recreate:\n            if v is not None:\n                comp.exposed_vars.remove(list(comp.exposed_vars).index(v))\n            v = comp.exposed_vars.add()\n            v.name = f[\"name\"]\n            v.vtype = new_type\n            v.elem_type = new_elem\n            _init_var_value(v, f)\n        # Enum choices can change without a type change, so refresh every sync.\n        if new_type == 'ENUM':\n            v.enum_options = ENUM_SEP.join(f.get(\"options\") or [])\n            choices = _enum_choices(v)\n            if choices and v.s_val not in choices:\n                v.s_val = choices[0]\n        v.label = f[\"label\"]","file":"blender_addon/components/exposed_vars.py","line":147}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
+const DIAGRAM_DATA = {"title":"Trace — @exposed: TypeScript → Blender fields","nodes":[{"id":1,"x":40,"y":40,"w":190,"h":56,"label":"1. parse_exposed","sub":"script_parse.py","desc":"Entry: read a behavior .ts file, scan its @exposed decorators, return field descriptors (name, type, default, options). No TS runtime — pure regex, hence the single-line-literal rule.","meta":[["File","blender_addon/core/script_parse.py"],["Line","184"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"def parse_exposed(filepath):\n    \"\"\"Return a list of dicts: {name, vtype, default, min, max, label}.\"\"\"\n    if not filepath or not os.path.isfile(filepath):\n        return []\n    try:\n        with open(filepath, \"r\", encoding=\"utf-8\") as f:\n            src = f.read()\n    except OSError:\n        return []\n\n    fields = []\n    seen = set()\n    for arg_src, after in _scan_decorators(src):\n        m = _FIELD.match(src, after)\n        if not m:\n            continue\n        name, default = m.group(1), m.group(2)\n        if name in seen:\n            continue\n        opts = _parse_options(arg_src)\n        type_hint = opts.get(\"type\")\n        elem_type = \"\"\n        options = None\n\n        if type_hint == \"enum\":\n            options = opts.get(\"options\", [])\n            value = _parse_string_literal(default)\n            if value is None:\n                value = options[0] if options else \"\"\n            vtype = \"ENUM\"\n        elif type_hint == \"list\":\n            elem_type = opts.get(\"of\", \"float\")\n            value = _parse_list_default(default, elem_type)\n            vtype = \"LIST\"\n        else:\n            parsed = _parse_default(default, type_hint)\n            if parsed is None:\n                continue\n            vtype, value = parsed\n\n        seen.add(name)\n        fields.append({\n            \"name\": name,\n            \"vtype\": vtype,\n            \"default\": value,\n            \"elem_type\": elem_type.upper(),  # list element type (LIST only)\n            \"options\": options,              # enum choices (ENUM only)\n            \"min\": opts.get(\"min\"),\n            \"max\": opts.get(\"max\"),\n            \"label\": opts.get(\"label\", \"\"),\n        })\n    return fields","file":"blender_addon/core/script_parse.py","line":184},{"id":2,"x":300,"y":40,"w":190,"h":56,"label":"2. _scan_decorators","sub":"script_parse.py","desc":"Finds each `@exposed(...)` and the field it annotates, capturing the option blob and the field name + default expression.","meta":[["File","blender_addon/core/script_parse.py"],["Line","37"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"def _scan_decorators(src):\n    \"\"\"Yield (args_src, index_after_close_paren) for each @exposed(...).\n\n    Scans parentheses with string-literal awareness so labels/values containing\n    '(' or ')' (e.g. label: \"Speed (deg/s)\") don't break parsing — which a\n    naive regex would.\"\"\"\n    token = \"@exposed\"\n    i = 0\n    while True:\n        idx = src.find(token, i)\n        if idx == -1:\n            return\n        j = idx + len(token)\n        while j < len(src) and src[j].isspace():\n            j += 1\n        if j >= len(src) or src[j] != '(':\n            i = idx + len(token)\n            continue\n        depth, k, in_str = 0, j, None\n        while k < len(src):\n            c = src[k]\n            if in_str:\n                if c == '\\\\':\n                    k += 2\n                    continue\n                if c == in_str:\n                    in_str = None\n            elif c in \"\\\"'`\":\n                in_str = c\n            elif c == '(':\n                depth += 1\n            elif c == ')':\n                depth -= 1\n                if depth == 0:\n                    break\n            k += 1\n        yield (src[j + 1:k], k + 1)\n        i = k + 1","file":"blender_addon/core/script_parse.py","line":37},{"id":3,"x":560,"y":40,"w":190,"h":56,"label":"3. _parse_default","sub":"script_parse.py","desc":"Turns a literal default ([0,1,0], 5, \"idle\", true) into a Python value of the right type for the Blender property.","meta":[["File","blender_addon/core/script_parse.py"],["Line","131"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"def _parse_default(literal, type_hint):\n    \"\"\"Return (vtype, value) or None if unparseable.\"\"\"\n    lit = literal.strip()\n\n    # Object references default to null; the type hint is required to know it's\n    # an entity (a bare `= null` carries no type information on its own).\n    if type_hint in (\"entity\", \"node\", \"object\"):\n        return (\"ENTITY\", None)\n\n    if lit in (\"true\", \"false\"):\n        return (\"BOOL\", lit == \"true\")\n\n    if lit.startswith(\"[\"):\n        nums = re.findall(r'-?\\d+(?:\\.\\d+)?', lit)[:3]\n        vals = [float(n) for n in nums]\n        vals += [0.0] * (3 - len(vals))\n        return (\"COLOR\" if type_hint == \"color\" else \"VECTOR3\", vals[:3])\n\n    if lit and lit[0] in \"\\\"'`\":\n        return (\"STRING\", lit.strip(\"\\\"'`\"))\n\n    num = lit.split(\"//\")[0].strip()\n    try:\n        return (\"FLOAT\", float(num))\n    except ValueError:\n        return None","file":"blender_addon/core/script_parse.py","line":131},{"id":4,"x":560,"y":190,"w":190,"h":56,"label":"4. BJS_OT_sync_vars","sub":"scripts.py","desc":"The Sync button: re-parse the script and reconcile the component's vars (add new, drop removed, keep existing values).","meta":[["File","blender_addon/operators/scripts.py"],["Line","60"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"class BJS_OT_sync_vars(Operator):\n    \"\"\"Re-read @exposed variables from the script file (after editing it).\"\"\"\n    bl_idname = \"bjs.sync_vars\"\n    bl_label = \"Sync Variables\"\n    bl_options = {'REGISTER', 'UNDO'}\n\n    comp_index: IntProperty()\n\n    def execute(self, context):\n        obj = inspector_object(context)\n        if not obj or not (0 <= self.comp_index < len(obj.bjs_components)):\n            return {'CANCELLED'}\n        comp = obj.bjs_components[self.comp_index]\n        if not comp.script_path:\n            self.report({'WARNING'}, \"Pick a script first\")\n            return {'CANCELLED'}\n        n = _sync_component_vars(comp)\n        self.report({'INFO'}, f\"Synced {n} variable(s)\")\n        return {'FINISHED'}","file":"blender_addon/operators/scripts.py","line":60},{"id":5,"x":300,"y":190,"w":190,"h":56,"label":"5. sync_exposed_vars","sub":"exposed_vars.py","desc":"The reconcile itself — the function Sync and the script-path callback share.","meta":[["File","blender_addon/components/exposed_vars.py"],["Line","147"],["Diagram","data-model.html"],["Diagram","index.html"],["Diagram","input-actions.html"],["Diagram","livelink.html"],["Diagram","scene-settings.html"],["Diagram","validation.html"]],"code":"def sync_exposed_vars(comp, fields):\n    \"\"\"Reconcile a component's exposed_vars with freshly parsed `fields`,\n    preserving existing values where the name and type still match.\"\"\"\n    existing = {v.name: v for v in comp.exposed_vars}\n    keep = {f[\"name\"] for f in fields}\n\n    # Prune vars no longer exposed by the script.\n    for i in range(len(comp.exposed_vars) - 1, -1, -1):\n        if comp.exposed_vars[i].name not in keep:\n            comp.exposed_vars.remove(i)\n\n    for f in fields:\n        v = existing.get(f[\"name\"])\n        new_type = f[\"vtype\"]\n        new_elem = f.get(\"elem_type\") or 'FLOAT'\n        # A list whose element type changed must be rebuilt; same for any type swap.\n        recreate = (\n            v is None\n            or v.vtype != new_type\n            or (new_type == 'LIST' and v.elem_type != new_elem)\n        )\n        if recreate:\n            if v is not None:\n                comp.exposed_vars.remove(list(comp.exposed_vars).index(v))\n            v = comp.exposed_vars.add()\n            v.name = f[\"name\"]\n            v.vtype = new_type\n            v.elem_type = new_elem\n            _init_var_value(v, f)\n        # Enum choices can change without a type change, so refresh every sync.\n        if new_type == 'ENUM':\n            v.enum_options = ENUM_SEP.join(f.get(\"options\") or [])\n            choices = _enum_choices(v)\n            if choices and v.s_val not in choices:\n                v.s_val = choices[0]\n        v.label = f[\"label\"]","file":"blender_addon/components/exposed_vars.py","line":147}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":3,"tgt":4,"label":""},{"id":103,"src":4,"tgt":5,"label":""}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #e08a3c33; }
 </style>
@@ -1133,8 +1179,9 @@ function exportSelf() {
 <style>
   #panel.open { width: var(--panel-w, min(560px, 85vw)) !important; }
   .trace-code { background:#0d101a; border:1px solid #262d4a; border-radius:8px; padding:12px;
-    margin:10px 0 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
-    white-space:pre; tab-size:4; color:#dde2f1; height:42vh; resize: vertical; box-sizing: border-box; }
+    margin:6px 0 0; overflow:auto; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre; tab-size:4; color:#dde2f1; flex:1; min-height:160px; resize:none;
+    box-sizing: border-box; }
   .trace-loc { color:#8b93b8; font:11px system-ui; margin:6px 0 0; }
 </style>
 <script>
@@ -1144,14 +1191,17 @@ function exportSelf() {
     __openNodePanel(n);
     if (!n.code) { return; }
     const panel = document.getElementById('pi');
+    const wrap = document.createElement('div');
+    wrap.className = 'ptrace';
     const loc = document.createElement('div');
     loc.className = 'trace-loc';
     loc.textContent = n.file ? n.file + '  :  line ' + n.line : 'data between the two halves';
     const pre = document.createElement('pre');
     pre.className = 'trace-code';
     pre.textContent = n.code;
-    panel.appendChild(loc);
-    panel.appendChild(pre);
+    wrap.appendChild(loc);
+    wrap.appendChild(pre);
+    panel.appendChild(wrap);
   };
 </script></body>
 </html>

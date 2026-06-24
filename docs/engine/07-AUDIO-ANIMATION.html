@@ -83,6 +83,24 @@
     margin: 16px 0 6px;
   }
   article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 20px 1.1em;
+    font-size: 14px;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
   article ul, article ol {
     margin: 0 0 14px 1.35em;
   }
@@ -187,7 +205,7 @@
     <span class="sep">|</span>
     <a href="00-INDEX.html">Engine index</a>
     <span class="sep">|</span>
-    <a href="index.html">Diagrams</a>
+    <a href="index.html">Subsystem diagrams</a>
     <span class="sep">|</span>
     <a href="../blender/index.html">Blender docs</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="06-RENDERING.html">Prev</a> <span class="dim">·</span> <a href="08-WORKFLOW.html">Next →</a></p>
@@ -197,7 +215,7 @@
 <h2>Animation (<code>subsystems/animation.ts</code>)</h2>
 <p>NLA strips export as glTF animations → global <code>AnimationGroup</code>s. <code>FindAnimationGroups</code> scopes them to an entity <strong>by membership</strong>: a group belongs to a node if any targeted animation targets the node or a descendant — no reliance on globally-unique names. <code>ApplyAutoPlayAnimations</code> first stops the glTF loader's auto-started groups, then plays each entity's chosen clip (exact name, contains, else first) with its loop/speed. Runtime control: <code>entity.animations</code>, <code>entity.GetAnimation(&quot;Walk&quot;)?.start(true)</code> — see the <code>ClipSwitcher</code> behavior for clip cycling.</p>
 <h3>The skinned-mesh rule (important)</h3>
-<p>For rigged characters, <strong>everything goes on the armature object</strong> — GUID, Animation settings, Script components. Two glTF facts make the mesh object a trap: (1) a skinned mesh's own node transform is *ignored* (joints define the final pose), so a script moving the mesh entity moves nothing visible; (2) skeletal clips target the <strong>joint nodes under the armature</strong>, so clip scoping on the mesh entity finds zero clips. Both failures are silent, so the <a href="08-WORKFLOW.html#validator">validator</a> warns when components or autoplay sit on a skinned mesh. (An animation *state machine* was prototyped and deliberately reverted — see <a href="../DEVELOPMENT_PLAN.md">DEVELOPMENT_PLAN</a> for the revival constraints.)</p>
+<p>For rigged characters, <strong>everything goes on the armature object</strong> — GUID, Animation settings, Script components. Two glTF facts make the mesh object a trap: (1) a skinned mesh's own node transform is *ignored* (joints define the final pose), so a script moving the mesh entity moves nothing visible; (2) skeletal clips target the <strong>joint nodes under the armature</strong>, so clip scoping on the mesh entity finds zero clips. Both failures are silent, so the <a href="08-WORKFLOW.html#validator">validator</a> warns when components or autoplay sit on a skinned mesh. (An animation <em>state machine</em> was prototyped and deliberately reverted.)</p>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/engine/07-AUDIO-ANIMATION.html</code>, then <code>npm run docs:build</code>.

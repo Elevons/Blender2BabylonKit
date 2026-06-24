@@ -8,6 +8,8 @@
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { DiagramsForTrace, FilterNavByHrefs, TracesForDiagram } from "./docs/topics.mjs";
+import { EnrichBlenderAreaDiagram, EnrichTraceDiagram } from "./docs/diagram-links.mjs";
 import {
   ReadShell,
   EmitDiagramPage,
@@ -31,25 +33,27 @@ export const AREA_PAGES = {
   "index.html": {
     title: "Add-on overview",
     nodes: [
-      N(1, 300, 40, "__init__.py", "registration", "Extension entry point. register()/unregister() call each subpackage's register() in dependency order — components & scene first (their PropertyGroups are referenced everywhere), then input_actions, export, operators, ui, viewport. Reloads submodules so edits land mid-session.", [["Blender", "4.2+ extension"], ["Order", "data → ui"]]),
+      N(1, 300, 40, "__init__.py", "registration", "Extension entry point. register()/unregister() call each subpackage's register() in dependency order — components, scene, materials & input_actions first (PropertyGroups referenced everywhere), then export, operators, ui, viewport. Reloads submodules so edits land mid-session.", [["Blender", "4.2+ extension"], ["Order", "data → ui"]]),
       N(2, 40, 60, "core/", "ids + TS parsing", "Pure helpers, nothing registered. ids.py owns ID_KEY ('bjs_id'), VISIBLE_KEY ('bjs_visible'), and ensure_object_id(); script_parse.py regex-reads @exposed(...) and @inputMap(\"...\") from behavior TypeScript — THE cross-language contract.", [["Files", "ids · script_parse"]]),
       N(3, 40, 180, "components/", "per-object data", "The component model on every Object: BJSComponent (one group switched by comp_type), exposed vars + list items, trigger/click events, light-shadow & animation blocks, and the copy/paste clipboard. constants.py isolates every enum table.", [["Key class", "BJSComponent"], ["On", "Object.bjs_components"], ["Types", "incl. MSDF_TEXT"]]),
       N(4, 40, 300, "scene/", "scene settings", "BJSSceneSettings on Scene.bjs_scene: clear/ambient, environment (World texture via scene/environment.py find_world_env_node, or useDefault flag via use_default_environment), Show Skybox (IBL without visible background when off; forced off when Atmosphere on), Skybox Ignores Fog (mesh.applyFog = false when on), fog, Atmosphere (scene/atmosphere.py — SUN lamp, scattering), freeze shadows; post-processing lives on the nested bjs_scene.post block (scene/post_processing.py) — MSAA, FXAA, bloom, SSAO, image processing (tone mapping type, exposure, contrast, vignette, color grading, curves), sharpen, DOF, chromatic aberration, grain, glow.", [["On", "Scene.bjs_scene.post"]]),
       N(5, 40, 420, "input_actions/", "Input Actions asset", "The asset end-to-end: data model (maps/actions/bindings), the built-in Player defaults, JSON serialize/apply (+ friendly-key aliases), and every bjs.input_* operator.", [["Export keys", "inputActions + defaultInputMap"]]),
       N(6, 300, 200, "operators/", "the verbs", "Component/script/export operators in operators/ (components.py, scripts.py, export_ops.py). Input Actions operators live in input_actions/operators.py — those buttons route there, not through operators/.", [["Export op", "BJS_OT_export"]]),
-      N(7, 300, 340, "ui/", "panels + menus", "All presentation. Viewport **Babylon Object** N-panel = the selected object — or a PINNED object — with components + light/camera/animation child panels. Viewport **Babylon Scene** N-panel = scene-wide (rendering, fog, atmosphere, post-processing sub-panels via post_panels.py, Input Actions, export via draw_export_controls()).", [["Object", "Babylon Object"], ["Scene", "Babylon Scene"]]),
+      N(7, 300, 340, "ui/", "panels + menus", "All presentation. Viewport **Babylon Object** N-panel = selected or pinned object + light/camera/animation children. **Properties › Material › Babylon** = NME JSON + texture overrides on the material datablock (material_panels.py). **Babylon Scene** N-panel = scene-wide settings (rendering, fog, atmosphere, post, Input Actions, export).", [["Object", "Babylon Object"], ["Material", "Properties › Babylon"], ["Scene", "Babylon Scene"]]),
       N(8, 560, 110, "export/", "the pipeline", "The output half. level.py orchestrates the glb + schema-v4 manifest (begin_asset_export resets copy reservations each pass); components / datablocks / animation / scene serialize each block (Blender→Babylon axis swap happens here); assets.py copies media with stable sanitized names (re-export overwrites; _2 only on same-pass collision); validate.py pre-flights; live_link.py re-exports on Ctrl+S.", [["Output", "glb + scene.json"], ["Schema", "v4"]]),
-      N(9, 560, 320, "viewport/", "viewport gizmo", "GPU overlays. collider_preview.py draws manual colliders in the 3D view in Blender space, so the preview matches the body export produces.", [["Draw", "POST_VIEW handler"]]),
+      N(9, 560, 320, "viewport/", "viewport gizmo", "GPU overlays. collider_preview.py draws collider wireframes; cog_preview.py draws an amber cross at dynamic rigid-body center of mass — both in Blender space so preview matches export/runtime.", [["Draw", "POST_VIEW handlers"]]),
+      N(16, 40, 540, "materials/", "NME overrides", "Per Material datablock: bjs_nme_file (Node Material Editor JSON) + bjs_nme_textures rows. nme_scan.py reads ImageSourceBlock/TextureBlock slots; operators/material_ops.py Scan + Launcher; export/materials.py copies + patches texture URLs.", [["Panel", "Properties › Material › Babylon"], ["On", "Material"]]),
     ],
     edges: [
       E(100, 1, 3, "registers"), E(101, 1, 4, "registers"), E(102, 1, 5, "registers"),
       E(114, 1, 6, "registers"), E(115, 1, 7, "registers"), E(116, 1, 8, "registers"), E(117, 1, 9, "registers"),
+      E(119, 1, 16, "registers"),
       E(103, 7, 6, "buttons"), E(104, 7, 3, "draws"), E(105, 7, 4, "draws"), E(106, 7, 5, "edits"),
       E(118, 7, 5, "input_* buttons"),
       E(107, 6, 8, "Export"), E(119, 6, 8, "Validate"),
       E(108, 6, 2, "Sync"),
       E(109, 8, 3, "reads"), E(110, 8, 4, "reads"), E(111, 8, 5, "serializes"), E(112, 8, 2, "GUIDs"),
-      E(113, 3, 9, "collider fields"),
+      E(113, 3, 9, "preview fields"), E(120, 7, 16, "draws"), E(121, 16, 8, "serialize"),
     ],
   },
   "data-model.html": {
@@ -77,8 +81,9 @@ export const AREA_PAGES = {
       N(3, 300, 170, "_ensure_entity_ids", "step 2", "Assign GUIDs to everything addressable (components, lights, cameras) AND every referenced object, so refs always resolve. Must run before the glb so extras carry the IDs.", [["File", "export/level.py"]]),
       N(4, 300, 280, "_stamp_viewport_visibility", "step 3", "Transient bjs_visible: false on renderable objects with hide_viewport (eye icon). Cleared after the glb is written. Render-disabled (camera icon) objects are skipped entirely.", [["Key", "VISIBLE_KEY"], ["File", "export/level.py"]]),
       N(5, 300, 390, "_export_glb", "step 4", "Invokes Blender's glTF exporter (+Y-up, use_renderable=True, GUIDs + visibility in node extras, cameras/lights/animation included).", [["File", "export/level.py"]]),
-      N(6, 300, 500, "_build_manifest", "step 5", "Per renderable object: serialize components, light, camera, animation. Plus the scene block. The schema-v4 dict that becomes .scene.json.", [["File", "export/level.py"]]),
+      N(6, 300, 500, "_build_manifest", "step 5", "Per renderable object: serialize components, light, camera, animation. Plus the scene block and optional materials[] (serialize_materials for NME overrides). The schema-v4 dict that becomes .scene.json.", [["File", "export/level.py"]]),
       N(7, 560, 300, "serialize_components", "per object", "One dict per component. Converts collider center/size/rotation and constraint pivot/axis to Babylon Y-up; attaches trigger events; copies GUI JSON via copy_asset; particle JSON + texture overrides via export_particle_system; 3D button images via copy_asset; serializes GUI3D_* layout and click events.", [["Axis conv", "here"], ["File", "export/components.py"]]),
+      N(12, 560, 200, "serialize_materials", "materials block", "Per used Material with bjs_nme_file: export_node_material copies JSON + texture images to materials/, patches NME texture blocks, emits manifest.materials[] (name matches glTF material name at runtime).", [["File", "export/materials.py"], ["Key", "materials[]"]]),
       N(8, 560, 410, "_serialize_vars", "per script", "Exposed values → vars dict; entity refs become target GUIDs.", [["Refs", "GUID strings"], ["File", "export/components.py"]]),
       N(9, 800, 250, "serialize_light / serialize_camera", "auto blocks", "Derived from the lamp/camera datablock (no component needed); the active camera is flagged.", [["No component", "auto"], ["File", "export/datablocks.py"]]),
       N(10, 800, 380, "serialize_scene", "scene block", "Clear/ambient, environment (World Output chain → env/ via scene/environment.py, or useDefault when Default Environment is on; createSkybox forced off when Atmosphere on; skyboxIgnoreFog), fog, atmosphere (export/atmosphere.py), post (export/post_processing.py; LUTs → post/), inputActions + defaultInputMap.", [["File", "export/scene.py"]]),
@@ -86,8 +91,72 @@ export const AREA_PAGES = {
     ],
     edges: [
       E(100, 1, 2), E(120, 2, 3), E(121, 3, 4), E(122, 4, 5), E(123, 5, 6),
-      E(105, 6, 7, "per-object components"), E(106, 7, 8),
+      E(105, 6, 7, "per-object components"), E(125, 6, 12, "materials"), E(106, 7, 8),
       E(107, 6, 9), E(108, 6, 10), E(124, 6, 11, "animation"),
+    ],
+  },
+  "input-actions.html": {
+    title: "Input Actions",
+    nodes: [
+      N(1, 40, 80, "Input Actions panel", "Babylon Scene", "Scene-level asset editor in ui/input_panel.py (BJS_PT_input_map): Action Maps > Actions > Bindings, Scene Default map picker, seed/sync operators.", [["Panel", "Babylon Scene"], ["File", "ui/input_panel.py"]]),
+      N(2, 280, 40, "properties.py", "data model", "BJSInputActionMap / Action / Binding PropertyGroups on Scene — the in-Blender representation of the Unity-style asset.", [["Package", "input_actions/"]]),
+      N(3, 280, 150, "defaults.py", "built-in Player", "Seeded on first export when the panel is empty — must stay in sync with engine DefaultAsset.ts.", [["Map", "Move Look Jump …"]]),
+      N(4, 280, 270, "serialize.py", "→ manifest", "serialize_input_asset + defaultInputMap string → scene.inputActions and scene.defaultInputMap in the manifest scene block (called from export/scene.py).", [["Keys", "inputActions · defaultInputMap"]]),
+      N(5, 520, 80, "operators.py", "seed / sync", "Create default asset, sync maps used by @inputMap from script_parse, duplicate/rename maps and actions.", [["Triggers", "panel buttons"]]),
+      N(6, 520, 220, "script_parse.py", "@inputMap scan", "Regex-reads @inputMap(\"Name\") from behavior .ts — lowercase literal like @exposed. Used to validate refs and seed maps.", [["File", "core/script_parse.py"]]),
+      N(7, 760, 150, "InputManager.LoadAsset", "runtime", "Engine loads the asset before behaviors; @inputMap fields and behavior.input injected during ApplyComponents.", [["Diagram", "../engine/input.html"], ["Trace", "trace-input.html"]]),
+    ],
+    edges: [
+      E(100, 1, 2, "edits"), E(101, 1, 5, "buttons"), E(102, 5, 3, "seed"),
+      E(103, 5, 6, "scan scripts"), E(104, 2, 4, "serialize"), E(105, 3, 4, "when empty"),
+      E(106, 4, 7, "manifest"),
+    ],
+  },
+  "scene-settings.html": {
+    title: "Scene settings",
+    nodes: [
+      N(1, 40, 100, "Babylon Scene panel", "scene-wide UI", "ui/scene_panels.py + draw_export_controls: Rendering, Environment, Fog, Atmosphere, Post-Processing, Input Actions, Export/Live Link/Debug Build.", [["Panel", "Babylon Scene"]]),
+      N(2, 280, 40, "scene/settings.py", "clear · env · fog", "BJSSceneSettings on Scene.bjs_scene: clear/ambient, Default Environment, Show Skybox, Skybox Ignores Fog, fog mode/color.", [["Block", "scene clear/ambient/env/fog"]]),
+      N(3, 280, 160, "scene/environment.py", "World HDR", "find_world_env_node traces World Output → Surface → Background → env/image only. Shared by UI and export.", [["Copy", "export/assets.py → env/"]]),
+      N(4, 280, 280, "scene/atmosphere.py", "physical sky", "BJSAtmosphereSettings: enable, Sun Light picker, scattering tuning, LUTs vs ray marching.", [["Export", "export/atmosphere.py"]]),
+      N(5, 280, 400, "scene/post_processing.py", "post stack", "Nested bjs_scene.post: MSAA, FXAA, bloom, SSAO, tone mapping, DOF, grain, glow, LUTs.", [["Export", "export/post_processing.py → post/"]]),
+      N(6, 560, 200, "serialize_scene", "manifest scene", "export/scene.py assembles the scene block: environment (createSkybox off when atmosphere on), fog, atmosphere, postProcessing, inputActions.", [["File", "export/scene.py"]]),
+      N(7, 800, 200, "ApplySceneSettings", "runtime", "FinalizeLevel: clear/ambient, async env/skybox, fog — then ApplyAtmosphere and ApplyPostProcessing (after Begin for active camera).", [["Diagram", "../engine/rendering.html"], ["Trace", "../engine/trace-post.html"]]),
+    ],
+    edges: [
+      E(100, 1, 2, "draws"), E(101, 1, 4, "draws"), E(102, 1, 5, "draws"),
+      E(103, 2, 3, "World texture"), E(104, 2, 6), E(105, 4, 6), E(106, 5, 6),
+      E(107, 6, 7, "manifest"),
+    ],
+  },
+  "validation.html": {
+    title: "Validation",
+    nodes: [
+      N(1, 40, 200, "Validate operator", "BJS_OT_validate", "operators/export_ops.py — runs validate_scene and reports warnings in a popup. Same checks run before Export and Live Link.", [["Runs", "Validate · Export · Live Link"]]),
+      N(2, 280, 60, "validate_scene", "entry", "export/validate.py — iterate renderable objects, run per-object checks, then scene-wide checks; returns warning strings (never blocks save).", [["File", "export/validate.py"]]),
+      N(3, 280, 180, "Per-object checks", "components · physics", "_check_scripts, _check_entity_refs, _check_physics (MESH+DYNAMIC), _check_triggers (mesh triggers), _check_constraints, _check_skinned_meshes, _check_media, _check_gui3d, _check_lights.", [["Trap", "skinned mesh on mesh object"]]),
+      N(4, 280, 320, "Scene-wide checks", "identity · input · materials", "_check_duplicate_guids, _check_active_camera, _check_input_map (@inputMap refs, empty bindings, Scene Default), _check_atmosphere (SUN lamp), _check_materials (NME JSON + texture rows).", [["Input", "input_actions/"]]),
+      N(5, 560, 200, "export_level", "still runs", "Warnings do not block export or Live Link — they surface silent failures before you iterate in the browser.", [["Trace", "trace-validate.html"]]),
+      N(6, 560, 340, "Runtime load", "fewer surprises", "Catches issues the loader cannot fix: missing scripts, dangling GUID refs, invalid physics combos, AREA lights (glTF unsupported).", [["Diagram", "../engine/workflow.html"]]),
+    ],
+    edges: [
+      E(100, 1, 2), E(101, 2, 3), E(102, 2, 4), E(103, 1, 5, "before export"),
+      E(104, 3, 6, "prevents"), E(105, 4, 6, "prevents"),
+    ],
+  },
+  "livelink.html": {
+    title: "Live Link",
+    nodes: [
+      N(1, 40, 120, "Scene checkbox", "bjs_live_link", "Scene property enables save_post re-export. export_level path remembered per scene (bjs_live_link_path).", [["Panel", "Babylon Scene › Export"]]),
+      N(2, 280, 60, "_on_save_post", "Ctrl+S hook", "export/live_link.py — if enabled + path set: validate_scene then export_level. Failures log; Blender save never breaks.", [["File", "export/live_link.py"]]),
+      N(3, 280, 180, "export_level", "same as Export", "begin_asset_export overwrites stable sidecar paths (env/, audio/, gui/). Manifest written after glb so both artifacts are ready together.", [["Diagram", "export.html"]]),
+      N(4, 280, 300, "Debug Build flag", "manifest debug", "scene.bjs_debug_build → top-level manifest \"debug\" → level.debugEnabled gates C/I keys and debugColliders.", [["Default", "missing = true"]]),
+      N(5, 560, 120, "ReloadOnLevelExport", "Vite plugin", "apps/*/vite.config.ts watches all files under public/levels/ (path.resolve; 50ms debounce) → full page reload.", [["Not just", ".scene.json"]]),
+      N(6, 560, 260, "LevelLoader.Load", "browser", "Full reload re-runs Load after Havok init — sees updated glb, manifest, and replaced HDRs.", [["Diagram", "../engine/workflow.html"], ["Trace", "../engine/trace-livelink.html"]]),
+    ],
+    edges: [
+      E(100, 1, 2, "Ctrl+S"), E(101, 2, 3), E(102, 3, 4, "manifest"),
+      E(103, 3, 5, "writes files"), E(104, 5, 6, "reload"),
     ],
   },
 };
@@ -175,6 +244,15 @@ export const TRACES = [
     ],
   },
   {
+    id: "cog-preview",
+    title: "CoM preview: the viewport gizmo",
+    intro: "How rigid-body center of mass is drawn in the 3D view so the preview matches the exported body (export CoM fields apply to Dynamic bodies only).",
+    steps: [
+      { file: "blender_addon/viewport/cog_preview.py", symbol: "_draw", note: "POST_VIEW draw handler: for each selected object with an enabled RigidBody and Show Preview on, build an amber cross + rings at the CoM. Depth test is off so the marker stays visible inside solid meshes." },
+      { file: "blender_addon/viewport/cog_preview.py", symbol: "_local_cog", note: "Resolves the CoM in object local space — auto-fit uses compute_local_bounds (same owned-mesh rule as collider auto-fit); manual uses cog_center. Gizmo size scales with bounds (~10% of the longest axis). Export converts manual offsets to Babylon Y-up." },
+    ],
+  },
+  {
     id: "gui3d",
     title: "3D GUI: authoring → manifest",
     intro: "How nine GUI3D_* component types serialize and validate before export.",
@@ -197,6 +275,18 @@ export const TRACES = [
       { file: "blender_addon/export/validate.py", symbol: "_check_media", note: "Warns when particle JSON or a Particle Textures image file is missing." },
     ],
   },
+  {
+    id: "materials",
+    title: "Node materials: authoring → patched JSON",
+    intro: "Properties › Material › Babylon: NME JSON plus optional texture rows copied and patched on export.",
+    steps: [
+      { file: "blender_addon/materials/properties.py", symbol: "BJSNmeTexture", note: "AUTHORING — Material.bjs_nme_textures rows: block_id, block_name, block_type (from scan), image_file, json_url, match_url." },
+      { file: "blender_addon/materials/nme_scan.py", symbol: "sync_material_nme_textures", note: "Scan Textures reads ImageSourceBlock + TextureBlock slots from the NME JSON; preserves existing image picks by block_id." },
+      { file: "blender_addon/ui/material_panels.py", symbol: "BJS_PT_material", note: "Properties › Material › Babylon panel (context.material); Scan Textures, Open in Launcher, per-slot image pickers." },
+      { file: "blender_addon/export/materials.py", symbol: "export_node_material", note: "EXPORT — copy JSON to materials/; copy_nme_texture per row; patch_nme_json_textures (strips embedded base64 when overriding)." },
+      { file: "blender_addon/export/validate.py", symbol: "_check_materials", note: "Warns on missing NME file, unused override, or missing images for non-embedded slots." },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -214,12 +304,17 @@ export function BuildBlenderDocs()
 
   for (const [file, page] of Object.entries(AREA_PAGES))
   {
+    const pageTraceNav = FilterNavByHrefs(
+      traceNav,
+      "blender",
+      TracesForDiagram(`blender/${file}`),
+    );
     EmitDiagramPage({
       shell,
       outPath: path.join(OUT_DIR, file),
       pageTitle: `Blender — ${page.title}`,
-      diagramData: { title: "Blender — " + page.title, nodes: page.nodes, edges: page.edges },
-      navHtml: BuildBlenderNav(file, areaNav, traceNav),
+      diagramData: EnrichBlenderAreaDiagram(page, file, TRACES),
+      navHtml: BuildBlenderNav(file, areaNav, pageTraceNav),
       bodyPatch: LAYOUT_PATCH_BLENDER,
     });
   }
@@ -251,12 +346,18 @@ export function BuildBlenderDocs()
     }));
     const edges = trace.steps.slice(1).map((_, i) => ({ id: 100 + i, src: i + 1, tgt: i + 2, label: "" }));
     const outFile = `trace-${trace.id}.html`;
+    const relatedDiagrams = DiagramsForTrace(`blender/${outFile}`).map((href) => href.replace(/^blender\//, ""));
+    const traceDiagram = EnrichTraceDiagram(
+      { title: "Trace — " + trace.title, nodes, edges },
+      outFile,
+      "blender",
+    );
     EmitDiagramPage({
       shell,
       outPath: path.join(OUT_DIR, outFile),
       pageTitle: `Blender — ${trace.title}`,
-      diagramData: { title: "Trace — " + trace.title, nodes, edges },
-      navHtml: BuildBlenderNav(outFile, areaNav, traceNav),
+      diagramData: traceDiagram,
+      navHtml: BuildBlenderNav(outFile, areaNav, traceNav, { highlightDiagrams: relatedDiagrams }),
       bodyPatch: CODE_PANEL_PATCH_BLENDER,
     });
   }

@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Audio/Anim</span><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Audio/Anim</span><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Babylon Level Kit — Audio & Animation","nodes":[{"id":1,"x":40,"y":80,"w":150,"h":40,"label":"AUDIO component","sub":"Blender","desc":"File picker (copied to audio/), volume, loop, autoplay, 3D spatial + max distance, playback rate.","meta":[["Validator","missing file warn"]]},{"id":2,"x":300,"y":80,"w":150,"h":40,"label":"ApplyAudio","sub":"subsystems/audio.ts","desc":"Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Queued in ApplyComponents; promises settled in FinalizeLevel. Names = file stem.","meta":[["Legacy Sound class","deprecated — not used"]]},{"id":3,"x":560,"y":40,"w":150,"h":40,"label":"Autoplay & unlock","sub":"browser policy","desc":"Auto-play sounds await audioEngine.unlockAsync() (first user gesture) WITHOUT blocking the load — creation promises settle in FinalizeLevel via allSettled.","meta":[["Bad file","logs, level still loads"]]},{"id":4,"x":560,"y":140,"w":150,"h":40,"label":"entity.sounds","sub":"runtime","desc":"GetSound('door') → play/stop/pitch from behaviors. Disposed with the level.","meta":[["Demo","MessageLogger plays on message"]]},{"id":5,"x":40,"y":280,"w":150,"h":40,"label":"NLA strips","sub":"Blender","desc":"Strips export as glTF animations → global AnimationGroups. The Animation box sets autoplay clip/loop/speed.","meta":[["Block","entities[].animation"]]},{"id":6,"x":300,"y":280,"w":150,"h":40,"label":"FindAnimationGroups","sub":"membership scoping","desc":"A group belongs to an entity if any targeted animation targets its node or a descendant — no global-name reliance.","meta":[["File","subsystems/animation.ts"]]},{"id":7,"x":560,"y":280,"w":150,"h":40,"label":"ApplyAutoPlayAnimations","sub":"FinalizeLevel","desc":"Stops the glTF loader's auto-started groups first, then plays each entity's chosen clip (exact → contains → first).","meta":[["Runtime control","entity.GetAnimation('Walk')?.start()"]]},{"id":8,"x":300,"y":400,"w":150,"h":40,"label":"Skinned-mesh rule","sub":"author on the ARMATURE","desc":"glTF skinning ignores the mesh node's transform (joints define the pose) and clips target the joints under the armature — so GUID, Animation settings, and Scripts on the mesh object silently do nothing. Validator warns.","meta":[["State machine","prototyped + reverted; see DEVELOPMENT_PLAN"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"manifest"},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":2,"tgt":4,"label":""},{"id":103,"src":5,"tgt":6,"label":"glb clips at load"},{"id":104,"src":6,"tgt":7,"label":""},{"id":105,"src":5,"tgt":8,"label":"if rigged"},{"id":106,"src":6,"tgt":8,"label":"joints scope"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Audio & Animation","nodes":[{"id":1,"x":40,"y":80,"w":150,"h":40,"label":"AUDIO component","sub":"Blender","desc":"File picker (copied to audio/), volume, loop, autoplay, 3D spatial + max distance, playback rate.","meta":[["Validator","missing file warn"]]},{"id":2,"x":300,"y":80,"w":150,"h":40,"label":"ApplyAudio","sub":"subsystems/audio.ts","desc":"Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Queued in ApplyComponents; promises settled in FinalizeLevel. Names = file stem.","meta":[["Legacy Sound class","deprecated — not used"],["Trace","trace-audio.html"]]},{"id":3,"x":560,"y":40,"w":150,"h":40,"label":"Autoplay & unlock","sub":"browser policy","desc":"Auto-play sounds await audioEngine.unlockAsync() (first user gesture) WITHOUT blocking the load — creation promises settle in FinalizeLevel via allSettled.","meta":[["Bad file","logs, level still loads"]]},{"id":4,"x":560,"y":140,"w":150,"h":40,"label":"entity.sounds","sub":"runtime","desc":"GetSound('door') → play/stop/pitch from behaviors. Disposed with the level.","meta":[["Demo","MessageLogger plays on message"]]},{"id":5,"x":40,"y":280,"w":150,"h":40,"label":"NLA strips","sub":"Blender","desc":"Strips export as glTF animations → global AnimationGroups. The Animation box sets autoplay clip/loop/speed.","meta":[["Block","entities[].animation"]]},{"id":6,"x":300,"y":280,"w":150,"h":40,"label":"FindAnimationGroups","sub":"membership scoping","desc":"A group belongs to an entity if any targeted animation targets its node or a descendant — no global-name reliance.","meta":[["File","subsystems/animation.ts"]]},{"id":7,"x":560,"y":280,"w":150,"h":40,"label":"ApplyAutoPlayAnimations","sub":"FinalizeLevel","desc":"Stops the glTF loader's auto-started groups first, then plays each entity's chosen clip (exact → contains → first).","meta":[["Runtime control","entity.GetAnimation('Walk')?.start()"],["Trace","trace-audio.html"]]},{"id":8,"x":300,"y":400,"w":150,"h":40,"label":"Skinned-mesh rule","sub":"author on the ARMATURE","desc":"glTF skinning ignores the mesh node's transform (joints define the pose) and clips target the joints under the armature — so GUID, Animation settings, and Scripts on the mesh object silently do nothing. Validator warns.","meta":[["State machine","prototyped + reverted"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"manifest"},{"id":101,"src":2,"tgt":3,"label":""},{"id":102,"src":2,"tgt":4,"label":""},{"id":103,"src":5,"tgt":6,"label":"glb clips at load"},{"id":104,"src":6,"tgt":7,"label":""},{"id":105,"src":5,"tgt":8,"label":"if rigged"},{"id":106,"src":6,"tgt":8,"label":"joints scope"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
 </style>

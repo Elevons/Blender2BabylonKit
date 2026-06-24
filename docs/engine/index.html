@@ -110,6 +110,7 @@ a.tb         { text-decoration: none; display: inline-block; }
 #workspace {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -164,6 +165,8 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  align-self: stretch;
 }
 #panel.open { width: 230px; }
 
@@ -174,8 +177,20 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Non-growing panel sections (label, metadata, …) */
+.pblock { flex-shrink: 0; }
+
+/* Description block — grows to fill remaining panel height */
+.pdesc {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Panel section label (uppercase, muted) */
@@ -201,7 +216,12 @@ canvas#mm { display: block; width: 100%; height: 100%; }
   resize: none;
 }
 .inp:focus { border-color: #7a6830; }
-.pta { min-height: 80px; line-height: 1.6; }  /* textarea variant */
+.pta {
+  flex: 1;
+  min-height: 120px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
 
 /* "+ add row" button inside panel */
 .padd {
@@ -248,9 +268,16 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 
 /* Metadata key/value row */
 .meta-row { display: flex; gap: 3px; margin-bottom: 4px; }
+a.meta-doc-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #a8b8ff;
+}
+a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Overview</span><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a></div></div>
+<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Overview</span><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="trace-exposed.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><a href="trace-trigger.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Triggers</a><a href="trace-constraint.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Constraints</a><a href="trace-audio.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio</a><a href="trace-load.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Level load, end to end</a><a href="trace-atmosphere.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Atmosphere</a><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a><a href="trace-livelink.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-gui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">2D GUI</a><a href="trace-particles.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Node materials</a><a href="trace-msdfText.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">MSDF text</a><a href="trace-gui3d.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-lights.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Lights</a><a href="trace-cameras.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Cameras</a><a href="trace-shadows.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Shadows</a><a href="trace-post.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Post-processing</a></div></div>
 <div id="app">
 
   <div id="toolbar">
@@ -308,7 +335,7 @@ canvas#mm { display: block; width: 100%; height: 100%; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Babylon Level Kit — Engine overview","nodes":[{"id":1,"x":30,"y":40,"w":150,"h":40,"label":"Blender scene","sub":"objects + components","desc":"Authoring: the **Babylon Object** viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, MSDF Text, GUI3D_*) to objects. Scene-wide settings (rendering, fog, atmosphere, post, Input Actions, export) live in the **Babylon Scene** N-panel. GUIDs (bjs_id) make objects addressable entities.","meta":[["Module","components/ · ui/view3d_panels"],["Identity","ID_KEY = bjs_id"]]},{"id":2,"x":30,"y":140,"w":150,"h":40,"label":"Validator","sub":"pre-export checks","desc":"Catches silent failures at export: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, skinned-mesh components, duplicate GUIDs, area lights, no camera, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default).","meta":[["Module","export/validate.py"],["Runs","Validate / Export / Live Link"]]},{"id":3,"x":30,"y":240,"w":150,"h":40,"label":"Exporter","sub":"glb + manifest","desc":"Writes the glb (Blender glTF, +Y-up, GUIDs in extras) and builds the schema-v4 manifest. Converts axes Blender→Babylon at export. Copies audio/env files. Seeds Input Actions on first export.","meta":[["Module","export/ (+ scene/ · animation/)"],["Schema","v4"]]},{"id":4,"x":30,"y":340,"w":150,"h":40,"label":"Live Link","sub":"save_post hook","desc":"Ctrl+S re-exports using the remembered path; the app's Vite plugin watches all files under public/levels/ (path.resolve matching; 50ms debounce) and full-reloads the browser — not only .scene.json, so replaced env HDRs still refresh.","meta":[["Module","export/live_link.py"],["Runtime","vite.config.ts"]]},{"id":5,"x":260,"y":220,"w":140,"h":40,"label":"level.glb","sub":"what glTF expresses","desc":"Meshes, transforms, hierarchy, materials, lights, cameras, animation clips. Multi-material objects import as a wrapper node + one child mesh per material.","meta":[["Owner","Babylon glTF importer"],["GUIDs","node extras"]]},{"id":6,"x":260,"y":300,"w":140,"h":40,"label":"level.scene.json","sub":"what it can't","desc":"Components, tags, physics, script bindings + exposed values, trigger events, constraints, audio, GUI/particle JSON refs, 3D GUI button/panel settings, per-light/camera and scene settings, the debug flag.","meta":[["Owner","LevelLoader"],["Version","4"]]},{"id":7,"x":480,"y":260,"w":150,"h":40,"label":"LevelLoader.Load","sub":"core/LevelLoader.ts","desc":"Fetch+validate manifest, LoadAsset (inputActions + defaultInputMap), append glb RIGHT-HANDED, GUID index, per-entity pass, second pass, FinalizeLevel.","meta":[["Passes","2 + finalize"],["Matching","GUID first, name fallback"]]},{"id":8,"x":700,"y":40,"w":140,"h":40,"label":"Physics","sub":"bodies + owned meshes","desc":"COLLIDER/RIGIDBODY become one Havok V2 body per node. Multiple COLLIDER rows → PhysicsShapeContainer compound. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.","meta":[["File","subsystems/physics.ts"],["Engine","Havok V2"]]},{"id":9,"x":700,"y":340,"w":140,"h":40,"label":"Constraints","sub":"joints","desc":"Fixed/Ball/Hinge/Slider/Spring/Custom 6DoF. Frame from live world transforms (pins as-placed pose); hinge/slider motors; CUSTOM = per-axis free/locked/limited/spring on one joint. Bodies Collide (collision, default off) → Havok isCollisionsEnabled for that body pair only.","meta":[["File","subsystems/constraints.ts"],["Core","Physics6DoFConstraint"]]},{"id":10,"x":700,"y":400,"w":140,"h":40,"label":"Triggers","sub":"messaging","desc":"Authored On-Enter events: one plugin observable dispatches TRIGGER_ENTERED, tag filter, then target.SendMessage to behaviors' OnMessage(message, source).","meta":[["File","subsystems/triggers.ts"],["Gotcha","MESH triggers never fire"]]},{"id":11,"x":700,"y":100,"w":140,"h":40,"label":"Cameras & Lights","sub":"faithful + overrides","desc":"glb creates them; we copy Blender properties on (parent-chain find). CAMERA component swaps in Universal/Arc/Follow/Geospatial built from the exported pose; FOLLOW/ARC targets resolve in the second pass.","meta":[["Files","subsystems/cameras/ / lights.ts"],["Shadows","shadows.ts per light"]]},{"id":12,"x":700,"y":160,"w":140,"h":40,"label":"Audio","sub":"engine v2","desc":"AUDIO components become StaticSounds (spatial attach to the entity node). Autoplay waits for the browser's gesture unlock without blocking the load. entity.GetSound(stem).","meta":[["File","subsystems/audio.ts"],["API","CreateSoundAsync"]]},{"id":13,"x":700,"y":460,"w":140,"h":40,"label":"Animation","sub":"NLA clips","desc":"Clips scoped to entities by node membership (no name reliance). Autoplay stops loader-auto groups first. Skinned characters: author on the ARMATURE (mesh node transform is ignored).","meta":[["File","subsystems/animation.ts"],["Rule","armature owns it"]]},{"id":14,"x":920,"y":160,"w":140,"h":40,"label":"Level","sub":"runtime container","desc":"entities, ById/ByTag, activeCamera, constraints, shadowGenerators, debugEnabled. Begin attaches InputManager + runs OnStart; RunFrame drives InputManager.Process, OnUpdate, updaters, InputManager.EndFrame.","meta":[["File","core/Level.ts"],["Debug","C wireframes / I inspector"]]},{"id":15,"x":920,"y":260,"w":140,"h":40,"label":"Behaviors","sub":"your scripts","desc":"InstantiateScripts + ApplyExposedVars during the entity pass; OnStart / OnUpdate / OnDestroy / OnMessage after Level.Begin. One default-export class per file (filename = registry key). @exposed fields edited per-object in Blender.","meta":[["Base","scripting/Behavior.ts"],["Registry","BehaviorRegistry"]]},{"id":16,"x":920,"y":360,"w":140,"h":40,"label":"Input","sub":"src/input/","desc":"Unity Input System clone: Action Maps > Actions > Bindings. InputManager.LoadAsset runs at the start of Load (before the glb append) so @inputMap fields and behavior.input can be injected; Level.Begin enables maps and RunFrame drives Process/EndFrame.","meta":[["Module","src/input/"],["Panel","Input Actions"]]},{"id":17,"x":700,"y":220,"w":140,"h":40,"label":"UI","sub":"2D · particles · 3D","desc":"GUI / PARTICLE / MSDF_TEXT queue async fetches during the entity pass (settled in FinalizeLevel); GUI3D_* registrations build panels and controls after constraints. entity.GetGui / GetParticles / GetControl3D.","meta":[["Files","ui/ · subsystems/particles.ts"],["Diagram","ui.html"]]},{"id":18,"x":700,"y":280,"w":140,"h":40,"label":"Scene look","sub":"env · fog · post","desc":"FinalizeLevel: SetupShadows, ApplySceneSettings (clear/ambient, HDR env, fog), ApplyAtmosphere when enabled, then ApplyPostProcessing on the active camera after Level.Begin.","meta":[["Files","loader/sceneSettings.ts · atmosphere.ts"],["Post","subsystems/postprocess.ts"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":"warnings"},{"id":103,"src":3,"tgt":5,"label":"glTF"},{"id":104,"src":3,"tgt":6,"label":"serialize"},{"id":105,"src":4,"tgt":3,"label":"Ctrl+S"},{"id":118,"src":4,"tgt":7,"label":"reload"},{"id":106,"src":5,"tgt":7,"label":"appendSceneAsync"},{"id":107,"src":6,"tgt":7,"label":"fetch"},{"id":108,"src":7,"tgt":8,"label":"entity pass"},{"id":109,"src":7,"tgt":9,"label":"finalize"},{"id":110,"src":7,"tgt":10,"label":"finalize"},{"id":111,"src":7,"tgt":11,"label":"entity pass"},{"id":112,"src":7,"tgt":12,"label":"entity pass"},{"id":119,"src":7,"tgt":17,"label":"entity pass"},{"id":120,"src":7,"tgt":18,"label":"finalize"},{"id":113,"src":7,"tgt":13,"label":"finalize"},{"id":121,"src":7,"tgt":16,"label":"LoadAsset"},{"id":122,"src":7,"tgt":15,"label":"entity pass"},{"id":114,"src":7,"tgt":14,"label":"builds"},{"id":115,"src":14,"tgt":15,"label":"OnStart"},{"id":116,"src":14,"tgt":16,"label":"Process"},{"id":117,"src":10,"tgt":15,"label":"OnMessage"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Engine overview","nodes":[{"id":1,"x":30,"y":40,"w":150,"h":40,"label":"Blender scene","sub":"objects + components","desc":"Authoring: the **Babylon Object** viewport N-panel adds components (Tag, Collider, RigidBody, Script, Camera, Audio, Constraint, GUI, Particle, MSDF Text, GUI3D_*) to objects. Scene-wide settings (rendering, fog, atmosphere, post, Input Actions, export) live in the **Babylon Scene** N-panel. GUIDs (bjs_id) make objects addressable entities.","meta":[["Module","components/ · ui/view3d_panels"],["Identity","ID_KEY = bjs_id"]]},{"id":2,"x":30,"y":140,"w":150,"h":40,"label":"Validator","sub":"pre-export checks","desc":"Catches silent failures at export: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, skinned-mesh components, duplicate GUIDs, area lights, no camera, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default).","meta":[["Module","export/validate.py"],["Runs","Validate / Export / Live Link"]]},{"id":3,"x":30,"y":240,"w":150,"h":40,"label":"Exporter","sub":"glb + manifest","desc":"Writes the glb (Blender glTF, +Y-up, GUIDs in extras) and builds the schema-v4 manifest. Converts axes Blender→Babylon at export. Copies audio/env files. Seeds Input Actions on first export.","meta":[["Module","export/ (+ scene/ · animation/)"],["Schema","v4"]]},{"id":4,"x":30,"y":340,"w":150,"h":40,"label":"Live Link","sub":"save_post hook","desc":"Ctrl+S re-exports using the remembered path; the app's Vite plugin watches all files under public/levels/ (path.resolve matching; 50ms debounce) and full-reloads the browser — not only .scene.json, so replaced env HDRs still refresh.","meta":[["Module","export/live_link.py"],["Runtime","vite.config.ts"]]},{"id":5,"x":260,"y":220,"w":140,"h":40,"label":"level.glb","sub":"what glTF expresses","desc":"Meshes, transforms, hierarchy, materials, lights, cameras, animation clips. Multi-material objects import as a wrapper node + one child mesh per material.","meta":[["Owner","Babylon glTF importer"],["GUIDs","node extras"]]},{"id":6,"x":260,"y":300,"w":140,"h":40,"label":"level.scene.json","sub":"what it can't","desc":"Components, tags, physics, script bindings + exposed values, trigger events, constraints, audio, GUI/particle JSON refs, node material (NME) overrides, 3D GUI button/panel settings, per-light/camera and scene settings, the debug flag.","meta":[["Owner","LevelLoader"],["Version","4"]]},{"id":7,"x":480,"y":260,"w":150,"h":40,"label":"LevelLoader.Load","sub":"core/LevelLoader.ts","desc":"Fetch+validate manifest, LoadAsset (inputActions + defaultInputMap), append glb RIGHT-HANDED, ApplyNodeVisibility, ApplyNodeMaterials (optional materials[]), GUID index, per-entity pass, second pass, FinalizeLevel.","meta":[["Passes","2 + finalize"],["Matching","GUID first, name fallback"],["Trace","trace-load.html"],["Trace","trace-input.html"],["Trace","trace-materials.html"]]},{"id":8,"x":700,"y":40,"w":140,"h":40,"label":"Physics","sub":"bodies + owned meshes","desc":"COLLIDER/RIGIDBODY become one Havok V2 body per node. Multiple COLLIDER rows → PhysicsShapeContainer compound. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.","meta":[["File","subsystems/physics.ts"],["Engine","Havok V2"]]},{"id":9,"x":700,"y":340,"w":140,"h":40,"label":"Constraints","sub":"joints","desc":"Fixed/Ball/Hinge/Slider/Spring/Custom 6DoF. Frame from live world transforms (pins as-placed pose); hinge/slider motors; CUSTOM = per-axis free/locked/limited/spring on one joint. Bodies Collide (collision, default off) → Havok isCollisionsEnabled for that body pair only.","meta":[["File","subsystems/constraints.ts"],["Core","Physics6DoFConstraint"]]},{"id":10,"x":700,"y":400,"w":140,"h":40,"label":"Triggers","sub":"messaging","desc":"Authored On-Enter events: one plugin observable dispatches TRIGGER_ENTERED, tag filter, then target.SendMessage to behaviors' OnMessage(message, source).","meta":[["File","subsystems/triggers.ts"],["Gotcha","MESH triggers never fire"]]},{"id":11,"x":700,"y":100,"w":140,"h":40,"label":"Cameras & Lights","sub":"faithful + overrides","desc":"glb creates them; we copy Blender properties on (parent-chain find). CAMERA component swaps in Universal/Arc/Follow/Geospatial built from the exported pose; FOLLOW/ARC targets resolve in the second pass.","meta":[["Files","subsystems/cameras/ / lights.ts"],["Shadows","shadows.ts per light"]]},{"id":12,"x":700,"y":160,"w":140,"h":40,"label":"Audio","sub":"engine v2","desc":"AUDIO components become StaticSounds (spatial attach to the entity node). Autoplay waits for the browser's gesture unlock without blocking the load. entity.GetSound(stem).","meta":[["File","subsystems/audio.ts"],["API","CreateSoundAsync"]]},{"id":13,"x":700,"y":460,"w":140,"h":40,"label":"Animation","sub":"NLA clips","desc":"Clips scoped to entities by node membership (no name reliance). Autoplay stops loader-auto groups first. Skinned characters: author on the ARMATURE (mesh node transform is ignored).","meta":[["File","subsystems/animation.ts"],["Rule","armature owns it"]]},{"id":14,"x":920,"y":160,"w":140,"h":40,"label":"Level","sub":"runtime container","desc":"entities, ById/ByTag, activeCamera, constraints, shadowGenerators, debugEnabled. Begin attaches InputManager + runs OnStart; RunFrame drives InputManager.Process, OnUpdate, updaters, InputManager.EndFrame.","meta":[["File","core/Level.ts"],["Debug","C wireframes / I inspector"]]},{"id":15,"x":920,"y":260,"w":140,"h":40,"label":"Behaviors","sub":"your scripts","desc":"InstantiateScripts + ApplyExposedVars during the entity pass; OnStart / OnUpdate / OnDestroy / OnMessage after Level.Begin. One default-export class per file (filename = registry key). @exposed fields edited per-object in Blender.","meta":[["Base","scripting/Behavior.ts"],["Registry","BehaviorRegistry"]]},{"id":16,"x":920,"y":360,"w":140,"h":40,"label":"Input","sub":"src/input/","desc":"Unity Input System clone: Action Maps > Actions > Bindings. InputManager.LoadAsset runs at the start of Load (before the glb append) so @inputMap fields and behavior.input can be injected; Level.Begin enables maps and RunFrame drives Process/EndFrame.","meta":[["Module","src/input/"],["Panel","Input Actions"]]},{"id":17,"x":700,"y":220,"w":140,"h":40,"label":"UI","sub":"2D · particles · 3D","desc":"GUI / PARTICLE / MSDF_TEXT queue async fetches during the entity pass (settled in FinalizeLevel); GUI3D_* registrations build panels and controls after constraints. entity.GetGui / GetParticles / GetControl3D.","meta":[["Files","ui/ · subsystems/particles.ts"],["Diagram","ui.html"]]},{"id":18,"x":700,"y":280,"w":140,"h":40,"label":"Scene look","sub":"env · fog · post","desc":"FinalizeLevel: SetupShadows, ApplySceneSettings (clear/ambient, HDR env, fog), ApplyAtmosphere when enabled, then ApplyPostProcessing on the active camera after Level.Begin.","meta":[["Files","loader/sceneSettings.ts · atmosphere.ts"],["Post","subsystems/postprocess.ts"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":""},{"id":101,"src":2,"tgt":3,"label":"warnings"},{"id":103,"src":3,"tgt":5,"label":"glTF"},{"id":104,"src":3,"tgt":6,"label":"serialize"},{"id":105,"src":4,"tgt":3,"label":"Ctrl+S"},{"id":118,"src":4,"tgt":7,"label":"reload"},{"id":106,"src":5,"tgt":7,"label":"appendSceneAsync"},{"id":107,"src":6,"tgt":7,"label":"fetch"},{"id":108,"src":7,"tgt":8,"label":"entity pass"},{"id":109,"src":7,"tgt":9,"label":"finalize"},{"id":110,"src":7,"tgt":10,"label":"finalize"},{"id":111,"src":7,"tgt":11,"label":"entity pass"},{"id":112,"src":7,"tgt":12,"label":"entity pass"},{"id":119,"src":7,"tgt":17,"label":"entity pass"},{"id":120,"src":7,"tgt":18,"label":"finalize"},{"id":113,"src":7,"tgt":13,"label":"finalize"},{"id":121,"src":7,"tgt":16,"label":"LoadAsset"},{"id":122,"src":7,"tgt":15,"label":"entity pass"},{"id":114,"src":7,"tgt":14,"label":"builds"},{"id":115,"src":14,"tgt":15,"label":"OnStart"},{"id":116,"src":14,"tgt":16,"label":"Process"},{"id":117,"src":10,"tgt":15,"label":"OnMessage"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES
@@ -1007,36 +1034,48 @@ function openNodePanel(n) {
   openPanel();
   document.getElementById('pi').innerHTML = `
 <button class="pclose" onclick="clearSelection();draw()">✕ close</button>
-<div>
+<div class="pblock">
   <div class="pl">label</div>
   <input class="inp" value="${esc(n.label)}" oninput="updateNode(${n.id},'label',this.value)">
 </div>
-<div>
+<div class="pblock">
   <div class="pl">sublabel</div>
   <input class="inp" value="${esc(n.sub)}" placeholder="optional" oninput="updateNode(${n.id},'sub',this.value)">
 </div>
-<div>
+<div class="pdesc">
   <div class="pl">description</div>
   <textarea class="inp pta" oninput="updateNode(${n.id},'desc',this.value)" placeholder="Describe this node…">${esc(n.desc)}</textarea>
 </div>
-<div>
+<div class="pblock">
   <div class="pl">metadata</div>
   <div id="pmr"></div>
   <button class="padd" onclick="addMeta(${n.id})">+ add row</button>
 </div>
-<button class="pdel" onclick="deleteSelected()">Delete node</button>`;
+<button class="pdel pblock" onclick="deleteSelected()">Delete node</button>`;
   renderMeta(n);
+}
+
+function docMetaHref(key, val) {
+  if (key !== 'Trace' && key !== 'Diagram') return null;
+  if (!val || !/\.html$/i.test(val)) return null;
+  return val;
 }
 
 function renderMeta(n) {
   const el = document.getElementById('pmr');
   if (!el) return;
-  el.innerHTML = n.meta.map((m, i) => `
+  el.innerHTML = n.meta.map((m, i) => {
+    const href = docMetaHref(m[0], m[1]);
+    const valCell = href
+      ? `<a class="inp meta-doc-link" href="${esc(href)}" style="flex:1">${esc(m[1])}</a>`
+      : `<input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">`;
+    return `
 <div class="meta-row">
   <input class="inp" style="flex:1" value="${esc(m[0])}" placeholder="key" oninput="updateMeta(${n.id},${i},0,this.value)">
-  <input class="inp" style="flex:1" value="${esc(m[1])}" placeholder="val" oninput="updateMeta(${n.id},${i},1,this.value)">
+  ${valCell}
   <button class="pdel" style="padding:3px 6px;margin:0;width:auto" onclick="removeMeta(${n.id},${i})">✕</button>
-</div>`).join('');
+</div>`;
+  }).join('');
 }
 
 function openEdgePanel(e) {
@@ -1112,7 +1151,14 @@ function exportSelf() {
   #panel { position: relative; }
   #panel.open { width: var(--panel-w, min(280px, 85vw)) !important; }
   #pi { width: 100% !important; box-sizing: border-box; }
-  textarea.inp.pta { resize: vertical !important; min-height: 80px; max-height: 70vh; }
+  textarea.inp.pta { resize: none !important; min-height: 120px; max-height: none; }
+  .ptrace {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+  }
   #panel-resizer { position:absolute; left:0; top:0; bottom:0; width:7px; cursor: ew-resize; z-index: 10; }
   #panel-resizer:hover, #panel-resizer.dragging { background: #4f6df533; }
 </style>
