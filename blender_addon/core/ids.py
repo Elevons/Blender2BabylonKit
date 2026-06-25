@@ -18,6 +18,10 @@ ID_KEY = "bjs_id"
 # dropped by some glTF exporter versions).
 VISIBLE_KEY = "bjs_visible"
 
+# glTF extras key for objects with ray-visibility Shadow disabled. Meshes still
+# receive shadows; they are omitted from ShadowGenerator casters at load.
+CAST_SHADOWS_KEY = "bjs_cast_shadows"
+
 
 def ensure_object_id(obj):
     """Return obj's GUID, generating and storing one if it doesn't have it yet."""

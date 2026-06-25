@@ -12,6 +12,8 @@ def serialize_light(obj):
         "energy": lamp.energy,                    # W (point/spot/area) or W/m^2 (sun)
         "castShadows": bool(getattr(lamp, "use_shadow", False)),
     }
+    if lamp.type == 'SUN':
+        info["sunAngle"] = lamp.angle            # angular diameter, radians
     if lamp.type == 'SPOT':
         info["spotSize"] = lamp.spot_size        # full cone angle, radians
         info["spotBlend"] = lamp.spot_blend

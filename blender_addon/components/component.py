@@ -88,6 +88,21 @@ class BJSConstraintAxisDoF(PropertyGroup):
 
 class BJSParticleTexture(PropertyGroup):
     """One particle texture image copied on export and wired into the particle JSON."""
+    block_id: IntProperty(
+        name="Block ID",
+        default=0,
+        description="Particle editor block id used to patch the correct texture slot",
+    )
+    block_name: StringProperty(
+        name="Block",
+        default="",
+        description="Particle editor block name (display label)",
+    )
+    block_type: StringProperty(
+        name="Type",
+        default="",
+        description="Particle editor block class (ParticleTextureSourceBlock)",
+    )
     image_file: StringProperty(
         name="Image",
         subtype='FILE_PATH',
@@ -103,8 +118,8 @@ class BJSParticleTexture(PropertyGroup):
     match_url: StringProperty(
         name="Replace URL",
         default="",
-        description="Only patch texture blocks whose current URL equals this "
-                    "(empty = auto: first empty block, or the only block)",
+        description="Only patch blocks whose current URL equals this "
+                    "(empty = match by block id)",
     )
 
 
@@ -342,6 +357,19 @@ class BJSComponent(PropertyGroup):
                                       description="0 = no limit")
     cam_target:         PointerProperty(name="Target", type=Object,
                                         update=_on_cam_target_update)
+    cam_track_target:   BoolProperty(
+        name="Track Target", default=False,
+        description="Move the orbit pivot with the target each frame "
+                    "(for moving targets)")
+    cam_orbit_speed:    FloatProperty(
+        name="Orbit Speed", default=1.0, min=0.01,
+        description="How fast the camera orbits (rotate); 1 = default")
+    cam_zoom_speed:     FloatProperty(
+        name="Zoom Speed", default=1.0, min=0.01,
+        description="How fast the camera zooms; 1 = default")
+    cam_pan_speed:      FloatProperty(
+        name="Pan Speed", default=1.0, min=0.01,
+        description="How fast the camera pans; 1 = default")
     cam_distance:       FloatProperty(name="Follow Distance", default=10.0, min=0.0)
     cam_height:         FloatProperty(name="Height Offset", default=4.0)
     cam_rotation_offset: FloatProperty(name="Rotation Offset", default=0.0,

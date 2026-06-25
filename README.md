@@ -85,7 +85,8 @@ APIs.
   Blender child objects carrying button components). Clicks send messages via
   the same `OnMessage` hook trigger volumes use.
 - **Camera** – opt-in type override on a camera object (ArcRotate / Follow /
-  Geospatial / …); most cameras stay faithful FreeCameras with no component.
+  Geospatial / …); **Track Target**, **Orbit/Zoom/Pan Speed** on orbit cameras;
+  most cameras stay faithful FreeCameras with no component.
 - **Script** – click **Open Script…** to pick the behavior's source file in a
   file browser. The picked filename (minus extension) becomes the *registry
   key* (e.g. `behaviors/Rotator.ts` → `Rotator`); the field stays editable. Add
@@ -231,8 +232,8 @@ it from a Script component in Blender.
 ## Lights
 
 Lights need **no component** — any Blender light object is picked up
-automatically. The Blender lamp *is* the light: edit its color, energy, spot
-cone, and range in Blender (the Babylon tab also surfaces these for
+automatically. The Blender lamp *is* the light: edit its color, energy, sun
+angle, spot cone, and range in Blender (the Babylon tab also surfaces these for
 convenience), and on export the plugin reads the native lamp datablock into the
 manifest. The glb already places the light with the correct converted
 transform, so at load the runtime copies the Blender properties onto that light
@@ -245,6 +246,13 @@ Intensity is approximate by nature — `SUN_SCALE` and `PUNCTUAL_SCALE` in
 `packages/engine/src/subsystems/lights.ts` are the two knobs to tune if a scene reads too bright or dim.
 Color transfers exactly.
 
+**Sun angle** (Blender's **Angle** on SUN lamps — angular diameter in radians)
+controls shadow penumbra softness. It is exported as `sunAngle` and, when the
+lamp casts shadows, mapped linearly to Babylon's PCSS
+`contactHardeningLightSizeUVRatio` (Blender 0°→0, 45°→1; clamped above 45°). PCSS is
+enabled automatically when a sun angle is authored, since other shadow filters
+cannot represent an angular sun.
+
 **Shadows** follow the lamp's **Cast Shadows** toggle (Blender's `use_shadow`).
 When it's on, the Babylon tab reveals a **Shadow** subsection with per-light
 controls — filter (PCF / PCSS contact-hardening / Poisson / Blur ESM / hard),
@@ -253,8 +261,12 @@ map size, bias, normal bias, darkness, frustum clip start/end, **Edge Falloff**
 concepts (they don't map onto Blender's
 renderer-specific shadow settings), so they're authored here and serialized per
 light. On load, each shadow-casting light gets a `ShadowGenerator` configured
-from those values, and all geometry casts and receives by default. PointLight,
-Sun (Directional) and Spot can cast; anything else is skipped with a warning.
+from those values. Meshes **receive** shadows by default; **casting** is controlled
+by Blender **Object Properties → Visibility → Ray Visibility → Shadow**
+(`visible_shadow`). When Shadow is off, export stamps `bjs_cast_shadows: 0` in
+glTF extras and the loader omits that mesh from shadow casters (receive-only).
+Use this on huge ground planes so they don't expand the sun's shadow frustum.
+PointLight, Sun (Directional) and Spot can cast; anything else is skipped with a warning.
 Generators are exposed as `level.shadowGenerators`. A clip start/end of `0` means
 "let Babylon auto-fit the frustum", and a map size of `0` falls back to the
 loader default. To set the default resolution or disable the whole pass:
@@ -294,10 +306,13 @@ To use a different camera type, add a **Camera component** to the camera object 
 this is opt-in and leaves the faithful FreeCamera as the default for every other
 camera. Pick a type: **Free**/**Universal** (configures the camera with
 speed/inertia/controls), **ArcRotate** (orbits — around a target object you pick,
-or, if none, a point ahead of where Blender framed the camera; with optional zoom
-limits), **Follow** (tracks a target object you pick), or **Geospatial** (orbits a
+or, if none, a point ahead of where Blender framed the camera; optional **Track
+Target** so the orbit pivot follows a moving target; **Orbit Speed**, **Zoom
+Speed**, and **Pan Speed** when controls are attached; optional zoom limits),
+**Follow** (tracks a target object you pick), or **Geospatial** (orbits a
 spherical planet at world origin — map-like pan/zoom/tilt; set **Planet Radius**
-to match your globe mesh, optional min/max zoom and collision checking). All build
+to match your globe mesh, optional min/max zoom, collision checking, and the
+same orbit/zoom/pan speed multipliers). All build
 from the faithful camera's world transform, so they begin where Blender framed
 them: Arc starts at the exported position (its offset from the orbit target
 defines the starting angle/distance). Geospatial raycasts the exported pose
@@ -384,9 +399,11 @@ Add a **Particles** component and pick the `.json` exported from the
 `GPUParticleSystem` when supported, else CPU), **Auto Start** (emit on load),
 **Attach to Object** (emit from this entity — meshes and empties follow it at
 runtime), and **Max Particles** (override the JSON's capacity; 0 keeps it).
-Use **Particle Textures** on the component to copy image files into
-`particles/` on export and patch the particle JSON's texture URL (set **URL in
-JSON** to the filename the Node Particle Editor references, e.g. `bubble.png`).
+Use **Scan Textures** on the component to list texture slots from the
+particle JSON, then pick image files for any slot that needs one. Export
+copies them into `particles/` and patches the matching
+`ParticleTextureSourceBlock` by block id (set **URL in JSON** when you need a
+subpath, e.g. `fx/bubble.png`).
 Any texture path in the JSON is loaded from beside the `.json` at runtime.
 Scripts reach the system via `entity.GetParticles("name")` (named
 by file stem) or `entity.particleSystems` to `.start()` / `.stop()` it.
@@ -903,14 +920,17 @@ background (`true` = show skybox, `false` = IBL only).
           ] },
         { "type": "CAMERA", "cameraType": "GEOSPATIAL", "attachControl": true,
           "planetRadius": 1.0, "lowerRadius": 0.01, "upperRadius": 0,
-          "checkCollisions": false },
+          "checkCollisions": false, "orbitSpeed": 1.0, "zoomSpeed": 1.0, "panSpeed": 1.0 },
         { "type": "CAMERA", "cameraType": "ARC", "attachControl": true,
           "keys": { "scheme": "ARROWS", "up": "W", "down": "S", "left": "A", "right": "D" },
-          "useBlenderTransform": true, "followMode": "OFFSET", "radius": 10, "lowerRadius": 0, "upperRadius": 0,
-          "target": null, "distance": 10, "height": 4, "rotationOffset": 0 }
+          "useBlenderTransform": true, "followMode": "OFFSET", "lockRoll": false,
+          "speed": 1.0, "inertia": 0.9, "radius": 10, "lowerRadius": 0, "upperRadius": 0,
+          "target": null, "trackTarget": false, "orbitSpeed": 1.0, "zoomSpeed": 1.0, "panSpeed": 1.0,
+          "distance": 10, "height": 4, "rotationOffset": 0 }
       ],
-      "light":  { "type": "SUN", "color": [1,1,1], "energy": 1, "castShadows": true,
-                  "shadow": { "filter": "PCF", "mapSize": 0, "bias": 0.00005,
+      "light":  { "type": "SUN", "color": [1,1,1], "energy": 1, "sunAngle": 0.00918,
+                  "castShadows": true,
+                  "shadow": { "filter": "PCSS", "mapSize": 0, "bias": 0.00005,
                               "normalBias": 0, "darkness": 0, "minZ": 0, "maxZ": 0 } },
       "camera": { "type": "PERSP", "clipStart": 0.1, "clipEnd": 1000,
                   "fov": 0.69, "active": true },

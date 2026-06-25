@@ -12,6 +12,7 @@ from ..core.inspector import inspector_object
 from ..components.constants import COMPONENT_TYPES
 from ..components.exposed_vars import add_list_item
 from ..components.clipboard import copy_component
+from ..components.particle_scan import sync_component_particle_textures
 
 
 class BJS_OT_toggle_pin(Operator):
@@ -326,6 +327,34 @@ class BJS_OT_gui3d_event_remove(Operator):
         return {'FINISHED'}
 
 
+class BJS_OT_scan_particle_textures(Operator):
+    """Read texture slots from the particle JSON and populate the list."""
+    bl_idname = "bjs.scan_particle_textures"
+    bl_label = "Scan Textures"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if not (0 <= self.comp_index < len(comps)):
+            return {'CANCELLED'}
+        comp = comps[self.comp_index]
+        if not comp.particle_file:
+            self.report({'ERROR'}, "Assign a particle JSON first")
+            return {'CANCELLED'}
+
+        count = sync_component_particle_textures(comp)
+        if count == 0:
+            self.report({'WARNING'}, "No texture blocks found in the JSON")
+        else:
+            self.report({'INFO'}, f"Found {count} texture slot{'s' if count != 1 else ''}")
+        return {'FINISHED'}
+
+
 class BJS_OT_particle_texture_add(Operator):
     """Add a particle texture override row."""
     bl_idname = "bjs.particle_texture_add"
@@ -470,6 +499,7 @@ classes = (
     BJS_OT_trigger_event_remove,
     BJS_OT_gui3d_event_add,
     BJS_OT_gui3d_event_remove,
+    BJS_OT_scan_particle_textures,
     BJS_OT_particle_texture_add,
     BJS_OT_particle_texture_remove,
 )

@@ -13,6 +13,9 @@ export const ID_KEY = "bjs_id";
 /** glTF extras key for viewport-hidden objects. Must match the Blender add-on's VISIBLE_KEY. */
 export const VISIBLE_KEY = "bjs_visible";
 
+/** glTF extras key when ray-visibility Shadow is off. Must match CAST_SHADOWS_KEY in the add-on. */
+export const CAST_SHADOWS_KEY = "bjs_cast_shadows";
+
 // ---- Manifest schema (mirrors the Blender exporter output) ----
 
 export interface TagComponent {
@@ -89,6 +92,10 @@ export interface CameraComponent {
   lowerRadius: number;   // ARC / GEOSPATIAL: min zoom (0 = none)
   upperRadius: number;   // ARC / GEOSPATIAL: max zoom (0 = none)
   target: string | null; // ARC orbit pivot / FOLLOW target entity GUID
+  trackTarget: boolean;  // ARC: move the orbit pivot with the target each frame
+  orbitSpeed: number;    // ARC / GEOSPATIAL: orbit (rotate) speed multiplier
+  zoomSpeed: number;     // ARC / GEOSPATIAL: zoom speed multiplier
+  panSpeed: number;      // ARC / GEOSPATIAL: pan speed multiplier
   distance: number;      // FOLLOW: follow distance
   height: number;        // FOLLOW: height offset
   rotationOffset: number;// FOLLOW: angle behind target (deg)
@@ -335,6 +342,7 @@ export interface LightInfo {
   color: [number, number, number];
   energy: number;
   range?: number;
+  sunAngle?: number;   // angular diameter, radians (sun only)
   spotSize?: number;   // full cone angle, radians (spot only)
   spotBlend?: number;  // 0..1 edge softness (spot only)
   castShadows: boolean;

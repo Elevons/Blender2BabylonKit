@@ -109,6 +109,8 @@ class BJS_PT_light_info(Panel):
         col.use_property_split = True
         col.prop(lamp, "color")
         col.prop(lamp, "energy")
+        if lamp.type == 'SUN':
+            col.prop(lamp, "angle")
         if lamp.type == 'SPOT':
             col.prop(lamp, "spot_size")
             col.prop(lamp, "spot_blend")

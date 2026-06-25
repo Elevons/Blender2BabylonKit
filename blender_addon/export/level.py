@@ -11,7 +11,7 @@ import os
 
 import bpy
 
-from ..core.ids import ID_KEY, VISIBLE_KEY, ensure_object_id
+from ..core.ids import ID_KEY, VISIBLE_KEY, CAST_SHADOWS_KEY, ensure_object_id
 from .animation import serialize_animation, nla_clip_names
 from .assets import begin_asset_export
 from .components import serialize_components, iter_referenced_objects
@@ -35,6 +35,11 @@ def _is_viewport_hidden(obj):
     if visible_get is not None:
         return not visible_get()
     return obj.hide_viewport
+
+
+def _casts_shadows(obj):
+    """Ray Visibility › Shadow (Object Properties › Visibility)."""
+    return bool(getattr(obj, "visible_shadow", True))
 
 
 def _referenced_ids(context):
@@ -143,23 +148,33 @@ def _build_manifest(context, glb_filename, output_dir):
     return manifest
 
 
-def _stamp_viewport_visibility(context):
-    """Write viewport-hidden state into glTF extras (transient — cleared after export)."""
+def _stamp_gltf_extras(context):
+    """Write transient glTF extras (cleared after export).
+
+    bjs_visible — viewport eye icon off.
+    bjs_cast_shadows — ray-visibility Shadow off (receive-only at runtime).
+    """
     stamped = []
     for obj in context.scene.objects:
         if not _is_renderable(obj):
             continue
+        extras = []
         if _is_viewport_hidden(obj):
-            # Int 0 — some glTF exporter versions omit boolean false from extras.
             obj[VISIBLE_KEY] = 0
-            stamped.append(obj)
+            extras.append(VISIBLE_KEY)
+        if not _casts_shadows(obj):
+            obj[CAST_SHADOWS_KEY] = 0
+            extras.append(CAST_SHADOWS_KEY)
+        if extras:
+            stamped.append((obj, extras))
     return stamped
 
 
-def _clear_viewport_visibility(stamped):
-    for obj in stamped:
-        if VISIBLE_KEY in obj:
-            del obj[VISIBLE_KEY]
+def _clear_gltf_extras(stamped):
+    for obj, keys in stamped:
+        for key in keys:
+            if key in obj:
+                del obj[key]
 
 
 def _export_glb(glb_path):
@@ -194,9 +209,9 @@ def export_level(context, filepath):
     begin_asset_export()
     _dedupe_entity_ids(context)   # duplicated objects get fresh GUIDs
     _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
-    visibility_stamped = _stamp_viewport_visibility(context)
+    extras_stamped = _stamp_gltf_extras(context)
     _export_glb(glb_path)
-    _clear_viewport_visibility(visibility_stamped)
+    _clear_gltf_extras(extras_stamped)
 
     manifest = _build_manifest(context, glb_filename, os.path.dirname(glb_path))
     manifest["debug"] = bool(getattr(context.scene, "bjs_debug_build", True))

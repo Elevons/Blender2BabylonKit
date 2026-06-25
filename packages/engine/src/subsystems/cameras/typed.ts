@@ -14,6 +14,7 @@ import {
 import type { Scene } from "@babylonjs/core";
 import type { CameraComponent } from "../../core/types";
 import { ApplyCameraKeys } from "./keys";
+import { ApplyArcRotateControlSpeeds, ApplyGeospatialControlSpeeds } from "./speeds";
 
 /**
  * Typed camera overrides (the CAMERA component): replace the glb's faithful
@@ -148,6 +149,12 @@ function BuildArcCamera(
   }
 
   ApplyCameraKeys(arcCamera, cameraComponent.keys);
+  ApplyArcRotateControlSpeeds(
+    arcCamera,
+    cameraComponent.orbitSpeed,
+    cameraComponent.panSpeed,
+    cameraComponent.zoomSpeed
+  );
   if (cameraComponent.attachControl)
   {
     arcCamera.attachControl(true);
@@ -309,6 +316,13 @@ function BuildGeospatialCamera(
   geospatialCamera.yaw = pose.yaw;
   geospatialCamera.pitch = pose.pitch;
   geospatialCamera.radius = pose.radius;
+
+  ApplyGeospatialControlSpeeds(
+    geospatialCamera,
+    cameraComponent.orbitSpeed,
+    cameraComponent.panSpeed,
+    cameraComponent.zoomSpeed
+  );
 
   if (cameraComponent.attachControl)
   {

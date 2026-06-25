@@ -265,6 +265,10 @@
           "lowerRadius": 10.0,
           "upperRadius": 100.0,
           "target": "ff0c0f68f1ad4fbf8dfbff6e1b2c9288",
+          "trackTarget": false,
+          "orbitSpeed": 1.0,
+          "zoomSpeed": 1.0,
+          "panSpeed": 1.0,
           "distance": 10.0,
           "height": 4.0,
           "rotationOffset": 0.0

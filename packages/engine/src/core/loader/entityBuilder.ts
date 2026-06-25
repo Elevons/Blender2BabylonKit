@@ -292,9 +292,13 @@ function ProcessLightForEntity(
 ): void
 {
   const light = ApplyBlenderLight(scene, node, lightInfo);
-  if (light !== null && lightInfo.castShadows)
+  if (light !== null && lightInfo.castShadows && light.isEnabled())
   {
-    context.shadowLights.push({ light, settings: lightInfo.shadow });
+    context.shadowLights.push({
+      light,
+      settings: lightInfo.shadow,
+      sunAngle: lightInfo.type === "SUN" ? lightInfo.sunAngle : undefined,
+    });
   }
 }
 

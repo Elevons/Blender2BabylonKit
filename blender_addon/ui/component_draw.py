@@ -62,27 +62,61 @@ def _draw_var(layout, comp_index, var_index, v):
     layout.prop(v, slot, text=label)
 
 
+from ..components.component import ensure_custom_constraint_axes
+from ..components.particle_scan import enumerate_particle_texture_slots
+
+
+def _particle_slot_needs_file(tex_row, particle_file):
+    if not particle_file:
+        return False
+    slots = enumerate_particle_texture_slots(particle_file)
+    by_id = {slot["block_id"]: slot for slot in slots}
+    info = by_id.get(tex_row.block_id)
+    if info is not None:
+        return info["needs_file"]
+    return not tex_row.image_file
+
+
 def _draw_particle_textures(body, comp, index):
     """Texture images copied on export and patched into the particle JSON."""
+    if not comp.particle_file:
+        body.label(text="Pick a particle JSON, then Scan Textures", icon='INFO')
+        return
+
     box = body.box()
     header = box.row()
-    header.label(text="Particle Textures", icon='TEXTURE')
+    header.label(text="Textures", icon='TEXTURE')
     add = header.operator("bjs.particle_texture_add", text="", icon='ADD')
     add.comp_index = index
+
+    if len(comp.particle_textures) == 0:
+        box.label(
+            text="Scan Textures to list slots from the JSON",
+            icon='INFO',
+        )
+        return
+
     for tex_i, tex in enumerate(comp.particle_textures):
         col = box.column(align=True)
+        needs = _particle_slot_needs_file(tex, comp.particle_file)
+        label = tex.block_type or "Texture"
+        if tex.block_name:
+            label = f"{label} · {tex.block_name}"
+        if tex.block_id:
+            label = f"{label} (id {tex.block_id})"
+        row = col.row()
+        row.label(
+            text=label,
+            icon='ERROR' if needs and not tex.image_file else 'TEXTURE',
+        )
+        if tex.match_url:
+            col.label(text=f"JSON URL: {tex.match_url}", icon='LINKED')
         col.prop(tex, "image_file", text="Image")
         col.prop(tex, "json_url", text="URL in JSON")
-        col.prop(tex, "match_url", text="Replace URL")
         rem = col.row()
         op = rem.operator("bjs.particle_texture_remove", text="Remove", icon='X')
         op.comp_index = index
         op.particle_texture_index = tex_i
-    if len(comp.particle_textures) == 0:
-        box.label(
-            text="Optional: copy images to particles/ and set the JSON URL",
-            icon='INFO',
-        )
 
 
 def _draw_click_events(body, comp, index):
@@ -263,6 +297,8 @@ def draw_component(layout, obj, index, comp):
     elif comp.comp_type == 'PARTICLE':
         body.prop(comp, "particle_file")
         row = body.row(align=True)
+        scan = row.operator("bjs.scan_particle_textures", text="Scan Textures", icon='FILE_REFRESH')
+        scan.comp_index = index
         op = row.operator("bjs.open_launcher_particle", text="Open in Launcher", icon='WORLD')
         op.comp_index = index
         body.prop(comp, "particle_attach")
@@ -407,9 +443,15 @@ def draw_component(layout, obj, index, comp):
             body.prop(comp, "cam_lock_roll")
         elif t == 'ARC':
             body.prop(comp, "cam_target", text="Orbit Target")
+            if comp.cam_target:
+                body.prop(comp, "cam_track_target")
             body.prop(comp, "cam_radius")
             body.prop(comp, "cam_lower_radius")
             body.prop(comp, "cam_upper_radius")
+            if comp.cam_attach_control:
+                body.prop(comp, "cam_orbit_speed")
+                body.prop(comp, "cam_zoom_speed")
+                body.prop(comp, "cam_pan_speed")
         elif t == 'FOLLOW':
             body.prop(comp, "cam_target")
             body.prop(comp, "cam_follow_mode")
@@ -427,6 +469,10 @@ def draw_component(layout, obj, index, comp):
             body.prop(comp, "cam_lower_radius")
             body.prop(comp, "cam_upper_radius")
             body.prop(comp, "cam_check_collisions")
+            if comp.cam_attach_control:
+                body.prop(comp, "cam_orbit_speed")
+                body.prop(comp, "cam_zoom_speed")
+                body.prop(comp, "cam_pan_speed")
             body.label(
                 text="Starts at the exported camera pose; planet must be centered at world origin",
                 icon='INFO')

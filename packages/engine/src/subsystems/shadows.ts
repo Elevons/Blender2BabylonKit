@@ -8,6 +8,7 @@ import {
 } from "@babylonjs/core";
 import type { Light, IShadowLight, AbstractMesh } from "@babylonjs/core";
 import type { ShadowSettings } from "../core/types";
+import { CAST_SHADOWS_KEY } from "../core/types";
 
 export interface ShadowOptions {
   mapSize?: number; // default resolution when a light doesn't override it
@@ -36,6 +37,77 @@ const PUNCTUAL_NORMAL_BIAS = 0.03;
 export interface ShadowCaster {
   light: Light;
   settings?: ShadowSettings;
+  /** Blender SUN lamp angular diameter (radians); drives PCSS penumbra size. */
+  sunAngle?: number;
+}
+
+/** Blender sun Angle UI is 0–180°; we map 0–45° to PCSS ratio 0–1 (clamp above). */
+const BLENDER_SUN_ANGLE_MAX = Math.PI / 4;
+
+/** Linear map: 0° → 0, 45° → 1 on Babylon's PCSS contactHardeningLightSizeUVRatio. */
+function MapSunAngleToPcssRatio(sunAngle: number): number
+{
+  return Math.min(Math.max(sunAngle / BLENDER_SUN_ANGLE_MAX, 0), 1);
+}
+
+/** False when Blender ray-visibility Shadow is disabled (bjs_cast_shadows in glTF extras). */
+function MeshCastsShadows(mesh: AbstractMesh): boolean
+{
+  const marked = mesh.metadata?.gltf?.extras?.[CAST_SHADOWS_KEY];
+  return marked !== false && marked !== 0;
+}
+
+/** Largest axis-aligned world extent of a mesh (after world matrix). */
+function MeshWorldExtent(mesh: AbstractMesh): number
+{
+  mesh.computeWorldMatrix(true);
+  const box = mesh.getBoundingInfo().boundingBox;
+  const extent = box.maximumWorld.subtract(box.minimumWorld);
+  return Math.max(extent.x, extent.y, extent.z);
+}
+
+/**
+ * Meshes that dwarf everything else (a 3 km sea floor, etc.) blow up the
+ * directional shadow ortho frustum when registered as casters — shadows vanish
+ * or turn to mush. Keep them as receivers only; drop outliers vs the next tier.
+ */
+function SelectShadowCasters(meshes: AbstractMesh[]): AbstractMesh[]
+{
+  const castEnabled = meshes.filter((mesh) => MeshCastsShadows(mesh));
+  const withExtents = castEnabled.map((mesh) => ({ mesh, extent: MeshWorldExtent(mesh) }));
+  const sortedExtents = withExtents.map((entry) => entry.extent).sort((a, b) => b - a);
+  const secondLargest = sortedExtents[1] ?? sortedExtents[0] ?? 0;
+  const outlierThreshold = Math.max(secondLargest * 3, 500);
+
+  const casters = withExtents
+    .filter((entry) => entry.extent <= outlierThreshold)
+    .map((entry) => entry.mesh);
+
+  const skippedOutliers = withExtents.filter((entry) => entry.extent > outlierThreshold);
+  for (const entry of skippedOutliers)
+  {
+    console.log(
+      `[bjs] "${entry.mesh.name}" extent ${entry.extent.toFixed(0)} — receive-only ` +
+        `(exceeds shadow caster threshold ${outlierThreshold.toFixed(0)})`
+    );
+  }
+
+  for (const mesh of meshes)
+  {
+    if (!MeshCastsShadows(mesh))
+    {
+      console.log(`[bjs] "${mesh.name}" — receive-only (Blender ray-visibility Shadow off)`);
+    }
+  }
+
+  return casters;
+}
+
+/** Clamp to a supported shadow-map resolution (power of two, max 8192). */
+function ClampShadowMapSize(mapSize: number): number
+{
+  const clamped = Math.min(Math.max(Math.round(mapSize), 256), 8192);
+  return 2 ** Math.round(Math.log2(clamped));
 }
 
 /** Only Directional / Spot / Point lights can cast shadows. */
@@ -89,8 +161,9 @@ export function SetupShadows(
   options: ShadowOptions = {}
 ): ShadowGenerator[]
 {
-  const defaultMapSize = options.mapSize ?? 1024;
+  const defaultMapSize = ClampShadowMapSize(options.mapSize ?? 1024);
   const renderableMeshes: AbstractMesh[] = scene.meshes.filter((mesh) => mesh.getTotalVertices() > 0);
+  const shadowCasters = SelectShadowCasters(renderableMeshes);
 
   for (const mesh of renderableMeshes)
   {
@@ -144,10 +217,28 @@ export function SetupShadows(
       light.shadowMaxZ = light.range;
     }
 
-    const mapSize = settings.mapSize && settings.mapSize > 0 ? settings.mapSize : defaultMapSize;
+    const mapSize = settings.mapSize && settings.mapSize > 0
+      ? ClampShadowMapSize(settings.mapSize)
+      : defaultMapSize;
     const shadowGenerator = new ShadowGenerator(mapSize, light);
 
     ApplyShadowFilter(shadowGenerator, settings.filter);
+
+    // Blender SUN angle is an angular diameter — Babylon only approximates it via
+    // PCSS contact hardening. Enable PCSS when a sun angle is authored.
+    if (
+      light instanceof DirectionalLight &&
+      typeof caster.sunAngle === "number" &&
+      caster.sunAngle > 0
+    )
+    {
+      if (!shadowGenerator.useContactHardeningShadow)
+      {
+        ApplyShadowFilter(shadowGenerator, "PCSS");
+      }
+      shadowGenerator.contactHardeningLightSizeUVRatio = MapSunAngleToPcssRatio(caster.sunAngle);
+    }
+
     if (typeof settings.bias === "number")
     {
       shadowGenerator.bias = settings.bias;
@@ -187,7 +278,7 @@ export function SetupShadows(
       shadowGenerator.forceBackFacesOnly = true;
     }
 
-    for (const mesh of renderableMeshes)
+    for (const mesh of shadowCasters)
     {
       shadowGenerator.addShadowCaster(mesh);
     }

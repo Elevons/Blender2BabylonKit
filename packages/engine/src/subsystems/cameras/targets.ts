@@ -17,7 +17,7 @@ import type { TypedCameraResult } from "./typed";
  */
 export interface CameraTargetSets {
   followCams: { cam: FollowCamera; guid: string; eye: Vector3; derive: boolean }[];
-  arcCams: { cam: ArcRotateCamera; guid: string; eye: Vector3 }[];
+  arcCams: { cam: ArcRotateCamera; guid: string; eye: Vector3; track: boolean }[];
   offsetCams: { cam: UniversalCamera; guid: string; eye: Vector3 }[];
 }
 
@@ -53,6 +53,7 @@ export function QueueCameraTargets(
       cam: built.camera as ArcRotateCamera,
       guid: built.arcTarget.guid,
       eye: built.arcTarget.eye,
+      track: cameraComponent.trackTarget,
     });
   }
 
@@ -125,9 +126,18 @@ function ResolveArcCameras(level: Level, arcCams: CameraTargetSets["arcCams"]): 
       continue;
     }
 
-    targetEntity.node.computeWorldMatrix(true);
-    arcBinding.cam.setTarget(targetEntity.node.getAbsolutePosition().clone());
+    const targetNode = targetEntity.node;
+    targetNode.computeWorldMatrix(true);
+    arcBinding.cam.setTarget(targetNode.getAbsolutePosition().clone());
     arcBinding.cam.setPosition(arcBinding.eye); // keep the Blender framing, new pivot
+
+    if (arcBinding.track)
+    {
+      level.AddUpdater(() =>
+      {
+        arcBinding.cam.setTarget(targetNode.getAbsolutePosition());
+      });
+    }
   }
 }
 

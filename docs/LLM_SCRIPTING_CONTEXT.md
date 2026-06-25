@@ -100,7 +100,11 @@ entity.SendMessage(message, source): void              // deliver to all its beh
 hidden in the viewport export with `bjs_visible: false` in glTF extras and load with
 `isVisible = false` (child lights/cameras are disabled too). Toggle at runtime with
 `entity.node.isVisible = true` (if the object is a lamp, also
-`this.scene.getLightByName(this.entity.name)?.setEnabled(true)`). **Render-disabled**
+`this.scene.getLightByName(this.entity.name)?.setEnabled(true)`). **Ray Visibility → Shadow**
+(`visible_shadow`) controls **shadow casting** only: when off, export stamps
+`bjs_cast_shadows: 0` and the mesh still renders and **receives** shadows but is omitted
+from `ShadowGenerator` casters (useful for huge ground planes that would blow up the sun
+frustum). **Render-disabled**
 objects (camera icon / `hide_render`) are **not exported at all** — they won't exist in
 the level.
 
@@ -186,6 +190,7 @@ Blender has two outliner toggles; only one maps to runtime hiding:
 | Blender toggle | Property | Export / runtime |
 |---|---|---|
 | **Eye** (viewport) | `hide_viewport` | Exported; loads with `entity.node.isVisible = false` |
+| **Ray Visibility → Shadow** | `visible_shadow` | Exported; visible and receives shadows; does **not** cast when off (`bjs_cast_shadows: 0`) |
 | **Camera** (render) | `hide_render` | Omitted from the `.glb` and manifest entirely |
 
 Viewport-hidden objects still exist as entities (physics, scripts, references resolve).
@@ -227,17 +232,23 @@ exported pose:
 
 | `cameraType` | Use when |
 |---|---|
-| `FREE` / `UNIVERSAL` | Free-fly inspection; optional key scheme + **Keep Upright** |
-| `ARC` | Orbit a target object (or a point ahead of the exported view) |
+| `FREE` / `UNIVERSAL` | Free-fly inspection; `speed` / `inertia`; optional key scheme + **Keep Upright** |
+| `ARC` | Orbit a target (or a point ahead of the exported view); **Track Target** moves the pivot each frame; `orbitSpeed` / `zoomSpeed` / `panSpeed` (1 = Babylon default) |
 | `FOLLOW` | Track a target — fixed world offset or Babylon FollowCamera orbit |
-| `GEOSPATIAL` | **Globe / planet** at world origin — map-like pan, zoom-to-cursor, tilt |
+| `GEOSPATIAL` | **Globe / planet** at world origin — map-like pan, zoom-to-cursor, tilt; `orbitSpeed` / `zoomSpeed` / `panSpeed` |
+
+**ArcRotate** (`ARC`): pick an **Orbit Target** object (or leave unset to pivot ahead of
+the exported view). Enable **Track Target** when the pivot should follow a moving
+entity each frame (`trackTarget` in the manifest). When **Attach Controls** is on,
+**Orbit Speed**, **Zoom Speed**, and **Pan Speed** are multipliers (`1.0` = Babylon's
+default feel; higher = faster). Exported as `orbitSpeed`, `zoomSpeed`, `panSpeed`.
 
 **Geospatial** (`GEOSPATIAL`): the planet mesh must be centered at world origin;
 set **Planet Radius** to match the mesh radius in scene units. Optional min/max
-zoom and collision checking. Controls attach when **Attach Controls** is on
-(pointer, wheel, keyboard — built into Babylon's `GeospatialCamera`). Do **not**
-write a behavior to recreate globe navigation — author the Camera component
-instead.
+zoom and collision checking. The same **Orbit/Zoom/Pan Speed** fields apply when
+controls are attached (pointer, wheel, keyboard — built into Babylon's
+`GeospatialCamera`). Do **not** write a behavior to recreate globe navigation —
+author the Camera component instead.
 
 Behaviors that need to **drive** an authored Geospatial camera (e.g. fly to a
 marker on click) use `this.scene.activeCamera` after load:
@@ -256,9 +267,9 @@ if (camera instanceof GeospatialCamera)
 
 `flyToAsync(yaw?, pitch?, radius?, center?, durationMs?)` animates all four
 properties; any argument can be `undefined` to keep the current value.
-`updateFlyToDestination` redirects an in-flight animation. Movement tuning
-(`movement.zoomSpeed`, `movement.panInertia`, etc.) is on the runtime camera
-object — not exported from Blender today.
+`updateFlyToDestination` redirects an in-flight animation. Fine-grained movement
+tuning beyond the exported speed multipliers (`movement.panInertia`, etc.) is on
+the runtime camera object via the Babylon API after load.
 
 For a **script-built** orbit around a moving entity (not a globe), see the
 `camera-follow` recipe — it creates a `UniversalCamera` and sets
@@ -281,6 +292,7 @@ concern — it is authored under **Babylon Scene** and exported in
 |---|---|---|
 | Environment / IBL | Rendering › Environment | None — IBL only when Atmosphere replaces the skybox |
 | **Atmosphere** (physical sky) | Atmosphere (SUN lamp + scattering) | None — time of day follows the sun lamp direction |
+| **Sun shadow penumbra** | Sun lamp **Angle** (0–45° → PCSS softness; clamped above) | `level.shadowGenerators` for runtime tuning |
 | Fog | Babylon Scene › Fog | None |
 | Default pipeline (bloom, DOF, …) | Post-Processing › Default Pipeline | None |
 | SSAO | Post-Processing › SSAO | None |
@@ -493,11 +505,12 @@ drops enterers whose `entity.tag` doesn't match.
 ## GUI & particles
 
 GUI layouts and particle systems are authored in Blender as **GUI** / **Particles**
-components pointing at a Babylon-editor `.json`. **Particle Textures** (optional
-list on the Particles component) copy images into `particles/` on export and
-patch texture URLs in the exported JSON; the runtime resolves those paths beside
-the particle file (`rootUrl` in `LoadParticleSystems`). Behaviors drive the
-already-built objects:
+components pointing at a Babylon-editor `.json`. On the **Particles**
+component, **Scan Textures** lists `ParticleTextureSourceBlock` slots from the
+JSON (same idea as NME **Scan Textures** on materials); per-slot image picks
+copy into `particles/` on export and patch texture URLs in the exported JSON.
+The runtime resolves those paths beside the particle file (`rootUrl` in
+`LoadParticleSystems`). Behaviors drive the already-built objects:
 
 | GUI mode | Babylon API | Requirement |
 |---|---|---|

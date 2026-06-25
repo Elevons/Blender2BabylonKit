@@ -66,13 +66,22 @@ def patch_particle_json_textures(json_abs, assignments):
     if not texture_blocks:
         return
 
+    blocks_by_id = {
+        block["id"]: block
+        for block in texture_blocks
+        if isinstance(block.get("id"), int)
+    }
     patched_ids = set()
 
     for assignment in assignments:
         rel_url = assignment["rel_url"]
+        block_id = assignment.get("block_id")
         match_url = (assignment.get("match_url") or "").strip()
 
-        if match_url:
+        targets = []
+        if block_id and block_id in blocks_by_id:
+            targets = [blocks_by_id[block_id]]
+        elif match_url:
             targets = [
                 block for block in texture_blocks
                 if (block.get("url") or "") == match_url
@@ -84,7 +93,6 @@ def patch_particle_json_textures(json_abs, assignments):
             ]
             targets = empty if empty else [texture_blocks[0]]
         else:
-            targets = []
             for block in texture_blocks:
                 if id(block) in patched_ids:
                     continue
@@ -113,6 +121,7 @@ def export_particle_system(particle_file, textures, output_dir):
         if rel_url is None:
             continue
         assignments.append({
+            "block_id": texture.block_id,
             "rel_url": rel_url,
             "match_url": texture.match_url,
         })

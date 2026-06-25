@@ -1092,7 +1092,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "appendSceneAsync",
           "sub": "step 3 — RIGHT-HANDED",
-          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras; ApplyNodeMaterials replaces glTF PBR when manifest.materials[] is set. Needs the ExtrasAsMetadata import for GUIDs.",
+          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras; SetupShadows (finalize) skips bjs_cast_shadows meshes as casters; ApplyNodeMaterials replaces glTF PBR when manifest.materials[] is set. Needs the ExtrasAsMetadata import for GUIDs.",
           "meta": [
             [
               "Why",
@@ -1938,7 +1938,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Lights",
           "sub": "subsystems/lights.ts",
-          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. FindLightForNode walks the parent chain (orientation-correction node in between).",
+          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between).",
           "meta": [
             [
               "AREA",
@@ -1974,7 +1974,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "BuildTypedCamera",
           "sub": "CAMERA component",
-          "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset) / Geospatial (planet at origin; DeriveGeospatialPose seeds center/yaw/pitch/radius). Free-fly cameras honor a Keep Upright toggle (lockRoll): LockCameraRoll bakes the world pose, detaches the orientation-correction parent, and pins look-at to world up so yaw/pitch stay level.",
+          "desc": "Opt-in type override built FROM the faithful camera's world pose, lens copied, original disposed. Per-type builders: Universal / Arc (re-pivot to target; trackTarget updater; orbit/zoom/pan speeds) / Follow-Orbit (DeriveFollowFromPosition) / Follow-Offset (AddUpdater holds world offset) / Geospatial (planet at origin; DeriveGeospatialPose seeds center/yaw/pitch/radius; orbit/zoom/pan speeds). Free-fly cameras honor a Keep Upright toggle (lockRoll): LockCameraRoll bakes the world pose, detaches the orientation-correction parent, and pins look-at to world up so yaw/pitch stay level.",
           "meta": [
             [
               "Targets",
@@ -1994,7 +1994,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Shadows",
           "sub": "subsystems/shadows.ts",
-          "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all geometry caster+receiver. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
+          "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all meshes receive; casters respect bjs_cast_shadows (ray-visibility Shadow off → receive-only) and outlier-size heuristics. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1). Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
           "meta": [
             [
               "Options",
@@ -2342,7 +2342,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "PARTICLE component",
           "sub": "Blender",
-          "desc": "References a .json from Babylon's Particle or Node Particle Editor. GPU, autoStart, attachToEntity, capacity. Particle Textures list: copy images + patch JSON URL on export.",
+          "desc": "References a .json from Babylon's Particle or Node Particle Editor. GPU, autoStart, attachToEntity, capacity. Scan Textures lists ParticleTextureSourceBlock slots; per-slot image picks copy + patch JSON URL on export.",
           "meta": [
             [
               "Editor",
@@ -2362,7 +2362,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "export_particle_system",
           "sub": "export/particles.py",
-          "desc": "Copy particle JSON + Particle Textures images into particles/; patch ParticleTextureSourceBlock.url in the exported JSON (URL in JSON / Replace URL).",
+          "desc": "Copy particle JSON + scanned texture images into particles/; patch ParticleTextureSourceBlock.url in the exported JSON (match by block id).",
           "meta": [
             [
               "Export",
