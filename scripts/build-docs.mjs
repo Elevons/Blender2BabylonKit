@@ -25,13 +25,16 @@ BuildBlenderDocs();
 BuildProseDocs();
 BuildLandingPage();
 
-const linkCheck = spawnSync(process.execPath, ["scripts/check-doc-links.mjs"], {
-  cwd: ROOT,
-  stdio: "inherit",
-});
-if (linkCheck.status !== 0)
+for (const script of ["scripts/docs/validate-docs.mjs", "scripts/check-doc-links.mjs"])
 {
-  process.exit(linkCheck.status ?? 1);
+  const result = spawnSync(process.execPath, [script], {
+    cwd: ROOT,
+    stdio: "inherit",
+  });
+  if (result.status !== 0)
+  {
+    process.exit(result.status ?? 1);
+  }
 }
 
 console.log("docs:build complete");

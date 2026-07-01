@@ -15,10 +15,11 @@ const SCALE_EPSILON = 1e-6;
  */
 export function LocalScaleAxes(node: TransformNode): { sx: number; sy: number; sz: number }
 {
-  const s = node.scaling;
-  return { sx: Math.abs(s.x), sy: Math.abs(s.y), sz: Math.abs(s.z) };
+  const localScaling = node.scaling;
+  return { sx: Math.abs(localScaling.x), sy: Math.abs(localScaling.y), sz: Math.abs(localScaling.z) };
 }
 
+/** True when this node's own scale deviates from identity (parents excluded). */
 export function HasLocalNodeScale(node: TransformNode): boolean
 {
   const { sx, sy, sz } = LocalScaleAxes(node);

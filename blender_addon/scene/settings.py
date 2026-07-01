@@ -29,6 +29,17 @@ class BJSSceneSettings(PropertyGroup):
                     "(loaded from the Babylon CDN when the level loads). Used when "
                     "the World has no environment texture. Ignored when a World "
                     "texture is present")
+    environment_intensity: FloatProperty(
+        name="Intensity", default=1.0, min=0.0, soft_max=10.0,
+        description="IBL strength for the default environment at runtime")
+    environment_rotation_y: FloatProperty(
+        name="Rotation Y", default=0.0, subtype='ANGLE',
+        description="Y-axis rotation of the default environment skybox and IBL")
+    skybox_color: FloatVectorProperty(
+        name="Skybox Color", subtype='COLOR', size=3,
+        default=(0.2, 0.2, 0.3), min=0.0, max=1.0,
+        description="Tint mixed into the default environment skybox texture at runtime "
+                    "(Babylon EnvironmentHelper skyboxColor)")
     create_skybox: BoolProperty(
         name="Show Skybox", default=True,
         description="Display the environment as a visible skybox. Turn off to keep "
@@ -44,6 +55,18 @@ class BJSSceneSettings(PropertyGroup):
         description="Render each shadow map once and freeze it. Big performance "
                     "win for a fully static level, but moving objects won't update "
                     "their shadows (call level.RefreshShadows() after moving one)")
+
+    # Large world / floating origin (Babylon useLargeWorldRendering + Havok multi-region).
+    use_large_world_rendering: BoolProperty(
+        name="Large World Rendering", default=False,
+        description="Eliminate jitter at large world coordinates by offsetting "
+                    "shader uniforms relative to the active camera and simulating "
+                    "Havok physics in regional floating-origin worlds. Recommended "
+                    "for geospatial globes, flight sims, and open worlds")
+    floating_origin_world_radius: FloatProperty(
+        name="Physics Region Radius", default=100000.0, min=1000.0,
+        description="Havok multi-region radius in Babylon scene units when Large "
+                    "World Rendering is on (default 100000)")
 
     # Fog
     use_fog: BoolProperty(name="Enable Fog", default=False)

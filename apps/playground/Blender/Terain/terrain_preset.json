@@ -1,0 +1,298 @@
+{
+  "app": "terrain-studio",
+  "version": 1,
+  "exportedAt": "2026-06-29T20:10:58.370Z",
+  "params": {
+    "seed": 3015175907,
+    "preset": "highlands",
+    "heightScale": 370,
+    "seaLevel": 63,
+    "noiseScale": 54,
+    "noiseStrength": 0.79,
+    "octaves": 5,
+    "persistence": 0.3,
+    "lacunarity": 2.41,
+    "ridge": 0.48,
+    "warp": 0,
+    "falloff": 0.28,
+    "edgeFalloffMode": "island",
+    "moistScale": 1,
+    "moistBias": 0,
+    "biomeScale": 1,
+    "tempBias": 0,
+    "biomeDebug": false,
+    "snowLine": 0.7,
+    "normalStrength": 1.25,
+    "aoStrength": 0.75,
+    "chunkGrid": false,
+    "chunkCount": 8,
+    "chunkSize": 128,
+    "planetRadius": 16000,
+    "planetFaceGrid": 8,
+    "wireframe": false,
+    "lodDebug": false,
+    "autoUpdate": true,
+    "sunAzimuth": 135,
+    "sunElevation": 42,
+    "fogDensity": 0.45,
+    "waterAnim": true,
+    "pixelRatio": 0,
+    "propsEnabled": false,
+    "propsDensity": 2,
+    "propsFlowers": 0.28,
+    "propsGrass": 0.85,
+    "propsRocks": 0.8,
+    "propsRockScale": 0.65,
+    "propsWind": 0.6,
+    "propsWindSpeed": 1.6,
+    "propsGust": 0.45,
+    "propsCullDistance": 760,
+    "propsLodDistance": 280,
+    "planetPreset": "earth",
+    "palettePreset": "earth",
+    "noisePreset": "default",
+    "cloudsEnabled": false,
+    "cloudChunksEnabled": false,
+    "cloudCoverage": 0.5,
+    "cloudDensity": 1,
+    "cloudSoftness": 0.16,
+    "cloudNoiseVariant": "soft",
+    "cloudAltitude": 240,
+    "cloudThickness": 620,
+    "cloudScale": 2.2,
+    "cloudDetailScale": 7,
+    "cloudDetailStrength": 0.35,
+    "cloudErosionScale": 15,
+    "cloudErosionStrength": 0.3,
+    "cloudWindDir": 45,
+    "cloudWindSpeed": 1,
+    "cloudRotationSpeed": 0.35,
+    "cloudEvolveSpeed": 1,
+    "cloudLightAbsorption": 1.1,
+    "cloudShadowStrength": 0.6,
+    "cloudScatteringStrength": 1,
+    "cloudColor": [
+      1,
+      1,
+      1
+    ],
+    "cloudShadowColor": [
+      0.42,
+      0.47,
+      0.6
+    ],
+    "skyboxEnabled": true,
+    "skyboxBrightness": 1,
+    "skyboxHaze": 0.55,
+    "skyboxStars": true,
+    "waterEnabled": true,
+    "waterMode": "legacy",
+    "waterQualityPreset": "legacy",
+    "waterAutoDowngradeInfinite": true,
+    "waterLegacyOnLowFps": true,
+    "waterOpacity": 0.72,
+    "waterRoughness": 0.35,
+    "waterFresnelStrength": 1,
+    "waterRefractionStrength": 0.45,
+    "waterSpecularStrength": 1,
+    "waterDepthColorStrength": 1,
+    "waterDepthOpacityStrength": 1,
+    "waterMaxVisibleDepth": 120,
+    "waterDepthFalloff": 1,
+    "waterShallowDistance": 8,
+    "waterDeepDistance": 55,
+    "waterAbsorptionStrength": 1,
+    "waterWaveSpeed": 1,
+    "waterWaveScale": 1,
+    "waterWaveStrength": 1,
+    "waterSmallWaveStrength": 0.65,
+    "waterLargeWaveStrength": 1,
+    "waterNormalIntensity": 1,
+    "waterWaveDirection": 0,
+    "waterAnimSpeed": 1,
+    "waterFoamEnabled": true,
+    "waterFoamStrength": 0.75,
+    "waterFoamWidth": 3.2,
+    "waterFoamSoftness": 0.6,
+    "waterFoamAnimSpeed": 1,
+    "waterSlopeFoam": 0.25,
+    "waterCliffFoam": 0.3,
+    "waterUnderwaterEnabled": true,
+    "waterUnderwaterMode": "auto",
+    "waterUnderwaterFogDensity": 1,
+    "waterUnderwaterVisibility": 1,
+    "waterUnderwaterDistortion": 0.5,
+    "waterUnderwaterCaustics": 0.4,
+    "waterUnderwaterCausticsEnabled": true,
+    "waterUnderwaterCausticScale": 1,
+    "waterUnderwaterCausticSpeed": 1,
+    "waterUnderwaterParticles": false,
+    "waterUnderwaterLightShafts": false,
+    "waterSurfaceTransition": 0.8,
+    "waterReflectionQuality": 1,
+    "waterRefractionQuality": 0.6,
+    "waterFoamQuality": 1,
+    "waterCausticsQuality": 0.5,
+    "waterNormalResolution": 1,
+    "waterRenderScale": 1,
+    "waterUpdateFrequency": 1,
+    "waterDisableExpensiveBelowFps": 42,
+    "waterDebugView": "off",
+    "waterShowMeshBounds": false,
+    "waterShowPerfCost": false,
+    "erosionEnabled": false,
+    "erosionPreset": "custom",
+    "erosionQuality": "balanced",
+    "erosionSeed": 1,
+    "erosionStrength": 1,
+    "erosionDroplets": 100000,
+    "erosionLifetime": 30,
+    "erosionRadius": 3,
+    "erosionDeposition": 0.3,
+    "erosionErosionRate": 0.3,
+    "erosionEvaporation": 0.02,
+    "erosionGravity": 4,
+    "erosionInertia": 0.05,
+    "erosionSedimentCapacity": 6,
+    "erosionThermalStrength": 0.4,
+    "erosionThermalIterations": 30,
+    "erosionTalus": 0.6,
+    "erosionSmoothing": 0.1,
+    "noiseStack": {
+      "version": 1,
+      "globalSeed": 0,
+      "normalizeOutput": false,
+      "outputMin": 0,
+      "outputMax": 1.35,
+      "layers": [
+        {
+          "id": "Lmqzndl96l",
+          "name": "Classic Terrain",
+          "enabled": true,
+          "type": "legacy",
+          "blendMode": "replace",
+          "strength": 1,
+          "opacity": 1,
+          "seedOffset": 0,
+          "params": {},
+          "masks": [],
+          "previewSolo": false,
+          "locked": false
+        }
+      ]
+    },
+    "planetStyle": {
+      "planetPreset": "earth",
+      "palettePreset": "earth",
+      "noisePreset": "default",
+      "palette": {
+        "deep": [
+          0.012,
+          0.075,
+          0.14
+        ],
+        "shallow": [
+          0.06,
+          0.29,
+          0.33
+        ],
+        "sand": [
+          0.56,
+          0.47,
+          0.3
+        ],
+        "dune": [
+          0.62,
+          0.49,
+          0.29
+        ],
+        "dryGrass": [
+          0.38,
+          0.33,
+          0.15
+        ],
+        "grass": [
+          0.13,
+          0.26,
+          0.085
+        ],
+        "forest": [
+          0.052,
+          0.14,
+          0.055
+        ],
+        "jungle": [
+          0.035,
+          0.125,
+          0.045
+        ],
+        "swamp": [
+          0.09,
+          0.13,
+          0.07
+        ],
+        "tundra": [
+          0.3,
+          0.29,
+          0.24
+        ],
+        "redRock": [
+          0.42,
+          0.235,
+          0.14
+        ],
+        "redRock2": [
+          0.56,
+          0.37,
+          0.21
+        ],
+        "rock": [
+          0.26,
+          0.235,
+          0.215
+        ],
+        "rockHi": [
+          0.38,
+          0.365,
+          0.355
+        ],
+        "snow": [
+          0.87,
+          0.89,
+          0.93
+        ],
+        "foam": [
+          0.82,
+          0.9,
+          0.94
+        ]
+      },
+      "paletteSaturation": 1,
+      "paletteContrast": 1,
+      "paletteTint": [
+        1,
+        1,
+        1
+      ],
+      "sunColor": [
+        1,
+        0.94,
+        0.82
+      ],
+      "sunIntensity": 1.25,
+      "skyAmbient": [
+        0.36,
+        0.46,
+        0.62
+      ],
+      "groundBounce": [
+        0.2,
+        0.16,
+        0.11
+      ],
+      "fogTint": null,
+      "skyTint": null,
+      "customEdits": false
+    }
+  }
+}

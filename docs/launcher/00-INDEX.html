@@ -24,23 +24,22 @@
     z-index: 100;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
-    padding: 10px 0;
-    margin: 0 -4px 8px;
-    background: linear-gradient(#0c0c0a 70%, transparent);
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
     border-bottom: 1px solid #1e1c28;
-    font-family: ui-monospace, Menlo, Consolas, monospace;
-    font-size: 12px;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
   }
   #toolbar a {
-    color: #8fa3ff;
+    color: #9aa8e8;
     text-decoration: none;
-    padding: 4px 8px;
-    border-radius: 6px;
   }
-  #toolbar a:hover { background: #1a2040; }
-  #toolbar .sep { color: #3a3850; }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
   .wrap { max-width: 780px; margin: 0 auto; }
   body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
   .chapter-nav {
@@ -95,8 +94,13 @@
   article .feature-toc ul {
     columns: 2;
     gap: 24px;
-    margin: 0 0 20px 1.1em;
+    margin: 0 0 0 1.1em;
     font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
   }
   @media (max-width: 640px) {
     article .feature-toc ul { columns: 1; }
@@ -119,6 +123,134 @@
   article a { color: #8fa3ff; }
   article a:hover { color: #b8c8ff; }
   article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
   article code {
     font-family: ui-monospace, Menlo, Consolas, monospace;
     font-size: 0.88em;
@@ -201,11 +333,11 @@
 </head>
 <body class="">
 <div class="wrap">
-  <nav id="toolbar"><a href="../index.html">← Search</a>
-    <span class="sep">|</span>
-    <a href="00-INDEX.html">Launcher index</a>
-    <span class="sep">|</span>
-    <a href="../engine/00-INDEX.html">Runtime docs</a></nav>
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Launcher</a>
+    <span class="sep">/</span>
+    <a href="../engine/00-INDEX.html">Engine</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-LAUNCHER.html">Next →</a></p>
   <article><h1>Babylon Launcher — Documentation</h1>
 <p>The <strong>Babylon Launcher</strong> (<code>tools/babylon-launcher/</code>, npm workspace <code>@bjs/babylon-launcher</code>) is a small self-hosted web hub for day-to-day work in the monorepo. It discovers apps under <code>apps/</code>, starts and stops the per-app Vite dev server, manages the <strong>bjs-mcp</strong> behavior-authoring server for Cursor, scaffolds new projects, and browses JSON asset folders next to each level.</p>
@@ -224,7 +356,7 @@ npm run launcher:start</code></pre>
 </ol>
 <h2>Related docs</h2>
 <ul>
-<li><a href="../engine/08-WORKFLOW.html">Workflow &amp; tooling</a> — Live Link, validator, monorepo commands</li>
+<li><a href="../engine/09-WORKFLOW.html">Workflow &amp; tooling</a> — Live Link, validator, monorepo commands</li>
 <li><a href="../engine/01-ARCHITECTURE.html">Architecture</a> — two-artifact export model and repo layout</li>
 </ul>
 </article>

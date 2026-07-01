@@ -14,6 +14,8 @@ import { Entity } from "./Entity";
 import { InputManager } from "../input";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
 import type { AtmosphereHandle } from "../subsystems/atmosphere";
+import type { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
+import type { PunctualLightingMode } from "../subsystems/clusteredLights";
 
 /**
  * Runtime container for a loaded level: the entity map, the active camera,
@@ -27,6 +29,10 @@ export class Level
   activeCamera?: Camera;
   /** Shadow generators created for shadow-casting lights (one per light). */
   shadowGenerators: ShadowGenerator[] = [];
+  /** Clustered punctual lights, when the scene exceeded the forward-light budget. */
+  clusteredLights?: ClusteredLightContainer;
+  /** How punctual lights were set up at load (forward, clustered, or UBO fallback). */
+  punctualLightingMode: PunctualLightingMode = "forward";
   /** Post-processing pipelines, if the manifest enabled them. */
   post?: PostProcessingHandles;
   /** Physically based atmosphere, if the manifest enabled it. */
@@ -247,6 +253,12 @@ export class Level
     {
       this.atmosphere.dispose();
       this.atmosphere = undefined;
+    }
+
+    if (this.clusteredLights !== undefined)
+    {
+      this.clusteredLights.dispose();
+      this.clusteredLights = undefined;
     }
 
     for (const entity of this.entities.values())

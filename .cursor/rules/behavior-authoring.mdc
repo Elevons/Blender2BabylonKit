@@ -8,11 +8,12 @@ alwaysApply: false
 
 When creating or editing files under `src/behaviors/`, use the **bjs-level-kit** MCP server.
 
-## Before writing code
+## Before writing code (mandatory order)
 
-1. `get_kernel` or read `docs/LLM_KERNEL.md`
-2. `plan_behavior(intent, className)` — follow the returned steps
-3. `get_recipe_template` for the primary recipe — edit the skeleton, do not blank-page
+1. **`route_task(intent, className)`** — matched playbook + exact MCP steps
+2. **`preflight_behavior(intent, className)`** — checklist
+3. **`get_do_not_list`** — skim silent failures once per session
+4. **`get_recipe_template`** from the route — edit skeleton, never blank-page
 
 ## Non-negotiable contracts
 
@@ -21,15 +22,26 @@ When creating or editing files under `src/behaviors/`, use the **bjs-level-kit**
 - Decorators: `@exposed`, `@inputMap("MapName")` — lowercase literals
 - `@exposed({ type: "entity" }) target: Entity | null = null`; entity lists start `[]`
 - Scale continuous motion by `deltaSeconds`; no `Level` handle on behaviors
-- `setMotionType(PhysicsMotionType.ANIMATED)` before driving `node.position` each frame when a body exists
+- DYNAMIC body: velocity/impulse only — never `node.position` each frame
+- ANIMATED body: `disablePreStep = false` before driving `node.position`; zero velocity after teleports
 
 ## Grounding (never guess)
 
 - `list_input_actions` — real action names
-- `list_scene_entities` — real entity names for `@exposed` picks
-- `get_behavior` / `find_similar_behavior(includeSource=true)` — copy proven patterns
+- `list_levels` / `list_scene_entities` — real entity names for `@exposed` picks
+- `get_engine_basics` — if unsure how engine/load loop works
+- `list_behaviors` / `get_behavior` / `find_similar_behavior(includeSource=true)`
+
+## API detail (on demand)
+
+- `get_playbook(name)` — full task recipe from `docs/LLM_PLAYBOOK.md`
+- `get_scripting_context(section=…)` — API sections only as needed
+- `get_physics_movement` — before any movement on a physics body
+- `get_fragment` / `list_fragments`
 
 ## Before saving
 
-`validate_behavior(source, "ClassName.ts")` — fix all errors; revalidate until clean.
+`validate_behavior(source, "ClassName.ts")` — fix **all** errors; revalidate until clean.
 Use `get_style_guide` for Allman braces and `: void` on lifecycle methods.
+
+Human docs: `docs/LLM_PLAYBOOK.md`, `docs/engine/14-API-GUIDE.html`, `docs/engine/00-INDEX.html`.

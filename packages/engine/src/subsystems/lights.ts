@@ -1,4 +1,4 @@
-import { Scene, Light, SpotLight, Color3 } from "@babylonjs/core";
+import { Scene, Light, SpotLight, DirectionalLight, Color3, Vector3 } from "@babylonjs/core";
 import type { Node } from "@babylonjs/core";
 import type { LightInfo } from "../core/types";
 
@@ -47,10 +47,30 @@ export function FindLightForNode(scene: Scene, entityNode: Node): Light | null
 }
 
 /**
- * Copy the Blender lamp's properties onto the existing Babylon light. Position
- * and direction are left untouched (they come from the glb node), so the Blender
- * lamp acts as a live stand-in: move/aim it in Blender, re-export, and Babylon
- * follows.
+ * glTF parents a SUN lamp's DirectionalLight under the lamp's transform node
+ * (local −Z aim). Bake that parenting into world-space direction once at load
+ * and detach the light so Atmosphere and mesh lighting both read the same aim.
+ */
+function BakeSunLightWorldTransform(sunLight: DirectionalLight): void
+{
+  if (!sunLight.computeTransformedInformation())
+  {
+    return;
+  }
+
+  sunLight.direction.copyFrom(sunLight.transformedDirection);
+  sunLight.parent = null;
+  // Directional lighting is infinite — only direction matters for shading. Shadow
+  // maps still need a view origin; keep it near the scene (SetupShadows re-anchors
+  // on caster bounds) instead of the Blender sun empty, which is often placed far
+  // from gameplay geometry and washes out shadow precision away from center.
+  sunLight.position.copyFrom(sunLight.direction).scaleInPlace(-1);
+}
+
+/**
+ * Copy the Blender lamp's properties onto the existing Babylon light. Spot/point
+ * position and direction come from the glb as-is. SUN lamps bake world aim once
+ * at load (see BakeSunLightWorldTransform) so Atmosphere reads the aimed direction.
  */
 export function ApplyBlenderLight(
   scene: Scene,
@@ -89,6 +109,11 @@ export function ApplyBlenderLight(
     light.angle = lightInfo.spotSize;
     const edgeBlend = lightInfo.spotBlend ?? 0;
     light.innerAngle = lightInfo.spotSize * (1 - edgeBlend); // hotspot for soft edges
+  }
+
+  if (lightInfo.type === "SUN" && light instanceof DirectionalLight)
+  {
+    BakeSunLightWorldTransform(light);
   }
 
   return light;

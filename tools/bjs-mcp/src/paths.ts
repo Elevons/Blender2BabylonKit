@@ -41,6 +41,7 @@ export const REPO_ROOT = FindRepoRoot();
 export const DOCS = {
   kernel: join(REPO_ROOT, "docs/LLM_KERNEL.md"),
   scriptingContext: join(REPO_ROOT, "docs/LLM_SCRIPTING_CONTEXT.md"),
+  playbook: join(REPO_ROOT, "docs/LLM_PLAYBOOK.md"),
   styleGuide: join(REPO_ROOT, "docs/STYLE_GUIDE.md"),
 } as const;
 

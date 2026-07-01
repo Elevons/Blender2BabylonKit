@@ -652,7 +652,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Data model",
           "sub": "components/",
-          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/MSDF_TEXT/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene): clear/ambient, Default Environment, Show Skybox, Skybox Ignores Fog, fog, Atmosphere (scene/atmosphere.py), freeze shadows.",
+          "desc": "Component PropertyGroups in components/: BJSComponent (Tag/Collider/RigidBody/Script/Camera/Audio/Constraint/GUI/PARTICLE/MSDF_TEXT/GUI3D_*), exposed vars + list items, trigger/click events, light/shadow/animation settings. GUID assignment lives in core/ids.py (ID_KEY = bjs_id). Scene render settings in scene/settings.py (Scene.bjs_scene): clear/ambient, Default Environment, environment_intensity / environment_rotation_y (default env), Show Skybox, Skybox Ignores Fog, fog, Atmosphere (scene/atmosphere.py), freeze shadows.",
           "meta": [
             [
               "Identity",
@@ -752,7 +752,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene block",
           "sub": "export/scene.py",
-          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/, or useDefault when Default Environment is enabled; createSkybox forced off when Atmosphere is on; skyboxIgnoreFog when skybox on), fog, atmosphere (export/atmosphere.py), post-processing (via export/post_processing.py — default pipeline, SSAO), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/atmosphere.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
+          "desc": "Clear/ambient color, environment (World texture on active World Output chain via scene/environment.py → env/ with Background/Mapping intensity+rotation — Mapping Z negated on export; or useDefault when Default Environment is enabled with intensity/rotationY from bjs_scene; createSkybox forced off when Atmosphere is on; skyboxIgnoreFog when skybox on), fog, atmosphere (export/atmosphere.py), post-processing (via export/post_processing.py — default pipeline, SSAO), inputActions + defaultInputMap. Scene data edited via scene/settings.py + scene/atmosphere.py + scene/post_processing.py (nested bjs_scene.post); inputActions serialized by input_actions/serialize.py (built-in Player asset when empty).",
           "meta": [
             [
               "Manifest key",
@@ -848,7 +848,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Sidecar files",
           "sub": "artifact",
-          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (patched particle JSON), materials/ (patched NME JSON + texture images). Stable sanitized names; re-export overwrites.",
+          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (patched particle JSON), materials/ (each NME source copied once; external texture overrides patch URLs and strip embeds; embedded-only slots stay in JSON + InputBlock values). Stable sanitized names; re-export overwrites.",
           "meta": [
             [
               "Copied by",
@@ -1148,7 +1148,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyComponents",
           "sub": "per entity",
-          "desc": "ClassifyComponents collects all COLLIDER rows → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "ClassifyComponents collects all COLLIDER rows → HideEntityNode when any collider has makeInvisible → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
           "meta": [
             [
               "Helpers",
@@ -1196,7 +1196,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
+          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1326,6 +1326,115 @@ export const ENGINE_AREA_PAGES = {
           "tgt": 12,
           "label": "each render"
         }
+      ]
+    }
+  },
+  "runtime-loop.html": {
+    "navLabel": "Runtime loop",
+    "diagram": {
+      "title": "Babylon Level Kit — Runtime loop (one frame)",
+      "nodes": [
+        {
+          "id": 1,
+          "x": 40,
+          "y": 200,
+          "w": 160,
+          "h": 40,
+          "label": "runRenderLoop",
+          "sub": "apps/.../main.ts",
+          "desc": "App responsibility — requestAnimationFrame tick calls scene.render() each frame. The kit never starts this loop.",
+          "meta": [
+            ["After", "LevelLoader.Load + level.Begin"],
+            ["Trace", "trace-runtime-loop.html"]
+          ]
+        },
+        {
+          "id": 2,
+          "x": 240,
+          "y": 200,
+          "w": 160,
+          "h": 40,
+          "label": "scene.render()",
+          "sub": "Babylon.js",
+          "desc": "One frame: observables → physics step → GPU draw → after-render callbacks.",
+          "meta": [
+            ["Prose", "02-RUNTIME-BASICS.html"]
+          ]
+        },
+        {
+          "id": 3,
+          "x": 440,
+          "y": 80,
+          "w": 160,
+          "h": 40,
+          "label": "onBeforeRender (first)",
+          "sub": "particles.ts",
+          "desc": "WireParticleEmitterTracking — insertFirst=true so empty-node emitters copy entity world position before RunFrame.",
+          "meta": [
+            ["File", "subsystems/particles.ts"]
+          ]
+        },
+        {
+          "id": 4,
+          "x": 440,
+          "y": 200,
+          "w": 160,
+          "h": 40,
+          "label": "Level.RunFrame",
+          "sub": "core/Level.ts",
+          "desc": "onBeforeRenderObservable — InputManager.Process → all behavior.OnUpdate(deltaSeconds) → AddUpdater callbacks → InputManager.EndFrame.",
+          "meta": [
+            ["deltaSeconds", "getDeltaTime()/1000"],
+            ["Trace", "trace-lifecycle.html"]
+          ]
+        },
+        {
+          "id": 5,
+          "x": 640,
+          "y": 200,
+          "w": 160,
+          "h": 40,
+          "label": "Havok step",
+          "sub": "inside scene.render",
+          "desc": "Physics integrates after beforeRender callbacks — OnUpdate sees the previous step's state.",
+          "meta": [
+            ["Prose", "06-PHYSICS.html#physics-vs-onupdate"]
+          ]
+        },
+        {
+          "id": 6,
+          "x": 840,
+          "y": 200,
+          "w": 160,
+          "h": 40,
+          "label": "GPU draw",
+          "sub": "meshes · shadows · post",
+          "desc": "Main render pass — meshes, lights, shadow maps, post-processing on activeCamera.",
+          "meta": [
+            ["Setup", "FinalizeLevel + ApplyPostProcessing"]
+          ]
+        },
+        {
+          "id": 7,
+          "x": 640,
+          "y": 320,
+          "w": 160,
+          "h": 40,
+          "label": "onAfterRender",
+          "sub": "ui/msdfText.ts",
+          "desc": "WireMsdfTextRendering — MSDF text draw pass after the main scene render.",
+          "meta": [
+            ["Trace", "trace-msdfText.html"]
+          ]
+        }
+      ],
+      "edges": [
+        { "id": 100, "src": 1, "tgt": 2, "label": "each frame" },
+        { "id": 101, "src": 2, "tgt": 3, "label": "beforeRender" },
+        { "id": 102, "src": 3, "tgt": 4, "label": "then" },
+        { "id": 103, "src": 4, "tgt": 5, "label": "then" },
+        { "id": 104, "src": 5, "tgt": 6, "label": "then" },
+        { "id": 105, "src": 6, "tgt": 7, "label": "afterRender" }
       ]
     }
   },
@@ -1665,7 +1774,7 @@ export const ENGINE_AREA_PAGES = {
           "sub": "script_parse.py",
           "desc": "Blender regex-parses @inputMap(\"…\") from behavior .ts — lowercase literal token like @exposed. Create Maps Used by Scripts operator can seed maps from scripts.",
           "meta": [
-            ["See", "11-INPUT.html prose"]
+            ["See", "12-INPUT.html prose"]
           ]
         }
       ],
@@ -1938,7 +2047,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Lights",
           "sub": "subsystems/lights.ts",
-          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between).",
+          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. SUN bakes world aim (BakeSunLightWorldTransform) and detaches — empty position ignored for shadows. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between). Large rigs: see Punctual light budget.",
           "meta": [
             [
               "AREA",
@@ -1994,7 +2103,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Shadows",
           "sub": "subsystems/shadows.ts",
-          "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all meshes receive; casters respect bjs_cast_shadows (ray-visibility Shadow off → receive-only) and outlier-size heuristics. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1). Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
+          "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all meshes receive; casters respect bjs_cast_shadows (ray-visibility Shadow off → receive-only) and outlier-size heuristics. Directional suns: AnchorDirectionalShadowOrigin on caster bounds + autoCalcShadowZBounds when clip planes are auto. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1). Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
           "meta": [
             [
               "Options",
@@ -2014,7 +2123,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene look",
           "sub": "environment / fog / atmosphere / postprocess",
-          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; waits for texture before skybox; createSkybox off when atmosphere on or IBL-only; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
+          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; file-based .env/.hdr/equirect → createDefaultSkybox with same texture as IBL; ResolveEnvironmentRotation +π/2 for panorama sources; ApplyEnvironmentRotation on texture not mesh; Mapping Z exported as -rotationY; waits for texture before skybox; ComputeSkyboxSize max(1000, diagonal×3); infiniteDistance + ignoreCameraMaxZ; EnvironmentHelper skybox unparented without double rotation; createSkybox off when atmosphere on; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
           "meta": [
             [
               "Attach",
@@ -2034,7 +2143,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Level",
           "sub": "holds the handles",
-          "desc": "activeCamera, shadowGenerators, post, atmosphere — all reachable from gameplay code for further tuning.",
+          "desc": "activeCamera, shadowGenerators, punctualLightingMode, clusteredLights, post, atmosphere — all reachable from gameplay code for further tuning.",
           "meta": [
             [
               "See",
@@ -2050,7 +2159,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Node materials",
           "sub": "subsystems/materials.ts",
-          "desc": "Optional manifest.materials[]: after glTF load, ApplyNodeMaterials matches mesh.material.name to Blender material name, parses NME JSON (materials/), replaces PBR. Texture rows patch JSON on export; runtime urlRewriter + BindManifestTextures fallback.",
+          "desc": "Optional manifest.materials[]: ApplyNodeMaterials matches mesh.material.name, parses NME JSON, replaces PBR. Loads embedded data: / base64String from JSON or relative paths via urlRewriter. Cache per file+name; manifest textures[] always override embeds; blockId via editorData.map; BindManifestTextures + BindManifestInputs.",
           "meta": [
             [
               "Editor",
@@ -2061,6 +2170,26 @@ export const ENGINE_AREA_PAGES = {
               "Properties › Material › Babylon"
             ]
           ]
+        },
+        {
+          "id": 8,
+          "x": 560,
+          "y": 280,
+          "w": 150,
+          "h": 40,
+          "label": "Punctual budget",
+          "sub": "subsystems/clusteredLights.ts",
+          "desc": "FinalizeLevel (before SetupShadows): when enabled lights exceed lightBudget (default 8), cluster point/spot into ClusteredLightContainer or disable light UBOs (forward-expanded). Suns stay forward for shadows. Sets level.punctualLightingMode and level.clusteredLights.",
+          "meta": [
+            [
+              "Modes",
+              "forward · clustered · forward-expanded"
+            ],
+            [
+              "Override",
+              "scene.clusterPunctualLights · lightBudget"
+            ]
+          ]
         }
       ],
       "edges": [
@@ -2069,6 +2198,18 @@ export const ENGINE_AREA_PAGES = {
           "src": 1,
           "tgt": 4,
           "label": "casting lamps"
+        },
+        {
+          "id": 107,
+          "src": 1,
+          "tgt": 8,
+          "label": "entity pass"
+        },
+        {
+          "id": 108,
+          "src": 8,
+          "tgt": 6,
+          "label": "punctualLightingMode"
         },
         {
           "id": 101,

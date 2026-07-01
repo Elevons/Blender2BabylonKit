@@ -1,0 +1,17 @@
+<h1>12 — Input: actions, bindings, @inputMap</h1>
+<p class="doc-links">Subsystem diagram: <a href="input.html">input.html</a> · Code traces: <a href="trace-input.html">trace-input</a> (runtime) · <a href="../blender/trace-input.html">Blender trace-input</a> · Feature chain: <a href="10-FEATURE-TRACES.html#input">10 — Feature Traces</a></p>
+<h2>Overview (<code>src/input/</code>) <a name="input"></a></h2>
+<p>A Unity Input System clone: <code>InputManager</code> owns the device state (keyboard + first gamepad, deadzoned) and the project-wide <code>InputActionAsset</code> of <strong>Action Maps</strong> &gt; <strong>Actions</strong> &gt; <strong>Bindings</strong> (direct key/button/axis/stick reads, plus <code>1DAXIS</code>/<code>2DVECTOR</code> composites). Actions have a type (<code>BUTTON</code>/<code>VALUE</code>/<code>PASSTHROUGH</code>) and fire Unity-style <code>started</code>/<code>performed</code>/<code>canceled</code> callbacks; polling: <code>ReadValue()</code>, <code>ReadVector2()</code>, <code>IsPressed()</code>, <code>WasPressedThisFrame()</code>, <code>WasReleasedThisFrame()</code>, <code>WasPerformedThisFrame()</code>.</p>
+<h2>Blender authoring</h2>
+<p>The asset and <strong>Scene Default</strong> map are authored in Blender's <strong>Input Actions</strong> panel (the <code>input_actions/</code> package: <code>properties.py</code> / <code>serialize.py</code> / <code>operators.py</code>, drawn by <code>ui/input_panel.py</code>) and exported as <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>. If the panel is empty at export, the built-in &quot;Player&quot; map is serialized anyway.</p>
+<h2>Load-time injection</h2>
+<p><code>LevelLoader</code> calls <code>InputManager.LoadAsset</code> before behaviors are built. Map injection (<code>core/loader/entityBuilder.ts</code> → <code>InjectInputMaps</code>):</p>
+<ul>
+<li><code>@inputMap(&quot;Name&quot;)</code> on a field → that map;</li>
+<li><code>@inputMap()</code> or <code>@inputMap(&quot;&quot;)</code> → scene default;</li>
+<li>no <code>@inputMap</code> fields → <code>behavior.input</code> receives the scene default.</li>
+</ul>
+<p><code>@inputMap</code> stays lowercase like <code>@exposed</code> (Blender scans the literal token). See also <a href="05-SCRIPTING.html">05 — Scripting</a> for behavior lifecycle and decorator contracts.</p>
+<h2>Frame lifecycle</h2>
+<p>Automatic: <code>Level.Begin</code> attaches and enables every map; each <code>scene.render()</code> drives <code>RunFrame</code> on <code>onBeforeRenderObservable</code>. Inside <code>RunFrame</code>: <code>InputManager.Process</code> runs <em>before</em> all behavior <code>OnUpdate</code> calls; <code>InputManager.EndFrame</code> runs <em>after</em> them so <code>WasPressedThisFrame</code> / <code>WasReleasedThisFrame</code> edges last exactly one frame. <code>Dispose</code> detaches input and removes observers.</p>
+<p>The keyboard observable (<code>scene.onKeyboardObservable</code>) is separate — it fires on key events and is used by Babylon's native camera key schemes, not by the Input Actions pipeline. Full app → BJS timeline: <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="trace-runtime-loop.html">trace-runtime-loop</a>. Babylon camera key schemes intentionally stay native (cameras consume keycode arrays).</p>

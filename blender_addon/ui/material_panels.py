@@ -29,6 +29,33 @@ def _slot_needs_file(tex_row, nme_file):
     return not tex_row.image_file
 
 
+def _draw_nme_input(layout, row):
+    """Draw one inspector-visible NME parameter row."""
+    label = row.block_name or "Parameter"
+    if row.block_id:
+        label = f"{label} (id {row.block_id})"
+
+    value_type = row.value_type
+    if value_type == 'FLOAT':
+        layout.prop(row, "f_val", text=label)
+    elif value_type == 'INT':
+        layout.prop(row, "i_val", text=label)
+    elif value_type == 'BOOL':
+        layout.prop(row, "b_val", text=label)
+    elif value_type == 'VECTOR2':
+        layout.prop(row, "v2_val", text=label)
+    elif value_type == 'VECTOR3':
+        layout.prop(row, "v3_val", text=label)
+    elif value_type == 'VECTOR4':
+        layout.prop(row, "v4_val", text=label)
+    elif value_type == 'COLOR3':
+        layout.prop(row, "c3_val", text=label)
+    elif value_type == 'COLOR4':
+        col = layout.column(align=True)
+        col.prop(row, "c4_rgb", text=label)
+        col.prop(row, "c4_a", text="Alpha")
+
+
 def draw_babylon_material(layout, mat):
     """Shared draw routine for the material's Babylon / NME settings."""
     users = _material_user_count(mat)
@@ -43,15 +70,30 @@ def draw_babylon_material(layout, mat):
     layout.prop(mat, "bjs_nme_file", text="Node Material JSON")
 
     row = layout.row(align=True)
-    scan = row.operator("bjs.scan_nme_textures", text="Scan Textures", icon='FILE_REFRESH')
+    scan = row.operator("bjs.scan_nme_textures", text="Scan NME", icon='FILE_REFRESH')
     scan.material_name = mat.name
     if mat.bjs_nme_file:
         launch = row.operator("bjs.open_launcher_nme", text="Open in Launcher", icon='WORLD')
         launch.material_name = mat.name
 
+    if mat.bjs_nme_file:
+        extract = layout.operator("bjs.extract_nme_textures", text="Extract Textures…", icon='EXPORT')
+        extract.material_name = mat.name
+
     if not mat.bjs_nme_file:
-        layout.label(text="Pick an NME JSON, then Scan Textures", icon='INFO')
+        layout.label(text="Pick an NME JSON, then Scan NME", icon='INFO')
         return
+
+    if len(mat.bjs_nme_inputs) > 0:
+        params = layout.box()
+        params.label(text="Parameters", icon='PRESET')
+        current_group = None
+        for row in mat.bjs_nme_inputs:
+            group = row.group_in_inspector or ""
+            if group and group != current_group:
+                current_group = group
+                params.label(text=group, icon='NONE')
+            _draw_nme_input(params, row)
 
     box = layout.box()
     header = box.row()
@@ -61,7 +103,7 @@ def draw_babylon_material(layout, mat):
 
     if len(mat.bjs_nme_textures) == 0:
         box.label(
-            text="Scan Textures to list slots from the JSON",
+            text="Scan NME to list slots from the JSON",
             icon='INFO',
         )
         return

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PROSE_CHAPTERS } from "./docs/prose/manifest.mjs";
+import { KEPT_META_MD } from "./docs/prose-config.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTENT_DIR = path.join(ROOT, "scripts/docs/prose/content");
@@ -51,7 +52,7 @@ for (const chapter of PROSE_CHAPTERS)
   scanHtml(chapter.fragment, chapter.href);
 }
 
-for (const name of ["STYLE_GUIDE.md", "LLM_KERNEL.md", "LLM_SCRIPTING_CONTEXT.md"])
+for (const name of KEPT_META_MD)
 {
   const filePath = path.join(DOCS_DIR, name);
   if (!fs.existsSync(filePath)) { continue; }

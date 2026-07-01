@@ -1,4 +1,4 @@
-import { appendSceneAsync, SceneLoader } from "@babylonjs/core";
+import { appendSceneAsync, LoadAssetContainerAsync, SceneLoader } from "@babylonjs/core";
 import type { Scene } from "@babylonjs/core";
 // Registers the glTF loader so .glb files can be loaded. (In Babylon 9 the old
 // SceneLoader.AppendAsync statics are deprecated in favour of appendSceneAsync.)
@@ -13,6 +13,12 @@ import { Level } from "./Level";
 import type { BehaviorRegistry } from "../scripting/BehaviorRegistry";
 import { InputManager, DEFAULT_INPUT_ASSET } from "../input";
 import { SetupShadows } from "../subsystems/shadows";
+import {
+  AddContainerToSceneWithLightClustering,
+  ClusterPunctualLightsIfNeeded,
+  ShouldClusterBeforeGlbLoad,
+} from "../subsystems/clusteredLights";
+import type { ClusteredLightsResult } from "../subsystems/clusteredLights";
 import { ResolveCameraTargets } from "../subsystems/cameras";
 import { WireTriggerEvents } from "../subsystems/triggers";
 import { BuildConstraints } from "../subsystems/constraints";
@@ -61,6 +67,13 @@ export interface LevelLoaderOptions {
   cleanBoneMatrixWeights?: boolean;
   /** Show collider wireframes on load (Babylon PhysicsViewer). Default false. */
   debugColliders?: boolean;
+  /**
+   * When false, never cluster punctual lights (UBO fallback if over budget).
+   * Overrides the manifest scene block when set.
+   */
+  clusterPunctualLights?: boolean;
+  /** Max forward scene lights before clustering / UBO fallback. Default 8. */
+  lightBudget?: number;
 }
 
 /**
@@ -77,10 +90,14 @@ export class LevelLoader
     private options: LevelLoaderOptions = {}
   ) {}
 
-  /** Load a `.scene.json` manifest (the glb path is resolved relative to it). */
-  async Load(manifestUrl: string): Promise<Level>
+  /**
+   * Load a `.scene.json` manifest (the glb path is resolved relative to it).
+   * Pass `prefetchedManifest` when the app already fetched the manifest for
+   * engine bootstrap (large-world rendering must be decided before `new Scene`).
+   */
+  async Load(manifestUrl: string, prefetchedManifest?: LevelManifest): Promise<Level>
   {
-    const manifest = await FetchAndValidateManifest(manifestUrl);
+    const manifest = prefetchedManifest ?? await FetchAndValidateManifest(manifestUrl);
     const baseUrl = GetDirectory(manifestUrl);
 
     // The scene's Input Actions asset must exist BEFORE behaviors are built,
@@ -100,7 +117,34 @@ export class LevelLoader
     // mirror; that mirror would otherwise corrupt Havok collider placement.
     // See physics.ts for the full explanation.
     this.scene.useRightHandedSystem = true;
-    await appendSceneAsync(baseUrl + manifest.glb, this.scene);
+
+    const clusterPunctualLights =
+      this.options.clusterPunctualLights ?? manifest.scene?.clusterPunctualLights;
+    const lightBudget = this.options.lightBudget ?? manifest.scene?.lightBudget;
+    const clusterOptions = {
+      enabled: clusterPunctualLights,
+      threshold: lightBudget,
+    };
+
+    let earlyPunctualLighting: ClusteredLightsResult | null = null;
+    const glbUrl = baseUrl + manifest.glb;
+
+    if (ShouldClusterBeforeGlbLoad(manifest, clusterOptions))
+    {
+      // appendSceneAsync compiles PBR while every glTF light is still forward;
+      // large rigs hit WebGL UBO limits before FinalizeLevel can cluster them.
+      const container = await LoadAssetContainerAsync(glbUrl, this.scene);
+      earlyPunctualLighting = AddContainerToSceneWithLightClustering(
+        this.scene,
+        container,
+        clusterOptions
+      );
+    }
+    else
+    {
+      await appendSceneAsync(glbUrl, this.scene);
+    }
+
     NeutralizeGltfRoot(this.scene);
     ApplyNodeVisibility(this.scene);
     await ApplyNodeMaterials(this.scene, manifest.materials, baseUrl);
@@ -120,7 +164,7 @@ export class LevelLoader
     ResolveObjectReferences(context.pendingReferences, context.level);
     ResolveCameraTargets(context.level, context.cameraTargets);
 
-    await this.FinalizeLevel(manifest, context);
+    await this.FinalizeLevel(manifest, context, earlyPunctualLighting);
 
     return context.level;
   }
@@ -129,8 +173,29 @@ export class LevelLoader
    * Everything after the entity passes: shadows, scene-wide render settings,
    * animations, sound settling, trigger wiring, and starting the update loop.
    */
-  private async FinalizeLevel(manifest: LevelManifest, context: LoadContext): Promise<void>
+  private async FinalizeLevel(
+    manifest: LevelManifest,
+    context: LoadContext,
+    earlyPunctualLighting: ClusteredLightsResult | null = null
+  ): Promise<void>
   {
+    // Large rigs may already be clustered during glb import; otherwise cluster
+    // here before shadows (still before gameplay, but after appendSceneAsync).
+    const sceneInfo = manifest.scene;
+    const clusterPunctualLights =
+      this.options.clusterPunctualLights ?? sceneInfo?.clusterPunctualLights;
+    const lightBudget = this.options.lightBudget ?? sceneInfo?.lightBudget;
+
+    const punctualLighting = earlyPunctualLighting ?? ClusterPunctualLightsIfNeeded(this.scene, {
+      enabled: clusterPunctualLights,
+      threshold: lightBudget,
+    });
+    context.level.punctualLightingMode = punctualLighting.mode;
+    if (punctualLighting.container !== null)
+    {
+      context.level.clusteredLights = punctualLighting.container;
+    }
+
     if (this.options.shadows !== false && context.shadowLights.length > 0)
     {
       // Loader option wins; otherwise the Blender scene's "Freeze Shadows" flag.

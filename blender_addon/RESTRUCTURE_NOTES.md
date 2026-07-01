@@ -60,7 +60,8 @@ The split is now **"about the object" vs "about the scene"**:
       appear for the relevant object type (previously inline boxes)
   - *Export* — a compact copy of the export controls for convenience
 - **Properties > Scene > "Babylon"** — everything scene-wide, under one parent:
-  - *Rendering* — clear/ambient color, environment/skybox
+  - *Rendering* — clear/ambient color, freeze shadows
+  - *Environment* — default env, intensity/rotation (default env), skybox
   - *Fog* — enabled by the checkbox in the panel header
   - *Post-Processing* — enabled by the checkbox in the panel header
   - *Input Actions* — **moved here from the N-panel** (it's scene data, not

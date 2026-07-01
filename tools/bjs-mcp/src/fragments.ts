@@ -206,7 +206,36 @@ await activeCamera.flyToAsync(
   this.entity.body.disablePreStep = false;
 }`,
   },
+  {
+    name: "reveal-entity",
+    description: "Show a viewport-hidden or Make Invisible entity at runtime.",
+    code: `this.node.isVisible = true;
+
+const light = this.scene.getLightByName(this.entity.name);
+if (light !== null)
 {
+  light.setEnabled(true);
+}`,
+  },
+  {
+    name: "play-sound",
+    description: "Play an AUDIO component sound by file stem.",
+    code: `this.entity.GetSound("door")?.play();`,
+  },
+  {
+    name: "throttle-from-actions",
+    description: "Read Throttle Up / Throttle Down as -1, 0, or +1 (see TrainBehavior).",
+    code: `let throttle = 0;
+if (this.input?.FindAction("Throttle Up")?.IsPressed() === true)
+{
+  throttle += 1;
+}
+if (this.input?.FindAction("Throttle Down")?.IsPressed() === true)
+{
+  throttle -= 1;
+}`,
+  },
+  {
     name: "move-animated-body",
     description:
       "Teleport an ANIMATED (kinematic) body and have it hold position. disablePreStep = false lets the node transform reach the body; zero velocity after the write so it does not drift.",

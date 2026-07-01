@@ -17,6 +17,7 @@
     "docs:trace": "node scripts/build-trace-docs.mjs",
     "docs:blender": "node scripts/build-blender-docs.mjs",
     "docs:prose": "node scripts/build-prose-docs.mjs",
+    "docs:validate": "node scripts/docs/validate-docs.mjs",
     "docs:check-links": "node scripts/check-doc-links.mjs",
     "input:gen": "node scripts/generate-input-constants.mjs",
     "mcp:build": "npm run build --workspace @bjs/mcp",

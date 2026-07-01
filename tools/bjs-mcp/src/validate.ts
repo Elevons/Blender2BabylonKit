@@ -404,16 +404,48 @@ function CheckScenePostProcessInBehavior(source: string, issues: ValidationIssue
   });
 }
 
+const FIX_HINTS: Record<string, string> = {
+  "missing-engine-import": 'Add: import { Behavior, … } from "@bjs/engine";',
+  "missing-export-default": "Add: export default class YourName extends Behavior { }",
+  "class-filename-mismatch": "Rename class or file so stems match (Patrol.ts → class Patrol).",
+  "lowercase-lifecycle": "Rename to PascalCase: OnStart, OnUpdate, OnDestroy, OnMessage.",
+  "wrong-exposed-decorator": "Use lowercase @exposed (not @Exposed).",
+  "wrong-inputmap-decorator": "Use lowercase @inputMap (not @InputMap).",
+  "target-transform-once":
+    "Call setTargetTransform every frame, or use node.position with ANIMATED + disablePreStep.",
+  "multiline-exposed-default": "Use single-line literal defaults only for @exposed.",
+  "computed-exposed-default": "Replace computed default with a literal (= 5, = true, = null, …).",
+  "entity-missing-type-hint": 'Add type: "entity" to @exposed for Entity | null fields.',
+  "entity-list-not-empty": "Entity lists must start as [] — authors fill in Blender.",
+  "missing-void-return": "Add explicit : void return type on lifecycle methods.",
+  "dynamic-body-position-fight":
+    "Call get_physics_movement — use velocity on DYNAMIC or ANIMATED + disablePreStep.",
+  "possible-physics-fight": "Call get_physics_movement before writing node.position in OnUpdate.",
+  "unknown-input-action": "Call list_input_actions; use exact names or PlayerActions constants.",
+  "raw-key-input": "Use @inputMap + FindAction, or scene observable + OnDestroy cleanup.",
+  "brace-style": "Call get_style_guide — Allman braces (opening brace on its own line).",
+  "missing-observer-cleanup": "Store observer in OnStart; remove in OnDestroy.",
+  "scene-post-in-behavior":
+    'Author in Blender Scene panels — get_scripting_context(section="scene-look").',
+};
+
 export function FormatValidationResult(result: ValidationResult): string
 {
   if (result.issues.length === 0)
   {
-    return "Valid — no issues found.";
+    return "Valid — no issues found.\n\nNext: save to src/behaviors/ and attach SCRIPT in Blender if not already.";
   }
 
-  const lines = result.issues.map(
-    (issue) => `[${issue.severity.toUpperCase()}] ${issue.code}: ${issue.message}`
-  );
+  const lines = result.issues.map((issue) =>
+  {
+    const hint = FIX_HINTS[issue.code];
+    const hintLine = hint !== undefined ? `\n    → Fix: ${hint}` : "";
+    return `[${issue.severity.toUpperCase()}] ${issue.code}: ${issue.message}${hintLine}`;
+  });
 
-  return `${result.valid ? "Warnings only" : "Invalid"}:\n${lines.join("\n")}`;
+  const footer = result.valid
+    ? "\n\nWarnings only — address before shipping."
+    : "\n\nInvalid — fix ALL errors, then call validate_behavior again.";
+
+  return `${result.valid ? "Warnings only" : "Invalid"}:\n${lines.join("\n")}${footer}`;
 }

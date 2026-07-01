@@ -5,6 +5,7 @@ import {
   SpotLight,
   PointLight,
   RenderTargetTexture,
+  Vector3,
 } from "@babylonjs/core";
 import type { Light, IShadowLight, AbstractMesh } from "@babylonjs/core";
 import type { ShadowSettings } from "../core/types";
@@ -103,6 +104,51 @@ function SelectShadowCasters(meshes: AbstractMesh[]): AbstractMesh[]
   return casters;
 }
 
+/** Merged world-space AABB center of every shadow caster mesh. */
+function ShadowCasterBoundsCenter(casters: AbstractMesh[]): Vector3 | null
+{
+  if (casters.length === 0)
+  {
+    return null;
+  }
+
+  const boundsMin = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+  const boundsMax = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+
+  for (const mesh of casters)
+  {
+    mesh.computeWorldMatrix(true);
+    const worldMin = mesh.getBoundingInfo().boundingBox.minimumWorld;
+    const worldMax = mesh.getBoundingInfo().boundingBox.maximumWorld;
+    boundsMin.x = Math.min(boundsMin.x, worldMin.x);
+    boundsMin.y = Math.min(boundsMin.y, worldMin.y);
+    boundsMin.z = Math.min(boundsMin.z, worldMin.z);
+    boundsMax.x = Math.max(boundsMax.x, worldMax.x);
+    boundsMax.y = Math.max(boundsMax.y, worldMax.y);
+    boundsMax.z = Math.max(boundsMax.z, worldMax.z);
+  }
+
+  return boundsMin.add(boundsMax).scaleInPlace(0.5);
+}
+
+/**
+ * Directional shadows use an orthographic frustum anchored at light.position.
+ * Re-center on caster geometry so a Blender sun empty placed far from the level
+ * does not stretch depth precision or push content to the frustum edge.
+ */
+function AnchorDirectionalShadowOrigin(light: DirectionalLight, casters: AbstractMesh[]): void
+{
+  const center = ShadowCasterBoundsCenter(casters);
+  if (center === null)
+  {
+    light.position.copyFrom(light.direction).scaleInPlace(-1);
+    return;
+  }
+
+  light.position.copyFrom(center.subtract(light.direction));
+  light.forceProjectionMatrixCompute();
+}
+
 /** Clamp to a supported shadow-map resolution (power of two, max 8192). */
 function ClampShadowMapSize(mapSize: number): number
 {
@@ -193,13 +239,17 @@ export function SetupShadows(
       light.shadowMaxZ = settings.maxZ;
     }
 
-    // A directional sun's auto frustum keeps a huge depth range (the light is
-    // placed far from the geometry), which wrecks shadow-map depth precision and
-    // produces acne stripes. When the user hasn't pinned the clip planes, let
-    // Babylon recompute a tight depth range from the actual casters each frame.
-    if (light instanceof DirectionalLight && !settings.minZ && !settings.maxZ)
+    // A directional sun's auto frustum keeps a huge depth range when the shadow
+    // view origin sits far from the geometry, which wrecks depth precision and
+    // produces washed-out or striped shadows. Anchor on caster bounds and let
+    // Babylon recompute a tight depth range each frame when clip planes are auto.
+    if (light instanceof DirectionalLight)
     {
-      light.autoCalcShadowZBounds = true;
+      AnchorDirectionalShadowOrigin(light, shadowCasters);
+      if (!settings.minZ && !settings.maxZ)
+      {
+        light.autoCalcShadowZBounds = true;
+      }
     }
 
     // Point/spot lights default their shadow depth range to the *camera's*

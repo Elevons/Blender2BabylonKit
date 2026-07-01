@@ -1,10 +1,11 @@
 """Per-object settings that aren't components: Babylon shadow controls for
 lights, and NLA playback settings. Both attach as PointerProperties on Object."""
 
-from bpy.props import (
+from bpy.types import PropertyGroup
+
+from ..core.props import (
     StringProperty, EnumProperty, FloatProperty, BoolProperty, IntProperty,
 )
-from bpy.types import PropertyGroup
 
 from .constants import SHADOW_FILTERS
 

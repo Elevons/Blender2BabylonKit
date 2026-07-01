@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 07 — Rendering</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Engine</a>
+    <span class="sep">/</span>
+    <a href="../blender/00-INDEX.html">Blender</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="06-PHYSICS.html">Prev</a> <span class="dim">·</span> <a href="08-AUDIO-ANIMATION.html">Next →</a></p>
+  <article><h1>07 — Rendering: lights, cameras, shadows, scene look, node materials</h1>
+<p class="doc-links">Subsystem diagram: <a href="rendering.html">rendering.html</a> · Code traces: <a href="trace-lights.html">Lights</a> · <a href="trace-cameras.html">Cameras</a> · <a href="trace-shadows.html">Shadows</a> · <a href="trace-post.html">Post-processing</a> · <a href="trace-atmosphere.html">Atmosphere</a> · <a href="trace-materials.html">Node materials</a> · Blender: <a href="../blender/trace-materials.html">NME authoring</a></p>
+<h2>Lights (<code>subsystems/lights.ts</code>)</h2>
+<p>Automatic — no component. The glb creates and places the light; <code>ApplyBlenderLight</code> copies the lamp's properties onto it. Blender inserts an orientation-correction node when exporting +Y-up, so the GUID node is an *ancestor* of the light — <code>FindLightForNode</code> walks the whole parent chain. POINT→Point, SUN→Directional, SPOT→Spot (AREA unsupported by glTF — validator warns). Color exact; intensity approximate (watts don't map cleanly): <code>SUN_SCALE</code> / <code>PUNCTUAL_SCALE</code> at the top of the file are the single tuning point. SUN lamps export <code>sunAngle</code> (angular diameter, radians); when the lamp casts shadows, <code>SetupShadows</code> maps it to PCSS penumbra (Blender Angle 0°→0, 45°→1; clamped above 45°). Spot lamps export <code>spotSize</code> / <code>spotBlend</code>. No fallback light — a dark scene means add a lamp in Blender.</p>
+<h2>Punctual light budget (<code>subsystems/clusteredLights.ts</code>)</h2>
+<p>Large light rigs can exceed WebGL's per-shader <strong>uniform buffer block</strong> limit (often 12–16 blocks; Babylon uses one block per forward light plus scene/material/mesh data). Symptom: <code>Unable to compile effect</code> / <code>_finalizePipelineContext</code> in the browser console with a high <code>LIGHTCOUNT</code> define — not a Blender export bug.</p>
+<p>The loader handles this <strong>automatically</strong> during <code>FinalizeLevel</code>, <em>before</em> <code>SetupShadows</code> and the first material compile. Authors do not toggle anything in Blender for normal use.</p>
+<h3>When it kicks in</h3>
+<p>After the entity pass, count <strong>enabled</strong> lights in <code>scene.lights</code>. When the count exceeds the budget (default <strong>8</strong>), the loader tries to move eligible <strong>point and spot</strong> lights into a Babylon <code>ClusteredLightContainer</code>. <strong>Directional (sun) lights stay forward</strong> so shadow maps and PCSS penumbra keep working.</p>
+<h3>Three outcomes (<code>level.punctualLightingMode</code>)</h3>
+<table><thead><tr><th>Mode</th><th>When</th><th>What happened</th></tr></thead><tbody>
+<tr><td><code>forward</code></td><td>Enabled lights ≤ budget</td><td>No change — standard forward PBR per light</td></tr>
+<tr><td><code>clustered</code></td><td>Over budget and clustering succeeded</td><td>Punctual lights live in one cluster (counts as a single shader light); handle on <code>level.clusteredLights</code></td></tr>
+<tr><td><code>forward-expanded</code></td><td>Over budget but clustering unavailable</td><td><code>engine.disableUniformBuffers = true</code> — forward path with more lights, slightly slower; preserves glTF falloff</td></tr>
+</tbody></table>
+<p>On load, check the console for a summary line:</p>
+<pre><code class="language-text">[bjs] punctual lighting: clustered 19 point/spot lights (2 regular scene lights remain; budget 8)</code></pre>
+<p>or <code>forward-expanded (uniform buffers disabled; …)</code>. You can also read <code>level.punctualLightingMode</code> from gameplay code after <code>LevelLoader.Load</code>.</p>
+<h3>Clustering details and limits</h3>
+<ul>
+<li>glTF punctual lights export with <code>Light.FALLOFF_GLTF</code>; clustered lighting only accepts <code>FALLOFF_DEFAULT</code>, so the loader converts falloff before <code>addLight</code>. The cluster writes inverse-square attenuation into its light-data texture — close to glTF, not bit-identical to forward.</li>
+<li>Clustered lights <strong>cannot cast shadows</strong> in Babylon. Keep shadow-casting on suns (and any punctual lights that must shadow) as regular forward lights; expect those to count toward the budget.</li>
+<li>IES profiles and projection textures on spots are not clusterable.</li>
+<li>Devices without WebGL2 float blending fall back to <code>forward-expanded</code>.</li>
+</ul>
+<h3>Overrides (optional)</h3>
+<p>Most scenes should leave these unset. Manifest <code>scene</code> block (no Blender panel yet):</p>
+<pre><code class="language-json">&quot;scene&quot;: {
+  &quot;clusterPunctualLights&quot;: true,
+  &quot;lightBudget&quot;: 8
+}</code></pre>
+<table><thead><tr><th>Field</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>clusterPunctualLights</code></td><td><code>true</code> (auto)</td><td>When <code>false</code>, never cluster — use UBO fallback when over budget</td></tr>
+<tr><td><code>lightBudget</code></td><td><code>8</code></td><td>Max enabled forward scene lights before clustering / fallback</td></tr>
+</tbody></table>
+<p><code>LevelLoader</code> options <code>clusterPunctualLights</code> and <code>lightBudget</code> override the manifest when set. Trace: entity pass applies lamps → <code>ClusterPunctualLightsIfNeeded</code> → <code>SetupShadows</code>.</p>
+<h2>Cameras (<code>subsystems/cameras/</code>)</h2>
+<p>Mirrors the lights design: the glb creates a faithful <code>FreeCamera</code> (<code>FindCameraForNode</code> walks parents the same way); <code>ApplyBlenderCamera</code> copies clip range and FOV/ortho mode; the exporter flags the scene's active camera → <code>scene.activeCamera</code> + <code>level.activeCamera</code>. Faithful playback by default — no controls attached; <code>main.ts</code> adds a fallback ArcRotate only when no camera shipped.</p>
+<p>An opt-in <strong>CAMERA component</strong> overrides the type via <code>BuildTypedCamera</code>, which derives the new camera from the faithful one's world transform (so it starts exactly where Blender framed it), copies the lens, then disposes the original. Per-type builders: UNIVERSAL (free-fly + key scheme), ARC (orbit; optional target re-pivots in the second pass; <code>setPosition(eye)</code> keeps the Blender framing; optional <strong>Track Target</strong> drives the orbit pivot each frame via <code>Level.AddUpdater</code>), FOLLOW-ORBIT (Babylon FollowCamera; <code>useBlenderTransform</code> derives radius/height/rotationOffset via <code>DeriveFollowFromPosition</code>), FOLLOW-OFFSET (a UniversalCamera driven each frame by a <code>Level.AddUpdater</code> to hold the exported world offset), GEOSPATIAL (Babylon <code>GeospatialCamera</code> for map-like globe navigation — pan, zoom-to-cursor, tilt; the planet mesh must sit at world origin and <strong>Planet Radius</strong> must match its radius in scene units; <code>DeriveGeospatialPose</code> raycasts the exported eye/forward against that sphere to seed <code>center</code> / <code>yaw</code> / <code>pitch</code> / <code>radius</code>; optional min/max zoom and collision checking). <strong>Orbit Speed</strong>, <strong>Zoom Speed</strong>, and <strong>Pan Speed</strong> (manifest <code>orbitSpeed</code> / <code>zoomSpeed</code> / <code>panSpeed</code>, default <code>1.0</code>) apply to ARC and GEOSPATIAL when controls are attached — implemented in <code>speeds.ts</code> (<code>ApplyArcRotateControlSpeeds</code> maps to Babylon sensibility / wheel precision; <code>ApplyGeospatialControlSpeeds</code> scales <code>movement.rotationXSpeed</code> / <code>rotationYSpeed</code> / <code>panSpeed</code> / <code>zoomSpeed</code>). Free-fly cameras (FREE/UNIVERSAL) also honor an optional <strong>Keep Upright</strong> toggle (<code>lockRoll</code>): <code>LockCameraRoll</code> bakes the world pose and detaches the glb camera from its orientation-correction parent (so yaw/pitch happen in world space), pins look-at to world up, and drops any residual view-axis roll each frame — keeping the camera level with the horizon. Targets resolve with entity references in the loader's second pass (<a href="04-LOAD-PIPELINE.html">pipeline step 5</a>). GEOSPATIAL has no deferred target — controls (pointer, wheel, keyboard) attach when <strong>Attach Controls</strong> is on.</p>
+<h4>CAMERA component example (ArcRotate)</h4>
+<p>Orbit a moving target; speeds are multipliers over Babylon defaults:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;CAMERA&quot;,
+  &quot;cameraType&quot;: &quot;ARC&quot;,
+  &quot;attachControl&quot;: true,
+  &quot;keys&quot;: { &quot;scheme&quot;: &quot;ARROWS&quot;, &quot;up&quot;: &quot;W&quot;, &quot;down&quot;: &quot;S&quot;, &quot;left&quot;: &quot;A&quot;, &quot;right&quot;: &quot;D&quot; },
+  &quot;useBlenderTransform&quot;: true,
+  &quot;followMode&quot;: &quot;OFFSET&quot;,
+  &quot;lockRoll&quot;: false,
+  &quot;speed&quot;: 1.0,
+  &quot;inertia&quot;: 0.9,
+  &quot;radius&quot;: 10.0,
+  &quot;lowerRadius&quot;: 0.0,
+  &quot;upperRadius&quot;: 0.0,
+  &quot;target&quot;: &quot;&lt;entity-guid&gt;&quot;,
+  &quot;trackTarget&quot;: true,
+  &quot;orbitSpeed&quot;: 1.0,
+  &quot;zoomSpeed&quot;: 1.0,
+  &quot;panSpeed&quot;: 1.0,
+  &quot;distance&quot;: 10.0,
+  &quot;height&quot;: 4.0,
+  &quot;rotationOffset&quot;: 0.0
+}</code></pre>
+<h4>CAMERA component example (Geospatial)</h4>
+<p>Globe mesh centered at world origin; camera starts at the exported Blender pose:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;CAMERA&quot;,
+  &quot;cameraType&quot;: &quot;GEOSPATIAL&quot;,
+  &quot;attachControl&quot;: true,
+  &quot;planetRadius&quot;: 1.0,
+  &quot;lowerRadius&quot;: 0.01,
+  &quot;upperRadius&quot;: 0,
+  &quot;checkCollisions&quot;: false,
+  &quot;orbitSpeed&quot;: 1.0,
+  &quot;zoomSpeed&quot;: 1.0,
+  &quot;panSpeed&quot;: 1.0
+}</code></pre>
+<p><code>planetRadius</code> must match the globe mesh radius. <code>lowerRadius</code> / <code>upperRadius</code> map to Babylon's <code>limits.radiusMin</code> / <code>limits.radiusMax</code> (<code>0</code> = no limit). <code>orbitSpeed</code> / <code>zoomSpeed</code> / <code>panSpeed</code> tune pointer orbit, wheel zoom, and pan when controls are attached (<code>1.0</code> = default). Runtime-only APIs such as <code>flyToAsync</code> remain on the live <code>GeospatialCamera</code> instance.</p>
+<h2>Large world rendering / floating origin</h2>
+<p>When coordinates are very large (geospatial globes, flight sims, open worlds), enable <strong>Large World Rendering</strong> in Blender's <strong>Babylon Scene › Rendering</strong> panel. Export writes <code>scene.largeWorldRendering</code> and optional <code>scene.floatingOriginWorldRadius</code> (Havok multi-region radius, default 100000).</p>
+<p>The app must fetch the manifest <em>before</em> creating the Babylon engine — <code>CreateLevelEngine</code> sets <code>useLargeWorldRendering</code>; <code>ResolveHavokPhysicsOptions</code> passes the region radius to <code>EnableHavokPhysics</code>. See <code>core/bootstrap.ts</code> and <code>apps/playground/src/main.ts</code>. Meshes, behaviors, and the loader otherwise stay unchanged; Babylon offsets shader uniforms relative to the active camera and Havok simulates bodies in regional floating-origin worlds automatically.</p>
+<h2>Shadows (<code>subsystems/shadows.ts</code>)</h2>
+<p>Driven by each lamp's Cast Shadows toggle; one <code>ShadowGenerator</code> per casting light. Meshes always <strong>receive</strong> shadows; <strong>casting</strong> follows Blender <strong>Object Properties → Visibility → Ray Visibility → Shadow</strong> (<code>visible_shadow</code>) — when off, export stamps <code>bjs_cast_shadows: 0</code> in glTF extras and <code>SetupShadows</code> skips that mesh as a caster (receive-only). Typical use: a huge sea floor that should catch train shadows but must not blow up the sun frustum. Per-light settings: filter (PCF / PCSS / Poisson / Blur ESM / hard), bias, normalBias, darkness, mapSize, frustum minZ/maxZ (set on the *light*; 0 = auto), <code>frustumEdgeFalloff</code> (directional/spot edge fade), and <code>forceBackFaces</code> (render only back faces into the shadow map — strong acne fix, opt-in because it can leak on thin/open meshes). SUN lamps with <code>sunAngle</code> enable PCSS and set <code>contactHardeningLightSizeUVRatio</code> linearly from the Blender Angle slider (0°→0, 45°→1; clamped above 45°). Loader options: <code>{ shadows?, shadowMapSize?, freezeShadows?, cleanBoneMatrixWeights? }</code>. Exposed as <code>level.shadowGenerators</code>.</p>
+<p><strong>Static-world freeze.</strong> The scene's <strong>Freeze Shadows</strong> flag (or the <code>freezeShadows</code> loader option) renders each shadow map once then freezes it (<code>REFRESHRATE_RENDER_ONCE</code>) — a big perf win that lets you raise the map resolution, valid only when no caster moves. After moving a caster at runtime, call <code>level.RefreshShadows()</code> for a one-shot re-render. <code>cleanBoneMatrixWeights</code> scrubs bad skeleton weights on load (fixes garbled shadows on skinned meshes).</p>
+<p><strong>Acne defaults.</strong> Blender lamps export <code>normalBias = 0</code>, which leaves suns striped and point/spot edges speckled, so the loader applies a normal-bias floor when a light doesn't set its own (0.02 directional, 0.03 point/spot). It also tightens the shadow depth range automatically, since a stretched depth buffer is the usual cause of acne: directional suns get <code>autoCalcShadowZBounds</code> (Babylon re-fits minZ/maxZ to the casters each frame) when clip planes are left at auto; point/spot lights cap <code>shadowMaxZ</code> to the lamp's range (set a <strong>Custom Range</strong> in Blender for this to kick in). Explicit clip start/end or normal bias always win over these defaults.</p>
+<h2>Scene look (<code>environment.ts</code>, <code>fog.ts</code>, <code>atmosphere.ts</code>, <code>postprocess.ts</code>)</h2>
+<p>From the manifest's <code>scene</code> block: clear/ambient color, environment texture → IBL, fog (LINEAR/EXP/EXP2), physically based atmosphere, and post-processing are applied in <code>await ApplySceneSettings</code> during <code>FinalizeLevel</code> (environment loads asynchronously — the skybox is created only after the env texture is ready). <code>ApplyAtmosphere</code> runs immediately after scene settings when the manifest includes an <code>atmosphere</code> block. Post-processing is applied <strong>after</strong> <code>level.Begin()</code> so behaviors that create a runtime camera in <code>OnStart</code> (e.g. a script-built <code>UniversalCamera</code>) receive the stack on the camera that is actually active.</p>
+<h3>Environment / IBL (<code>subsystems/environment.ts</code>)</h3>
+<p>Image-based lighting comes from <code>scene.environmentTexture</code>. Without an <code>environment</code> block in the manifest, PBR materials get no cubemap — only direct lamps and the optional <code>ambientColor</code> fill.</p>
+<p><strong>Authoring (Babylon Scene › Environment):</strong></p>
+<table><thead><tr><th>Blender setting</th><th>Manifest</th><th>Runtime</th></tr></thead><tbody><tr><td>World environment texture</td><td><code>environment.file</code>, <code>intensity</code>, <code>rotationY</code></td><td>Copied to <code>env/</code> when wired to <strong>World Output → Surface</strong> (Background → env/image texture); intensity from Background <strong>Strength</strong>; <code>rotationY</code> from a <strong>Mapping</strong> node on the texture's Vector input. Orphan textures in the node editor are ignored</td></tr><tr><td><strong>Default Environment</strong></td><td><code>environment.useDefault: true</code></td><td>Loads Babylon's built-in studio HDR from the CDN at runtime (no file exported)</td></tr><tr><td><strong>Intensity</strong> (default env only)</td><td><code>environment.intensity</code></td><td>IBL strength (<code>environmentTexture.level</code>). Shown in the panel only when <strong>Default Environment</strong> is on and no World texture wins</td></tr><tr><td><strong>Rotation Y</strong> (default env only)</td><td><code>environment.rotationY</code></td><td>Y-axis rotation in radians (<code>backgroundYRotation</code> for built-in env; <code>rotationY</code> on file-based cubemaps and the visible skybox mesh on every path). Panel field uses degrees; export writes radians</td></tr><tr><td><strong>Show Skybox</strong></td><td><code>environment.createSkybox</code></td><td>When <code>true</code>, shows the background; when <code>false</code>, IBL only. <code>.env</code> / <code>useDefault</code> → <code>EnvironmentHelper</code> (Babylon's DDS sky texture); <code>.hdr</code> / equirect → <code>createDefaultSkybox</code>. Size from <code>ComputeSkyboxSize</code> at load (<code>max(1000, scene diagonal × 3)</code>); skybox follows the camera (<code>infiniteDistance</code>, <code>ignoreCameraMaxZ</code>)</td></tr><tr><td><strong>Skybox Ignores Fog</strong></td><td><code>environment.skyboxIgnoreFog</code></td><td>When <code>true</code> (and skybox is on), sets <code>mesh.applyFog = false</code> so scene fog does not wash out the background</td></tr></tbody></table>
+<p>A World texture always wins over <strong>Default Environment</strong>. Export copies World textures through <code>copy_asset</code> / <code>save_image_asset</code> with <code>sanitize_asset_filename()</code> (spaces and unsafe characters → URL-safe names under <code>env/</code>). The same source file always maps to the same export path; Live Link re-exports <strong>overwrite</strong> that file rather than suffixing <code>_2</code>, <code>_3</code>, … World texture discovery is shared by export and the scene UI in <code>scene/environment.py</code> (<code>find_world_env_node</code> traces <strong>World Output → Surface → Background → env/image</strong> only — orphan nodes in the node editor are ignored).</p>
+<p><code>useDefault</code> loads Babylon's built-in studio <code>.env</code> from the CDN at runtime — the player needs network access. Format handling at load: <code>.env</code> (Babylon prefiltered cube — recommended) → <code>CubeTexture</code>; <code>.hdr</code> → <code>HDRCubeTexture</code>; anything else → equirectangular. <code>.exr</code> is not loadable in-browser.</p>
+<p><code>ApplyEnvironment</code> is async: it awaits <code>WhenTextureReady</code> (30s timeout) before creating a skybox so <code>createDefaultSkybox</code> does not clone an empty cube map on the first Live Link reload.</p>
+<p><strong>Skybox sizing.</strong> <code>ApplyEnvironment</code> runs in <code>FinalizeLevel</code> after entities load so bounds include your level geometry. <code>ComputeSkyboxSize()</code> measures visible meshes (excluding skybox helper meshes) and passes <code>max(1000, diagonal × 3)</code> to every skybox path — the same scale Babylon's <code>EnvironmentHelper</code> <code>sizeAuto</code> uses. <code>EnvironmentHelper</code> skyboxes are unparented from <code>BackgroundHelper</code> before <code>infiniteDistance</code> is set (parenting disables camera-follow in Babylon). On planet-scale levels, also raise the camera <strong>Clip End</strong> in Blender — the default <code>1000</code> is often shorter than distant mesh.</p>
+<h4>Manifest example</h4>
+<pre><code class="language-json">&quot;environment&quot;: {
+  &quot;useDefault&quot;: true,
+  &quot;intensity&quot;: 1,
+  &quot;rotationY&quot;: 0,
+  &quot;createSkybox&quot;: false
+}</code></pre>
+<p>With skybox and fog (exports <code>skyboxIgnoreFog</code> when <strong>Show Skybox</strong> is on):</p>
+<pre><code class="language-json">&quot;environment&quot;: {
+  &quot;useDefault&quot;: true,
+  &quot;intensity&quot;: 1,
+  &quot;rotationY&quot;: 0,
+  &quot;createSkybox&quot;: true,
+  &quot;skyboxIgnoreFog&quot;: true
+}</code></pre>
+<p>Or with an authored World texture:</p>
+<pre><code class="language-json">&quot;environment&quot;: {
+  &quot;file&quot;: &quot;env/sky.env&quot;,
+  &quot;intensity&quot;: 1,
+  &quot;rotationY&quot;: 0,
+  &quot;createSkybox&quot;: false
+}</code></pre>
+<p>Omit <code>&quot;environment&quot;</code> (or set it to <code>null</code>) when neither a World texture nor <strong>Default Environment</strong> is configured. <code>skyboxIgnoreFog</code> is only exported when <code>createSkybox</code> is <code>true</code>; older manifests without it keep Babylon's default (skybox is fogged).</p>
+<h3>Atmosphere (<code>subsystems/atmosphere.ts</code>)</h3>
+<p>The Babylon <strong>Atmosphere</strong> addon (<code>@babylonjs/addons/atmosphere</code>) provides a physically based sky and aerial perspective. It automatically integrates with <code>PBRMaterial</code> for consistent lighting. Requires WebGL 2 or WebGPU — the runtime calls <code>Atmosphere.IsSupported(engine)</code> and logs a warning if unsupported.</p>
+<p><strong>Authoring (Babylon Scene › Atmosphere):</strong></p>
+<table><thead><tr><th>Blender setting</th><th>Manifest</th><th>Runtime</th></tr></thead><tbody><tr><td><strong>Atmosphere</strong> (header)</td><td><code>atmosphere</code> block (omit when off)</td><td><code>new Atmosphere(&quot;atmosphere&quot;, scene, [sunLight], options)</code></td></tr><tr><td><strong>Sun Light</strong></td><td><code>atmosphere.sunLightId</code></td><td>Entity GUID of a Blender SUN lamp; omit to use the first exported SUN</td></tr><tr><td><strong>PBR Sun Intensity</strong></td><td><code>atmosphere.pbrSunIntensity</code></td><td>When <code>true</code> (default), sets the sun's intensity to π for PBRMaterials</td></tr><tr><td><strong>Use LUTs</strong></td><td><code>atmosphere.useLuts</code></td><td>When <code>true</code> (default), LUT-based sky/aerial perspective; <code>false</code> = ray marching</td></tr><tr><td><strong>Multi Scattering</strong></td><td><code>atmosphere.multiScatteringIntensity</code></td><td>Overall multiple-scattering contribution</td></tr><tr><td><strong>Night Ambient</strong></td><td><code>atmosphere.minimumMultiScatteringIntensity</code></td><td>Floor when the sun is below the horizon</td></tr><tr><td><strong>Ground Albedo</strong></td><td><code>atmosphere.groundAlbedo</code></td><td>Average ground-reflected light color</td></tr><tr><td><strong>Peak Rayleigh</strong> / <strong>Mie</strong> / <strong>Ozone</strong></td><td><code>atmosphere.physical.*</code></td><td>Scattering and absorption tuning (Earth-like defaults)</td></tr><tr><td><strong>Origin Height (km)</strong></td><td><code>atmosphere.physical.originHeight</code></td><td>Scene origin height above the planet surface</td></tr></tbody></table>
+<p>When atmosphere is enabled, export forces <code>environment.createSkybox: false</code> — the atmosphere renders the sky. IBL from a World texture or <strong>Default Environment</strong> still loads for material reflections. For best results, enable <strong>Post-Processing › Default Pipeline</strong> (HDR) with tone mapping — the runtime sets <code>isLinearSpaceComposition</code> from the manifest's <code>postProcessing.defaultPipeline</code>.</p>
+<p>Time of day is driven by the SUN lamp's direction in Blender (re-export after aiming the sun). The handle lives on <code>level.atmosphere</code> and is disposed with the level.</p>
+<h4>Manifest example</h4>
+<pre><code class="language-json">&quot;atmosphere&quot;: {
+  &quot;pbrSunIntensity&quot;: true,
+  &quot;useLuts&quot;: true,
+  &quot;multiScatteringIntensity&quot;: 1,
+  &quot;minimumMultiScatteringIntensity&quot;: 0.1,
+  &quot;groundAlbedo&quot;: [1, 1, 1],
+  &quot;physical&quot;: {
+    &quot;peakRayleighScattering&quot;: [0.000005802, 0.000013558, 0.0000331],
+    &quot;mieScatteringScale&quot;: 1,
+    &quot;ozoneAbsorptionScale&quot;: 1,
+    &quot;originHeight&quot;: 0
+  }
+}</code></pre>
+<p>Omit <code>&quot;atmosphere&quot;</code> (or set it to <code>null</code>) when the panel header is off.</p>
+<h2>Node materials (<code>subsystems/materials.ts</code>)</h2>
+<p>Standard glTF PBR from Blender rides in the <code>.glb</code>. For custom shaders authored in the <a href="https://nme.babylonjs.com">Node Material Editor</a>, open <strong>Properties › Material</strong>, select the material in the slot list, and use the <strong>Babylon</strong> panel (per material datablock, not per object). Export copies the JSON to <code>materials/</code> and writes a top-level manifest block:</p>
+<pre><code class="language-json">&quot;materials&quot;: [
+  {
+    &quot;name&quot;: &quot;Water&quot;,
+    &quot;file&quot;: &quot;materials/water.json&quot;,
+    &quot;textures&quot;: [
+      { &quot;blockId&quot;: 42, &quot;blockName&quot;: &quot;albedo&quot;, &quot;file&quot;: &quot;materials/albedo.png&quot; }
+    ],
+    &quot;inputs&quot;: [
+      { &quot;blockId&quot;: 21, &quot;blockName&quot;: &quot;fillColor&quot;, &quot;type&quot;: &quot;COLOR4&quot;, &quot;value&quot;: [0.15, 0.4, 1, 0.35] }
+    ]
+  }
+]</code></pre>
+<p><strong>Matching.</strong> Runtime replaces <code>mesh.material</code> when <code>mesh.material.name</code> equals the manifest <code>name</code> (Blender / glTF material name). Parsed node materials are cached per manifest entry (<code>file</code> + <code>name</code>) so several Blender materials can share one NME JSON yet keep distinct texture/input overrides.</p>
+<p><strong>Scan NME.</strong> Click <strong>Scan NME</strong> in the <strong>Babylon</strong> material panel after picking a JSON. It lists <code>ImageSourceBlock</code> / <code>TextureBlock</code> slots <em>and</em> inspector-visible <code>InputBlock</code> parameters (<code>visibleInInspector: true</code> in NME — not system values like World or View). Tune floats, colors, vectors, and booleans in the <strong>Parameters</strong> box. Export copies picked images into <code>materials/</code>, patches texture <code>url</code> / <code>name</code> and input <code>value</code> fields in the exported JSON (strips embedded <code>base64String</code> / <code>internalTextureLabel</code> when overriding a slot). When several Blender materials share the same NME source file, export copies that JSON once and later materials patch the same exported copy in place. Particle systems use the same texture pattern on the <strong>Particles</strong> component (<strong>Scan Textures</strong> lists <code>ParticleTextureSourceBlock</code> slots only).</p>
+<p><strong>Embedded textures.</strong> NME can store image bytes inside the JSON (<code>texture.url</code> as a <code>data:…;base64,…</code> URI, or a <code>base64String</code> field). The runtime loads these directly from the JSON — no external file required. Embedded slots are skipped by export override logic (export does not try to replace them with empty paths). For smaller manifests and easier iteration, use <strong>Extract Textures…</strong> (<code>bjs.extract_nme_textures</code>): pick a folder, the add-on writes <code>{BlockName}_{blockId}.png</code> (or <code>.jpg</code>) beside the JSON, rewrites each block's <code>url</code> to the relative filename, then runs <strong>Scan NME</strong> and fills the matching texture rows. After that, assign or re-export like any external texture. NME saves that put the data URI only in <code>texture.name</code> with an empty <code>url</code> do not load — re-save from NME or run <strong>Extract Textures…</strong> so bytes live on <code>texture.url</code>.</p>
+<p><strong>Runtime load.</strong> <code>ApplyNodeMaterials</code> parses with <code>NodeMaterial.ParseFromFileAsync</code> + a <code>urlRewriter</code> for relative URLs beside the JSON, then always applies manifest <code>textures[]</code> via <code>BindManifestTextures</code> (authoring wins over embedded JSON) and manifest <code>inputs[]</code> via <code>BindManifestInputs</code>. Block ids from the manifest are resolved through the material's <code>editorData.map</code> (NME JSON id → runtime <code>uniqueId</code>); <code>blockName</code> is a fallback. The loader awaits <code>whenTexturesReadyAsync()</code> before continuing.</p>
+<p><strong>Workflow.</strong> Save from NME into the level's <code>materials/</code> folder (mark shader uniforms <strong>Visible in Inspector</strong> when you want them in Blender) → Material Properties → <strong>Babylon</strong> panel → pick JSON → optional <strong>Extract Textures…</strong> when the JSON still embeds images → <strong>Scan NME</strong> → tune <strong>Parameters</strong> and assign any external texture images → export. Trace: <a href="trace-materials.html">trace-materials.html</a> · Blender: <a href="../blender/trace-materials.html">trace-materials</a>.</p>
+<h3>Post-processing (<code>subsystems/postprocess.ts</code>)</h3>
+<p>Handles land on <code>level.post</code> (<code>PostProcessingHandles</code>: <code>pipeline?</code>, <code>ssao?</code>). Use <code>RetargetPostProcessing(handles, camera)</code> if gameplay swaps the active camera later (default pipeline only today).</p>
+<p>When <code>scene.postProcessing.defaultPipeline</code> is true, the runtime builds Babylon's <code>DefaultRenderingPipeline</code> (HDR on). Supported effects:</p>
+<table><thead><tr><th>Effect</th><th>Manifest keys</th><th>Notes</th></tr></thead><tbody><tr><td>MSAA</td><td><code>msaaSamples</code> (1–8)</td><td>WebGL 2 only; 1 = off</td></tr><tr><td>FXAA</td><td><code>fxaa</code></td><td>Fast approximate AA on the pipeline texture</td></tr><tr><td>Bloom</td><td><code>bloom.{enabled,threshold,intensity,kernel?,scale?}</code></td><td>Tone mapping auto-enabled when bloom is on (HDR)</td></tr><tr><td>Sharpen</td><td><code>sharpen.{enabled,edgeAmount?,colorAmount?}</code></td><td></td></tr><tr><td>Depth of field</td><td><code>depthOfField.{enabled,blurLevel?,focusDistance?,focalLength?,fStop?}</code></td><td><code>blurLevel</code>: LOW / MEDIUM / HIGH</td></tr><tr><td>Chromatic aberration</td><td><code>chromaticAberration.{enabled,aberrationAmount?,radialIntensity?,directionX?,directionY?}</code></td><td>direction 0,0 → radial</td></tr><tr><td>Grain</td><td><code>grain.{enabled,intensity?,animated?}</code></td><td></td></tr><tr><td>Glow layer</td><td><code>glow.{enabled,blurKernelSize?,intensity?}</code></td><td>Emissive-material glow</td></tr><tr><td>Tone mapping</td><td><code>toneMapping</code>, <code>toneMappingType?</code></td><td>STANDARD / ACES (default) / KHR_PBR_NEUTRAL</td></tr><tr><td>Exposure / contrast</td><td><code>exposure</code>, <code>contrast</code></td><td>Image-processing pass</td></tr><tr><td>Vignette</td><td><code>vignette.{enabled,weight?,stretch?,centerX?,centerY?}</code></td><td></td></tr><tr><td>Color grading LUT</td><td><code>colorGrading.{enabled,file}</code></td><td><code>.3dl</code> or <code>.png</code> under <code>post/</code></td></tr><tr><td>Color curves</td><td><code>colorCurves.{enabled,globalHue?,…}</code></td><td>Global / highlights / midtones / shadows</td></tr><tr><td>SSAO</td><td><code>ssao</code>, <code>ssaoSettings?</code></td><td>Separate <code>SSAO2RenderingPipeline</code> (<code>radius</code>, <code>totalStrength</code>, <code>samples</code>, <code>maxZ</code>)</td></tr></tbody></table>
+<p><strong>Not yet implemented</strong> (separate Babylon pipelines, not part of the default stack): SSR, TAA, motion blur, IBL shadows, frame-graph <code>FrameGraphVolumetricLightingTask</code> (Babylon 9's directional-light volume path; requires a frame graph render pipeline).</p>
+<h4>Manifest example</h4>
+<pre><code class="language-json">&quot;postProcessing&quot;: {
+  &quot;defaultPipeline&quot;: true,
+  &quot;fxaa&quot;: true,
+  &quot;msaaSamples&quot;: 4,
+  &quot;bloom&quot;: { &quot;enabled&quot;: true, &quot;threshold&quot;: 0.9, &quot;intensity&quot;: 0.5, &quot;kernel&quot;: 64, &quot;scale&quot;: 0.5 },
+  &quot;ssao&quot;: true,
+  &quot;ssaoSettings&quot;: { &quot;radius&quot;: 2, &quot;totalStrength&quot;: 1, &quot;samples&quot;: 8 },
+  &quot;toneMapping&quot;: true,
+  &quot;toneMappingType&quot;: &quot;ACES&quot;,
+  &quot;exposure&quot;: 1,
+  &quot;contrast&quot;: 1,
+  &quot;sharpen&quot;: { &quot;enabled&quot;: false, &quot;edgeAmount&quot;: 0.3, &quot;colorAmount&quot;: 1 },
+  &quot;depthOfField&quot;: { &quot;enabled&quot;: false, &quot;blurLevel&quot;: &quot;LOW&quot;, &quot;focusDistance&quot;: 2000, &quot;focalLength&quot;: 50, &quot;fStop&quot;: 1.4 },
+  &quot;chromaticAberration&quot;: { &quot;enabled&quot;: false, &quot;aberrationAmount&quot;: 30 },
+  &quot;grain&quot;: { &quot;enabled&quot;: false, &quot;intensity&quot;: 30, &quot;animated&quot;: false },
+  &quot;glow&quot;: { &quot;enabled&quot;: false, &quot;blurKernelSize&quot;: 16, &quot;intensity&quot;: 1 },
+  &quot;vignette&quot;: { &quot;enabled&quot;: false, &quot;weight&quot;: 1.5 },
+  &quot;colorGrading&quot;: { &quot;enabled&quot;: false, &quot;file&quot;: &quot;post/LateSunset.3dl&quot; },
+  &quot;colorCurves&quot;: { &quot;enabled&quot;: false, &quot;globalHue&quot;: 30 }
+}</code></pre>
+<p>Omit optional effect blocks when disabled; older manifests with only <code>fxaa</code> / <code>bloom</code> / <code>toneMapping</code> / <code>exposure</code> / <code>contrast</code> still load.</p>
+<h3>Blender UI</h3>
+<p><strong>Babylon Scene › Environment</strong> (<code>ui/scene_panels.py</code>, <code>BJS_PT_scene_environment</code>). <strong>Default Environment</strong> (IBL without a World texture), <strong>Intensity</strong> and <strong>Rotation Y</strong> when default env is active (hidden when a World texture wins), <strong>Show Skybox</strong> (IBL-only background when off), and <strong>Skybox Ignores Fog</strong> (disabled when Show Skybox is off). The panel previews the texture on the active World Output chain via <code>scene/environment.py</code>.</p>
+<p><strong>Babylon Scene › Atmosphere</strong> (<code>ui/scene_panels.py</code>). Physically based sky settings on <code>scene.bjs_scene.atmosphere</code> (<code>scene/atmosphere.py</code>). Export serialization is in <code>export/atmosphere.py</code>.</p>
+<p><strong>Babylon Scene › Post-Processing</strong> (<code>ui/post_panels.py</code>). Settings live on <code>scene.bjs_scene.post</code> (<code>scene/post_processing.py</code>). Export serialization is in <code>export/post_processing.py</code> (LUT files copied via <code>copy_asset</code> → <code>post/</code>). Exposure/contrast export as <code>1.0</code> when tone mapping is off so stale panel values do not crush the image.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/07-RENDERING.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

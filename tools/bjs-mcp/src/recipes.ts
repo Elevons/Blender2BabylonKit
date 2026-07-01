@@ -264,6 +264,89 @@ export const RECIPES: Recipe[] = [
       '@exposed({ label: "Activate on message" }) activateMessage = "start"',
     ],
   },
+  {
+    name: "hover-bob",
+    description: "Sine-wave vertical bob with optional look-at target.",
+    keywords: ["hover", "bob", "float", "sine", "bounce", "levitate", "amplitude"],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "",
+    pitfalls: [
+      "Capture restY in OnStart, not the constructor.",
+      "Scale sine phase by deltaSeconds via elapsed time accumulator.",
+      "With a physics body, set ANIMATED before writing node.position each frame.",
+    ],
+    exposedFields: [
+      '@exposed({ min: 0, max: 5, label: "Amplitude (m)" }) amplitude = 0.5',
+      '@exposed({ min: 0.1, max: 4, label: "Period (s)" }) period = 2',
+      '@exposed({ type: "entity", label: "Face target" }) target: Entity | null = null',
+    ],
+  },
+  {
+    name: "reveal-on-message",
+    description: "Show a hidden entity when a trigger or SendMessage delivers a matching message.",
+    keywords: ["reveal", "show", "hidden", "invisible", "visibility", "trigger", "eye"],
+    hooks: ["OnMessage"],
+    referenceBehavior: "",
+    pitfalls: [
+      "Viewport-hidden and Make Invisible entities load with isVisible = false — this only toggles runtime visibility.",
+      "Re-enable child lights with getLightByName when the entity is a lamp.",
+      "Render-disabled objects are not exported — they cannot be revealed.",
+    ],
+    exposedFields: [
+      '@exposed({ label: "Reveal on message" }) revealMessage = "reveal"',
+    ],
+  },
+  {
+    name: "sound-on-message",
+    description: "Play an AUDIO component sound when OnMessage fires.",
+    keywords: ["sound", "audio", "play", "door", "sfx", "trigger", "message"],
+    hooks: ["OnMessage"],
+    referenceBehavior: "",
+    pitfalls: [
+      "Sound name = file stem (audio/door.mp3 → \"door\").",
+      "Autoplay sounds need a prior user gesture; OnMessage from triggers is usually safe.",
+      "AUDIO component must exist on this entity or use GetSound on the right entity via @exposed.",
+    ],
+    exposedFields: [
+      '@exposed({ label: "Sound stem" }) soundName = "door"',
+      '@exposed({ label: "Play on message" }) playMessage = "open"',
+    ],
+  },
+  {
+    name: "msdf-label-update",
+    description: "Update MSDF_TEXT label copy at runtime (font JSON stem lookup).",
+    keywords: ["msdf", "text", "label", "hud", "score", "font", "3d text"],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "",
+    pitfalls: [
+      "MSDF_TEXT is authored in Blender — behaviors only update paragraphs, not create renderers.",
+      "GetTextRenderer(fontStem) matches the font JSON file stem.",
+      "clearParagraphs + addParagraph each time the string changes.",
+    ],
+    exposedFields: [
+      '@exposed({ label: "Font stem" }) fontStem = "roboto-regular"',
+      '@exposed({ label: "Label text" }) labelText = "Hello"',
+    ],
+  },
+  {
+    name: "rover-wheel-drive",
+    description: "Drive multiple hinge motors for a wheeled rover (see CarController).",
+    keywords: ["rover", "wheel", "drive", "vehicle", "car", "tank", "motor", "hinge", "steer"],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "CarController.ts",
+    pitfalls: [
+      "HINGE constraints must be authored in Blender on each wheel entity.",
+      "Use GetAttachmentsOfType(\"CONSTRAINT\") — one row per wheel.",
+      "Do not overwrite wheel node.rotation when motors drive physics.",
+      "list_input_actions for real action names (Forward/Backward/Left/Right).",
+    ],
+    exposedFields: [
+      '@exposed({ type: "list", of: "entity", label: "Wheels" }) wheels: (Entity | null)[] = []',
+      '@exposed({ min: 0, max: 100, label: "Drive speed (deg/s)" }) driveSpeed = 30',
+      '@exposed({ min: 0, max: 1000, label: "Motor force" }) motorForce = 200',
+      '@inputMap("Player") player!: InputActionMap',
+    ],
+  },
 ];
 
 export function FindRecipesByIntent(intent: string): Recipe[]
@@ -968,6 +1051,224 @@ export default class ${className} extends Behavior
     {
       // {{CUSTOM_LOGIC}}
     }
+  }
+}
+`,
+
+  "hover-bob": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Vector3 } from "@babylonjs/core";
+
+/** Bobs the node up and down, optionally facing a target. */
+export default class ${className} extends Behavior
+{
+  @exposed({ min: 0, max: 5, step: 0.1, label: "Amplitude (m)" })
+  amplitude = 0.5;
+
+  @exposed({ min: 0.1, max: 4, label: "Period (s)" })
+  period = 2;
+
+  @exposed({ type: "entity", label: "Face target" })
+  target: Entity | null = null;
+
+  private restY = 0;
+  private elapsedSeconds = 0;
+
+  OnStart(): void
+  {
+    this.restY = this.node.position.y;
+  }
+
+  OnUpdate(deltaSeconds: number): void
+  {
+    this.elapsedSeconds += deltaSeconds;
+    const offset = Math.sin((this.elapsedSeconds / this.period) * Math.PI * 2) * this.amplitude;
+    this.node.position.y = this.restY + offset;
+
+    if (this.target !== null)
+    {
+      this.node.lookAt(this.target.node.getAbsolutePosition());
+    }
+  }
+}
+`,
+
+  "reveal-on-message": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+
+/** Reveals this entity when a matching message arrives (trigger or SendMessage). */
+export default class ${className} extends Behavior
+{
+  @exposed({ label: "Reveal on message" })
+  revealMessage = "reveal";
+
+  OnMessage(message: string, _source: Entity): void
+  {
+    if (message !== this.revealMessage)
+    {
+      return;
+    }
+
+    this.node.isVisible = true;
+
+    const light = this.scene.getLightByName(this.entity.name);
+    if (light !== null)
+    {
+      light.setEnabled(true);
+    }
+  }
+}
+`,
+
+  "sound-on-message": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+
+/** Plays an AUDIO component sound when a matching message arrives. */
+export default class ${className} extends Behavior
+{
+  @exposed({ label: "Sound stem" })
+  soundName = "door";
+
+  @exposed({ label: "Play on message" })
+  playMessage = "open";
+
+  OnMessage(message: string, _source: Entity): void
+  {
+    if (message !== this.playMessage)
+    {
+      return;
+    }
+
+    this.entity.GetSound(this.soundName)?.play();
+  }
+}
+`,
+
+  "msdf-label-update": (className) => `import { Behavior, exposed } from "@bjs/engine";
+
+/** Updates MSDF_TEXT label copy (MSDF_TEXT component must be authored in Blender). */
+export default class ${className} extends Behavior
+{
+  @exposed({ label: "Font stem" })
+  fontStem = "roboto-regular";
+
+  @exposed({ label: "Label text" })
+  labelText = "Hello";
+
+  OnStart(): void
+  {
+    this.RefreshLabel();
+  }
+
+  OnUpdate(_deltaSeconds: number): void
+  {
+    // Call RefreshLabel() when labelText changes at runtime, or poll here if needed.
+  }
+
+  private RefreshLabel(): void
+  {
+    const label = this.entity.GetTextRenderer(this.fontStem);
+    if (label === undefined)
+    {
+      return;
+    }
+
+    label.clearParagraphs();
+    label.addParagraph(this.labelText, { textAlign: "center" });
+  }
+}
+`,
+
+  "rover-wheel-drive": (className) => `import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
+import type { InputActionMap } from "@bjs/engine";
+import {
+  Physics6DoFConstraint,
+  PhysicsConstraintAxis,
+  PhysicsConstraintMotorType,
+} from "@babylonjs/core";
+
+/** Drives hinge motors on multiple wheel entities (HINGE constraints authored in Blender). */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "list", of: "entity", label: "Wheels" })
+  wheels: (Entity | null)[] = [];
+
+  @exposed({ min: 0, max: 100, label: "Drive speed (deg/s)" })
+  driveSpeed = 30;
+
+  @exposed({ min: 0, max: 1000, label: "Motor force" })
+  motorForce = 200;
+
+  @inputMap("Player") player!: InputActionMap;
+
+  private hinges: Physics6DoFConstraint[] = [];
+
+  OnStart(): void
+  {
+    for (const wheel of this.wheels)
+    {
+      if (wheel === null)
+      {
+        continue;
+      }
+
+      const hinge = this.ResolveHinge(wheel);
+      if (hinge !== undefined)
+      {
+        this.hinges.push(hinge);
+      }
+    }
+  }
+
+  OnUpdate(_deltaSeconds: number): void
+  {
+    const forward = this.player.FindAction("Forward")?.IsPressed() === true;
+    const backward = this.player.FindAction("Backward")?.IsPressed() === true;
+
+    let motorSpeed = 0;
+    if (forward)
+    {
+      motorSpeed = this.driveSpeed;
+    }
+    else if (backward)
+    {
+      motorSpeed = -this.driveSpeed;
+    }
+
+    for (const hinge of this.hinges)
+    {
+      this.SetMotor(hinge, motorSpeed);
+    }
+  }
+
+  private ResolveHinge(wheelEntity: Entity): Physics6DoFConstraint | undefined
+  {
+    for (const row of wheelEntity.GetAttachmentsOfType("CONSTRAINT"))
+    {
+      if (row.data.constraintType !== "HINGE")
+      {
+        continue;
+      }
+
+      if (row.constraint instanceof Physics6DoFConstraint)
+      {
+        return row.constraint;
+      }
+    }
+
+    return undefined;
+  }
+
+  private SetMotor(hinge: Physics6DoFConstraint, speedDegreesPerSecond: number): void
+  {
+    const motorAxis = PhysicsConstraintAxis.ANGULAR_X;
+
+    if (speedDegreesPerSecond === 0)
+    {
+      hinge.setAxisMotorTarget(motorAxis, 0);
+      return;
+    }
+
+    hinge.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
+    hinge.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
+    hinge.setAxisMotorMaxForce(motorAxis, this.motorForce);
   }
 }
 `,

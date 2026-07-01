@@ -1,28 +1,24 @@
 # bjs-mcp — MCP server for Babylon Level Kit behavior authoring
 
-An [MCP](https://modelcontextprotocol.io/) server that helps local models write
-behavior scripts with less cognitive load: planning, recipes, templates,
-validation, scene grounding, and reference examples — backed by
-`docs/LLM_KERNEL.md`, `docs/LLM_SCRIPTING_CONTEXT.md`, and `docs/STYLE_GUIDE.md`.
+An [MCP](https://modelcontextprotocol.io/) server that guides LLMs through behavior
+scripting with **task routing**, playbooks tied to human docs, validation with fix
+hints, and zero-guess grounding (scene entities, input actions, physics movement).
+
+**Start here for any behavior:** `route_task(intent, className)`
+
+Backed by:
+- `docs/LLM_PLAYBOOK.md` — task recipes (Blender + MCP steps)
+- `docs/LLM_SCRIPTING_CONTEXT.md` — full API contract
+- `docs/LLM_KERNEL.md` — minimal invariant rules
+- `docs/engine/*.html` — engine prose (via `get_engine_basics`)
 
 ## Setup
 
 ```bash
-cd tools/bjs-mcp
-npm install
-npm run build
-```
-
-From the repo root (after adding the workspace):
-
-```bash
-npm install
-npm run mcp:build
+npm run mcp:build   # from repo root
 ```
 
 ## Cursor configuration
-
-Add to `~/.cursor/mcp.json` (or project MCP settings):
 
 ```json
 {
@@ -36,88 +32,90 @@ Add to `~/.cursor/mcp.json` (or project MCP settings):
 }
 ```
 
-Replace paths with your checkout location.
+Or use **Babylon Launcher** → Services → Copy Cursor Config.
 
 ## Resources
 
 | URI | Content |
 |-----|---------|
-| `bjs://docs/kernel` | `docs/LLM_KERNEL.md` — **start here** (~80 lines) |
-| `bjs://docs/scripting-context` | `docs/LLM_SCRIPTING_CONTEXT.md` — full contract |
+| `bjs://docs/playbook` | `docs/LLM_PLAYBOOK.md` |
+| `bjs://docs/kernel` | `docs/LLM_KERNEL.md` |
+| `bjs://docs/scripting-context` | `docs/LLM_SCRIPTING_CONTEXT.md` |
 | `bjs://docs/style-guide` | `docs/STYLE_GUIDE.md` |
-| `bjs://behaviors/{Name}` | `apps/playground/src/behaviors/{Name}.ts` |
+| `bjs://behaviors/{Name}` | Playground example `.ts` |
 
-## Tools
+## Tools (v1.4)
+
+### Route first (weak models)
 
 | Tool | Purpose |
 |------|---------|
-| `get_kernel` | Minimal authoring kernel — call first |
-| `plan_behavior` | Intent → recipes, sections, fragments, steps |
-| `get_style_guide` | Full style guide or a section |
-| `get_scripting_context` | Full contract or a section (exposed, input, physics, cameras, **scene-look**, …) |
-| `list_recipes` | All behavior patterns |
-| `suggest_recipe` | Match intent → recipe |
-| `get_recipe_template` | Full valid skeleton for a recipe + class name |
-| `get_exposed_field_snippet` | Blender-safe `@exposed` one-liner |
-| `list_input_actions` | Maps and actions from playground |
-| `list_scene_entities` | Entity names/components/light types + enabled atmosphere / post-processing from a level manifest |
-| `get_behavior` | Full source of an example behavior by stem |
-| `find_similar_behavior` | Search example behaviors by keyword |
-| `validate_behavior` | Check draft against parse/style/physics rules |
-| `get_fragment` | Paste-in code blocks (hinge motor, Path3D, …) |
+| **`route_task`** | **START HERE** — intent → playbook + numbered MCP steps |
+| `preflight_behavior` | Checklist before writing code |
+| `get_do_not_list` | Silent failures + which tool fixes each |
+| `get_playbook` / `list_playbooks` | One task recipe from LLM_PLAYBOOK.md |
+| `get_engine_basics` | Architecture, frame loop, Blender vs behavior |
 
-## Workflow for small models
+### Scaffold & ground
 
-1. `get_kernel` — invariant contracts (or rely on `.cursor/rules/behavior-authoring.mdc`)
-2. `plan_behavior(intent, className)` — structured plan
-3. `get_recipe_template` — valid skeleton from the plan's primary recipe
-4. `list_input_actions` / `list_scene_entities` — real names from the project
-5. `find_similar_behavior` / `get_behavior` — copy proven patterns for novel logic
-6. `get_scripting_context(section=…)` — pull only needed API sections
-7. `get_fragment` / `get_exposed_field_snippet` — paste-in blocks
-8. `validate_behavior` — fix errors; **revalidate until valid**
+| Tool | Purpose |
+|------|---------|
+| `plan_behavior` | Recipes, sections, fragments, steps |
+| `get_recipe_template` | Valid TypeScript skeleton |
+| `list_levels` / `list_scene_entities` | Real entity names from scene.json |
+| `list_input_actions` | Real action names |
+| `list_behaviors` / `get_behavior` / `find_similar_behavior` | Examples |
 
-## Recipes
+### API & physics
 
-### Core
+| Tool | Purpose |
+|------|---------|
+| `get_scripting_context` | Full contract or one section |
+| `get_physics_movement` | Decision tree for moving bodies |
+| `get_fragment` / `list_fragments` | Paste-in code |
+| `get_exposed_field_snippet` | Blender-safe @exposed |
+| `get_style_guide` | Allman braces, naming |
 
-- `minimal-behavior` — empty shell
-- `look-at-target` — face another entity
-- `constant-rotate` — spin on axis
-- `waypoint-path` — interpolate through vector3 points
-- `patrol-oscillate` — sine ease between two positions
-- `input-poll-move` — WASD / stick via Input Actions
-- `on-message-handler` — triggers / SendMessage
-- `animation-cycle` — clip cycling
-- `kinematic-body-move` — physics-safe motion template
-- `trigger-logger` — overlap logging
+### Finish
 
-### Advanced (multi-domain)
+| Tool | Purpose |
+|------|---------|
+| `validate_behavior` | Required before save — includes fix hints |
 
-- `constraint-hinge-motor` — drive Blender HINGE constraints (see `CarController.ts`)
-- `path-follow-advanced` — Path3D + throttle + tangent facing (see `TrainBehavior.ts`)
-- `camera-follow` — orbiting `UniversalCamera` (see `TrainCamera.ts`)
-- `geospatial-camera-flyto` — fly the authored `GeospatialCamera` to a point (Blender Camera component **Geospatial**)
-- `message-state-handler` — OnMessage-driven state machine
+Also: `get_authoring_workflow`, `get_kernel`, `list_recipes`, `suggest_recipe`.
 
-## Fragments
+## Workflow (dumb-model safe)
 
-`ease-smoothstep`, `move-by-input-vector2`, `subscribe-jump-performed`,
-`make-body-kinematic`, `animated-body-sync`, `enable-trigger-logging`,
-`cleanup-keyboard-observer`, `play-animation`, `send-message`,
-`resolve-hinge-constraint`, `set-hinge-motor-velocity`, `path3d-from-entities`,
-`orbit-camera-around-target`, `geospatial-camera-flyto-point`,
-`geospatial-camera-flyto-properties`
+```
+route_task("rover drives with wasd", "RoverDrive")
+  → preflight_behavior(same)
+  → get_do_not_list()
+  → get_recipe_template("rover-wheel-drive", "RoverDrive")
+  → list_input_actions()
+  → list_scene_entities(level="…", filter="wheel")
+  → get_physics_movement()
+  → edit template (do NOT blank-page)
+  → validate_behavior(source, "RoverDrive.ts")  # repeat until valid
+```
 
-## Validation
+## Playbooks (16 tasks)
 
-`validate_behavior` checks:
+`first-behavior`, `player-mover`, `trigger-reaction`, `moving-platform`,
+`waypoint-patrol`, `train-on-path`, `rover-drive`, `spin-object`,
+`look-at-target`, `animation-cycle`, `reveal-on-trigger`, `sound-on-trigger`,
+`update-msdf-label`, `orbit-camera`, `geospatial-flyto`, `debug-triggers`
 
-- Export default, class/filename match, `@exposed` / `@inputMap` casing
-- PascalCase lifecycle hooks, single-line `@exposed` defaults
-- Entity field hints, empty entity lists
-- Physics anti-pattern: `node.position` in `OnUpdate` without `ANIMATED`
-- Unknown `FindAction("…")` names vs playground input catalog
-- Raw key codes when Input Actions are available
-- Scene atmosphere / post-processing / MSDF text APIs in behaviors (`Atmosphere`, `VolumetricLightScatteringPostProcess`, `TextRenderer`, etc.) — author in Blender
-- Allman brace style, observer cleanup in `OnDestroy`
+Full text: `docs/LLM_PLAYBOOK.md` or `get_playbook(name="…")`.
+
+## Human documentation map
+
+| Question | Doc |
+|----------|-----|
+| What task am I doing? | `docs/LLM_PLAYBOOK.md` |
+| What API exists? | `docs/LLM_SCRIPTING_CONTEXT.md` |
+| How does the engine work? | `docs/engine/00-INDEX.html` |
+| API tables | `docs/engine/14-API-GUIDE.html` |
+| Does the kit support X? | `docs/engine/13-FEATURE-LIST.html` |
+| Frame loop | `docs/engine/02-RUNTIME-BASICS.html` |
+
+Cursor rule: `.cursor/rules/behavior-authoring.mdc`

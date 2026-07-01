@@ -2,11 +2,12 @@
 parameters per component, plus the sync logic that reconciles them with a
 fresh parse of the script source."""
 
-from bpy.props import (
+from bpy.types import PropertyGroup, Object
+
+from ..core.props import (
     StringProperty, EnumProperty, FloatProperty, BoolProperty,
     FloatVectorProperty, IntProperty, CollectionProperty, PointerProperty,
 )
-from bpy.types import PropertyGroup, Object
 
 from ..core.ids import ensure_object_id
 from .constants import VAR_TYPES, LIST_ELEM_SLOT, ENUM_SEP
@@ -91,7 +92,10 @@ class BJSExposedVar(PropertyGroup):
 
     # ENUM: choices stored as a separator-joined string; selection lives in s_val.
     enum_options: StringProperty()
-    e_val: EnumProperty(name="Value", items=_enum_items, get=_enum_get, set=_enum_set)
+    e_val: EnumProperty(
+        name="Value", items=_enum_items, get=_enum_get, set=_enum_set,
+        overridable=False,
+    )
 
     # LIST: element type + the items themselves.
     elem_type:  StringProperty(default='FLOAT')
@@ -100,8 +104,11 @@ class BJSExposedVar(PropertyGroup):
     # Per-list collapse, independent of the component's own show_expanded.
     show_expanded: BoolProperty(default=True)
     # Typed length: reading returns the current item count, writing resizes.
-    list_count: IntProperty(name="Count", description="Number of items in the list",
-                            min=0, get=_list_count_get, set=_list_count_set)
+    list_count: IntProperty(
+        name="Count", description="Number of items in the list",
+        min=0, get=_list_count_get, set=_list_count_set,
+        overridable=False,
+    )
 
 
 def add_list_item(v, el=None):

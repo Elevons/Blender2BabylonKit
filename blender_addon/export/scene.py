@@ -27,7 +27,8 @@ def _env_rotation_y(node):
         if inp.name == 'Vector':
             for link in inp.links:
                 if link.from_node.type == 'MAPPING':
-                    return link.from_node.inputs['Rotation'].default_value[2]
+                    # Mapping yaw is around Blender Z (Z-up); Babylon rotates around Y.
+                    return -link.from_node.inputs['Rotation'].default_value[2]
     return 0.0
 
 
@@ -45,6 +46,7 @@ def _environment_skybox_flags(s):
     flags = {"createSkybox": s.create_skybox}
     if s.create_skybox:
         flags["skyboxIgnoreFog"] = s.skybox_ignore_fog
+        flags["skyboxColor"] = _round3(s.skybox_color)
     return flags
 
 
@@ -68,8 +70,8 @@ def _serialize_environment(context, output_dir):
     if s.use_default_environment:
         return {
             "useDefault": True,
-            "intensity": 1.0,
-            "rotationY": 0.0,
+            "intensity": s.environment_intensity,
+            "rotationY": s.environment_rotation_y,
             **skybox_flags,
         }
     return None
@@ -99,5 +101,9 @@ def serialize_scene(context, output_dir):
     data["postProcessing"] = serialize_post_processing(s, output_dir)
     data["inputActions"] = serialize_input_asset(context.scene)
     data["defaultInputMap"] = context.scene.bjs_input_default_map
+
+    if s.use_large_world_rendering:
+        data["largeWorldRendering"] = True
+        data["floatingOriginWorldRadius"] = s.floating_origin_world_radius
 
     return data

@@ -15,8 +15,25 @@ export const TOPICS = [
       "engine/index.html",
       "engine/architecture.html",
       "engine/01-ARCHITECTURE.html",
+      "engine/02-RUNTIME-BASICS.html",
+      "engine/13-FEATURE-LIST.html",
+      "engine/14-API-GUIDE.html",
+      "engine/10-FEATURE-TRACES.html",
+      "engine/runtime-loop.html",
+      "engine/trace-runtime-loop.html",
       "engine/workflow.html",
       "engine/00-INDEX.html",
+    ],
+  },
+  {
+    id: "runtime",
+    label: "Runtime loop & Babylon hooks",
+    blurb: "App bootstrap, runRenderLoop, scene.render, OnUpdate delta time, and subsystem observer timing.",
+    startHere: [
+      "engine/02-RUNTIME-BASICS.html",
+      "engine/runtime-loop.html",
+      "engine/trace-runtime-loop.html",
+      "engine/trace-lifecycle.html",
     ],
   },
   {
@@ -33,21 +50,37 @@ export const TOPICS = [
     blurb: "Colliders, rigid bodies, Havok, constraints, triggers — Blender authoring through runtime bodies.",
     startHere: [
       "engine/physics.html",
-      "engine/05-PHYSICS.html",
+      "engine/06-PHYSICS.html",
       "engine/trace-physics.html",
       "blender/trace-collider-preview.html",
       "blender/trace-cog-preview.html",
     ],
   },
   {
+    id: "reference",
+    label: "Feature list & API",
+    blurb: "Complete feature inventory and runtime API reference for behavior authors.",
+    startHere: [
+      "engine/13-FEATURE-LIST.html",
+      "engine/14-API-GUIDE.html",
+      "engine/10-FEATURE-TRACES.html",
+    ],
+  },
+  {
     id: "scripting",
     label: "Scripting & behaviors",
-    blurb: "Behavior classes, @exposed fields, entity refs, and the OnMessage gameplay hook.",
+    blurb: "Behavior lifecycle (OnStart/OnUpdate/OnDestroy/OnMessage), components vs behaviors, @exposed fields, and entity refs.",
     startHere: [
+      "engine/14-API-GUIDE.html",
       "engine/scripting.html",
-      "engine/04-SCRIPTING.html",
+      "engine/02-RUNTIME-BASICS.html",
+      "engine/05-SCRIPTING.html",
+      "engine/trace-runtime-loop.html",
+      "engine/trace-lifecycle.html",
+      "engine/trace-components.html",
       "engine/trace-exposed.html",
       "blender/trace-exposed.html",
+      "blender/trace-components.html",
     ],
   },
   {
@@ -58,10 +91,11 @@ export const TOPICS = [
       "blender/export.html",
       "blender/validation.html",
       "blender/livelink.html",
+      "blender/PREFABS.html",
       "engine/blender-addon.html",
       "engine/trace-livelink.html",
       "blender/trace-export.html",
-      "engine/08-WORKFLOW.html",
+      "engine/09-WORKFLOW.html",
     ],
   },
   {
@@ -70,7 +104,7 @@ export const TOPICS = [
     blurb: "LevelLoader.Load — manifest fetch, glb append, entity passes, and FinalizeLevel.",
     startHere: [
       "engine/load-pipeline.html",
-      "engine/03-LOAD-PIPELINE.html",
+      "engine/04-LOAD-PIPELINE.html",
       "engine/trace-load.html",
     ],
   },
@@ -81,7 +115,7 @@ export const TOPICS = [
     startHere: [
       "engine/rendering.html",
       "blender/scene-settings.html",
-      "engine/06-RENDERING.html",
+      "engine/07-RENDERING.html",
       "engine/trace-lights.html",
       "engine/trace-cameras.html",
       "engine/trace-shadows.html",
@@ -96,7 +130,7 @@ export const TOPICS = [
     blurb: "Spatial audio, NLA clips, autoplay, and the skinned-mesh armature rule.",
     startHere: [
       "engine/audio-animation.html",
-      "engine/07-AUDIO-ANIMATION.html",
+      "engine/08-AUDIO-ANIMATION.html",
       "engine/trace-audio.html",
     ],
   },
@@ -106,7 +140,7 @@ export const TOPICS = [
     blurb: "GUI Editor JSON, particles, MSDF text, and Blender-authored 3D GUI controls.",
     startHere: [
       "engine/ui.html",
-      "engine/10-UI.html",
+      "engine/11-UI.html",
       "engine/trace-gui.html",
       "engine/trace-gui3d.html",
     ],
@@ -118,7 +152,7 @@ export const TOPICS = [
     startHere: [
       "engine/input.html",
       "blender/input-actions.html",
-      "engine/11-INPUT.html",
+      "engine/12-INPUT.html",
       "engine/trace-input.html",
       "blender/trace-input.html",
     ],
@@ -130,9 +164,10 @@ export const TOPICS = [
     startHere: [
       "blender/index.html",
       "blender/00-INDEX.html",
+      "blender/PREFABS.html",
       "blender/data-model.html",
       "blender/export.html",
-      "engine/02-BLENDER-ADDON.html",
+      "engine/03-BLENDER-ADDON.html",
     ],
   },
 ];
@@ -147,10 +182,11 @@ export const PAGE_TOPICS = {
   // — Engine subsystem diagrams —
   "engine/index.html": ["start"],
   "engine/architecture.html": ["start"],
+  "engine/runtime-loop.html": ["runtime", "start", "scripting"],
   "engine/workflow.html": ["start", "export"],
   "engine/blender-addon.html": ["export", "blender"],
   "engine/load-pipeline.html": ["load"],
-  "engine/scripting.html": ["scripting"],
+  "engine/scripting.html": ["scripting", "runtime"],
   "engine/input.html": ["input"],
   "engine/physics.html": ["physics"],
   "engine/rendering.html": ["rendering"],
@@ -160,6 +196,9 @@ export const PAGE_TOPICS = {
   // — Engine traces —
   "engine/trace-physics.html": ["physics"],
   "engine/trace-exposed.html": ["scripting"],
+  "engine/trace-lifecycle.html": ["scripting", "load", "runtime"],
+  "engine/trace-runtime-loop.html": ["runtime", "scripting", "start"],
+  "engine/trace-components.html": ["scripting", "load", "blender"],
   "engine/trace-trigger.html": ["physics", "scripting"],
   "engine/trace-constraint.html": ["physics"],
   "engine/trace-audio.html": ["audio"],
@@ -190,6 +229,7 @@ export const PAGE_TOPICS = {
   "blender/trace-export.html": ["export"],
   "blender/trace-guid.html": ["blender", "load"],
   "blender/trace-exposed.html": ["scripting", "blender"],
+  "blender/trace-components.html": ["scripting", "blender", "export"],
   "blender/trace-validate.html": ["export"],
   "blender/trace-input.html": ["input", "blender"],
   "blender/trace-livelink.html": ["export"],
@@ -202,19 +242,23 @@ export const PAGE_TOPICS = {
   // — Engine prose chapters —
   "engine/00-INDEX.html": ["start"],
   "engine/01-ARCHITECTURE.html": ["start"],
-  "engine/02-BLENDER-ADDON.html": ["blender", "export"],
-  "engine/03-LOAD-PIPELINE.html": ["load"],
-  "engine/04-SCRIPTING.html": ["scripting"],
-  "engine/05-PHYSICS.html": ["physics"],
-  "engine/06-RENDERING.html": ["rendering"],
-  "engine/07-AUDIO-ANIMATION.html": ["audio"],
-  "engine/08-WORKFLOW.html": ["start", "export"],
-  "engine/09-FEATURE-TRACES.html": ["start"],
-  "engine/10-UI.html": ["ui"],
-  "engine/11-INPUT.html": ["input"],
+  "engine/02-RUNTIME-BASICS.html": ["runtime", "start", "scripting"],
+  "engine/03-BLENDER-ADDON.html": ["blender", "export"],
+  "engine/04-LOAD-PIPELINE.html": ["load", "runtime"],
+  "engine/05-SCRIPTING.html": ["scripting", "runtime"],
+  "engine/06-PHYSICS.html": ["physics", "runtime"],
+  "engine/07-RENDERING.html": ["rendering"],
+  "engine/08-AUDIO-ANIMATION.html": ["audio"],
+  "engine/09-WORKFLOW.html": ["start", "export"],
+  "engine/10-FEATURE-TRACES.html": ["start"],
+  "engine/11-UI.html": ["ui", "runtime"],
+  "engine/12-INPUT.html": ["input", "runtime"],
+  "engine/13-FEATURE-LIST.html": ["start", "reference"],
+  "engine/14-API-GUIDE.html": ["start", "reference", "scripting"],
 
   // — Blender prose —
   "blender/00-INDEX.html": ["blender", "start"],
+  "blender/PREFABS.html": ["blender", "export", "start"],
 
   // — Launcher prose —
   "launcher/00-INDEX.html": ["start"],
@@ -280,6 +324,18 @@ export function DiagramsForTrace(traceHref)
   const traceTopics = PAGE_TOPICS[traceHref] ?? [];
   return Object.keys(PAGE_TOPICS)
     .filter((href) => href.startsWith(`${side}/`) && IsSubsystemDiagramHref(href)
+      && TopicsOverlap(traceTopics, PAGE_TOPICS[href]))
+    .sort();
+}
+
+/** Subsystem diagram hrefs related to a trace page via PAGE_TOPICS. */
+export function TracesForTrace(traceHref)
+{
+  const side = traceHref.split("/")[0];
+  const traceTopics = PAGE_TOPICS[traceHref] ?? [];
+  return Object.keys(PAGE_TOPICS)
+    .filter((href) => href.startsWith(`${side}/trace-`)
+      && href !== traceHref
       && TopicsOverlap(traceTopics, PAGE_TOPICS[href]))
     .sort();
 }

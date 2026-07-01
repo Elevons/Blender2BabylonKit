@@ -11,11 +11,7 @@ import bpy
 
 from ..core.ids import ID_KEY
 from ..components.constants import GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED
-
-
-def _is_renderable(obj):
-    """Mirror export.py's rule: render-disabled objects are skipped entirely."""
-    return not obj.hide_render
+from .visibility import is_renderable
 
 
 def _check_scripts(obj, warnings):
@@ -33,7 +29,7 @@ def _check_scripts(obj, warnings):
                     f"{obj.name}: script file not found: {comp.script_path}")
 
 
-def _check_entity_refs(obj, warnings):
+def _check_entity_refs(obj, context, warnings):
     """Entity references to render-disabled or GUID-less objects resolve to
     nothing at runtime (the target won't be in the manifest)."""
     for comp in obj.bjs_components:
@@ -49,7 +45,7 @@ def _check_entity_refs(obj, warnings):
                         refs.append((v.name, item.obj_val))
 
         for label, target in refs:
-            if not _is_renderable(target):
+            if not is_renderable(target, context):
                 warnings.append(
                     f"{obj.name}: '{label}' references '{target.name}', which is "
                     f"render-disabled and won't be exported")
@@ -309,13 +305,14 @@ def _check_input_map(scene, warnings):
                         f"> Create Maps Used by Scripts)")
 
 
-def _check_duplicate_guids(scene, warnings):
+def _check_duplicate_guids(context, warnings):
     """Two renderable objects sharing a GUID (copy-pasted between scenes/files)
     would collide in the manifest. export.py re-IDs duplicates automatically;
     this warns so the author knows references may have moved."""
+    scene = context.scene
     seen = {}
     for obj in scene.objects:
-        if not _is_renderable(obj):
+        if not is_renderable(obj, context):
             continue
         guid = obj.get(ID_KEY)
         if not guid:
@@ -329,23 +326,24 @@ def _check_duplicate_guids(scene, warnings):
             seen[guid] = obj.name
 
 
-def _check_active_camera(scene, warnings):
+def _check_active_camera(context, warnings):
     """No active camera means the runtime falls back to a default orbit cam."""
-    cam = scene.camera
-    if cam is None or not _is_renderable(cam):
+    cam = context.scene.camera
+    if cam is None or not is_renderable(cam, context):
         warnings.append(
             "Scene has no (renderable) active camera — the runtime will use a "
             "fallback orbit camera")
 
 
-def _check_atmosphere(scene, warnings):
+def _check_atmosphere(context, warnings):
     """Atmosphere needs at least one exported SUN lamp (or a valid Sun Light pick)."""
+    scene = context.scene
     atmosphere = scene.bjs_scene.atmosphere
     if not atmosphere.use_atmosphere:
         return
 
     if atmosphere.sun_light is not None:
-        if not _is_renderable(atmosphere.sun_light):
+        if not is_renderable(atmosphere.sun_light, context):
             warnings.append(
                 "Atmosphere: Sun Light is render-disabled and won't be exported")
         elif atmosphere.sun_light.data.type != 'SUN':
@@ -354,7 +352,7 @@ def _check_atmosphere(scene, warnings):
         return
 
     has_sun = any(
-        obj.type == 'LIGHT' and obj.data.type == 'SUN' and _is_renderable(obj)
+        obj.type == 'LIGHT' and obj.data.type == 'SUN' and is_renderable(obj, context)
         for obj in scene.objects
     )
     if not has_sun:
@@ -398,6 +396,24 @@ def _check_materials(context, warnings):
                     f"(not embedded in the JSON)")
 
 
+def _check_large_world_rendering(context, warnings):
+    """Geospatial globes need floating origin to stay stable at large coordinates."""
+    scene = context.scene
+    if scene.bjs_scene.use_large_world_rendering:
+        return
+
+    for obj in scene.objects:
+        if not is_renderable(obj, context):
+            continue
+        for comp in obj.bjs_components:
+            if comp.comp_type == 'CAMERA' and comp.cam_type == 'GEOSPATIAL':
+                warnings.append(
+                    f"{obj.name}: Geospatial camera but Large World Rendering is off — "
+                    "enable Babylon Scene › Rendering › Large World Rendering for "
+                    "globe-scale coordinates")
+                return
+
+
 def validate_scene(context):
     """Run every check over the renderable scene. Returns a list of warning
     strings; an empty list means the export looks clean."""
@@ -405,10 +421,10 @@ def validate_scene(context):
     scene = context.scene
 
     for obj in scene.objects:
-        if not _is_renderable(obj):
+        if not is_renderable(obj, context):
             continue
         _check_scripts(obj, warnings)
-        _check_entity_refs(obj, warnings)
+        _check_entity_refs(obj, context, warnings)
         _check_physics(obj, warnings)
         _check_triggers(obj, warnings)
         _check_media(obj, warnings)
@@ -418,9 +434,10 @@ def validate_scene(context):
         _check_lights(obj, warnings)
 
     _check_input_map(scene, warnings)
-    _check_duplicate_guids(scene, warnings)
-    _check_active_camera(scene, warnings)
-    _check_atmosphere(scene, warnings)
+    _check_duplicate_guids(context, warnings)
+    _check_active_camera(context, warnings)
+    _check_atmosphere(context, warnings)
+    _check_large_world_rendering(context, warnings)
     _check_materials(context, warnings)
 
     return warnings

@@ -1,0 +1,79 @@
+<h1>Prefabs — linked .blend files</h1>
+<p>Reuse authored content across levels by treating each separate <strong>.blend file</strong> as a <strong>prefab</strong>: link it into your level scene, then apply Blender <strong>library overrides</strong> on the instances you want to customize.</p>
+
+<p class="doc-links">
+  <strong>See also:</strong>
+  <a href="data-model.html">data-model</a> ·
+  <a href="export.html">export</a> ·
+  <a href="trace-guid.html">GUID trace</a> ·
+  <a href="../engine/03-BLENDER-ADDON.html">03 — Blender Add-on</a> ·
+  <a href="../engine/09-WORKFLOW.html#prefabs">09 — Workflow</a>
+</p>
+
+<hr>
+
+<h2>What counts as a prefab</h2>
+<p>A prefab is a <strong>library .blend</strong> you link into the level you are exporting — not an app-level or runtime concept. Typical layout:</p>
+<ul>
+  <li><strong>Prefab source</strong> — e.g. <code>Small Rover.blend</code> with meshes, empties, components, and GUIDs authored once.</li>
+  <li><strong>Level scene</strong> — e.g. <code>Train Scene.blend</code> that <strong>links</strong> the rover (and other prefabs), places instances in the world, and exports to <code>public/levels/…</code>.</li>
+</ul>
+<p>Linked objects arrive read-only. To move, retarget scripts, or tweak colliders on one copy without changing the library file, you need a <strong>library override</strong> on that instance (or on a parent collection that contains it).</p>
+
+<h2>Authoring workflow</h2>
+<ol>
+  <li><p><strong>Build the prefab</strong> in its own .blend — components on objects, behaviors wired, colliders previewed, GUIDs assigned where references need them.</p></li>
+  <li><p><strong>Link into the level</strong> — <em>File → Link…</em>, pick the prefab .blend, choose the collection (or objects) to bring in. The linked hierarchy appears in the level outliner.</p></li>
+  <li><p><strong>Make a library override</strong> — select the linked collection or object, then <em>Object → Relations → Make Library Override</em> (or the outliner override entry). You can override at collection scope so the whole prefab instance is editable as one unit.</p></li>
+  <li><p><strong>Customize the instance</strong> — transform, visibility, mesh slots, and <strong>Babylon components</strong> on the overridden copy. Unchanged fields keep tracking the library; overridden fields are stored on the level .blend.</p></li>
+  <li><p><strong>Export the level</strong> as usual — linked + overridden objects in the active scene are flattened into the level <code>.glb</code> and <code>.scene.json</code> like any other renderable object.</p></li>
+</ol>
+
+<pre class="mermaid">flowchart LR
+  subgraph lib["Prefab .blend (library)"]
+    P[Authored objects + components]
+  end
+  subgraph level["Level .blend"]
+    L[File → Link collection]
+    O[Library override on instance]
+    E[Export glb + manifest]
+  end
+  P --> L --> O --> E</pre>
+
+<h2>Editing components on overrides</h2>
+<p>Component data lives on <code>Object.bjs_components</code> (and nested PropertyGroups for <code>@exposed</code> fields, trigger rows, particle texture slots, etc.). Blender only allows overrides on RNA properties explicitly marked <strong>library-overridable</strong>.</p>
+<p>The add-on registers that entire chain via <code>core/props.py</code> wrappers around <code>bpy.props</code> — every scalar field gets <code>LIBRARY_OVERRIDABLE</code>; collections (the component stack, exposed-var lists, trigger events, …) also get <code>USE_INSERTION</code> so you can add or remove rows on an instance.</p>
+<p>After updating the add-on, <strong>disable and re-enable</strong> the extension (or restart Blender) so the flags register. Overrides created before that update may need to be re-applied or touched once so Blender records the new override operations.</p>
+<p>Use the <strong>pin</strong> button in <strong>Babylon Object → Components</strong> when editing entity lists or picking trigger targets across a prefab hierarchy — the inspector stays on the prefab root while you change the viewport selection.</p>
+
+<h2>GUIDs and multiple instances</h2>
+<p>Entity identity is <code>obj["bjs_id"]</code> (see <a href="trace-guid.html">GUID trace</a>). Linked copies initially <strong>share the library GUIDs</strong>. That is fine when one instance is in the level; for <strong>several instances of the same prefab</strong>, each object that becomes its own runtime entity needs a unique id.</p>
+<p>On export, <code>_dedupe_entity_ids</code> (<code>export/level.py</code>) detects duplicate <code>bjs_id</code> values among scene objects and re-issues fresh GUIDs on the later duplicates. You can also assign overrides per instance ahead of time:</p>
+<ul>
+  <li><strong>Assign GUID</strong> in the Babylon Object panel on the overridden object.</li>
+  <li>Or override the <code>bjs_id</code> custom property in Blender’s Object Properties → Custom Properties (separate from RNA components).</li>
+</ul>
+<p>References inside a prefab (camera targets, constraint partners, <code>@exposed</code> entity fields) should point at objects <strong>inside the same prefab hierarchy</strong> when possible, so overrides move together. Pointing at level-only objects works but those pointers are level-specific overrides.</p>
+
+<h2>What overrides well vs what stays in the library</h2>
+<table>
+  <thead><tr><th>Typical override on an instance</th><th>Usually stays in the library file</th></tr></thead>
+  <tbody>
+    <tr><td>Transform, parenting, viewport/render visibility</td><td>Default mesh topology and materials</td></tr>
+    <tr><td>Per-instance script <code>@exposed</code> values</td><td>Default component stack layout</td></tr>
+    <tr><td>Collider size, body type, trigger messages</td><td>Shared behavior <code>.ts</code> paths (relative to the app)</td></tr>
+    <tr><td>Per-instance GUID when duplicated</td><td>Scene-wide settings (<code>Scene.bjs_scene</code>) — live in the level file only</td></tr>
+  </tbody>
+</table>
+<p>Material overrides use Blender’s material library system; NME JSON and texture overrides on <code>Material.bjs_nme_*</code> follow the same library-override rules as other material data.</p>
+
+<h2>Live Link and prefabs</h2>
+<p>Live Link re-exports the <strong>active level .blend</strong>. Edit prefab sources freely, but remember:</p>
+<ul>
+  <li>Saving the <strong>library</strong> file does not run Live Link on the level unless that file also has Live Link enabled.</li>
+  <li>Saving the <strong>level</strong> re-exports the merged result — linked data is resolved at export time from whatever the override references.</li>
+</ul>
+<p>Iterating on a prefab: save the library → switch to the level → save (or export once) to push changes through.</p>
+
+<h2>Runtime</h2>
+<p>The engine has no prefab loader — export produces a flat level. Each manifest entity is a glTF node plus components; parenting from Blender is preserved. Multiple instances of the same linked prefab appear as separate entities (with distinct GUIDs after dedupe).</p>

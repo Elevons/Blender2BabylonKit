@@ -105,6 +105,7 @@ def serialize_components(obj, output_dir):
             d.update({
                 "shape": c.collider_shape,
                 "isTrigger": bool(c.is_trigger),
+                "makeInvisible": bool(c.collider_make_invisible),
                 "autoFit": bool(c.auto_fit),
                 "applyObjectScale": bool(c.collider_apply_scale),
                 "size": [sx, sz, sy],        # extents: y<->z axes swap

@@ -18,23 +18,16 @@ from .components import serialize_components, iter_referenced_objects
 from .datablocks import serialize_light, serialize_camera
 from .scene import serialize_scene
 from .materials import serialize_materials
+from .visibility import (
+    is_renderable,
+    is_viewport_hidden,
+    nonrenderable_gltf_lights,
+    relink_scene_objects,
+    unlink_scene_objects,
+)
 
 
 SCHEMA_VERSION = 4
-
-
-def _is_renderable(obj):
-    """Objects disabled in renders (the camera icon / `hide_render`) are excluded
-    from the level entirely — no glb geometry and no manifest entry."""
-    return not obj.hide_render
-
-
-def _is_viewport_hidden(obj):
-    """True when the eye icon is off, including collection / hierarchy visibility."""
-    visible_get = getattr(obj, "visible_get", None)
-    if visible_get is not None:
-        return not visible_get()
-    return obj.hide_viewport
 
 
 def _casts_shadows(obj):
@@ -77,14 +70,14 @@ def _ensure_entity_ids(context):
     'Add Component', and referenced objects may have no components at all, so
     this is where they get their id."""
     for obj in context.scene.objects:
-        if not _is_renderable(obj):
+        if not is_renderable(obj, context):
             continue
         if (len(obj.bjs_components) > 0 or obj.type in {'LIGHT', 'CAMERA'}
-                or nla_clip_names(obj) or _is_viewport_hidden(obj)):
+                or nla_clip_names(obj) or is_viewport_hidden(obj)):
             ensure_object_id(obj)
         for comp in obj.bjs_components:
             for ref in iter_referenced_objects(comp):
-                if _is_renderable(ref):
+                if is_renderable(ref, context):
                     ensure_object_id(ref)
 
 
@@ -92,7 +85,7 @@ def _build_manifest(context, glb_filename, output_dir):
     referenced = _referenced_ids(context)
     entities = []
     for obj in context.scene.objects:
-        if not _is_renderable(obj):
+        if not is_renderable(obj, context):
             continue  # disabled in renders → not part of the level
         comps = serialize_components(obj, output_dir)
         light = serialize_light(obj) if obj.type == 'LIGHT' else None
@@ -100,7 +93,7 @@ def _build_manifest(context, glb_filename, output_dir):
         animation = serialize_animation(obj)
         is_referenced = obj.get(ID_KEY) in referenced
         has_id = bool(obj.get(ID_KEY))
-        viewport_hidden = _is_viewport_hidden(obj)
+        viewport_hidden = is_viewport_hidden(obj)
         # A GUID is an explicit "make this addressable" marker (e.g. Assign GUID
         # on a bare empty), so include it even with nothing else on it.
         if (not comps and not light and not camera and not animation
@@ -156,10 +149,10 @@ def _stamp_gltf_extras(context):
     """
     stamped = []
     for obj in context.scene.objects:
-        if not _is_renderable(obj):
+        if not is_renderable(obj, context):
             continue
         extras = []
-        if _is_viewport_hidden(obj):
+        if is_viewport_hidden(obj):
             obj[VISIBLE_KEY] = 0
             extras.append(VISIBLE_KEY)
         if not _casts_shadows(obj):
@@ -210,7 +203,11 @@ def export_level(context, filepath):
     _dedupe_entity_ids(context)   # duplicated objects get fresh GUIDs
     _ensure_entity_ids(context)   # assign GUIDs BEFORE the glb is written
     extras_stamped = _stamp_gltf_extras(context)
-    _export_glb(glb_path)
+    unlinked_lights = unlink_scene_objects(nonrenderable_gltf_lights(context))
+    try:
+        _export_glb(glb_path)
+    finally:
+        relink_scene_objects(unlinked_lights)
     _clear_gltf_extras(extras_stamped)
 
     manifest = _build_manifest(context, glb_filename, os.path.dirname(glb_path))

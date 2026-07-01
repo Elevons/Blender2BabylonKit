@@ -31,6 +31,15 @@ so the manifest only stores what glTF can't express: your ECS components.
 Matching is by a stable **GUID** stamped into each object (see "Entity identity"
 below), so renaming objects in Blender doesn't break the link.
 
+## Documentation
+
+Build the docs from the repo root with `npm run docs:build`, then open
+[`docs/index.html`](docs/index.html) (searchable landing with interactive diagrams
+and prose chapters). **Contributors:** edit sources under `scripts/docs/` and
+`scripts/docs/prose/content/` — see
+[`docs/BUILDING-DOCS.html`](docs/BUILDING-DOCS.html) for the full map. Quick
+checks: `npm run docs:validate` (registry) and `npm run docs:check-links`.
+
 ## Install the Blender add-on
 
 Use `babylon_level_kit_extension.zip`. Blender → Edit → Preferences → Get
@@ -51,8 +60,10 @@ APIs.
 - **Tag** – an entity tag/layer you can query at runtime (`level.ByTag("Enemy")`).
 - **Collider** – box/sphere/capsule/cylinder/convex/mesh. *Auto-Fit* derives
   size from the mesh bounding box at runtime (recommended). Toggle *Is Trigger*
-  for overlap-only volumes. When the object is selected, *Show Preview* draws the
-  collider as a cyan wireframe in the viewport. Manual *Size* / *Center Offset* / *Rotation*
+  for overlap-only volumes. *Make Invisible* hides the mesh in Babylon.js at
+  runtime while keeping the physics collider active (useful for invisible
+  triggers or collision-only blocking volumes). When the object is selected,
+  *Show Preview* draws the collider as a cyan wireframe in the viewport. Manual *Size* / *Center Offset* / *Rotation*
   are authored in Blender axes (what the preview shows) and converted to Babylon
   Y-up on export; capsule/cylinder run along Blender's up (Z) axis. Convex/mesh
   use the mesh itself, so they have no separate wireframe. *Fit to Bounds*
@@ -152,6 +163,15 @@ constraint ends without physics, invalid CUSTOM axis rows (min > max), area
 lights, duplicate GUIDs, and a missing active camera. The Export Level operator
 also runs them and lists warnings in its report.
 
+## Prefabs (linked .blend files)
+
+Reuse props and characters in separate **.blend library files**: link them into
+your level scene (**File → Link…**), then apply Blender **library overrides** on
+each instance you want to customize (transform, components, colliders,
+`@exposed` values). Export always runs from the **level** file — the runtime sees
+a flat level, not a prefab loader. Full workflow:
+[docs/blender/PREFABS.html](docs/blender/PREFABS.html).
+
 ## Creating a new project
 
 New games are apps inside the monorepo. From the repo root:
@@ -186,6 +206,10 @@ export default class Rotator extends Behavior
   OnUpdate(deltaSeconds: number): void { /* uses this.speed, this.axis */ }
 }
 ```
+
+`OnUpdate` runs once per frame from the app's `engine.runRenderLoop(() => scene.render())`
+hook chain — see [Runtime Basics](docs/engine/02-RUNTIME-BASICS.html) for delta time,
+load vs run time, and where Havok steps relative to your script.
 
 When you pick this file with **Open Script…** in Blender, the add-on parses the
 `@exposed` fields and shows typed widgets (float/bool/string/vector/color) right
@@ -237,8 +261,11 @@ angle, spot cone, and range in Blender (the Babylon tab also surfaces these for
 convenience), and on export the plugin reads the native lamp datablock into the
 manifest. The glb already places the light with the correct converted
 transform, so at load the runtime copies the Blender properties onto that light
-— position and aim included. Move or recolor the lamp in Blender, re-export, and
-Babylon follows.
+— spot/point position and aim included. **SUN lamps** bake world aim once
+(`BakeSunLightWorldTransform`): direction comes from the glTF hierarchy, the
+light is detached from its empty, and the empty's world position is **not** used
+for shading or shadows (see Shadows). Move or recolor the lamp in Blender,
+re-export, and Babylon follows.
 
 Mapping: `POINT → PointLight`, `SUN → DirectionalLight`, `SPOT → SpotLight`.
 Area lights aren't part of glTF and don't transfer (the panel warns you).
@@ -272,17 +299,34 @@ Generators are exposed as `level.shadowGenerators`. A clip start/end of `0` mean
 loader default. To set the default resolution or disable the whole pass:
 `new LevelLoader(scene, registry, { shadows: false })` or `{ shadowMapSize: 2048 }`.
 
+**Large light rigs.** WebGL limits how many forward lights fit in one PBR shader
+(typically ~8–10 before compile failures). When a scene has more enabled lamps than
+`scene.lightBudget` (default `8`), the loader automatically clusters point/spot
+lights into a `ClusteredLightContainer` or falls back to disabling light uniform
+buffers. Sun lamps stay on the forward path so shadows keep working. No Blender
+authoring step — see [Rendering — Punctual light budget](docs/engine/07-RENDERING.html)
+for modes (`level.punctualLightingMode`), overrides (`clusterPunctualLights`,
+`lightBudget`), and limits. Optional manifest fields:
+
+```json
+"scene": {
+  "clusterPunctualLights": true,
+  "lightBudget": 8
+}
+```
+
 The loader fights **shadow acne** out of the box. Blender ships normal bias at
 `0`, which stripes flat planes under a sun and speckles point/spot edges, so when
 a light doesn't override it the loader applies a floor (0.02 for directional,
 0.03 for point/spot). It also tightens the shadow depth range, the usual culprit:
 directional suns get `autoCalcShadowZBounds` (the depth frustum re-fits to the
-casters every frame), and point/spot lights cap their far plane to the lamp's
-range — set a **Custom Range** on the lamp for the tightest result. **Back Faces
-Only** (`forceBackFacesOnly`) is the heavy-handed last resort for stubborn
-self-shadowing; it's off by default because it can leak light on thin or
-single-sided meshes. Any value you set explicitly always overrides these
-defaults.
+casters every frame) and `AnchorDirectionalShadowOrigin` (shadow view centered on
+caster bounds, not the sun empty's world position), and point/spot lights cap
+their far plane to the lamp's range — set a **Custom Range** on the lamp for
+the tightest result. **Back Faces Only** (`forceBackFacesOnly`) is the
+heavy-handed last resort for stubborn self-shadowing; it's off by default because
+it can leak light on thin or single-sided meshes. Any value you set explicitly
+always overrides these defaults.
 
 For a fully static level, enable **Freeze Shadows** (scene settings, or the
 `freezeShadows` loader option): each shadow map renders once and then freezes, a
@@ -333,22 +377,36 @@ at load:
 
 - **Clear / ambient color** — `scene.clearColor` / `ambientColor`.
 - **Environment** — image-based lighting from the manifest `environment` block
-  (omit it for lamps + ambient only). In **Properties → Scene → Babylon →
-  Rendering → Environment**:
+  (omit it for lamps + ambient only). In the **Babylon Scene** N-panel →
+  **Environment**:
   - **Default Environment** — IBL without a World texture; exports
     `useDefault: true` and loads Babylon's built-in studio `.env` from the CDN at
     runtime (player needs network access).
+  - **Intensity** / **Rotation Y** — tune the default environment when no World
+    texture is active (exports `environment.intensity` and `environment.rotationY`
+    in radians). Hidden when a World texture wins.
   - **Show Skybox** — when on, draws the background; when off, IBL only.
+    At load, `ComputeSkyboxSize()` sizes the skybox from level geometry
+    (`max(1000, scene diagonal × 3)`) and pins it to the active camera
+    (`infiniteDistance`). Works for default env, `.env`, `.hdr`, and equirect
+    World textures.
   - **Skybox Ignores Fog** — when on (and Show Skybox is on), the skybox stays
     visible through scene fog (`mesh.applyFog = false` at runtime).
   - A World texture on the active **World Output → Surface → Background** chain
     wins over Default Environment; it's copied into `env/` with a URL-safe filename
     (`sanitize_asset_filename`). Orphan textures elsewhere in the node editor are
     ignored. `.env` (Babylon's prefiltered cube) is recommended; `.hdr` works;
-    `.exr` can't load in-browser. Intensity and Y-rotation come from the World's
-    Background/Mapping nodes. At load, `ApplyEnvironment` waits for the texture
-    before creating a skybox so the first Live Link reload doesn't show a blank
-    background.
+    `.exr` can't load in-browser. For World textures, intensity and Y-rotation
+    come from the World's Background/Mapping nodes (Mapping Z is negated on
+    export for Z-up → Y-up). At load, `ResolveEnvironmentRotation` adds `+π/2`
+    for panorama sources (`.hdr` and equirect PNG/JPG — not prefiltered `.env`)
+    so Blender Mapping yaw `0` matches Babylon; `ApplyEnvironmentRotation` applies
+    the same yaw to IBL and the skybox texture (not a separate mesh spin). All
+    exported file types with **Show Skybox** on use `createDefaultSkybox` with
+    the same texture as IBL. `ApplyEnvironment` waits for the texture before
+    creating a skybox so the first Live Link reload doesn't show a blank
+    background. On km-scale geometry, also raise the camera **Clip End** (Blender
+    default `1000` is often too short).
 - **Fog** — linear/exp/exp² with color and range/density.
 - **Atmosphere** — physically based sky and aerial perspective via Babylon's
   `@babylonjs/addons/atmosphere` addon. Enable in **Properties → Scene → Babylon
@@ -650,7 +708,7 @@ packages/
         InputBinding.ts Devices.ts DefaultAsset.ts
         inputMap.ts       #   @inputMap decorator (action-map injection)
       subsystems/       # one module per manifest concern the glb can't express
-        physics.ts lights.ts cameras/ shadows.ts constraints.ts
+        physics.ts lights.ts clusteredLights.ts cameras/ shadows.ts constraints.ts
         audio.ts particles.ts triggers.ts environment.ts fog.ts
         postprocess.ts animation.ts
       ui/               # user interfaces (2D GUI Editor layouts + 3D GUI)
@@ -664,10 +722,11 @@ apps/
       behaviors/          # YOUR scripts, one behavior per file (Rotator, LookAt…)
 
 Docs:
-  README.md                  # this file — overview, authoring, engine reference
+  docs/index.html               # searchable landing — open after npm run docs:build
+  docs/BUILDING-DOCS.html       # contributor guide (edit scripts/docs/prose/content/meta/BUILDING-DOCS.html)
   docs/STYLE_GUIDE.md           # C#-style coding conventions for engine + behaviors
   docs/LLM_SCRIPTING_CONTEXT.md # short context for an LLM generating a behavior file
-  docs/engine/00-INDEX.md    # full linked engine documentation + interactive diagram
+  docs/engine/00-INDEX.html     # full linked engine documentation + interactive diagrams
 ```
 
 

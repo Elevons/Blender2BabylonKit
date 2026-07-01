@@ -215,6 +215,7 @@ def draw_component(layout, obj, index, comp):
             info.label(text="Shapes combine at runtime; use manual center/size per collider")
         body.prop(comp, "collider_shape")
         body.prop(comp, "is_trigger")
+        body.prop(comp, "collider_make_invisible")
         body.prop(comp, "collider_show")
         body.prop(comp, "auto_fit")
         body.prop(comp, "collider_apply_scale")

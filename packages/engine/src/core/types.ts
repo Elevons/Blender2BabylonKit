@@ -27,6 +27,8 @@ export interface ColliderComponent {
   type: "COLLIDER";
   shape: "BOX" | "SPHERE" | "CAPSULE" | "CYLINDER" | "CONVEX" | "MESH";
   isTrigger: boolean;
+  /** Hide the entity mesh at runtime; physics collider stays active. */
+  makeInvisible?: boolean;
   autoFit: boolean;
   /** Default on. Bakes this entity's local scale into authored data; parent scale uses the world matrix. */
   applyObjectScale?: boolean;
@@ -388,6 +390,8 @@ export interface EnvironmentInfo {
   createSkybox: boolean;
   /** When true, the skybox mesh sets applyFog = false so scene fog does not wash out the background. */
   skyboxIgnoreFog?: boolean;
+  /** sRGB tint for EnvironmentHelper skyboxes (default studio env and .env backgrounds). */
+  skyboxColor?: [number, number, number];
 }
 
 export interface FogInfo {
@@ -543,6 +547,20 @@ export interface SceneInfo {
   inputActions?: InputActionAssetData | null;
   /** Map name injected when a script has no @inputMap (default "Player"). */
   defaultInputMap?: string;
+  /**
+   * When false, never cluster punctual lights (UBO fallback if over budget).
+   * Default: auto-cluster when the scene exceeds {@link lightBudget}.
+   */
+  clusterPunctualLights?: boolean;
+  /** Max forward scene lights before clustering / UBO fallback. Default 8. */
+  lightBudget?: number;
+  /**
+   * Babylon large-world / floating origin rendering (engine
+   * `useLargeWorldRendering`). Authored in Blender Scene › Rendering.
+   */
+  largeWorldRendering?: boolean;
+  /** Havok multi-region radius when {@link largeWorldRendering} is true. Default 100000. */
+  floatingOriginWorldRadius?: number;
 }
 
 // ---- Input Actions asset (Unity Input System style) ----
@@ -597,6 +615,14 @@ export interface NodeMaterialTextureInfo {
   file: string;
 }
 
+/** One inspector-visible InputBlock value authored in Blender. */
+export interface NodeMaterialInputInfo {
+  blockId: number;
+  blockName?: string;
+  type: "FLOAT" | "INT" | "BOOL" | "VECTOR2" | "VECTOR3" | "VECTOR4" | "COLOR3" | "COLOR4";
+  value: number | boolean | number[];
+}
+
 /** Blender material → Babylon node material override. */
 export interface NodeMaterialOverrideInfo {
   /** Blender / glTF material name used for matching at runtime. */
@@ -605,6 +631,8 @@ export interface NodeMaterialOverrideInfo {
   file: string;
   /** Optional texture bindings when the JSON omits image data. */
   textures?: NodeMaterialTextureInfo[];
+  /** Optional InputBlock overrides (also patched into the exported JSON). */
+  inputs?: NodeMaterialInputInfo[];
 }
 
 export interface LevelManifest {

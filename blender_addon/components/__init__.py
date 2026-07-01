@@ -8,8 +8,9 @@ deep-copy in clipboard.py.
 """
 
 import bpy
-from bpy.props import CollectionProperty, IntProperty, PointerProperty
 from bpy.types import Object, WindowManager
+
+from ..core.props import CollectionProperty, IntProperty, PointerProperty
 
 from .exposed_vars import BJSListItem, BJSExposedVar
 from .component import (

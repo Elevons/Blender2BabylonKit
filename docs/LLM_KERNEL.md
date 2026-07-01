@@ -1,8 +1,8 @@
 # Babylon Level Kit — Behavior Authoring Kernel
 
-Minimal contract for generating a behavior script (runtime **v0.32.0**). For
-domain detail, use **bjs-mcp** tools (`get_scripting_context`, `plan_behavior`,
-`get_recipe_template`, `validate_behavior`) — do not guess APIs.
+Minimal contract for generating a behavior script (runtime **v0.31.1**). For
+task-specific steps, call **`route_task(intent, className)`** first — do not
+guess. For API detail, use **`get_scripting_context(section=…)`**.
 
 **Terminology:** a **component** is authored data on an entity (TAG, SCRIPT, …);
 a **behavior** is a runtime script class (`extends Behavior`) from a SCRIPT
@@ -62,31 +62,26 @@ Entity lists: start `[]` — authors fill them in Blender.
 `@exposed` defaults must be **single-line literals** (Blender does not parse
 computed or multi-line defaults).
 
-## Silent failure checklist
+## Physics movement (one question)
 
-| Mistake | Result |
-|---------|--------|
-| `onStart` instead of `OnStart` | Hook never runs |
-| `@Exposed` / `@InputMap` | Blender UI breaks |
-| `node.position` every frame on DYNAMIC body | Fights physics solver |
-| Behavior on skinned mesh, not armature | Animation/transform ignored |
-| MESH trigger collider | Never fires in Havok |
-| Invented input action names | Always undefined at runtime |
-| `window` keyboard listeners | Leaks; use scene observables + `OnDestroy` |
-| Script-built `UniversalCamera` for globe navigation | Use Blender **Camera** component `GEOSPATIAL` instead |
-| Wrong **Planet Radius** on Geospatial camera | Zoom/pan limits and pose derivation break — match globe mesh |
-| `DefaultRenderingPipeline` / scene post in a behavior | Author post in Blender **Babylon Scene › Post-Processing** |
-| `Atmosphere` / `@babylonjs/addons/atmosphere` in a behavior | Author sky in Blender **Babylon Scene › Atmosphere** (Sun lamp) |
+| Body? | Mode | Rule |
+|-------|------|------|
+| No | — | Write `node.position` freely |
+| Yes | DYNAMIC | Velocity / impulse only — **never** `node.position` each frame |
+| Yes | ANIMATED | `disablePreStep = false`; teleport or drive each frame |
 
-## MCP workflow (complex scripts)
+**MCP:** `get_physics_movement` — full decision tree + copy-in code.
 
-1. `plan_behavior(intent)` — recipes, sections, reference, steps
-2. `get_recipe_template(recipe, ClassName)` — valid skeleton
-3. `list_input_actions` / `list_scene_entities` — real names
-4. `find_similar_behavior(query, includeSource=true)` — copy proven patterns
-5. `get_scripting_context(section=…)` — pull only needed API detail
-6. `get_fragment(name)` / `get_exposed_field_snippet` — paste-in blocks
-7. `validate_behavior(source, Filename.ts)` — fix errors; revalidate
+## MCP workflow (use tools — do not guess)
 
-Full contract: `docs/LLM_SCRIPTING_CONTEXT.md` (via `get_scripting_context`).
-Style: `docs/STYLE_GUIDE.md` (via `get_style_guide`).
+1. **`route_task(intent, className)`** — playbook + exact steps
+2. **`preflight_behavior`** — checklist
+3. **`get_recipe_template`** — valid skeleton
+4. **`list_input_actions` / `list_scene_entities`** — real names
+5. **`get_physics_movement`** — if anything moves
+6. **`validate_behavior`** — until clean
+
+Also: `get_do_not_list`, `get_engine_basics`, `get_playbook`, `get_scripting_context`.
+
+Full contract: `docs/LLM_SCRIPTING_CONTEXT.md`. Task recipes: `docs/LLM_PLAYBOOK.md`.
+Engine prose: `docs/engine/00-INDEX.html`. Style: `docs/STYLE_GUIDE.md`.

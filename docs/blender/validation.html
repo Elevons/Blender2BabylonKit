@@ -277,12 +277,47 @@ a.meta-doc-link {
 a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#553f28;margin:0 2px;"></span><span style="color:#967a52;padding:2px 6px;">Blender:</span><a href="index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Overview</a><a href="data-model.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Data model</a><a href="export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export pipeline</a><a href="input-actions.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="scene-settings.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Scene settings</a><span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">Validation</span><a href="livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;"><span style="color:#967a52;padding:2px 6px;">Traces:</span><a href="trace-export.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Export</a><a href="trace-guid.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">GUID identity</a><a href="trace-exposed.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">@exposed</a><a href="trace-validate.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Validation</a><a href="trace-input.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Input Actions</a><a href="trace-livelink.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Live Link</a><a href="trace-collider-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Collider preview</a><a href="trace-cog-preview.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">CoM preview</a><a href="trace-gui3d.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">3D GUI</a><a href="trace-particles.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Particles</a><a href="trace-materials.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">Node materials</a></div></div>
+<body>
+<style id="doc-bottom-nav-styles">
+  #doc-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: #12121a; border-top: 1px solid #2a2838;
+    padding: 10px 20px 12px; font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.35);
+  }
+  #doc-bottom-nav .crumbs {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+    max-width: 960px; margin: 0 auto;
+  }
+  #doc-bottom-nav a { color: #9aa8e8; text-decoration: none; }
+  #doc-bottom-nav a:hover { text-decoration: underline; color: #c8d4ff; }
+  #doc-bottom-nav .sep { color: #454560; user-select: none; }
+  #doc-bottom-nav .current { color: #e8ecff; font-weight: 500; }
+  #doc-bottom-nav .traces-row {
+    max-width: 960px; margin: 8px auto 0; padding-top: 8px;
+    border-top: 1px solid #1e1c28;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  #doc-bottom-nav .traces-label {
+    flex-shrink: 0; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: #6c7396;
+  }
+  #doc-bottom-nav .traces-links {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; line-height: 1.5;
+  }
+  #doc-bottom-nav .traces-links .current {
+    color: #e8ecff; font-weight: 500;
+  }
+  #doc-bottom-nav.blender a { color: #d4a870; }
+  #doc-bottom-nav.blender a:hover { color: #ffe8c8; }
+  #doc-bottom-nav.blender .current { color: #ffe8d0; }
+  #app { padding-bottom: 72px; }
+</style><nav id="doc-bottom-nav" class="blender"><div class="crumbs"><a href="../index.html">Docs</a><span class="sep">/</span><a href="00-INDEX.html">Blender guide</a><span class="sep">/</span><a href="index.html">Diagrams</a><span class="sep">/</span><span class="current">Validation</span><span class="sep">/</span><a href="../engine/00-INDEX.html">Engine</a></div><div class="traces-row"><span class="traces-label">Traces</span><div class="traces-links"><a href="trace-export.html">Export</a><a href="trace-guid.html">GUID identity</a><a href="trace-components.html">Components</a><a href="trace-exposed.html">@exposed</a><a href="trace-validate.html">Validation</a><a href="trace-input.html">Input Actions</a><a href="trace-livelink.html">Live Link</a><a href="trace-collider-preview.html">Collider preview</a><a href="trace-cog-preview.html">CoM preview</a><a href="trace-gui3d.html">3D GUI</a><a href="trace-particles.html">Particles</a><a href="trace-materials.html">Node materials</a></div></div></nav>
 <div id="app">
 
   <div id="toolbar">
     <div class="tg">
-      <a class="tb" href="../index.html" title="Back to documentation search">← Search</a>
+      <a class="tb" href="../index.html" title="Documentation home">Docs</a>
     </div>
     <div class="tsep"></div>
     <div class="tg">

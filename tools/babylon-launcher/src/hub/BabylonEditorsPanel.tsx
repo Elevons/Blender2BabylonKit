@@ -5,6 +5,7 @@ const BABYLON_EDITORS = [
   { name: "Geometry", url: "https://nge.babylonjs.com/" },
   { name: "Filters", url: "https://sfe.babylonjs.com/" },
   { name: "Render Graph", url: "https://nrge.babylonjs.com/" },
+  { name: "Terrains", url: "https://terrains.zyfod.dev/" },
 ] as const;
 
 export function BabylonEditorsPanel(): JSX.Element

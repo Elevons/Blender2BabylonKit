@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 10 — Feature Traces</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Engine</a>
+    <span class="sep">/</span>
+    <a href="../blender/00-INDEX.html">Blender</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="09-WORKFLOW.html">Prev</a> <span class="dim">·</span> <a href="11-UI.html">Next →</a></p>
+  <article><h1>10 — Feature Traces</h1>
+<p>Every feature in this kit travels the same path: you set something up in Blender, export writes a level file, the game reads that file and builds the scene. This page lists each hop in plain language, with the exact file and function underneath so you (or an LLM) can open the source. For a single-table inventory of all features, see <a href="13-FEATURE-LIST.html">13 — Feature List</a>; for runtime method reference, see <a href="14-API-GUIDE.html">14 — API Guide</a>.</p>
+<aside class="trace-legend">
+<p><strong>The five phases</strong> (look for the colored tag on each step):</p>
+<ol>
+<li><strong>Blender</strong> — what you click or type in the editor</li>
+<li><strong>Export</strong> — the add-on turns Blender data into files</li>
+<li><strong>Manifest</strong> — the level’s JSON description (the “recipe” between Blender and the game)</li>
+<li><strong>Load</strong> — the engine reads the recipe and creates objects</li>
+<li><strong>Runtime</strong> — the game is running (frames, input, messages)</li>
+</ol>
+</aside>
+<nav class="feature-toc">
+<ul>
+<li><a href="#guid">GUID / entity identity</a></li>
+<li><a href="#visibility">Viewport visibility</a></li>
+<li><a href="#tag">Tag</a></li>
+<li><a href="#collider">Collider / RigidBody</a></li>
+<li><a href="#script">Script + @exposed</a></li>
+<li><a href="#runtime-loop">Runtime loop</a></li>
+<li><a href="#lifecycle">Behavior lifecycle</a></li>
+<li><a href="#components">Components (all types)</a></li>
+<li><a href="#entity-ref">Entity reference field</a></li>
+<li><a href="#light">Light / Shadows</a></li>
+<li><a href="#camera">Camera</a></li>
+<li><a href="#atmosphere">Atmosphere</a></li>
+<li><a href="#post">Post-processing</a></li>
+<li><a href="#animation">Animation autoplay</a></li>
+<li><a href="#audio">Audio</a></li>
+<li><a href="#trigger">Trigger → OnMessage</a></li>
+<li><a href="#constraint">Constraint</a></li>
+<li><a href="#input">Input action</a></li>
+<li><a href="#livelink">Live Link</a></li>
+<li><a href="#debug">Debug Build</a></li>
+<li><a href="#gui2d">2D GUI</a></li>
+<li><a href="#particles">Particles</a></li>
+<li><a href="#materials">Node materials</a></li>
+<li><a href="#gui3d">3D GUI</a></li>
+</ul>
+</nav>
+
+<section class="trace-feature">
+<h3 id="guid">GUID / entity identity</h3>
+<p class="trace-summary">Every object gets a permanent ID so the game can find it again after export — even if you rename it.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">The add-on assigns a unique ID to each object the first time it needs one.</p><p class="step-code"><code>blender_addon/core/ids.py</code> · <code>ensure_object_id</code> (stores <code>bjs_id</code> on the object)</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">That ID is written into the 3D model file attached to each node.</p><p class="step-code"><code>blender_addon/export/level.py</code> · glTF node <code>extras.bjs_id</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">The same ID appears as <code>entities[].id</code> in the level JSON.</p><p class="step-code">manifest · <code>entities[].id</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader builds a lookup table from model nodes to IDs, then matches each entity row to a node.</p><p class="step-code"><code>packages/engine/src/core/loader/nodeResolution.ts</code> · <code>BuildIdIndex</code>, <code>ProcessEntity</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">You get an <code>Entity</code> in <code>level.entities</code>; the 3D node remembers which entity owns it.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · node <code>metadata.bjsEntity</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="visibility">Viewport visibility (eye icon)</h3>
+<p class="trace-summary">Hiding an object in Blender’s viewport can hide it in the game too, without deleting it from the level.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You turn off the viewport eye icon (but leave render on) — or disable shadow casting on a mesh.</p><p class="step-code">Blender · <code>hide_viewport</code>, ray-visibility Shadow</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Export stamps temporary flags onto each node before writing the model file.</p><p class="step-code"><code>blender_addon/export/level.py</code> · <code>_stamp_gltf_extras</code> (<code>bjs_visible</code>, <code>bjs_cast_shadows</code>)</p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Hidden nodes are turned off; lights and cameras under them are disabled too.</p><p class="step-code"><code>packages/engine/src/core/loader/nodeResolution.ts</code> · <code>ApplyNodeVisibility</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Meshes marked “no shadow cast” only receive shadows; they do not cast them.</p><p class="step-code"><code>packages/engine/src/subsystems/shadows.ts</code> · <code>SetupShadows</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Scripts can show or hide the mesh anytime by toggling <code>entity.node.isVisible</code>.</p><p class="step-code">Babylon · <code>AbstractMesh.isVisible</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="tag">Tag</h3>
+<p class="trace-summary">A text label on an entity so scripts and triggers can find “all enemies” or “the player” without hard-coding names.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add a TAG component and type a label (e.g. <code>Enemy</code>).</p><p class="step-code"><code>blender_addon/components/</code> · TAG component UI</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Export writes one TAG row into that object’s component list.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">The JSON holds <code>{ "type": "TAG", "tag": "Enemy" }</code>.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader sets <code>entity.tag</code> and records the attachment.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ClassifyComponents</code>, <code>RegisterAttachment</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Query with <code>level.ByTag("Enemy")</code> or check <code>entity.HasAttachment("TAG")</code>.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>ByTag</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="collider">Collider / RigidBody</h3>
+<p class="trace-summary">Collision shapes and physics bodies you author in Blender become one Havok body in the game when the level loads.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-physics.html"><strong>trace-physics</strong></a> · Blender viewport: <a href="../blender/trace-collider-preview.html">collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add collider and/or rigid-body rows in the N-panel, pick shapes, and optionally preview wireframes and center-of-mass in the 3D view.</p><p class="step-code"><code>blender_addon/viewport/collider_preview.py</code>, <code>cog_preview.py</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Each enabled row becomes one JSON object; positions are converted from Blender’s axes to the game’s Y-up space. “Make Invisible” and “Apply Object Scale” become flags on that row.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">The level file lists <code>COLLIDER</code> and <code>RIGIDBODY</code> entries under the entity. Multiple colliders on one object are intentional — they combine into one body.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader gathers all colliders for the entity, hides the mesh if requested, then builds physics.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ClassifyComponents</code>, <code>ApplyComponents</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">One collider → one shape (auto-fit to mesh, convex hull, or manual box/sphere). Several colliders → one compound body wrapping all shapes.</p><p class="step-code"><code>packages/engine/src/subsystems/physics.ts</code> · <code>BuildPhysics</code>, <code>BuildCompoundBody</code>, <code>OwnedColliderMeshes</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Mass, friction, and center of mass are applied for dynamic bodies.</p><p class="step-code"><code>packages/engine/src/subsystems/physics.ts</code> · <code>ApplyMassProperties</code>, <code>ResolveCenterOfMass</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">The entity gets <code>entity.body</code>; press <strong>C</strong> in debug builds to visualize colliders.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>ShowColliders</code></p></li>
+</ol>
+<p class="trace-footnote">Axis conversion detail: <a href="06-PHYSICS.html#right-handed">06 — Physics</a>. Scale default: <code>packages/engine/src/core/nodeScale.ts</code> · <code>ApplyObjectScaleEnabled</code>.</p>
+</section>
+
+<section class="trace-feature">
+<h3 id="script">Script + @exposed values</h3>
+<p class="trace-summary">TypeScript behaviors you attach in Blender get their tunable fields synced from the script file, edited per object, then applied when the game starts.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-exposed.html"><strong>trace-exposed</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You pick a script file and click Sync — the panel fills with fields marked <code>@exposed</code> in the TypeScript source.</p><p class="step-code"><code>blender_addon/core/script_parse.py</code> · <code>parse_exposed</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Your edited values are written into the SCRIPT row’s <code>vars</code> object (entity picks become GUID strings).</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>_serialize_vars</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">Each scripted object has <code>{ "type": "SCRIPT", "script": "MyBehavior", "vars": { … } }</code>.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader creates a behavior instance from the registry, injects <code>entity</code> and <code>scene</code>, then copies <code>vars</code> onto the instance.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>InstantiateScripts</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Entity-reference fields wait until every entity exists, then resolve to the real object.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ResolveObjectReferences</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what"><code>OnStart</code> runs once when the level begins — not during the steps above.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>Begin</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="runtime-loop">Runtime loop (app → Babylon → OnUpdate)</h3>
+<p class="trace-summary">After the level loads, the browser runs frames forever; each frame the kit processes input, calls your scripts, steps physics, and draws.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-runtime-loop.html"><strong>trace-runtime-loop</strong></a> · <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="runtime-loop.html">runtime-loop diagram</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Runtime</span><p class="step-what">The app creates the engine and scene, enables physics, and loads the level (which ends by calling <code>level.Begin()</code> once).</p><p class="step-code"><code>apps/playground/src/main.ts</code> · <code>Main</code> → <code>LevelLoader.Load</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">The app starts Babylon’s frame loop — without this line, nothing animates and <code>OnUpdate</code> never runs.</p><p class="step-code"><code>apps/playground/src/main.ts</code> · <code>engine.runRenderLoop(() =&gt; scene.render())</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">At the start of each frame: particle emitters sync, then the kit runs input + all <code>OnUpdate</code> hooks.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>RunFrame</code> on <code>onBeforeRenderObservable</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Havok advances physics, then the GPU draws meshes, shadows, and post effects.</p><p class="step-code">Babylon · physics step inside <code>scene.render()</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">After drawing, MSDF text labels render if any exist.</p><p class="step-code"><code>packages/engine/src/ui/msdfText.ts</code> · <code>onAfterRenderObservable</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="lifecycle">Behavior lifecycle (OnStart / OnUpdate / OnDestroy / OnMessage)</h3>
+<p class="trace-summary">Scripts have four hooks: start once, update every frame, react to messages, and clean up on teardown.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-lifecycle.html"><strong>trace-lifecycle</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Load</span><p class="step-what">Behavior objects are created but none of the hooks run yet.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>InstantiateScripts</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Cross-object references resolve; triggers, constraints, and GUI finish wiring.</p><p class="step-code"><code>packages/engine/src/core/LevelLoader.ts</code> · <code>FinalizeLevel</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what"><code>Begin</code> attaches input, calls every <code>OnStart</code> once, and subscribes <code>RunFrame</code> to the render loop.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>Begin</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Each frame: read input → all <code>OnUpdate</code> → camera updaters → clear input edges.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>RunFrame</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Triggers, GUI clicks, and <code>SendMessage</code> call <code>OnMessage</code> on target behaviors (any time, not only on frame boundaries).</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>SendMessage</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Leaving the level calls every <code>OnDestroy</code> and removes frame subscriptions.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>Dispose</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="components">Component application (all types)</h3>
+<p class="trace-summary">The component stack in Blender is the master list of “what this object has” — colliders, scripts, audio, GUI, and so on.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-components.html"><strong>trace-components</strong></a> (runtime) · <a href="../blender/trace-components.html">Blender trace-components</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add rows in the Babylon Components panel; each row is one feature on that object.</p><p class="step-code"><code>blender_addon/ui/component_draw.py</code> · <code>BJS_PT_components</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Every enabled row becomes one entry in the manifest component array.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">For each entity, the loader sorts components and sends each type to the right subsystem (physics, audio, scripts, …).</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ProcessEntity</code>, <code>ClassifyComponents</code>, <code>ApplyComponents</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Only SCRIPT rows become live TypeScript classes; everything else is applied data (bodies, sounds, textures).</p><p class="step-code"><code>packages/engine/src/core/attachments.ts</code> · <code>RegisterAttachment</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="entity-ref">Entity reference field</h3>
+<p class="trace-summary">An @exposed field can point at another object in the scene — export stores its ID, load swaps in the real entity before OnStart.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You pick a target object in an exposed “entity” field; export ensures that target is included in the level.</p><p class="step-code"><code>blender_addon/components/component.py</code> · <code>BJSExposedVar.obj_val</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">The target’s GUID is written into <code>vars</code>; referenced objects are force-exported even if hidden.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>iter_referenced_objects</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what"><code>vars.myTarget = "abc-123-guid"</code> in the SCRIPT row.</p><p class="step-code">manifest · <code>entities[].components[].vars</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">After all entities exist, GUIDs become <code>Entity</code> references on the behavior instance.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ResolveObjectReferences</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="light">Light / Shadows</h3>
+<p class="trace-summary">Lamps in Blender become Babylon lights; casting lamps also get shadow maps, with a budget for how many point/spot lights run at full quality.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-lights.html"><strong>trace-lights</strong></a> · <a href="trace-shadows.html"><strong>trace-shadows</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You place a lamp and optionally enable Cast Shadows and sun angle (for soft shadows).</p><p class="step-code">Blender · lamp object, shadow settings</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Each lamp becomes a <code>light</code> block in the manifest (type, color, intensity, shadow settings).</p><p class="step-code"><code>blender_addon/export/datablocks.py</code> · <code>serialize_light</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader creates or configures the matching Babylon light on the imported node.</p><p class="step-code"><code>packages/engine/src/subsystems/lights.ts</code> · <code>ApplyBlenderLight</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">If too many point/spot lights are on, extras are clustered into a cheaper path (see light budget in Rendering chapter).</p><p class="step-code"><code>packages/engine/src/subsystems/clusteredLights.ts</code> · <code>ClusterPunctualLightsIfNeeded</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Shadow generators are created for each casting light; meshes can opt out of casting.</p><p class="step-code"><code>packages/engine/src/subsystems/shadows.ts</code> · <code>SetupShadows</code></p></li>
+</ol>
+<p class="trace-footnote"><a href="07-RENDERING.html">07 — Rendering</a> · punctual light budget.</p>
+</section>
+
+<section class="trace-feature">
+<h3 id="camera">Camera (+ typed override)</h3>
+<p class="trace-summary">The active Blender camera becomes the game camera; an optional CAMERA component can replace it with orbit, follow, or geospatial controls.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-cameras.html"><strong>trace-cameras</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You mark one camera active and set clip range and field of view.</p><p class="step-code">Blender · camera object</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Basic camera settings export in the entity’s <code>camera</code> block; optional CAMERA component adds control type and speeds.</p><p class="step-code"><code>blender_addon/export/datablocks.py</code> · <code>serialize_camera</code>; <code>export/components.py</code> · CAMERA row</p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The imported FreeCamera gets lens settings; if a CAMERA component exists, it may be rebuilt as Arc/Follow/Offset/Geospatial.</p><p class="step-code"><code>packages/engine/src/subsystems/cameras/apply.ts</code> · <code>ApplyBlenderCamera</code>; <code>typed.ts</code> · <code>BuildTypedCamera</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Cameras that track another object resolve the target in a second pass after all entities exist.</p><p class="step-code"><code>packages/engine/src/subsystems/cameras/targets.ts</code> · <code>ResolveCameraTargets</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="atmosphere">Atmosphere</h3>
+<p class="trace-summary">Sky and aerial perspective from the Scene › Atmosphere panel replace the environment skybox when enabled.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-atmosphere.html"><strong>trace-atmosphere</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You tune atmosphere in the Babylon Scene panel (linked to a sun lamp for direction).</p><p class="step-code"><code>blender_addon/ui/scene_panels.py</code> · Atmosphere section</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Settings serialize to <code>scene.atmosphere</code> in the manifest; env skybox is forced off when atmosphere is on.</p><p class="step-code"><code>blender_addon/export/atmosphere.py</code> · <code>serialize_atmosphere</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The engine builds the Babylon atmosphere addon, tied to the exported sun light.</p><p class="step-code"><code>packages/engine/src/subsystems/atmosphere.ts</code> · <code>ApplyAtmosphere</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="post">Post-processing</h3>
+<p class="trace-summary">Bloom, depth of field, SSAO, and similar effects from the Scene › Post-Processing panel attach to the active camera after the level starts.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-post.html"><strong>trace-post</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You enable and tune post effects; LUT images are copied beside the level.</p><p class="step-code"><code>blender_addon/ui/post_panels.py</code> · Post-Processing section</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">All settings go to <code>scene.postProcessing</code> in the manifest.</p><p class="step-code"><code>blender_addon/export/post_processing.py</code> · <code>serialize_post_processing</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Post stack is applied after <code>Begin</code> so cameras created in <code>OnStart</code> still get the effects.</p><p class="step-code"><code>packages/engine/src/subsystems/postprocess.ts</code> · <code>ApplyPostProcessing</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="animation">Animation autoplay</h3>
+<p class="trace-summary">NLA strips you author in Blender can auto-play one clip when the level loads.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add NLA strips and choose which clip should autoplay (on the armature for skinned characters).</p><p class="step-code">Blender · NLA editor</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Strip names and autoplay choice serialize into the entity’s <code>animation</code> block.</p><p class="step-code"><code>blender_addon/export/animation.py</code> · <code>serialize_animation</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader finds matching animation groups on the imported model and starts the chosen clip.</p><p class="step-code"><code>packages/engine/src/subsystems/animation.ts</code> · <code>FindAnimationGroups</code>, <code>ApplyAutoPlayAnimations</code></p></li>
+</ol>
+<p class="trace-footnote">Skinned characters: animate on the <strong>armature</strong>, not the mesh — <a href="08-AUDIO-ANIMATION.html">08 — Audio &amp; Animation</a>.</p>
+</section>
+
+<section class="trace-feature">
+<h3 id="audio">Audio</h3>
+<p class="trace-summary">An AUDIO component plays a sound file from the object’s position (or globally) when the level loads or when triggered.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-audio.html"><strong>trace-audio</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add an AUDIO row and pick a sound file and options (spatial, autoplay, loop).</p><p class="step-code"><code>blender_addon/components/</code> · AUDIO component</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">The file is copied into the level’s <code>audio/</code> folder and referenced from the manifest.</p><p class="step-code"><code>blender_addon/export/assets.py</code> · <code>copy_asset</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Sounds are created asynchronously; autoplay waits for browser audio unlock if needed.</p><p class="step-code"><code>packages/engine/src/subsystems/audio.ts</code> · <code>ApplyAudio</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Access via <code>entity.GetSound("stem")</code> or the sounds list on the entity.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>GetSound</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="trigger">Trigger event → OnMessage</h3>
+<p class="trace-summary">A trigger volume can send a named message to another object when something enters it — scripts receive that in <code>OnMessage</code>.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-trigger.html"><strong>trace-trigger</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">On a trigger collider, you add “On Enter” rows: target object, message name, optional tag filter.</p><p class="step-code"><code>blender_addon/components/</code> · trigger events on COLLIDER</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Events serialize as <code>events: [{ target, message, filterTag }]</code> on the collider row.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">One physics observer listens for entries; matching bodies call <code>SendMessage</code> on the target.</p><p class="step-code"><code>packages/engine/src/subsystems/triggers.ts</code> · <code>WireTriggerEvents</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Target behaviors handle the string in <code>OnMessage(message, source)</code>.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>SendMessage</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="constraint">Constraint</h3>
+<p class="trace-summary">Constraints join two physics bodies — hinges, sliders, locks — using pivots you place in Blender.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-constraint.html"><strong>trace-constraint</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add a CONSTRAINT row, pick type and connected body, set pivots and limits.</p><p class="step-code"><code>blender_addon/components/</code> · CONSTRAINT component</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Pivots and axes convert to game space; the connected object’s GUID is included in the export.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">After both bodies exist, Havok constraints are built from live world poses (hinge motors optional).</p><p class="step-code"><code>packages/engine/src/subsystems/constraints.ts</code> · <code>BuildConstraints</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="input">Input action</h3>
+<p class="trace-summary">Input maps you define in Blender (keys, gamepad) become actions scripts read each frame via <code>behavior.input</code>.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-input.html"><strong>trace-input</strong></a> · <a href="12-INPUT.html">12 — Input</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You author maps, actions, and bindings in the Input Actions panel; pick a scene default map.</p><p class="step-code"><code>blender_addon/input_actions/</code> · Input Actions UI</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">The whole input asset and default map name go into <code>scene.inputActions</code> in the manifest.</p><p class="step-code"><code>blender_addon/input_actions/serialize.py</code> · <code>serialize_input_asset</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Input loads before behaviors; <code>@inputMap("Name")</code> fields get the matching map injected.</p><p class="step-code"><code>packages/engine/src/input/InputManager.ts</code> · <code>LoadAsset</code>; <code>core/loader/entityBuilder.ts</code> · <code>InjectInputMaps</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Each frame: poll devices → evaluate actions → scripts read values → clear “pressed this frame” edges.</p><p class="step-code"><code>packages/engine/src/input/InputManager.ts</code> · <code>Process</code>, <code>EndFrame</code> inside <code>Level.RunFrame</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="livelink">Live Link</h3>
+<p class="trace-summary">Save in Blender re-exports the level and refreshes the browser so you see changes immediately.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-livelink.html"><strong>trace-livelink</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You enable Live Link and set the export folder once; Ctrl+S triggers re-export.</p><p class="step-code"><code>blender_addon/export/live_link.py</code> · <code>_on_save_post</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Validate + write glb, manifest, and side files to stable paths under <code>public/levels/</code>.</p><p class="step-code"><code>blender_addon/export/</code> · <code>export_level</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">The dev server watches that folder and reloads the page after a short debounce.</p><p class="step-code"><code>apps/playground/</code> · Vite <code>ReloadOnLevelExport</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="debug">Debug Build</h3>
+<p class="trace-summary">A scene checkbox controls whether debug shortcuts (collider overlay, etc.) work in the running game.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You toggle Debug Build in scene settings.</p><p class="step-code"><code>scene.bjs_debug_build</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">Top-level <code>"debug": true/false</code> in the level JSON (missing means debug on).</p><p class="step-code">manifest · <code>debug</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what"><code>level.debugEnabled</code> gates collider overlay (<strong>C</strong>) and related dev features in <code>main.ts</code>.</p><p class="step-code"><code>apps/playground/src/main.ts</code> · debug key handlers</p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="gui2d">2D GUI (GUI Editor JSON)</h3>
+<p class="trace-summary">A GUI component loads a Babylon GUI Editor JSON file as a screen overlay on that entity.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-gui.html"><strong>trace-gui</strong></a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add a GUI row and pick the exported GUI JSON and display mode.</p><p class="step-code"><code>blender_addon/components/</code> · GUI component</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">The JSON file is copied into the level’s <code>gui/</code> folder.</p><p class="step-code"><code>blender_addon/export/assets.py</code> · <code>copy_asset</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader builds an AdvancedDynamicTexture and attaches it when async loading finishes.</p><p class="step-code"><code>packages/engine/src/ui/gui2d.ts</code> · <code>ApplyGui</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Retrieve with <code>entity.GetGui("stem")</code>.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>GetGui</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="particles">Particles (Particle / Node Particle Editor JSON)</h3>
+<p class="trace-summary">Particle systems authored in Babylon’s editors run from an empty or mesh emitter on the entity.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-particles.html"><strong>trace-particles</strong></a> · <a href="../blender/trace-particles.html">Blender trace-particles</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add a PARTICLE row, pick the system JSON, assign texture images per slot.</p><p class="step-code"><code>blender_addon/export/particles.py</code> · <code>export_particle_system</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">JSON and textures copy into the level; texture URLs inside the JSON are patched to local paths.</p><p class="step-code"><code>blender_addon/export/particles.py</code> · URL patch for <code>ParticleTextureSourceBlock</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The subsystem builds node or legacy particle systems on the entity’s node or a tracked empty.</p><p class="step-code"><code>packages/engine/src/subsystems/particles.ts</code> · <code>ApplyParticles</code>, <code>WireParticleEmitterTracking</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="materials">Node materials (NME JSON)</h3>
+<p class="trace-summary">Materials authored in Babylon’s Node Material Editor export as JSON plus textures; the game binds them to imported meshes by material name.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-materials.html"><strong>trace-materials</strong></a> · <a href="../blender/trace-materials.html">Blender trace-materials</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">On the material, link an NME JSON; optionally <strong>Extract Textures…</strong> when images are still embedded; scan slots and exposed inputs; assign external images and parameter values.</p><p class="step-code"><code>blender_addon/materials/</code> · <code>Scan NME</code> · <code>Extract Textures…</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Each distinct NME source JSON copies once; picked images copy to <code>materials/</code>; external overrides patch <code>url</code> / <code>name</code> and strip embeds; embedded-only slots ship as-is in the JSON.</p><p class="step-code"><code>blender_addon/export/materials.py</code> · <code>export_node_material</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">Top-level <code>materials[]</code> lists file, textures, and inspector inputs per material name.</p><p class="step-code">manifest · <code>materials[]</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">After the glb loads, matching mesh materials are replaced with parsed node materials.</p><p class="step-code"><code>packages/engine/src/subsystems/materials.ts</code> · <code>ApplyNodeMaterials</code></p></li>
+</ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="gui3d">3D GUI (buttons + panels)</h3>
+<p class="trace-summary">3D GUI components build floating panels and buttons in world space; clicks can send messages to other entities.</p>
+<p class="trace-interactive">Walk through the code: <a href="trace-gui3d.html"><strong>trace-gui3d</strong></a> · <a href="../blender/trace-gui3d.html">Blender trace-gui3d</a> · <a href="11-UI.html">11 — UI</a></p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">You add GUI3D panel/button/handle rows, layout, images, and click → target + message.</p><p class="step-code"><code>blender_addon/export/components.py</code> · GUI3D types in <code>serialize_components</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Panels are built first, then child controls; click handlers wire to <code>SendMessage</code>.</p><p class="step-code"><code>packages/engine/src/ui/gui3d/build.ts</code> · <code>BuildGui3DControls</code>; <code>events.ts</code> · <code>WireClickEvents</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Target behaviors receive the message in <code>OnMessage</code> — same path as physics triggers.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>SendMessage</code></p></li>
+</ol>
+</section>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/10-FEATURE-TRACES.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

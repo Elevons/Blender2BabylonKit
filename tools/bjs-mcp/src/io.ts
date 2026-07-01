@@ -128,6 +128,65 @@ export function ListBehaviorFiles(): string[]
     .sort();
 }
 
+export interface BehaviorCatalogEntry
+{
+  name: string;
+  summary: string;
+  hooks: string[];
+}
+
+/** Summarize each playground behavior for list_behaviors. */
+export function ListBehaviorCatalog(): BehaviorCatalogEntry[]
+{
+  const entries: BehaviorCatalogEntry[] = [];
+
+  for (const file of ListBehaviorFiles())
+  {
+    const name = file.replace(/\.ts$/, "");
+    const source = ReadBehaviorFile(name) ?? "";
+    const docMatch = source.match(/\/\*\*\s*([^*]+?)\s*\*\//);
+    const summary = docMatch?.[1]?.replace(/\s+/g, " ").trim() ?? `${name} behavior`;
+
+    const hooks: string[] = [];
+    if (/\bOnStart\s*\(/.test(source))
+    {
+      hooks.push("OnStart");
+    }
+    if (/\bOnUpdate\s*\(/.test(source))
+    {
+      hooks.push("OnUpdate");
+    }
+    if (/\bOnDestroy\s*\(/.test(source))
+    {
+      hooks.push("OnDestroy");
+    }
+    if (/\bOnMessage\s*\(/.test(source))
+    {
+      hooks.push("OnMessage");
+    }
+
+    entries.push({ name, summary, hooks });
+  }
+
+  return entries;
+}
+
+export function FormatBehaviorCatalog(entries: BehaviorCatalogEntry[]): string
+{
+  if (entries.length === 0)
+  {
+    return "No behaviors found under apps/playground/src/behaviors/.";
+  }
+
+  return entries
+    .map((entry) =>
+    {
+      const hookSuffix = entry.hooks.length > 0 ? ` · hooks: ${entry.hooks.join(", ")}` : "";
+      return `- **${entry.name}** — ${entry.summary}${hookSuffix}`;
+    })
+    .join("\n");
+}
+
 export function ReadBehaviorFile(name: string): string | undefined
 {
   const stem = name.replace(/\.tsx?$/i, "");

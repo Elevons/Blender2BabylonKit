@@ -38,65 +38,143 @@ export function EmitDiagramPage({ shell, outPath, pageTitle, diagramData, navHtm
 }
 
 // ---------------------------------------------------------------------------
-// Bottom nav (engine packet = blue, blender packet = amber).
+// Bottom nav — compact breadcrumbs (not a wall of subsystem buttons).
 // ---------------------------------------------------------------------------
 
-export function BuildEngineNav(currentFile, areaNav, traceNav, { highlightDiagrams = null } = {})
+const DOC_NAV_STYLES = `
+<style id="doc-bottom-nav-styles">
+  #doc-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: #12121a; border-top: 1px solid #2a2838;
+    padding: 10px 20px 12px; font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.35);
+  }
+  #doc-bottom-nav .crumbs {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+    max-width: 960px; margin: 0 auto;
+  }
+  #doc-bottom-nav a { color: #9aa8e8; text-decoration: none; }
+  #doc-bottom-nav a:hover { text-decoration: underline; color: #c8d4ff; }
+  #doc-bottom-nav .sep { color: #454560; user-select: none; }
+  #doc-bottom-nav .current { color: #e8ecff; font-weight: 500; }
+  #doc-bottom-nav .traces-row {
+    max-width: 960px; margin: 8px auto 0; padding-top: 8px;
+    border-top: 1px solid #1e1c28;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  #doc-bottom-nav .traces-label {
+    flex-shrink: 0; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: #6c7396;
+  }
+  #doc-bottom-nav .traces-links {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; line-height: 1.5;
+  }
+  #doc-bottom-nav .traces-links .current {
+    color: #e8ecff; font-weight: 500;
+  }
+  #doc-bottom-nav.blender a { color: #d4a870; }
+  #doc-bottom-nav.blender a:hover { color: #ffe8c8; }
+  #doc-bottom-nav.blender .current { color: #ffe8d0; }
+  #app { padding-bottom: 72px; }
+</style>`;
+
+/**
+ * @param {{ side: "engine"|"blender", currentFile: string, currentTitle: string, pageKind: "overview"|"diagram"|"trace", allTraces?: [string,string][] }} opts
+ */
+export function BuildDiagramBottomNav(opts)
 {
-  const highlight = highlightDiagrams ? new Set(highlightDiagrams) : null;
-  const areaLink = ([file, label]) =>
+  const { side, currentFile, currentTitle, pageKind, allTraces = [] } = opts;
+  const isEngine = side === "engine";
+  const cls = isEngine ? "" : " blender";
+  const accentLink = isEngine
+    ? `<a href="../blender/00-INDEX.html">Blender</a>`
+    : `<a href="../engine/00-INDEX.html">Engine</a>`;
+
+  const crumbs = [`<a href="../index.html">Docs</a>`];
+  if (isEngine)
   {
-    if (file === currentFile)
+    crumbs.push(`<a href="00-INDEX.html">Engine guide</a>`);
+    if (pageKind === "trace")
     {
-      return `<span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`;
+      crumbs.push(`<a href="index.html">Diagrams</a>`);
     }
-    const emph = highlight?.has(file)
-      ? "font-weight:600;border-bottom:1px solid #6b7fff;"
-      : "";
-    return `<a href="${file}" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;${emph}">${label}</a>`;
-  };
-  const traceLink = ([file, label]) => file === currentFile
-    ? `<span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`
-    : `<a href="${file}" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">${label}</a>`;
-  return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
-    + 'background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;'
-    + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;">'
-    + '<a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a>'
-    + '<span style="width:1px;background:#2a3050;margin:0 2px;"></span>'
-    + areaNav.map(areaLink).join("")
-    + '<a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div>'
-    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;">'
-    + '<span style="color:#6c7396;padding:2px 6px;">Traces:</span>' + traceNav.map(traceLink).join("") + '</div></div>';
+    else if (pageKind === "diagram" && currentFile !== "index.html")
+    {
+      crumbs.push(`<a href="index.html">Diagrams</a>`);
+    }
+  }
+  else
+  {
+    crumbs.push(`<a href="00-INDEX.html">Blender guide</a>`);
+    if (pageKind === "trace")
+    {
+      crumbs.push(`<a href="index.html">Diagrams</a>`);
+    }
+    else if (pageKind === "diagram" && currentFile !== "index.html")
+    {
+      crumbs.push(`<a href="index.html">Diagrams</a>`);
+    }
+  }
+
+  if (currentTitle)
+  {
+    crumbs.push(`<span class="current">${currentTitle}</span>`);
+  }
+  crumbs.push(accentLink);
+
+  const crumbHtml = crumbs.join('<span class="sep">/</span>');
+
+  let tracesHtml = "";
+  if (allTraces.length > 0)
+  {
+    const links = allTraces.map(([file, label]) =>
+    {
+      if (file === currentFile)
+      {
+        return `<span class="current">${label}</span>`;
+      }
+      return `<a href="${file}">${label}</a>`;
+    }).join("");
+    tracesHtml = `<div class="traces-row"><span class="traces-label">Traces</span><div class="traces-links">${links}</div></div>`;
+  }
+
+  return `${DOC_NAV_STYLES}<nav id="doc-bottom-nav" class="${cls.trim()}"><div class="crumbs">${crumbHtml}</div>${tracesHtml}</nav>`;
 }
 
-export function BuildBlenderNav(currentFile, areaNav, traceNav, { highlightDiagrams = null } = {})
+/** @deprecated Use BuildDiagramBottomNav — kept as thin wrapper for build scripts. */
+export function BuildEngineNav(currentFile, areaNav, traceNav, { currentTitle = null } = {})
 {
-  const highlight = highlightDiagrams ? new Set(highlightDiagrams) : null;
-  const areaLink = ([file, label]) =>
-  {
-    if (file === currentFile)
-    {
-      return `<span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`;
-    }
-    const emph = highlight?.has(file)
-      ? "font-weight:600;border-bottom:1px solid #e0a060;"
-      : "";
-    return `<a href="${file}" style="color:#f0cda8;text-decoration:none;padding:2px 8px;${emph}">${label}</a>`;
-  };
-  const traceLink = ([file, label]) => file === currentFile
-    ? `<span style="background:#e08a3c;color:#fff;border-radius:6px;padding:2px 8px;">${label}</span>`
-    : `<a href="${file}" style="color:#f0cda8;text-decoration:none;padding:2px 8px;">${label}</a>`;
-  return '<div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;'
-    + 'background:#241c14;border:1px solid #553f28;border-radius:10px;padding:6px 10px;'
-    + 'font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);">'
-    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;">'
-    + '<a href="../index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a>'
-    + '<span style="width:1px;background:#553f28;margin:0 2px;"></span>'
-    + '<span style="color:#967a52;padding:2px 6px;">Blender:</span>' + areaNav.map(areaLink).join("")
-    + '<a href="../engine/index.html" style="color:#8fa3ff;text-decoration:none;padding:2px 8px;border-left:1px solid #553f28;margin-left:4px;">Runtime docs →</a></div>'
-    + '<div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #553f28;padding-top:3px;">'
-    + '<span style="color:#967a52;padding:2px 6px;">Traces:</span>' + traceNav.map(traceLink).join("") + '</div></div>';
+  const areaEntry = areaNav.find(([file]) => file === currentFile);
+  const traceEntry = traceNav.find(([file]) => file === currentFile);
+  const title = currentTitle ?? areaEntry?.[1] ?? traceEntry?.[1] ?? null;
+  const pageKind = currentFile.startsWith("trace-")
+    ? "trace"
+    : (currentFile === "index.html" ? "overview" : "diagram");
+  return BuildDiagramBottomNav({
+    side: "engine",
+    currentFile,
+    currentTitle: title,
+    pageKind,
+    allTraces: traceNav,
+  });
+}
+
+/** @deprecated Use BuildDiagramBottomNav — kept as thin wrapper for build scripts. */
+export function BuildBlenderNav(currentFile, areaNav, traceNav, { currentTitle = null } = {})
+{
+  const areaEntry = areaNav.find(([file]) => file === currentFile);
+  const traceEntry = traceNav.find(([file]) => file === currentFile);
+  const title = currentTitle ?? areaEntry?.[1] ?? traceEntry?.[1] ?? null;
+  const pageKind = currentFile.startsWith("trace-")
+    ? "trace"
+    : (currentFile === "index.html" ? "overview" : "diagram");
+  return BuildDiagramBottomNav({
+    side: "blender",
+    currentFile,
+    currentTitle: title,
+    pageKind,
+    allTraces: traceNav,
+  });
 }
 
 // ---------------------------------------------------------------------------

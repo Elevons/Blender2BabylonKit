@@ -1,7 +1,8 @@
 """3D viewport N-panel "Babylon Scene" — ALL scene-wide settings in one place.
 
 Layout:
-    Rendering           (clear/ambient color, environment/skybox)
+    Rendering           (clear/ambient color, shadows, large world rendering)
+    Environment         (default env, skybox, IBL tuning)
     Fog                 (header checkbox enables it)
     Atmosphere
     Post-Processing     (header checkbox enables it)
@@ -40,29 +41,56 @@ class BJS_PT_scene_rendering(Panel):
         col.prop(s, "clear_color")
         col.prop(s, "ambient_color")
 
-        box = layout.box()
-        box.label(text="Environment", icon='WORLD')
-        ecol = box.column()
-        ecol.use_property_split = True
-        ecol.prop(s, "use_default_environment")
-        ecol.prop(s, "create_skybox")
-        fog_row = ecol.row()
-        fog_row.enabled = s.create_skybox
-        fog_row.prop(s, "skybox_ignore_fog")
-        world = context.scene.world
-        has_world_env = world and world.use_nodes and find_world_env_node(world)
-        if has_world_env:
-            box.label(text="IBL texture from World Output surface", icon='INFO')
-        elif s.use_default_environment:
-            box.label(text="Built-in studio environment at runtime", icon='INFO')
-        else:
-            box.label(
-                text="No environment — enable Default Environment or add a World texture",
-                icon='ERROR')
-
         sbox = layout.box()
         sbox.label(text="Shadows", icon='MOD_OPACITY')
         sbox.prop(s, "freeze_shadows")
+
+        lwbox = layout.box()
+        row = lwbox.row(align=True)
+        row.prop(s, "use_large_world_rendering", text="")
+        row.label(text="Large World Rendering", icon='WORLD')
+        if s.use_large_world_rendering:
+            sub = lwbox.column()
+            sub.use_property_split = True
+            sub.prop(s, "floating_origin_world_radius")
+
+
+class BJS_PT_scene_environment(Panel):
+    bl_label = "Environment"
+    bl_idname = "BJS_PT_scene_environment"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Babylon Scene"
+
+    def draw(self, context):
+        layout = self.layout
+        s = context.scene.bjs_scene
+        world = context.scene.world
+        has_world_env = world and world.use_nodes and find_world_env_node(world)
+
+        col = layout.column()
+        col.use_property_split = True
+        col.prop(s, "use_default_environment")
+
+        if s.use_default_environment and not has_world_env:
+            col.prop(s, "environment_intensity")
+            col.prop(s, "environment_rotation_y")
+
+        col.prop(s, "create_skybox")
+        if s.use_default_environment and not has_world_env and s.create_skybox:
+            col.prop(s, "skybox_color")
+        fog_row = col.row()
+        fog_row.enabled = s.create_skybox
+        fog_row.prop(s, "skybox_ignore_fog")
+
+        if has_world_env:
+            layout.label(text="IBL texture from World Output surface", icon='INFO')
+        elif s.use_default_environment:
+            layout.label(text="Built-in studio environment at runtime", icon='INFO')
+        else:
+            layout.label(
+                text="No environment — enable Default Environment or add a World texture",
+                icon='ERROR')
 
 
 class BJS_PT_scene_fog(Panel):
@@ -146,6 +174,7 @@ class BJS_PT_scene_export(Panel):
 
 classes = (
     BJS_PT_scene_rendering,
+    BJS_PT_scene_environment,
     BJS_PT_scene_fog,
     BJS_PT_scene_atmosphere,
     *post_panel_classes,

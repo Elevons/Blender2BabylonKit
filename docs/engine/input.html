@@ -277,12 +277,47 @@ a.meta-doc-link {
 a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 </style>
 </head>
-<body><div style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:9999;background:#1b2030;border:1px solid #333a55;border-radius:10px;padding:6px 10px;font:12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4);"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;"><a href="../index.html" style="color:#a8b8ff;text-decoration:none;padding:2px 8px;font-weight:600;">← Search</a><span style="width:1px;background:#2a3050;margin:0 2px;"></span><a href="index.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Overview</a><a href="architecture.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Architecture</a><a href="blender-addon.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Blender add-on</a><a href="load-pipeline.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Load pipeline</a><a href="scripting.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Scripting</a><span style="background:#4f6df5;color:#fff;border-radius:6px;padding:2px 8px;">Input</span><a href="physics.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Physics</a><a href="rendering.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Rendering</a><a href="audio-animation.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Audio/Anim</a><a href="ui.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">UI</a><a href="workflow.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Workflow</a><a href="../blender/index.html" style="color:#f0cda8;text-decoration:none;padding:2px 8px;border-left:1px solid #2a3050;margin-left:4px;">Blender docs →</a></div><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap;margin-top:3px;border-top:1px solid #2a3050;padding-top:3px;"><span style="color:#6c7396;padding:2px 6px;">Traces:</span><a href="trace-input.html" style="color:#cdd5ff;text-decoration:none;padding:2px 8px;">Input</a></div></div>
+<body>
+<style id="doc-bottom-nav-styles">
+  #doc-bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: #12121a; border-top: 1px solid #2a2838;
+    padding: 10px 20px 12px; font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.35);
+  }
+  #doc-bottom-nav .crumbs {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+    max-width: 960px; margin: 0 auto;
+  }
+  #doc-bottom-nav a { color: #9aa8e8; text-decoration: none; }
+  #doc-bottom-nav a:hover { text-decoration: underline; color: #c8d4ff; }
+  #doc-bottom-nav .sep { color: #454560; user-select: none; }
+  #doc-bottom-nav .current { color: #e8ecff; font-weight: 500; }
+  #doc-bottom-nav .traces-row {
+    max-width: 960px; margin: 8px auto 0; padding-top: 8px;
+    border-top: 1px solid #1e1c28;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  #doc-bottom-nav .traces-label {
+    flex-shrink: 0; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: #6c7396;
+  }
+  #doc-bottom-nav .traces-links {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; line-height: 1.5;
+  }
+  #doc-bottom-nav .traces-links .current {
+    color: #e8ecff; font-weight: 500;
+  }
+  #doc-bottom-nav.blender a { color: #d4a870; }
+  #doc-bottom-nav.blender a:hover { color: #ffe8c8; }
+  #doc-bottom-nav.blender .current { color: #ffe8d0; }
+  #app { padding-bottom: 72px; }
+</style><nav id="doc-bottom-nav" class=""><div class="crumbs"><a href="../index.html">Docs</a><span class="sep">/</span><a href="00-INDEX.html">Engine guide</a><span class="sep">/</span><a href="index.html">Diagrams</a><span class="sep">/</span><span class="current">Input</span><span class="sep">/</span><a href="../blender/00-INDEX.html">Blender</a></div><div class="traces-row"><span class="traces-label">Traces</span><div class="traces-links"><a href="trace-physics.html">Physics</a><a href="trace-exposed.html">Scripting</a><a href="trace-lifecycle.html">Behavior lifecycle</a><a href="trace-runtime-loop.html">Runtime loop</a><a href="trace-components.html">Components</a><a href="trace-trigger.html">Triggers</a><a href="trace-constraint.html">Constraints</a><a href="trace-audio.html">Audio</a><a href="trace-load.html">Level load, end to end</a><a href="trace-atmosphere.html">Atmosphere</a><a href="trace-input.html">Input</a><a href="trace-livelink.html">Live Link</a><a href="trace-gui.html">2D GUI</a><a href="trace-particles.html">Particles</a><a href="trace-materials.html">Node materials</a><a href="trace-msdfText.html">MSDF text</a><a href="trace-gui3d.html">3D GUI</a><a href="trace-lights.html">Lights</a><a href="trace-cameras.html">Cameras</a><a href="trace-shadows.html">Shadows</a><a href="trace-post.html">Post-processing</a></div></div></nav>
 <div id="app">
 
   <div id="toolbar">
     <div class="tg">
-      <a class="tb" href="../index.html" title="Back to documentation search">← Search</a>
+      <a class="tb" href="../index.html" title="Documentation home">Docs</a>
     </div>
     <div class="tsep"></div>
     <div class="tg">
@@ -335,7 +370,7 @@ a.meta-doc-link:hover { color: #d0dcff; border-color: #4f6df5; }
 // DATA  —  this block is replaced wholesale on every "Save as file" export.
 //          The regex anchor is the literal token DIAGRAM_DATA followed by = {…};
 // =============================================================================
-const DIAGRAM_DATA = {"title":"Babylon Level Kit — Input","nodes":[{"id":1,"x":40,"y":80,"w":150,"h":40,"label":"Input Actions panel","sub":"Blender Scene N-panel","desc":"Scene-level asset: Action Maps > Actions > Bindings + Scene Default map picker. Edited via input_actions/ (properties, serialize, operators) and ui/input_panel.py. First export seeds built-in Player when empty.","meta":[["Package","input_actions/"],["Panel","Babylon Scene › Input Actions"]]},{"id":2,"x":280,"y":80,"w":150,"h":40,"label":"serialize_input_asset","sub":"export/scene.py","desc":"Writes scene.inputActions + scene.defaultInputMap into the manifest scene block alongside env, fog, atmosphere, and post.","meta":[["File","input_actions/serialize.py"],["Trace","trace-input.html"]]},{"id":3,"x":520,"y":40,"w":150,"h":40,"label":"InputManager.LoadAsset","sub":"step 2 of Load","desc":"Runs before glb append and InstantiateScripts so maps exist when @inputMap fields and behavior.input are injected.","meta":[["File","src/input/InputManager.ts"],["Trace","trace-input.html"]]},{"id":4,"x":520,"y":160,"w":150,"h":40,"label":"InjectInputMaps","sub":"entity pass","desc":"@inputMap(\"Name\") on a field → that map; @inputMap() / empty → scene default; no @inputMap fields → behavior.input receives the scene default.","meta":[["File","core/loader/entityBuilder.ts"],["Trace","trace-input.html"]]},{"id":5,"x":760,"y":100,"w":150,"h":40,"label":"Level.Begin","sub":"attach + enable","desc":"InputManager.Attach: keyboard observable + enable every action map before OnStart runs.","meta":[["File","core/Level.ts"]]},{"id":6,"x":760,"y":220,"w":150,"h":40,"label":"RunFrame loop","sub":"every frame","desc":"InputManager.Process FIRST (gamepad poll, actions evaluate, callbacks) → OnUpdate for behaviors → updaters → InputManager.EndFrame LAST so WasPressedThisFrame edges last one frame.","meta":[["Polling","ReadValue / IsPressed / WasPressedThisFrame"]]},{"id":7,"x":280,"y":220,"w":150,"h":40,"label":"@inputMap in behaviors","sub":"script_parse.py","desc":"Blender regex-parses @inputMap(\"…\") from behavior .ts — lowercase literal token like @exposed. Create Maps Used by Scripts operator can seed maps from scripts.","meta":[["See","11-INPUT.html prose"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"export"},{"id":101,"src":2,"tgt":3,"label":"manifest"},{"id":102,"src":3,"tgt":4,"label":"before scripts"},{"id":103,"src":7,"tgt":1,"label":"authoring"},{"id":104,"src":4,"tgt":5,"label":"before Begin"},{"id":105,"src":5,"tgt":6,"label":"each render"}]};
+const DIAGRAM_DATA = {"title":"Babylon Level Kit — Input","nodes":[{"id":1,"x":40,"y":80,"w":150,"h":40,"label":"Input Actions panel","sub":"Blender Scene N-panel","desc":"Scene-level asset: Action Maps > Actions > Bindings + Scene Default map picker. Edited via input_actions/ (properties, serialize, operators) and ui/input_panel.py. First export seeds built-in Player when empty.","meta":[["Package","input_actions/"],["Panel","Babylon Scene › Input Actions"]]},{"id":2,"x":280,"y":80,"w":150,"h":40,"label":"serialize_input_asset","sub":"export/scene.py","desc":"Writes scene.inputActions + scene.defaultInputMap into the manifest scene block alongside env, fog, atmosphere, and post.","meta":[["File","input_actions/serialize.py"],["Trace","trace-input.html"]]},{"id":3,"x":520,"y":40,"w":150,"h":40,"label":"InputManager.LoadAsset","sub":"step 2 of Load","desc":"Runs before glb append and InstantiateScripts so maps exist when @inputMap fields and behavior.input are injected.","meta":[["File","src/input/InputManager.ts"],["Trace","trace-input.html"]]},{"id":4,"x":520,"y":160,"w":150,"h":40,"label":"InjectInputMaps","sub":"entity pass","desc":"@inputMap(\"Name\") on a field → that map; @inputMap() / empty → scene default; no @inputMap fields → behavior.input receives the scene default.","meta":[["File","core/loader/entityBuilder.ts"],["Trace","trace-input.html"]]},{"id":5,"x":760,"y":100,"w":150,"h":40,"label":"Level.Begin","sub":"attach + enable","desc":"InputManager.Attach: keyboard observable + enable every action map before OnStart runs.","meta":[["File","core/Level.ts"]]},{"id":6,"x":760,"y":220,"w":150,"h":40,"label":"RunFrame loop","sub":"every frame","desc":"InputManager.Process FIRST (gamepad poll, actions evaluate, callbacks) → OnUpdate for behaviors → updaters → InputManager.EndFrame LAST so WasPressedThisFrame edges last one frame.","meta":[["Polling","ReadValue / IsPressed / WasPressedThisFrame"]]},{"id":7,"x":280,"y":220,"w":150,"h":40,"label":"@inputMap in behaviors","sub":"script_parse.py","desc":"Blender regex-parses @inputMap(\"…\") from behavior .ts — lowercase literal token like @exposed. Create Maps Used by Scripts operator can seed maps from scripts.","meta":[["See","12-INPUT.html prose"]]}],"edges":[{"id":100,"src":1,"tgt":2,"label":"export"},{"id":101,"src":2,"tgt":3,"label":"manifest"},{"id":102,"src":3,"tgt":4,"label":"before scripts"},{"id":103,"src":7,"tgt":1,"label":"authoring"},{"id":104,"src":4,"tgt":5,"label":"before Begin"},{"id":105,"src":5,"tgt":6,"label":"each render"}]};
 
 // =============================================================================
 // CANVAS & DOM REFERENCES

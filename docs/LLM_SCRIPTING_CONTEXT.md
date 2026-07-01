@@ -1,14 +1,78 @@
 # Babylon Level Kit — Behavior Authoring Context
 
 Context for an LLM **generating a behavior script** for this engine (runtime
-**v0.32.0**). Each behavior is one self-contained `.ts` file the runtime loads
+**v0.31.1**). Each behavior is one self-contained `.ts` file the runtime loads
 and runs per-frame. This file is the **behavior authoring contract** — you do
-not need engine internals to write one. Deeper docs: `docs/engine/04-SCRIPTING.html`,
-`docs/STYLE_GUIDE.md`, and the full packet at `docs/engine/00-INDEX.html`.
+not need engine internals to write one.
+
+**MCP:** use **bjs-mcp** — start with **`route_task(intent, className)`**, then
+`preflight_behavior`, `get_recipe_template`, `get_physics_movement` (if moving),
+`validate_behavior`. Reference: `docs/LLM_PLAYBOOK.md` (`get_playbook`).
+
+**Human docs:** `docs/engine/00-INDEX.html` (choose your path) ·
+`docs/engine/14-API-GUIDE.html` · `docs/engine/13-FEATURE-LIST.html` ·
+`docs/engine/02-RUNTIME-BASICS.html` · `docs/engine/05-SCRIPTING.html` ·
+`docs/STYLE_GUIDE.md`.
 
 **Terminology:** a **component** is authored *data* on an entity (TAG, COLLIDER,
 SCRIPT, …) serialized from Blender; a **behavior** is a runtime *script class*
 (`extends Behavior`) instantiated from a `SCRIPT` component.
+
+## Start here (LLM / MCP)
+
+**Goal:** one file at `src/behaviors/ClassName.ts` where **class name === filename stem**.
+
+### Fast path (recommended)
+
+| Step | Tool | Why |
+|------|------|-----|
+| 1 | **`route_task(intent, className)`** | Picks playbook + numbered MCP steps — **start here** |
+| 2 | `preflight_behavior(intent, className)` | Checkbox list before coding |
+| 3 | `get_do_not_list` | Silent failures — skim once per session |
+| 4 | `get_recipe_template(recipe, className)` | From route result — valid skeleton |
+| 5 | `list_scene_entities` / `list_input_actions` | Real names — never guess |
+| 6 | `get_physics_movement` | If the script moves anything with a body |
+| 7 | `validate_behavior(source, ClassName.ts)` | Fix all errors; revalidate until clean |
+
+### Deep path (manual)
+
+| Step | Tool | Why |
+|------|------|-----|
+| 1 | `get_engine_basics(topic="components-vs-behaviors")` | First session only |
+| 2 | `plan_behavior(intent, className)` | Recipes, sections, fragments |
+| 3 | `get_playbook(name=…)` | Full Blender + MCP steps for one task |
+| 4+ | Same as steps 4–7 above | |
+
+Playbooks: `docs/LLM_PLAYBOOK.md` · `list_playbooks()` · `get_playbook(name=…)`.
+Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engine/`.
+
+`get_scripting_context(section="list")` returns section slugs. Common pulls:
+
+| Section slug | Topic |
+|--------------|-------|
+| `lifecycle` | OnStart / OnUpdate / OnDestroy / OnMessage |
+| `entity` | Entity API, attachments |
+| `exposed` | `@exposed` types and Blender parse rules |
+| `input` | Input Actions, `@inputMap` |
+| `physics` | Bodies, triggers, constraints, movement |
+| `cameras` | Camera component types, Geospatial |
+| `scene-look` | Atmosphere, post — **author in Blender** |
+| `visibility` | Eye icon, Make Invisible, shadow casters |
+| `animation` | Clips, armature rule |
+| `gui` | 2D GUI, particles, 3D GUI, MSDF text |
+
+## Author in Blender vs write in behavior
+
+| Need | Author in Blender | Write in behavior |
+|------|-------------------|-------------------|
+| Collider / rigid body / joint | COLLIDER, RIGIDBODY, CONSTRAINT components | Read `entity.body`, drive motors, react to triggers |
+| Camera type (orbit, globe) | CAMERA component on camera object | Rare: `flyToPointAsync` on GeospatialCamera only |
+| Sky / atmosphere / bloom / SSAO | Babylon Scene panels | **Never** — loader owns these |
+| Input bindings | Input Actions panel | Poll `FindAction("Move")` by **name** |
+| Tunable fields per object | `@exposed` on SCRIPT + **Sync** | Declare fields; runtime values applied before `OnStart` |
+| Trigger → gameplay | COLLIDER trigger events → target entity | `OnMessage` on target behaviors |
+| 2D HUD / particles / 3D buttons | GUI / PARTICLE / GUI3D_* components | `GetGui` / `GetParticles` / `GetControl3D` |
+| MSDF labels | MSDF_TEXT component | `GetTextRenderer` — update paragraphs only |
 
 ## File contract (every behavior)
 
@@ -83,6 +147,7 @@ entity.sounds: StaticSound[]                      // sounds from AUDIO component
 entity.guiTextures: AdvancedDynamicTexture[]      // from GUI components (@babylonjs/gui)
 entity.particleSystems: IParticleSystem[]         // from PARTICLE components
 entity.controls3D: Control3D[]                    // from GUI3D_* components (buttons + panels)
+entity.textRenderers: TextRenderer[]              // from MSDF_TEXT components
 entity.GetAttachments(): readonly EntityAttachment[]
 entity.GetAttachment(type): AttachmentOfType | undefined   // first row of that type
 entity.GetAttachmentsOfType(type): AttachmentOfType[]      // every row of that type
@@ -93,12 +158,16 @@ entity.GetSound(name): StaticSound | undefined         // exact match, then cont
 entity.GetGui(name): AdvancedDynamicTexture | undefined      // exact match, then contains
 entity.GetParticles(name): IParticleSystem | undefined       // exact match, then contains
 entity.GetControl3D(name): Control3D | undefined             // exact match, then contains
+entity.GetTextRenderer(fontStem): TextRenderer | undefined   // MSDF font JSON file stem
 entity.SendMessage(message, source): void              // deliver to all its behaviors' OnMessage
 ```
 
 `entity.node.isVisible` mirrors Blender's **viewport** visibility (eye icon): objects
 hidden in the viewport export with `bjs_visible: false` in glTF extras and load with
-`isVisible = false` (child lights/cameras are disabled too). Toggle at runtime with
+`isVisible = false` (child lights/cameras are disabled too). A COLLIDER component's
+**Make Invisible** does the same at runtime (`makeInvisible: true` in the manifest →
+`HideEntityNode` during `ApplyComponents`) while leaving the object visible in Blender
+for authoring. Toggle at runtime with
 `entity.node.isVisible = true` (if the object is a lamp, also
 `this.scene.getLightByName(this.entity.name)?.setEnabled(true)`). **Ray Visibility → Shadow**
 (`visible_shadow`) controls **shadow casting** only: when off, export stamps
@@ -143,6 +212,7 @@ for (const row of entity.GetAttachmentsOfType("AUDIO"))
 | `"PARTICLE"` | `data` + `system` (+ `emptyEmitter` when the entity node is an empty) |
 | `"CONSTRAINT"` | `data` + `constraint` |
 | `"GUI3D_*"` | `data` + `control` |
+| `"MSDF_TEXT"` | `data` + `renderer` |
 
 Use `GetBehavior(MyClass)` when you know the behavior **class**; use
 `GetAttachment("SCRIPT")` when you care about the component row or manifest
@@ -185,11 +255,12 @@ Options object: `{ min?, max?, step?, label?, type?, options?, of? }`.
 
 ## Visibility
 
-Blender has two outliner toggles; only one maps to runtime hiding:
+Blender has three ways to control what ships visible at runtime:
 
 | Blender toggle | Property | Export / runtime |
 |---|---|---|
 | **Eye** (viewport) | `hide_viewport` | Exported; loads with `entity.node.isVisible = false` |
+| **Collider › Make Invisible** | `collider_make_invisible` | Exported; mesh loads invisible when any enabled collider has `makeInvisible: true` (physics unchanged) |
 | **Ray Visibility → Shadow** | `visible_shadow` | Exported; visible and receives shadows; does **not** cast when off (`bjs_cast_shadows: 0`) |
 | **Camera** (render) | `hide_render` | Omitted from the `.glb` and manifest entirely |
 
@@ -197,6 +268,8 @@ Viewport-hidden objects still exist as entities (physics, scripts, references re
 Export writes `"visible": false` on manifest entities (check `.scene.json`) and
 `bjs_visible: 0` in glTF extras (collection / hierarchy visibility via
 `visible_get()`, not just the per-object eye flag). Use the eye icon for props you want in the level but off until a behavior reveals them.
+Use **Collider › Make Invisible** when you want the mesh visible while editing in Blender
+but collision-only at runtime (invisible triggers, hidden blocking volumes).
 Use render-disable for editor-only helpers (rigs, guides, blocking meshes) that should
 never ship.
 
@@ -290,7 +363,7 @@ concern — it is authored under **Babylon Scene** and exported in
 
 | Effect | Author in Blender | Behavior role |
 |---|---|---|
-| Environment / IBL | Rendering › Environment | None — IBL only when Atmosphere replaces the skybox |
+| Environment / IBL | Environment (Default Environment, Intensity, Rotation Y, Show Skybox) | None — IBL only when Atmosphere replaces the skybox |
 | **Atmosphere** (physical sky) | Atmosphere (SUN lamp + scattering) | None — time of day follows the sun lamp direction |
 | **Sun shadow penumbra** | Sun lamp **Angle** (0–45° → PCSS softness; clamped above) | `level.shadowGenerators` for runtime tuning |
 | Fog | Babylon Scene › Fog | None |
@@ -319,7 +392,21 @@ settings, and won't survive level reload. Use `list_scene_entities` to see
 enabled **atmosphere** / **post-processing** and which entity is the sun lamp
 when grounding `@exposed` picks.
 
-Runtime detail: `docs/engine/06-RENDERING.html` (Atmosphere + post-processing).
+Runtime detail: `docs/engine/07-RENDERING.html` (Atmosphere + post-processing).
+
+**Environment skybox:** when `environment.createSkybox` is true, `ApplyEnvironment`
+(in `FinalizeLevel`, after entities load) calls `ComputeSkyboxSize()` —
+`max(1000, visible scene diagonal × 3)` — then `createDefaultSkybox` for
+exported `.env` / `.hdr` / equirect World textures (built-in env uses
+`EnvironmentHelper` + CDN DDS). IBL and skybox share the same texture;
+`ApplyEnvironmentRotation` sets `texture.rotationY` (or a reflection matrix for
+equirect PNG/JPG) on both — not a separate mesh rotation. Panorama files (`.hdr`,
+equirect — not prefiltered `.env`) get `+π/2` baseline yaw in
+`ResolveEnvironmentRotation` (Blender Z-up → Babylon Y-up). World Mapping Z is
+exported as `-rotationY`. Skyboxes use `infiniteDistance` + `ignoreCameraMaxZ`;
+`EnvironmentHelper` meshes are unparented without re-applying rotation. On
+km-scale levels, camera **Clip End** in Blender often needs raising above the
+default `1000`.
 
 ## Physics
 
@@ -331,6 +418,25 @@ entity.body?.setLinearVelocity(v);   entity.body?.getLinearVelocityToRef(out);
 entity.body?.setAngularVelocity(v);  entity.body?.getAngularVelocityToRef(out);
 entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylonjs/core
 ```
+
+### How to move something (decision tree)
+
+Ask: does this entity have a **Rigid Body**, and who owns the transform?
+
+| Situation | What to do |
+|-----------|------------|
+| No Rigid Body | Write `this.node.position` / rotation directly in `OnUpdate`. |
+| **DYNAMIC** body | Never write `node.position` each frame — use velocity, impulse, or force. |
+| **ANIMATED**, move once (teleport) | `setMotionType(ANIMATED)`, `disablePreStep = false`, write transform, **zero velocity after**. |
+| **ANIMATED**, move every frame | `disablePreStep = false` in `OnStart`; drive `node.position` each frame **or** call `setTargetTransform` **every** frame (not once). |
+| Switch DYNAMIC ↔ ANIMATED | Zero velocity on every switch; restore `disablePreStep` when going back to DYNAMIC. |
+
+**MCP:** `get_physics_movement` returns copy-in patterns per mode (`no-body`, `dynamic`,
+`animated-teleport`, `animated-continuous`, `toggle-dynamic-animated`).
+
+**Classic bugs:** writing `node.position` on DYNAMIC (mesh jitters); forgetting
+`disablePreStep = false` on ANIMATED (position logs but mesh does not move);
+calling `setTargetTransform` once on kinematic (body drifts forever).
 
 ### Motion types (author on Rigid Body in Blender)
 
@@ -358,6 +464,8 @@ entity.body?.setMotionType(PhysicsMotionType.ANIMATED); // imports from @babylon
   chassis for stable tipping without resizing the collider.
 - MESH-shaped colliders can't be DYNAMIC (Havok limitation) — author CONVEX for
   moving bodies.
+- **Make Invisible** on a Collider (`makeInvisible` in the manifest) hides the
+  entity mesh at load via `HideEntityNode`; the Havok body is unchanged.
 - **Multiple Collider components** on one entity combine into one compound body
   (`PhysicsShapeContainer`). `entity.body` is shared; `GetAttachment("COLLIDER")`
   returns the first row — use `entity.attachments.filter(a => a.type === "COLLIDER")`
@@ -507,7 +615,7 @@ drops enterers whose `entity.tag` doesn't match.
 GUI layouts and particle systems are authored in Blender as **GUI** / **Particles**
 components pointing at a Babylon-editor `.json`. On the **Particles**
 component, **Scan Textures** lists `ParticleTextureSourceBlock` slots from the
-JSON (same idea as NME **Scan Textures** on materials); per-slot image picks
+JSON (NME materials use **Scan NME** on **Properties › Material › Babylon**, which also lists inspector-visible shader parameters); per-slot image picks
 copy into `particles/` on export and patch texture URLs in the exported JSON.
 The runtime resolves those paths beside the particle file (`rootUrl` in
 `LoadParticleSystems`). Behaviors drive the already-built objects:
@@ -530,25 +638,57 @@ particles stay in world space unless the particle file sets `isLocal: true`.
 `AdvancedDynamicTexture` / GUI control types import from `@babylonjs/gui`;
 `IParticleSystem` imports from `@babylonjs/core`.
 
+### MSDF text (3D labels)
+
+Authored as **MSDF_TEXT** on an entity (bmfont JSON + atlas PNG). The loader
+creates a `TextRenderer` and draws after the main pass — behaviors **update**
+copy, they do not create renderers.
+
+```ts
+import type { TextRenderer } from "@babylonjs/core";
+
+const label = this.entity.GetTextRenderer("roboto-regular"); // font JSON file stem
+if (label !== undefined)
+{
+  label.clearParagraphs();
+  label.addParagraph(`Score: ${score}`, { textAlign: "center" });
+}
+```
+
+**MCP:** `get_fragment(name="update-msdf-text")` · recipe `msdf-label-update`.
+
 ## Node materials (NME)
 
 Custom shaders are authored per **Blender Material** on **Properties › Material › Babylon**
 (not per object). Point at a `.json` from the
-[Node Material Editor](https://nme.babylonjs.com); use **Scan Textures** to list
-`ImageSourceBlock` / `TextureBlock` slots, then assign image files for any
-textures not embedded in the JSON. Export copies JSON + images to `materials/`
-and patches URLs in the exported JSON; the manifest gets optional `materials[]`:
+[Node Material Editor](https://nme.babylonjs.com); use **Scan NME** to list
+`ImageSourceBlock` / `TextureBlock` slots and inspector-visible `InputBlock`
+parameters (mark uniforms **Visible in Inspector** in NME). NME may embed image
+bytes in the JSON (`texture.url` as `data:…;base64,…`, or `base64String`) — the
+runtime loads these without external files. Use **Extract Textures…** to write
+PNG/JPG beside the JSON and wire relative paths when you want smaller manifests or
+Blender-side image picks. Assign image files for external texture slots; tune floats,
+colors, vectors, and booleans in the **Parameters** box. Export copies JSON + picked
+images to `materials/` (each distinct NME source file is copied once per export;
+several Blender materials can share one exported JSON and accumulate patches).
+External texture overrides strip embedded `base64String` / `internalTextureLabel`
+from the exported JSON and write manifest `textures[]`; embedded-only slots ship
+unchanged in the JSON:
 
 ```json
 "materials": [
   { "name": "Water", "file": "materials/water.json",
-    "textures": [{ "blockId": 42, "blockName": "albedo", "file": "materials/albedo.png" }] }
+    "textures": [{ "blockId": 42, "blockName": "albedo", "file": "materials/albedo.png" }],
+    "inputs": [{ "blockId": 21, "blockName": "fillColor", "type": "COLOR4", "value": [0.15, 0.4, 1, 0.35] }] }
 ]
 ```
 
 At load, `ApplyNodeMaterials` runs after the glb import and replaces
-`mesh.material` when the glTF material **name** matches. No behavior API —
-meshes using that material pick up the node shader automatically.
+`mesh.material` when the glTF material **name** matches. Parsed materials are cached
+per `file` + Blender material `name`. Embedded textures load from `data:` / `base64String`
+in the JSON; manifest `textures[]` always wins over embedded JSON when present; block
+ids resolve through `editorData.map`. No behavior API — meshes using that
+material pick up the node shader automatically.
 
 ## 3D GUI
 
@@ -632,15 +772,20 @@ export default class HoverBob extends Behavior
 
 ## Related documentation
 
-| Topic | Doc |
+| Topic | Doc / MCP |
 |---|---|
-| Full scripting chapter | `docs/engine/04-SCRIPTING.html` |
-| Physics (bodies, triggers, constraints) | `docs/engine/05-PHYSICS.html` |
-| Load order / when `OnStart` runs / visibility | `docs/engine/03-LOAD-PIPELINE.html` |
-| Cameras (component types, Geospatial) | `docs/engine/06-RENDERING.html` |
-| Scene look / atmosphere / post-processing (bloom, SSAO) | `docs/engine/06-RENDERING.html` · `get_scripting_context(section="scene-look")` |
-| Node materials (NME JSON, texture overrides) | `docs/engine/06-RENDERING.html` · `docs/engine/trace-materials.html` · `docs/blender/trace-materials.html` |
-| Audio, animation, skinned-mesh rule | `docs/engine/07-AUDIO-ANIMATION.html` |
-| 2D GUI, particles, 3D GUI | `docs/engine/10-UI.md` |
-| Code style | `docs/STYLE_GUIDE.md` |
+| MCP tool order | `get_authoring_workflow` · **`route_task`** |
+| Task playbooks | `docs/LLM_PLAYBOOK.md` · `get_playbook` · `list_playbooks` |
+| Runtime loop / OnUpdate / delta time | `docs/engine/02-RUNTIME-BASICS.html` · `trace-runtime-loop` |
+| Engine doc index (choose your path) | `docs/engine/00-INDEX.html` |
+| Full scripting chapter | `docs/engine/05-SCRIPTING.html` |
+| Physics (bodies, triggers, constraints) | `docs/engine/06-PHYSICS.html` · `get_physics_movement` |
+| Load order / when `OnStart` runs / visibility | `docs/engine/04-LOAD-PIPELINE.html` |
+| Cameras (component types, Geospatial) | `docs/engine/07-RENDERING.html` |
+| Scene look / atmosphere / post-processing | `docs/engine/07-RENDERING.html` · `get_scripting_context(section="scene-look")` |
+| Node materials (NME) | `docs/engine/trace-materials.html` |
+| Audio, animation, skinned-mesh rule | `docs/engine/08-AUDIO-ANIMATION.html` |
+| 2D GUI, particles, 3D GUI, MSDF | `docs/engine/11-UI.html` |
+| Example behaviors | `list_behaviors` · `get_behavior` · `find_similar_behavior` |
+| Code style | `docs/STYLE_GUIDE.md` · `get_style_guide` |
 | Prefabs + `level.Spawn()` (planned) | not documented in-repo |

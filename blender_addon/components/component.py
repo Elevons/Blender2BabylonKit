@@ -16,11 +16,12 @@ To add a new component type you:
 import os
 
 import bpy
-from bpy.props import (
+from bpy.types import PropertyGroup, Object
+
+from ..core.props import (
     StringProperty, EnumProperty, FloatProperty, BoolProperty,
     FloatVectorProperty, IntProperty, CollectionProperty, PointerProperty,
 )
-from bpy.types import PropertyGroup, Object
 
 from ..core.ids import ensure_object_id
 from .constants import (
@@ -148,6 +149,11 @@ class BJSComponent(PropertyGroup):
     is_trigger:     BoolProperty(name="Is Trigger",
                                  description="Detect overlaps without solid collision",
                                  default=False)
+    collider_make_invisible: BoolProperty(
+        name="Make Invisible",
+        description="Hide this object's mesh in Babylon.js at runtime (physics collider remains active)",
+        default=False,
+    )
     auto_fit:       BoolProperty(name="Auto-Fit to Bounds",
                                  description="Compute size from the mesh bounding box at runtime",
                                  default=True)

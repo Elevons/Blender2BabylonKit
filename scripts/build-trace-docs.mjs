@@ -12,7 +12,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ENGINE_AREA_PAGES } from "./docs/engine-areas.mjs";
-import { DiagramsForTrace, FilterNavByHrefs, TracesForDiagram } from "./docs/topics.mjs";
 import { EnrichEngineAreaDiagram, EnrichTraceDiagram } from "./docs/diagram-links.mjs";
 import {
   ReadShell,
@@ -38,12 +37,12 @@ export const TRACES = [
     intro: "From the N-panel checkbox to a body on the node. Authored in Blender space, converted once at export, built at load. Multiple colliders on one entity become a PhysicsShapeContainer compound body.",
     steps: [
       { file: "blender_addon/export/components.py", symbol: "serialize_components",
-        note: "EXPORT — every enabled component becomes one dict. Each COLLIDER row converts center (x,y,z)→(x,z,−y), swaps size axes, converts the rotation quaternion, and attaches trigger events. Output: the manifest's components array (multiple COLLIDER rows allowed)." },
+        note: "EXPORT — every enabled component becomes one dict. Each COLLIDER row converts center (x,y,z)→(x,z,−y), swaps size axes, converts the rotation quaternion, exports makeInvisible, and attaches trigger events. Output: the manifest's components array (multiple COLLIDER rows allowed)." },
       { title: "The manifest (data between the two halves)",
-        code: `{ "type": "COLLIDER", "shape": "BOX", "isTrigger": false, "autoFit": true,\n  "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0],\n  "rotation": [0,0,0,1] },\n{ "type": "COLLIDER", "shape": "SPHERE", "isTrigger": true, "autoFit": false,\n  "radius": 0.5, "center": [0, 1.5, 0] },\n{ "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1,\n  "friction": 0.5, "restitution": 0.2,\n  "linearDamping": 0, "angularDamping": 0, "startAsleep": false }`,
-        note: "Already Babylon-space (Y-up). Two COLLIDER rows on one entity are intentional — the runtime combines them." },
+        code: `{ "type": "COLLIDER", "shape": "BOX", "isTrigger": false, "makeInvisible": true, "autoFit": true,\n  "size": [1,1,1], "radius": 0.5, "height": 2, "center": [0,0,0],\n  "rotation": [0,0,0,1] },\n{ "type": "COLLIDER", "shape": "SPHERE", "isTrigger": true, "autoFit": false,\n  "radius": 0.5, "center": [0, 1.5, 0] },\n{ "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1,\n  "friction": 0.5, "restitution": 0.2,\n  "linearDamping": 0, "angularDamping": 0, "startAsleep": false }`,
+        note: "Already Babylon-space (Y-up). Two COLLIDER rows on one entity are intentional — the runtime combines them. makeInvisible hides the mesh at load; physics is unchanged." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
-        note: "LOAD, per entity — ClassifyComponents collects all COLLIDER rows into colliders[]; BuildPhysics builds one body (compound when length > 1); RegisterAttachment per COLLIDER/RIGIDBODY row; trigger events from all trigger colliders are merged." },
+        note: "LOAD, per entity — ClassifyComponents collects all COLLIDER rows into colliders[]; HideEntityNode when any collider has makeInvisible; BuildPhysics builds one body (compound when length > 1); RegisterAttachment per COLLIDER/RIGIDBODY row; trigger events from all trigger colliders are merged." },
       { file: "packages/engine/src/subsystems/physics.ts", symbol: "BuildPhysics",
         note: "The dispatcher. In: node + ColliderComponent[] + RigidBodyComponent? + scene. Single collider → one of three shape paths; multiple → BuildCompoundBody (PhysicsShapeContainer). Out: PhysicsBody | undefined." },
       { file: "packages/engine/src/subsystems/physics.ts", symbol: "BuildCompoundBody",
@@ -75,6 +74,74 @@ export const TRACES = [
         note: "Writes stored values onto the instance: scalars coerced (vector3/color arrays → Babylon types), lists per element, entity fields deferred." },
       { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ResolveObjectReferences",
         note: "SECOND PASS — every entity exists now; each PendingRef's GUID resolves via level.ById and the real Entity is assigned (or placed into its list slot). Then Begin → OnStart." },
+    ],
+  },
+  {
+    id: "lifecycle",
+    title: "Behavior lifecycle: hooks → Babylon render loop",
+    intro: "How OnStart / OnUpdate / OnDestroy / OnMessage plug into Level.Begin, scene.onBeforeRenderObservable, and Entity.SendMessage — from class definition through teardown.",
+    steps: [
+      { file: "packages/engine/src/scripting/Behavior.ts", symbol: "Behavior",
+        note: "THE contract — four overridable hooks (PascalCase only; lowercase names never run). Injected before OnStart: entity, scene; node getter; optional behavior.input. No Unity-style Awake/Enable — only these four." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "InstantiateScripts",
+        note: "LOAD ENTITY PASS — registry.Create → inject entity/scene → ApplyExposedVars → InjectInputMaps → entity.behaviors.push. Hooks are NOT called here; behaviors sit idle until Level.Begin." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ResolveObjectReferences",
+        note: "SECOND PASS — @exposed entity refs resolve to real Entity instances (or list slots) while hooks are still idle. Cross-entity OnStart order is unspecified after this." },
+      { file: "packages/engine/src/core/LevelLoader.ts", symbol: "FinalizeLevel",
+        note: "Async tasks settle → triggers/constraints/GUI3D wire → level.Begin() → ApplyPostProcessing (after Begin so OnStart cameras get the stack). OnStart never runs before physics bodies and trigger observers exist." },
+      { file: "packages/engine/src/core/Level.ts", symbol: "Begin",
+        note: "InputManager.Attach (keyboard observable + enable maps) → every behavior.OnStart (error-isolated) → subscribe RunFrame on scene.onBeforeRenderObservable. This is the Babylon hook that drives the whole game loop." },
+      { file: "packages/engine/src/core/Level.ts", symbol: "RunFrame",
+        note: "EVERY RENDER FRAME — InputManager.Process FIRST → all OnUpdate(deltaSeconds) → registered updaters (offset cameras) → InputManager.EndFrame LAST. deltaSeconds = scene.getEngine().getDeltaTime() / 1000 (seconds, not ms)." },
+      { file: "packages/engine/src/core/Entity.ts", symbol: "SendMessage",
+        note: "RUNTIME MESSAGE FAN-OUT — every behavior on this entity gets OnMessage(message, source). Used by trigger volumes, 3D GUI clicks, and gameplay SendMessage calls. Each call error-isolated." },
+      { file: "packages/engine/src/ui/gui3d/events.ts", symbol: "WireClickEvents",
+        note: "One OnMessage path — 3D GUI button OnPointerClick → targetEntity.SendMessage(message, buttonEntity). Same hook triggers use; see trace-trigger.html for the physics path." },
+      { file: "packages/engine/src/core/Level.ts", symbol: "Dispose",
+        note: "TEARDOWN — detach input, remove onBeforeRenderObservable + trigger observer, dispose constraints/sounds/GUI → every behavior.OnDestroy (errors swallowed). Unsubscribe anything you registered in OnStart." },
+    ],
+  },
+  {
+    id: "runtime-loop",
+    title: "Runtime loop: main.ts → scene.render → OnUpdate",
+    intro: "How the app render loop connects to Babylon observables and the kit's Level.RunFrame — including particle and MSDF hooks on the same frame.",
+    steps: [
+      { file: "apps/playground/src/main.ts", symbol: "Main",
+        note: "APP BOOT — after Load returns, engine.runRenderLoop(() => scene.render()) starts the browser frame loop. The kit never calls runRenderLoop; without this, OnUpdate never runs." },
+      { file: "packages/engine/src/core/Level.ts", symbol: "Begin",
+        note: "END OF LOAD — InputManager.Attach, every OnStart once, then subscribe RunFrame on scene.onBeforeRenderObservable (registered during FinalizeLevel → level.Begin)." },
+      { file: "packages/engine/src/subsystems/particles.ts", symbol: "WireParticleEmitterTracking",
+        note: "BEFORE RunFrame — onBeforeRenderObservable with insertFirst=true keeps empty-node emitter positions synced each frame." },
+      { file: "packages/engine/src/core/Level.ts", symbol: "RunFrame",
+        note: "EVERY FRAME (onBeforeRender) — InputManager.Process → all OnUpdate(deltaSeconds) → Level.AddUpdater callbacks → InputManager.EndFrame. deltaSeconds = getDeltaTime()/1000." },
+      { file: "packages/engine/src/scripting/Behavior.ts", symbol: "OnUpdate",
+        note: "BEHAVIOR HOOK — override in your script; called once per scene.render(), typically before Havok's step and before the GPU draw." },
+      { file: "packages/engine/src/ui/msdfText.ts", symbol: "WireMsdfTextRendering",
+        note: "AFTER DRAW — onAfterRenderObservable draws MSDF text labels when any exist; runs after the main scene pass for that frame." },
+    ],
+  },
+  {
+    id: "components",
+    title: "Components: Blender stack → manifest → attachments",
+    intro: "Component vs behavior: authored data (TAG, COLLIDER, SCRIPT, …) serialized once, applied per entity during load, recorded on entity.attachments — only SCRIPT rows become Behavior instances.",
+    steps: [
+      { file: "blender_addon/components/component.py", symbol: "BJSComponent",
+        note: "AUTHORING — one PropertyGroup per row in the Babylon Object stack (comp_type enum: TAG, COLLIDER, RIGIDBODY, SCRIPT, AUDIO, …). Enabled rows export; disabled rows are skipped." },
+      { file: "blender_addon/export/components.py", symbol: "serialize_components",
+        note: "EXPORT — one manifest dict per enabled row. Axis conversion for colliders/constraints happens here. SCRIPT carries script stem + vars; force-included GUID targets via iter_referenced_objects." },
+      { title: "The manifest (per entity)",
+        code: `"components": [\n  { "type": "TAG", "tag": "Player" },\n  { "type": "COLLIDER", "shape": "BOX", "autoFit": true, … },\n  { "type": "RIGIDBODY", "bodyType": "DYNAMIC", "mass": 1, … },\n  { "type": "SCRIPT", "script": "Patrol", "path": "behaviors/Patrol.ts", "vars": { … } }\n]`,
+        note: "Pure data — no code runs until load. Multiple rows of the same type are allowed (e.g. two COLLIDERs compound into one body). Lights/cameras/animation live outside components[] on the entity block." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ProcessEntity",
+        note: "LOAD — resolve glTF node by GUID → new Entity + metadata.bjsEntity back-ref → ApplyComponents(entityData.components) → auto-derived light/camera blocks." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ClassifyComponents",
+        note: "Switch on component.type: TAG applied inline (entity.tag + RegisterAttachment); others bucketed (colliders[], scripts[], audioTasks, constraintRegistrations, gui3dRegistrations, …)." },
+      { file: "packages/engine/src/core/loader/entityBuilder.ts", symbol: "ApplyComponents",
+        note: "Per-type apply: BuildPhysics + RegisterAttachment for COLLIDER/RIGIDBODY; queue triggers/audio/constraints/GUI/particles/GUI3D; InstantiateScripts last. Non-SCRIPT types never touch BehaviorRegistry." },
+      { file: "packages/engine/src/core/attachments.ts", symbol: "RegisterAttachment",
+        note: "Runtime registry — one EntityAttachment row per successfully applied component: { type, data } plus runtime handle when one exists (behavior, body, sound, texture, system, constraint, control)." },
+      { file: "packages/engine/src/core/Entity.ts", symbol: "GetAttachment",
+        note: "QUERY — GetAttachment(type) (first row), GetAttachmentsOfType (all rows), HasAttachment. SCRIPT → ?.behavior; COLLIDER/RIGIDBODY → ?.body (same PhysicsBody ref when both). Convenience: entity.behaviors, entity.body, entity.sounds." },
     ],
   },
   {
@@ -165,7 +232,7 @@ export const TRACES = [
       { file: "blender_addon/export/validate.py", symbol: "_check_atmosphere",
         note: "Warns when Atmosphere is on but no renderable SUN lamp is available (picked Sun Light or any exported sun)." },
       { file: "blender_addon/export/scene.py", symbol: "_serialize_environment",
-        note: "When atmosphere is enabled, export forces createSkybox: false — the addon renders the sky; IBL from World/useDefault still loads." },
+        note: "When atmosphere is enabled, export forces createSkybox: false — the addon renders the sky; IBL from World/useDefault still loads. useDefault writes intensity/rotationY from bjs_scene.environment_intensity / environment_rotation_y." },
       { file: "packages/engine/src/subsystems/atmosphere.ts", symbol: "ApplyAtmosphere",
         note: "LOAD — Atmosphere.IsSupported check; resolve SUN → DirectionalLight (GUID or first sun); optional π intensity; new Atmosphere(scene, [sunLight], options); physical property tuning." },
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "FinalizeLevel",
@@ -180,7 +247,7 @@ export const TRACES = [
       { file: "blender_addon/input_actions/serialize.py", symbol: "serialize_input_asset",
         note: "BLENDER — maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty). Called from export/scene.py alongside defaultInputMap from the Scene Default picker." },
       { file: "blender_addon/export/scene.py", symbol: "serialize_scene",
-        note: "BLENDER — assembles the manifest scene block: clear/ambient, environment (World Output chain via scene/environment.py → env/, or useDefault; createSkybox forced off when Atmosphere on; skyboxIgnoreFog), fog, atmosphere (export/atmosphere.py), post (via export/post_processing.py — default pipeline, SSAO), inputActions, and defaultInputMap." },
+        note: "BLENDER — assembles the manifest scene block: clear/ambient, environment (World Output chain via scene/environment.py → env/, or useDefault with intensity/rotationY from bjs_scene; createSkybox forced off when Atmosphere on; skyboxIgnoreFog), fog, atmosphere (export/atmosphere.py), post (via export/post_processing.py — default pipeline, SSAO), inputActions, and defaultInputMap." },
       { file: "packages/engine/src/input/DefaultAsset.ts", symbol: "DEFAULT_INPUT_ASSET",
         note: "Runtime fallback when a manifest omits inputActions — keep in sync with blender_addon/input_actions/defaults.py." },
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "Load",
@@ -251,14 +318,18 @@ export const TRACES = [
     title: "Node materials: NME JSON → mesh override",
     intro: "Per Blender Material datablock: Node Material Editor JSON replaces glTF PBR at runtime by material name.",
     steps: [
+      { file: "blender_addon/materials/nme_scan.py", symbol: "sync_material_nme",
+        note: "AUTHORING — Scan NME reads ImageSourceBlock/TextureBlock slots and inspector-visible InputBlocks from the NME JSON; preserves existing texture picks and parameter values by block_id." },
+      { file: "blender_addon/materials/nme_textures.py", symbol: "extract_nme_textures",
+        note: "AUTHORING — Extract Textures… (bjs.extract_nme_textures): decode embedded data: / base64String to PNG/JPG beside the JSON, rewrite block url, rescan texture rows." },
       { file: "blender_addon/export/materials.py", symbol: "export_node_material",
-        note: "EXPORT — copy NME JSON to materials/; copy each texture row image; patch_nme_json_textures on ImageSourceBlock / TextureBlock in the exported copy (block_id match; strips embedded base64 when overriding)." },
+        note: "EXPORT — copy each distinct NME source once; copy external texture images; patch_nme_json_textures (strip embeds on override; leave embedded-only slots) + patch_nme_json_inputs on the exported copy." },
       { file: "blender_addon/export/level.py", symbol: "_build_manifest",
-        note: "serialize_materials adds optional top-level manifest.materials[] (name, file, textures[]) for exportable meshes using a Material with bjs_nme_file set." },
+        note: "serialize_materials adds optional top-level manifest.materials[] (name, file, textures[], inputs[]) for exportable meshes using a Material with bjs_nme_file set." },
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "Load",
         note: "LOAD — after appendSceneAsync + ApplyNodeVisibility, await ApplyNodeMaterials(scene, manifest.materials, baseUrl) before the entity pass." },
       { file: "packages/engine/src/subsystems/materials.ts", symbol: "ApplyNodeMaterials",
-        note: "NodeMaterial.ParseFromFileAsync with rootUrl + urlRewriter; cache parsed materials per JSON path; replace mesh.material when glTF material.name matches manifest entry; BindManifestTextures fallback when JSON omitted texture data." },
+        note: "ParseFromFileAsync + urlRewriter; cache per file+name; BindManifestTextures always applies textures[] (editorData.map resolves blockId); BindManifestInputs; whenTexturesReadyAsync." },
     ],
   },
   {
@@ -310,6 +381,8 @@ export const TRACES = [
         note: "Walks the entity node's parent chain — the glb orientation-correction node may sit between the GUID node and the actual Light." },
       { file: "packages/engine/src/subsystems/lights.ts", symbol: "ApplyBlenderLight",
         note: "Copies color (exact), intensity (SUN_SCALE / PUNCTUAL_SCALE), spot cone. SUN angle is passed through to shadow setup (PCSS penumbra). AREA lamps are unsupported by glTF — validator warns at export." },
+      { file: "packages/engine/src/subsystems/clusteredLights.ts", symbol: "ClusterPunctualLightsIfNeeded",
+        note: "FINALIZE (before SetupShadows) — when enabled scene lights exceed lightBudget (default 8): move point/spot into ClusteredLightContainer (glTF falloff converted) or disable light UBOs. Sets level.punctualLightingMode and level.clusteredLights. Directional suns stay forward for shadows." },
     ],
   },
   {
@@ -345,7 +418,7 @@ export const TRACES = [
       { file: "packages/engine/src/subsystems/shadows.ts", symbol: "SetupShadows",
         note: "FINALIZE — one generator per casting lamp; all meshes receive; casters skip bjs_cast_shadows meshes and size outliers. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1)." },
       { file: "packages/engine/src/core/LevelLoader.ts", symbol: "FinalizeLevel",
-        note: "SetupShadows runs early in finalize; level.shadowGenerators exposed for runtime tuning. freezeShadows bakes maps once for static worlds." },
+        note: "ClusterPunctualLightsIfNeeded runs first when over budget; then SetupShadows; level.shadowGenerators exposed for runtime tuning. freezeShadows bakes maps once for static worlds." },
     ],
   },
   {
@@ -380,17 +453,14 @@ export function BuildEngineDocs()
     const pageTitle = file === "index.html"
       ? "BJS Level Kit — Engine overview"
       : `BJS Level Kit — ${page.diagram.title.replace(/^Babylon Level Kit — /, "")}`;
-    const pageTraceNav = FilterNavByHrefs(
-      traceNav,
-      "engine",
-      TracesForDiagram(`engine/${file}`),
-    );
+    const navLabel = page.navLabel
+      ?? page.diagram.title.replace(/^Babylon Level Kit — /, "");
     EmitDiagramPage({
       shell,
       outPath: path.join(OUT_DIR, file),
       pageTitle,
       diagramData: EnrichEngineAreaDiagram(page, file, TRACES),
-      navHtml: BuildEngineNav(file, areaNav, pageTraceNav),
+      navHtml: BuildEngineNav(file, areaNav, traceNav, { currentTitle: navLabel }),
       bodyPatch: LAYOUT_PATCH_ENGINE,
     });
   }
@@ -440,7 +510,7 @@ export function BuildEngineDocs()
     }));
 
     const outFile = `trace-${trace.id}.html`;
-    const relatedDiagrams = DiagramsForTrace(`engine/${outFile}`).map((href) => href.replace(/^engine\//, ""));
+    const traceTitle = trace.title.split(":")[0];
     const traceDiagram = EnrichTraceDiagram(
       { title: "Trace — " + trace.title, nodes, edges },
       outFile,
@@ -451,7 +521,7 @@ export function BuildEngineDocs()
       outPath: path.join(OUT_DIR, outFile),
       pageTitle: `Trace — ${trace.title}`,
       diagramData: traceDiagram,
-      navHtml: BuildEngineNav(outFile, areaNav, traceNav, { highlightDiagrams: relatedDiagrams }),
+      navHtml: BuildEngineNav(outFile, areaNav, traceNav, { currentTitle: traceTitle }),
       bodyPatch: CODE_PANEL_PATCH_ENGINE,
     });
     traceFiles.push(outFile);

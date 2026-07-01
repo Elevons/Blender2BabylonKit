@@ -7,7 +7,9 @@ import { FormatSectionList, FindDocSection, ParseDocSections, ReadDoc } from "./
 import { BuildExposedSnippet, GetFragment, FRAGMENTS } from "./fragments.js";
 import {
   FindSimilarBehavior,
+  FormatBehaviorCatalog,
   FormatInputActions,
+  ListBehaviorCatalog,
   ListBehaviorFiles,
   ListInputActions,
   ReadBehaviorFile,
@@ -22,6 +24,15 @@ import {
 } from "./recipes.js";
 import { FormatValidationResult, ValidateBehavior } from "./validate.js";
 import { FormatSceneSummary, ListLevels, LoadSceneSummary } from "./scene.js";
+import { FormatPreflight } from "./preflight.js";
+import {
+  FormatPlaybook,
+  FormatRouteTask,
+  ListPlaybooksMarkdown,
+} from "./playbooks.js";
+import { FormatDoNotList } from "./pitfalls.js";
+import { GetEngineBasics } from "./engine-basics.js";
+import { FormatAuthoringWorkflow } from "./workflow.js";
 import {
   FormatMovementMode,
   FormatMovementOverview,
@@ -31,7 +42,7 @@ import {
 
 const server = new McpServer({
   name: "bjs-level-kit",
-  version: "1.2.1",
+  version: "1.4.0",
 });
 
 // --- Resources -------------------------------------------------------------
@@ -67,6 +78,24 @@ server.resource(
         uri: "bjs://docs/scripting-context",
         mimeType: "text/markdown",
         text: readFileSync(DOCS.scriptingContext, "utf-8"),
+      },
+    ],
+  })
+);
+
+server.resource(
+  "playbook",
+  "bjs://docs/playbook",
+  {
+    description: "Task playbooks with Blender setup + MCP steps (LLM_PLAYBOOK.md) — use route_task first",
+    mimeType: "text/markdown",
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "bjs://docs/playbook",
+        mimeType: "text/markdown",
+        text: readFileSync(DOCS.playbook, "utf-8"),
       },
     ],
   })
@@ -115,8 +144,92 @@ for (const behaviorName of ListBehaviorFiles().map((file) => file.replace(/\.ts$
 // --- Tools -----------------------------------------------------------------
 
 server.tool(
+  "route_task",
+  "**START HERE** for any behavior task. Given plain-English intent + class name, returns matched playbook, numbered MCP steps (do not skip), Blender setup, and human doc links. Weaker models should call this before writing code.",
+  {
+    intent: z.string().describe("What the behavior should do, e.g. 'wasd player mover on rover'"),
+    className: z
+      .string()
+      .describe("PascalCase class and filename stem, e.g. RoverDrive (writes RoverDrive.ts)"),
+  },
+  async ({ intent, className }) => ({
+    content: [{ type: "text", text: FormatRouteTask(intent, className) }],
+  })
+);
+
+server.tool(
+  "preflight_behavior",
+  "Checklist before writing behavior source: identity, grounding tools to call, recipe, Blender steps, and a plan_behavior preview. Call immediately after route_task.",
+  {
+    intent: z.string().describe("What the behavior should do"),
+    className: z.string().describe("PascalCase class / filename stem"),
+  },
+  async ({ intent, className }) => ({
+    content: [{ type: "text", text: FormatPreflight(intent, className) }],
+  })
+);
+
+server.tool(
+  "get_playbook",
+  "Return one task playbook from docs/LLM_PLAYBOOK.md (Blender setup, MCP steps, do-not list).",
+  {
+    name: z
+      .string()
+      .describe(
+        'Playbook slug, e.g. "player-mover", "rover-drive", "train-on-path". Call list_playbooks() for all.'
+      ),
+  },
+  async ({ name }) => ({
+    content: [{ type: "text", text: FormatPlaybook(name) }],
+  })
+);
+
+server.tool(
+  "list_playbooks",
+  "Table of all task playbooks (slug → recipe → reference behavior).",
+  {},
+  async () => ({
+    content: [{ type: "text", text: ListPlaybooksMarkdown() }],
+  })
+);
+
+server.tool(
+  "get_engine_basics",
+  "Distilled engine concepts tied to human docs (architecture, frame loop, components vs behaviors, load order, blender vs behavior). For weak models — read before guessing how the engine works.",
+  {
+    topic: z
+      .string()
+      .optional()
+      .describe(
+        'Topic slug: architecture, frame-loop, components-vs-behaviors, load-order, blender-vs-behavior. Omit or "list" for index.'
+      ),
+  },
+  async ({ topic }) => ({
+    content: [{ type: "text", text: GetEngineBasics(topic) }],
+  })
+);
+
+server.tool(
+  "get_do_not_list",
+  "Silent failures and wrong approaches (onStart, DYNAMIC+position, invented input names, …) with fixes and which MCP tool to call.",
+  {},
+  async () => ({
+    content: [{ type: "text", text: FormatDoNotList() }],
+  })
+);
+
+server.tool(
+  "get_authoring_workflow",
+  "Return the recommended bjs-mcp tool order, section slugs, resources, and human doc links. Call when unsure which tool to use next.",
+  {},
+  async () => ({
+    content: [{ type: "text", text: FormatAuthoringWorkflow() }],
+  })
+);
+
+server.tool(
   "get_kernel",
-  "Return docs/LLM_KERNEL.md — minimal behavior contract (~80 lines). Call first before writing any behavior.",
+  "Return docs/LLM_KERNEL.md — minimal behavior contract. Use route_task for task-specific steps; kernel for invariant rules only.",
   {},
   async () => ({
     content: [{ type: "text", text: ReadDoc(DOCS.kernel) }],
@@ -172,6 +285,52 @@ server.tool(
       content: [{ type: "text", text: `// ${stem}.ts\n\n${source}` }],
     };
   }
+);
+
+server.tool(
+  "list_levels",
+  "List exported level folder names under apps/playground/public/levels/.",
+  {},
+  async () =>
+  {
+    const levels = ListLevels();
+    return {
+      content: [
+        {
+          type: "text",
+          text:
+            levels.length > 0
+              ? levels.map((entry) => `- ${entry}`).join("\n")
+              : "No levels found under apps/playground/public/levels/.",
+        },
+      ],
+    };
+  }
+);
+
+server.tool(
+  "list_behaviors",
+  "List all playground example behaviors with a one-line summary and lifecycle hooks.",
+  {},
+  async () => ({
+    content: [{ type: "text", text: FormatBehaviorCatalog(ListBehaviorCatalog()) }],
+  })
+);
+
+server.tool(
+  "list_fragments",
+  "List all paste-in code fragments (hinge motor, Path3D, MSDF text, reveal, …).",
+  {},
+  async () => ({
+    content: [
+      {
+        type: "text",
+        text: FRAGMENTS.map((fragment) => `- **${fragment.name}** — ${fragment.description}`).join(
+          "\n"
+        ),
+      },
+    ],
+  })
 );
 
 server.tool(

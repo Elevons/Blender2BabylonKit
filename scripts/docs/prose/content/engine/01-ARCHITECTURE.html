@@ -1,13 +1,27 @@
 <h1>01 — Architecture</h1>
-<p class="doc-links">Subsystem diagram: <a href="architecture.html">architecture.html</a> · Overview: <a href="index.html">index.html</a></p>
+<p class="doc-links">Subsystem diagram: <a href="architecture.html">architecture.html</a> · Overview: <a href="index.html">index.html</a> · Index: <a href="00-INDEX.html">00 — Engine index</a></p>
+<p><strong>Writing behaviors?</strong> Skim the two-artifact table below, then jump to <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> and <a href="14-API-GUIDE.html">14 — API Guide</a>. Come back here when you need GUID matching or the repo layout.</p>
+
 <h2>The core idea: two artifacts</h2>
 <blockquote><p>If glTF can already express it, the glb owns it and the engine writes no code for it. If it can't, it goes in the manifest and a small subsystem applies it.</p></blockquote>
+<p>For how the loaded <code>Level</code> hooks into Babylon's render loop (<code>runRenderLoop</code>, <code>OnUpdate</code>, delta time), read <a href="02-RUNTIME-BASICS.html"><strong>02 — Runtime Basics</strong></a> next.</p>
 <table><thead><tr><th>Artifact</th><th>Carries</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>level.glb</code></td><td>geometry, transforms, hierarchy, materials (standard PBR), lights, cameras, animation clips</td><td>Babylon's glTF importer</td></tr><tr><td><code>level.scene.json</code></td><td>components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), optional <code>materials[]</code> (Node Material Editor overrides), per-light/camera/scene settings, <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>, schema <strong>v4</strong></td><td>our <code>LevelLoader</code></td></tr></tbody></table>
 <p>The manifest never duplicates the glb — it only adds. This is why there's a <code>subsystems/physics.ts</code> but no <code>meshes.ts</code>: meshes ride entirely in the glb.</p>
+
 <h2>Entity identity (GUIDs)</h2>
-<p>Every addressable Blender object gets a GUID in a custom property (<code>bjs_id</code>, defined once as <code>ID_KEY</code> on both sides). The exporter writes it into the glTF node's <code>extras</code>; the manifest references the same GUID. At load it surfaces at <code>node.metadata.gltf.extras.bjs_id</code> (via the <code>ExtrasAsMetadata</code> loader extension) and the loader matches manifest entity → glb node by GUID, name as a legacy fallback. A GUID is what makes an object an *entity*; pure geometry without one just lives in the glb. GUIDs are auto-assigned to anything that needs to be findable: objects with components, lights, cameras, and any object referenced by an entity field, trigger event, or constraint target.</p>
-<p><strong>Visibility</strong> uses the same glTF extras channel. Viewport-hidden objects (Blender eye icon / <code>hide_viewport</code>, but still render-enabled) get a transient <code>bjs_visible: false</code> (<code>VISIBLE_KEY</code>) stamped at export; the loader's <code>ApplyNodeVisibility</code> sets <code>node.isVisible = false</code> and disables child lights/cameras. Objects with ray-visibility <strong>Shadow</strong> off (<code>visible_shadow = False</code>) get <code>bjs_cast_shadows: 0</code> (<code>CAST_SHADOWS_KEY</code>); at load they remain visible and still <strong>receive</strong> shadows, but <code>SetupShadows</code> omits them from casters. Render-disabled objects (<code>hide_render</code>, camera icon) are skipped entirely — no glb geometry and no manifest entry (<code>use_renderable=True</code> on the glTF exporter matches the manifest filter).</p>
-<p>The GUID is also the discriminator for two subtle cases: multi-material submeshes have <strong>no</strong> GUID (so they're &quot;owned&quot; by their wrapper — see <a href="05-PHYSICS.html#owned-meshes">Physics</a>), while real parented children <strong>do</strong> (so they're excluded from a parent's collider).</p>
+<p>Every addressable Blender object gets a GUID in a custom property (<code>bjs_id</code>, defined once as <code>ID_KEY</code> on both sides). The exporter writes it into the glTF node's <code>extras</code>; the manifest references the same GUID. At load it surfaces at <code>node.metadata.gltf.extras.bjs_id</code> (via the <code>ExtrasAsMetadata</code> loader extension) and the loader matches manifest entity → glb node by GUID, name as a legacy fallback.</p>
+<p>A GUID is what makes an object an <em>entity</em>; pure geometry without one just lives in the glb. GUIDs are auto-assigned to anything that needs to be findable: objects with components, lights, cameras, and any object referenced by an entity field, trigger event, or constraint target.</p>
+<p>The GUID is also the discriminator for two subtle cases: multi-material submeshes have <strong>no</strong> GUID (so they're &quot;owned&quot; by their wrapper — see <a href="06-PHYSICS.html#owned-meshes">Physics</a>), while real parented children <strong>do</strong> (so they're excluded from a parent's collider).</p>
+
+<h3>Visibility and shadows (export → load)</h3>
+<p>Optional detail — skip on first read unless you're debugging invisible objects or shadow casters.</p>
+<ul>
+<li><strong>Viewport hidden</strong> (Blender eye icon, still render-enabled) — transient <code>bjs_visible: false</code> (<code>VISIBLE_KEY</code>) in glTF extras; <code>ApplyNodeVisibility</code> sets <code>node.isVisible = false</code> and disables child lights/cameras.</li>
+<li><strong>Collider › Make Invisible</strong> — <code>makeInvisible: true</code> on the COLLIDER row; <code>ApplyComponents</code> calls <code>HideEntityNode</code> so collision-only props can stay visible in Blender while shipping invisible.</li>
+<li><strong>Shadow ray off</strong> (<code>visible_shadow = False</code>) — <code>bjs_cast_shadows: 0</code> (<code>CAST_SHADOWS_KEY</code>); meshes stay visible and <strong>receive</strong> shadows, but <code>SetupShadows</code> omits them from casters.</li>
+<li><strong>Render disabled</strong> (<code>hide_render</code>, camera icon) — omitted from glb and manifest (<code>use_renderable=True</code> on the glTF exporter matches the manifest filter).</li>
+</ul>
+
 <h2>Monorepo layout</h2>
 <pre><code>bjs-level-kit/
   package.json            # npm workspaces root: dev / typecheck / create
@@ -27,16 +41,18 @@
   scripts/create-app.mjs  # scaffolds apps/&lt;name&gt;
   docs/                   # this documentation, plans, specs</code></pre>
 <p>Apps declare <code>&quot;@bjs/engine&quot;: &quot;*&quot;</code>; <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code> (no publishing, no copying). The engine ships TS source (<code>exports</code> → <code>src/index.ts</code>); Vite compiles it across the link and hot-reloads engine edits into running apps. Engine and Blender add-on versions move in lockstep.</p>
+
 <h2>End-to-end data flow</h2>
 <pre><code>Blender scene (objects + components + GUIDs)
-   │  Export Level / Live Link            [02-BLENDER-ADDON.md]
+   │  Export Level / Live Link            [03-BLENDER-ADDON.html]
    ▼
 level.glb  +  level.scene.json  (+ audio/ files, env textures)
    │  Vite dev server serves apps/&lt;app&gt;/public/levels/
    ▼
-LevelLoader.Load(manifestUrl)             [03-LOAD-PIPELINE.md]
+LevelLoader.Load(manifestUrl)             [04-LOAD-PIPELINE.html]
    │  InputManager.LoadAsset → appendSceneAsync (right-handed) → GUID index
    │  → per-entity pass → second pass (refs, camera targets) → FinalizeLevel
    ▼
 Level (entities, update loop) ── behaviors run OnStart/OnUpdate
-                                          [04-SCRIPTING.md]</code></pre>
+                                          [05-SCRIPTING.html]</code></pre>
+<p>Per-frame order (app <code>runRenderLoop</code> → <code>scene.render</code> → <code>RunFrame</code> → Havok step): <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>.</p>

@@ -16,9 +16,9 @@ import type { TypedCameraResult } from "./typed";
  * loop, resolved in a second pass once every entity exists.
  */
 export interface CameraTargetSets {
-  followCams: { cam: FollowCamera; guid: string; eye: Vector3; derive: boolean }[];
-  arcCams: { cam: ArcRotateCamera; guid: string; eye: Vector3; track: boolean }[];
-  offsetCams: { cam: UniversalCamera; guid: string; eye: Vector3 }[];
+  followCams: { followCamera: FollowCamera; guid: string; eye: Vector3; derive: boolean }[];
+  arcCams: { arcCamera: ArcRotateCamera; guid: string; eye: Vector3; track: boolean }[];
+  offsetCams: { offsetCamera: UniversalCamera; guid: string; eye: Vector3 }[];
 }
 
 /** A fresh, empty target collection for one load pass. */
@@ -40,7 +40,7 @@ export function QueueCameraTargets(
   if (built.followTarget !== undefined)
   {
     sets.followCams.push({
-      cam: built.camera as FollowCamera,
+      followCamera: built.camera as FollowCamera,
       guid: built.followTarget.guid,
       eye: built.followTarget.eye,
       derive: cameraComponent.useBlenderTransform,
@@ -50,7 +50,7 @@ export function QueueCameraTargets(
   if (built.arcTarget !== undefined)
   {
     sets.arcCams.push({
-      cam: built.camera as ArcRotateCamera,
+      arcCamera: built.camera as ArcRotateCamera,
       guid: built.arcTarget.guid,
       eye: built.arcTarget.eye,
       track: cameraComponent.trackTarget,
@@ -60,7 +60,7 @@ export function QueueCameraTargets(
   if (built.offsetFollow !== undefined)
   {
     sets.offsetCams.push({
-      cam: built.camera as UniversalCamera,
+      offsetCamera: built.camera as UniversalCamera,
       guid: built.offsetFollow.guid,
       eye: built.offsetFollow.eye,
     });
@@ -104,12 +104,12 @@ function ResolveFollowCameras(level: Level, followCams: CameraTargetSets["follow
       continue;
     }
 
-    followBinding.cam.lockedTarget = targetEntity.node as never;
+    followBinding.followCamera.lockedTarget = targetEntity.node as never;
 
     // Start where Blender framed it (relative to the target) unless overridden.
     if (followBinding.derive)
     {
-      DeriveFollowFromPosition(followBinding.cam, targetEntity.node, followBinding.eye);
+      DeriveFollowFromPosition(followBinding.followCamera, targetEntity.node, followBinding.eye);
     }
   }
 }
@@ -128,14 +128,14 @@ function ResolveArcCameras(level: Level, arcCams: CameraTargetSets["arcCams"]): 
 
     const targetNode = targetEntity.node;
     targetNode.computeWorldMatrix(true);
-    arcBinding.cam.setTarget(targetNode.getAbsolutePosition().clone());
-    arcBinding.cam.setPosition(arcBinding.eye); // keep the Blender framing, new pivot
+    arcBinding.arcCamera.setTarget(targetNode.getAbsolutePosition().clone());
+    arcBinding.arcCamera.setPosition(arcBinding.eye); // keep the Blender framing, new pivot
 
     if (arcBinding.track)
     {
       level.AddUpdater(() =>
       {
-        arcBinding.cam.setTarget(targetNode.getAbsolutePosition());
+        arcBinding.arcCamera.setTarget(targetNode.getAbsolutePosition());
       });
     }
   }
@@ -160,8 +160,8 @@ function ResolveOffsetCameras(level: Level, offsetCams: CameraTargetSets["offset
     level.AddUpdater(() =>
     {
       const targetPosition = targetNode.getAbsolutePosition();
-      offsetBinding.cam.position.copyFrom(targetPosition).addInPlace(worldOffset);
-      offsetBinding.cam.setTarget(targetPosition);
+      offsetBinding.offsetCamera.position.copyFrom(targetPosition).addInPlace(worldOffset);
+      offsetBinding.offsetCamera.setTarget(targetPosition);
     });
   }
 }

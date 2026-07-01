@@ -1,0 +1,204 @@
+<h1>14 — API Guide (runtime)</h1>
+<p class="doc-links">Feature inventory: <a href="13-FEATURE-LIST.html">13 — Feature List</a> · Behavior quick-start: <a href="../LLM_SCRIPTING_CONTEXT.md">LLM_SCRIPTING_CONTEXT.md</a> · Scripting prose: <a href="05-SCRIPTING.html">05 — Scripting</a> · Input: <a href="12-INPUT.html">12 — Input</a></p>
+<p>Reference for <strong>behavior authors</strong> and anyone reading runtime code. Import from <code>@bjs/engine</code> in app behavior files. This guide covers the kit’s public surface — not every Babylon.js API.</p>
+
+<h2>Quick example</h2>
+<pre><code class="language-typescript">import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
+import type { InputActionMap } from "@bjs/engine";
+import { Vector3 } from "@babylonjs/core";
+
+export default class Patrol extends Behavior
+{
+  @exposed({ min: 0, max: 10 }) speed = 2;
+  @exposed({ type: "entity" }) target!: Entity;
+  @inputMap("Player") player!: InputActionMap;
+
+  OnStart(): void
+  {
+    // target is resolved before this runs
+  }
+
+  OnUpdate(deltaSeconds: number): void
+  {
+    const move = this.player.FindAction("Move")?.ReadVector2();
+    if (move !== undefined)
+    {
+      this.node.position.addInPlace(new Vector3(move.x, 0, move.y).scale(this.speed * deltaSeconds));
+    }
+  }
+
+  OnMessage(message: string, source: Entity): void
+  {
+    if (message === "Alert")
+    {
+      // react to trigger or GUI click from source
+    }
+  }
+}</code></pre>
+
+<h2 id="behavior">Behavior</h2>
+<p>Base class for all scripts. One <code>export default class</code> per file; filename stem = Blender registry key (<code>Patrol.ts</code> → <code>"Patrol"</code>).</p>
+<h3>Lifecycle (PascalCase required)</h3>
+<table><thead><tr><th>Method</th><th>When</th></tr></thead><tbody>
+<tr><td><code>OnStart(): void</code></td><td>Once, after load finishes and all <code>@exposed</code> entity refs resolve</td></tr>
+<tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every frame, inside <code>Level.RunFrame</code> (before physics step)</td></tr>
+<tr><td><code>OnDestroy(): void</code></td><td>When the level is disposed</td></tr>
+<tr><td><code>OnMessage(message, source): void</code></td><td>When this entity receives a message (triggers, 3D GUI, <code>SendMessage</code>)</td></tr>
+</tbody></table>
+<h3>Injected members</h3>
+<table><thead><tr><th>Member</th><th>Type</th><th>When set</th></tr></thead><tbody>
+<tr><td><code>entity</code></td><td><code>Entity</code></td><td>Before <code>OnStart</code></td></tr>
+<tr><td><code>scene</code></td><td>Babylon <code>Scene</code></td><td>Before <code>OnStart</code></td></tr>
+<tr><td><code>node</code></td><td><code>TransformNode</code> (getter)</td><td>Same as <code>entity.node</code></td></tr>
+<tr><td><code>input?</code></td><td><code>InputActionMap</code></td><td>Scene default map when the script has no <code>@inputMap</code> fields</td></tr>
+</tbody></table>
+<p>Scale continuous motion by <code>deltaSeconds</code>. Babylon <em>velocities</em> are already per-second — do not multiply those by <code>deltaSeconds</code>.</p>
+
+<h2 id="entity">Entity</h2>
+<p>One Blender object that exported successfully. File: <code>packages/engine/src/core/Entity.ts</code>.</p>
+<h3>Fields</h3>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>id</code></td><td>GUID string (<code>bjs_id</code>)</td></tr>
+<tr><td><code>name</code></td><td>Object name at export</td></tr>
+<tr><td><code>node</code></td><td>Babylon node (mesh, empty, camera, …)</td></tr>
+<tr><td><code>tag</code></td><td>From TAG component (default <code>"Untagged"</code>)</td></tr>
+<tr><td><code>attachments</code></td><td>All applied component rows (see <a href="#attachments">Attachments</a>)</td></tr>
+<tr><td><code>behaviors</code></td><td>Live <code>Behavior</code> instances from SCRIPT rows</td></tr>
+<tr><td><code>body?</code></td><td>Havok <code>PhysicsBody</code> when physics was built</td></tr>
+<tr><td><code>animations</code></td><td><code>AnimationGroup</code>s scoped to this node</td></tr>
+<tr><td><code>sounds</code></td><td><code>StaticSound</code>s from AUDIO components</td></tr>
+<tr><td><code>guiTextures</code></td><td>2D GUI textures from GUI components</td></tr>
+<tr><td><code>controls3D</code></td><td>3D GUI controls from GUI3D_* components</td></tr>
+<tr><td><code>particleSystems</code></td><td>Particle systems from PARTICLE components</td></tr>
+<tr><td><code>textRenderers</code></td><td>MSDF renderers from MSDF_TEXT components</td></tr>
+</tbody></table>
+<h3>Methods</h3>
+<table><thead><tr><th>Method</th><th>Returns</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>GetAttachments()</code></td><td>readonly attachment rows</td><td>Full list</td></tr>
+<tr><td><code>GetAttachment(type)</code></td><td>First row of type, or undefined</td><td>e.g. <code>GetAttachment("SCRIPT")?.behavior</code></td></tr>
+<tr><td><code>GetAttachmentsOfType(type)</code></td><td>All rows of type</td><td>e.g. multiple COLLIDER rows</td></tr>
+<tr><td><code>HasAttachment(type)</code></td><td><code>boolean</code></td><td></td></tr>
+<tr><td><code>GetBehavior(Ctor)</code></td><td>First instance of class</td><td><code>GetBehavior(Patrol)</code></td></tr>
+<tr><td><code>GetAnimation(name)</code></td><td><code>AnimationGroup?</code></td><td>Exact name, then substring match</td></tr>
+<tr><td><code>GetSound(name)</code></td><td><code>StaticSound?</code></td><td>File stem match</td></tr>
+<tr><td><code>GetGui(name)</code></td><td><code>AdvancedDynamicTexture?</code></td><td>JSON file stem</td></tr>
+<tr><td><code>GetControl3D(name)</code></td><td><code>Control3D?</code></td><td>Control name</td></tr>
+<tr><td><code>GetParticles(name)</code></td><td><code>IParticleSystem?</code></td><td>System JSON stem</td></tr>
+<tr><td><code>GetTextRenderer(name)</code></td><td><code>TextRenderer?</code></td><td>Font JSON stem</td></tr>
+<tr><td><code>SendMessage(message, source)</code></td><td><code>void</code></td><td>Calls <code>OnMessage</code> on every behavior on this entity</td></tr>
+</tbody></table>
+
+<h2 id="level">Level</h2>
+<p>Runtime container returned by <code>LevelLoader.Load</code>. File: <code>packages/engine/src/core/Level.ts</code>.</p>
+<h3>Fields (common)</h3>
+<table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>entities</code></td><td><code>Map&lt;string, Entity&gt;</code> by GUID</td></tr>
+<tr><td><code>activeCamera?</code></td><td>Exported / typed active camera</td></tr>
+<tr><td><code>shadowGenerators</code></td><td>One per casting light</td></tr>
+<tr><td><code>punctualLightingMode</code></td><td><code>"forward"</code> | <code>"clustered"</code> | <code>"forward-expanded"</code></td></tr>
+<tr><td><code>post?</code></td><td>Post-processing handles</td></tr>
+<tr><td><code>atmosphere?</code></td><td>Atmosphere addon handle</td></tr>
+<tr><td><code>constraints</code></td><td>Built physics joints</td></tr>
+<tr><td><code>debugEnabled</code></td><td>From manifest <code>debug</code> flag</td></tr>
+<tr><td><code>gui3DManager?</code></td><td>Shared 3D GUI manager</td></tr>
+</tbody></table>
+<h3>Methods</h3>
+<table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>ById(id)</code></td><td>Look up entity by GUID</td></tr>
+<tr><td><code>ByTag(tag)</code></td><td>All entities with matching <code>entity.tag</code></td></tr>
+<tr><td><code>ShowColliders(show?)</code></td><td>Toggle Havok wireframe debug view</td></tr>
+<tr><td><code>RefreshShadows()</code></td><td>Re-bake frozen shadow maps after moving casters</td></tr>
+<tr><td><code>AddUpdater(fn)</code></td><td>Per-frame callback after all <code>OnUpdate</code> (cameras use this)</td></tr>
+<tr><td><code>Dispose()</code></td><td>Teardown — input detach, <code>OnDestroy</code>, dispose assets</td></tr>
+</tbody></table>
+<p><code>Begin()</code> and <code>RunFrame()</code> are called by the loader — behaviors do not call them.</p>
+
+<h2 id="attachments">Attachments</h2>
+<p>Each successfully applied component becomes one row on <code>entity.attachments</code>. Types match manifest component types plus GUI3D variants.</p>
+<table><thead><tr><th><code>type</code></th><th><code>data</code></th><th>Runtime object on row</th></tr></thead><tbody>
+<tr><td><code>TAG</code></td><td>tag string</td><td>—</td></tr>
+<tr><td><code>COLLIDER</code></td><td>collider manifest</td><td><code>body</code> (shared per entity)</td></tr>
+<tr><td><code>RIGIDBODY</code></td><td>body manifest</td><td><code>body</code> (same ref as colliders)</td></tr>
+<tr><td><code>SCRIPT</code></td><td>script + vars</td><td><code>behavior</code></td></tr>
+<tr><td><code>AUDIO</code></td><td>audio manifest</td><td><code>sound</code></td></tr>
+<tr><td><code>GUI</code></td><td>gui manifest</td><td><code>texture</code></td></tr>
+<tr><td><code>PARTICLE</code></td><td>particle manifest</td><td><code>system</code>, optional <code>emptyEmitter</code></td></tr>
+<tr><td><code>MSDF_TEXT</code></td><td>font paths + text</td><td><code>renderer</code></td></tr>
+<tr><td><code>CONSTRAINT</code></td><td>constraint manifest</td><td><code>constraint</code></td></tr>
+<tr><td><code>GUI3D_*</code></td><td>layout + events</td><td><code>control</code></td></tr>
+</tbody></table>
+<p>Convenience arrays on <code>Entity</code> (<code>sounds</code>, <code>behaviors</code>, …) mirror attachments for common access patterns.</p>
+
+<h2 id="exposed">@exposed (Blender-editable fields)</h2>
+<p>Decorator: <code>exposed(options?)</code> from <code>@bjs/engine</code>. Must stay lowercase — Blender regex-parses the token literally.</p>
+<table><thead><tr><th>Type / option</th><th>Blender UI</th><th>Runtime value</th></tr></thead><tbody>
+<tr><td><code>float</code> / <code>int</code> (+ min, max, step)</td><td>Number slider</td><td><code>number</code></td></tr>
+<tr><td><code>bool</code></td><td>Checkbox</td><td><code>boolean</code></td></tr>
+<tr><td><code>string</code></td><td>Text field</td><td><code>string</code></td></tr>
+<tr><td><code>vector3</code> or <code>[n,n,n]</code> default</td><td>XYZ fields</td><td><code>Vector3</code></td></tr>
+<tr><td><code>color</code> or <code>Color3</code> default</td><td>Color picker</td><td><code>Color3</code></td></tr>
+<tr><td><code>type: "entity"</code></td><td>Object picker</td><td><code>Entity</code> (resolved before <code>OnStart</code>)</td></tr>
+<tr><td><code>type: "enum"</code>, <code>options: [...]</code></td><td>Dropdown</td><td><code>string</code></td></tr>
+<tr><td><code>type: "list"</code>, <code>of: "entity"|…</code></td><td>List rows</td><td>Array (entity slots resolve by index)</td></tr>
+</tbody></table>
+<p>Defaults in source must be <strong>single-line literals</strong> so Blender’s parser can read them. After changing fields, press <strong>Sync</strong> on the SCRIPT component.</p>
+
+<h2 id="input">Input (@inputMap + polling)</h2>
+<p>See <a href="12-INPUT.html">12 — Input</a> for authoring. In behaviors:</p>
+<pre><code class="language-typescript">@inputMap("Player") player!: InputActionMap;  // named map
+@inputMap() ui!: InputActionMap;              // scene default map</code></pre>
+<h3>InputActionMap</h3>
+<table><thead><tr><th>Method / property</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>FindAction(name)</code></td><td>Get action by name (warns if missing)</td></tr>
+<tr><td><code>Enable()</code> / <code>Disable()</code></td><td>Toggle whole map (loader enables on <code>Begin</code>)</td></tr>
+</tbody></table>
+<h3>InputAction (polling)</h3>
+<table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>ReadValue()</code></td><td>Scalar (VECTOR2 → magnitude)</td></tr>
+<tr><td><code>ReadVector2()</code></td><td><code>{ x, y }</code></td></tr>
+<tr><td><code>IsPressed()</code></td><td>True while actuated</td></tr>
+<tr><td><code>WasPressedThisFrame()</code></td><td>Edge: just pressed this frame</td></tr>
+<tr><td><code>WasReleasedThisFrame()</code></td><td>Edge: just released</td></tr>
+<tr><td><code>WasPerformedThisFrame()</code></td><td>Edge: performed callback fired</td></tr>
+</tbody></table>
+<h3>InputAction (callbacks)</h3>
+<p><code>action.started.add(fn)</code>, <code>action.performed.add(fn)</code>, <code>action.canceled.add(fn)</code> — same semantics as Unity Input System.</p>
+<h3>Global access (optional)</h3>
+<p><code>InputManager.actions</code> · <code>InputManager.FindAction("Player/Move")</code> · <code>InputManager.GetDefaultMap()</code> — prefer <code>@inputMap</code> fields on behaviors.</p>
+
+<h2 id="registry">BehaviorRegistry</h2>
+<p>Maps script name → class. Apps register before load:</p>
+<pre><code class="language-typescript">const registry = new BehaviorRegistry();
+const modules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
+AutoRegisterBehaviors(registry, modules);
+const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></pre>
+<p><code>registry.Create("Patrol")</code> is called internally for each SCRIPT row.</p>
+
+<h2 id="app">App bootstrap (not in behaviors)</h2>
+<p>Typical <code>main.ts</code> responsibilities — see <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>:</p>
+<ol>
+<li><code>FetchAndValidateManifest(url)</code> — optional; required before <code>CreateLevelEngine</code> when using large-world rendering</li>
+<li><code>CreateLevelEngine(canvas, antialias, manifest)</code></li>
+<li><code>new Scene(engine)</code></li>
+<li><code>await EnableHavokPhysics(scene, …)</code> — before <code>Load</code></li>
+<li><code>LevelLoader.Load(manifestUrl, manifest?, options?)</code></li>
+<li><code>engine.runRenderLoop(() =&gt; scene.render())</code></li>
+</ol>
+<h3>LevelLoaderOptions</h3>
+<table><thead><tr><th>Option</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>shadows</code></td><td><code>true</code></td><td>Create shadow generators</td></tr>
+<tr><td><code>shadowMapSize</code></td><td><code>1024</code></td><td>Shadow map resolution</td></tr>
+<tr><td><code>freezeShadows</code></td><td>from manifest</td><td>Static shadow bake</td></tr>
+<tr><td><code>debugColliders</code></td><td><code>false</code></td><td>Wireframes on load (also gated by debug flag)</td></tr>
+<tr><td><code>clusterPunctualLights</code></td><td>from manifest</td><td>Light clustering policy</td></tr>
+<tr><td><code>lightBudget</code></td><td><code>8</code></td><td>Max forward punctual lights</td></tr>
+</tbody></table>
+
+<h2 id="physics">Physics (from behaviors)</h2>
+<p>When an entity has a body: <code>this.entity.body</code> is a Babylon <code>PhysicsBody</code>. Use Havok APIs for impulses, velocities, etc. Collider overlay: app debug key → <code>level.ShowColliders()</code> (when <code>level.debugEnabled</code>).</p>
+
+<h2 id="messages">Messages</h2>
+<p>Triggers and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target gets <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
+
+<h2>Related exports</h2>
+<p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types.ts</code>), subsystem helpers (physics, lights, …), and UI loaders — mainly for app code and advanced scripts. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>

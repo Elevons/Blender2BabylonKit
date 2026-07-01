@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 05 — Scripting</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Engine</a>
+    <span class="sep">/</span>
+    <a href="../blender/00-INDEX.html">Blender</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="04-LOAD-PIPELINE.html">Prev</a> <span class="dim">·</span> <a href="06-PHYSICS.html">Next →</a></p>
+  <article><h1>05 — Scripting: Entity, Behavior, @exposed, @inputMap</h1>
+<p class="doc-links">API tables: <a href="14-API-GUIDE.html">14 — API Guide</a> · Feature inventory: <a href="13-FEATURE-LIST.html">13 — Feature List</a></p>
+<p class="doc-links">Subsystem diagram: <a href="scripting.html">scripting.html</a> · Code traces: <a href="trace-lifecycle.html">lifecycle</a> · <a href="trace-components.html">components</a> · <a href="trace-exposed.html">@exposed</a> · <a href="../blender/trace-exposed.html">Blender @exposed</a> · <a href="../blender/trace-components.html">Blender components</a></p>
+<h2>Entity (<code>core/Entity.ts</code>)</h2>
+<p>The runtime wrapper around one Blender object: <code>id</code> (GUID), <code>name</code>, <code>node</code> (the glb TransformNode), <code>tag</code>, <code>attachments</code> (live registry — one row per successfully applied component; types in <code>core/attachments.ts</code>), <code>behaviors</code>, <code>body?</code> (Havok), <code>animations</code> (its AnimationGroups), <code>sounds</code> (its StaticSounds).</p>
+<p><strong>Component vs behavior:</strong> a *component* is authored data (TAG, COLLIDER, SCRIPT, …); a *behavior* is a runtime script class from a SCRIPT component. <code>attachments</code> is the single source of truth for &quot;what components does this entity have?&quot; — each row pairs manifest <code>data</code> with its runtime object when one exists (<code>behavior</code>, <code>body</code>, <code>sound</code>, <code>texture</code>, <code>system</code>, <code>constraint</code>, <code>control</code>). Query via <code>GetAttachment(type)</code> (first row), <code>GetAttachmentsOfType(type)</code>, or <code>HasAttachment(type)</code> — e.g. <code>GetAttachment(&quot;SCRIPT&quot;)?.behavior</code>. Convenience lookups: <code>GetBehavior(Ctor)</code> (by class), <code>GetAnimation(name)</code>, <code>GetSound(name)</code> (exact match then contains), and <code>SendMessage(message, source)</code> → every behavior's <code>OnMessage</code>. There is no <code>entity.manifest</code> or <code>GetComponent</code>. Full apply chain: <a href="trace-components.html">trace-components</a> · Blender authoring: <a href="../blender/trace-components.html">Blender trace-components</a>.</p>
+<p>Three ways to reach another entity: an <code>@exposed({type:&quot;entity&quot;})</code> field (cleanest), <code>node.metadata.bjsEntity</code> from a node, or <code>level.ById</code>/<code>ByTag</code>.</p>
+<h2>Behavior lifecycle (<code>scripting/Behavior.ts</code>)</h2>
+<p>Four hooks — override only what you need. Names are <strong>PascalCase</strong>; a lowercase <code>onStart</code> silently never runs (it stops overriding the base hook). Interactive trace with Babylon integration: <a href="trace-lifecycle.html">trace-lifecycle</a>.</p>
+<table><thead><tr><th>Hook</th><th>When</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>OnStart(): void</code></td><td>Once, after the whole level loads and every <code>@exposed</code> entity ref resolves</td><td>Cross-entity order unspecified — guard <code>null</code> refs. Subscribe observers here; clean up in <code>OnDestroy</code>.</td></tr>
+<tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every render frame</td><td><code>deltaSeconds</code> is seconds (<code>Engine.getDeltaTime() / 1000</code>). Scale continuous motion by it. Babylon <em>velocities</em> are already per-second — do not multiply those by <code>deltaSeconds</code>.</td></tr>
+<tr><td><code>OnDestroy(): void</code></td><td><code>Level.Dispose</code></td><td>Remove observers, dispose constraints you created. Errors are swallowed during teardown.</td></tr>
+<tr><td><code>OnMessage(message, source): void</code></td><td>Trigger volumes, 3D GUI clicks, or <code>SendMessage</code></td><td><code>source</code> is the sending entity. See <a href="trace-trigger.html">trace-trigger</a> for the physics path.</td></tr>
+</tbody></table>
+<p><strong>Injected before <code>OnStart</code>:</strong> <code>entity</code>, <code>scene</code>; <code>node</code> is a getter for <code>entity.node</code>; <code>input?</code> when the script has no <code>@inputMap</code> fields (scene default map).</p>
+<h3>How it plugs into Babylon</h3>
+<p>Hooks are <em>not</em> called during <code>InstantiateScripts</code> — only after <code>Level.Begin</code> at end of load. Each <code>scene.render()</code> (from the app's <code>runRenderLoop</code>) fires <code>RunFrame</code> on <code>onBeforeRenderObservable</code>: input process → all <code>OnUpdate</code> → camera updaters → input end frame. Full sequence diagram, delta-time source, and physics step order: <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="trace-runtime-loop.html">trace-runtime-loop</a>. Load pass detail: <a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a>. Input edges: <a href="12-INPUT.html#input">12 — Input (frame lifecycle)</a>.</p>
+<h2>The registry contract (<code>scripting/BehaviorRegistry.ts</code>)</h2>
+<p><code>BehaviorRegistry</code> maps a SCRIPT component's name → Behavior class (it registers *behaviors*; TAG/COLLIDER/etc. are applied directly by the loader). <code>main.ts</code> auto-registers every file in <code>behaviors/</code> <strong>by filename stem</strong> via <code>import.meta.glob</code> + <code>AutoRegisterBehaviors</code> — exactly the key Blender's &quot;Open Script…&quot; picker stores. Hence the contract: <strong>one class per file, file named after the class, <code>export default</code>.</strong></p>
+<h2><code>@exposed</code> (<code>scripting/exposed.ts</code>)</h2>
+<p>Marks a field editable per-object in Blender. The decorator only records name + UI hints in a WeakMap; <code>ApplyExposedVars</code> writes the manifest's stored values onto the instance <strong>before OnStart</strong> (entity refs deferred to the loader's second pass; lists handled per element type). Types: <code>float int bool string vector3 color entity enum list</code> (+ <code>of</code> for list elements). Blender can't run TS — <code>core/script_parse.py</code> regex-parses the source — so: <strong>single-line literal defaults only</strong>, explicit <code>type:&quot;entity&quot;</code> hints, entity lists start <code>[]</code>, and the decorator name stays lowercase (the cross-language contract; the one PascalCase exception, see <a href="../STYLE_GUIDE.md">STYLE_GUIDE</a>). Press <strong>Sync</strong> in Blender after changing exposed fields.</p>
+<h2>Input</h2>
+<p>Input Actions, bindings, <code>@inputMap</code>, and per-frame polling are covered in <a href="12-INPUT.html">12 — Input</a>.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/05-SCRIPTING.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

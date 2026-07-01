@@ -4,10 +4,11 @@ import bpy
 from bpy.props import CollectionProperty, StringProperty
 from bpy.types import Material
 
-from .properties import BJSNmeTexture
+from .properties import BJSNmeTexture, BJSNmeInput
 
 classes = (
     BJSNmeTexture,
+    BJSNmeInput,
 )
 
 
@@ -23,9 +24,11 @@ def register():
                     "copied next to the level export",
     )
     Material.bjs_nme_textures = CollectionProperty(type=BJSNmeTexture)
+    Material.bjs_nme_inputs = CollectionProperty(type=BJSNmeInput)
 
 
 def unregister():
+    del Material.bjs_nme_inputs
     del Material.bjs_nme_textures
     del Material.bjs_nme_file
     for cls in reversed(classes):

@@ -1,0 +1,111 @@
+<h1>02 — Runtime Basics: loop, objects, and Babylon hooks</h1>
+<p class="doc-links">Subsystem diagram: <a href="runtime-loop.html">runtime-loop.html</a> · Code traces: <a href="trace-runtime-loop.html">runtime loop</a> · <a href="trace-lifecycle.html">lifecycle</a> · <a href="trace-load.html">load</a></p>
+<p><strong>Behavior authors:</strong> this is usually your first engine chapter — it explains <strong>what runs when</strong> and how the kit hooks into Babylon.js. Skim <a href="01-ARCHITECTURE.html">01 — Architecture</a> first only if you need the two-file export model (glb + manifest).</p>
+<h2>App vs kit</h2>
+<p>Your game app (e.g. <code>apps/playground/src/main.ts</code>) owns the Babylon <strong>Engine</strong>, the <strong>Scene</strong>, and the browser render loop. The kit (<code>@bjs/engine</code>) owns loading a level into that scene and driving gameplay scripts.</p>
+<table><thead><tr><th>Layer</th><th>Typical owner</th><th>Role</th></tr></thead><tbody>
+<tr><td><code>Engine</code></td><td>App</td><td>WebGL/WebGPU context, <code>runRenderLoop</code>, <code>getDeltaTime()</code></td></tr>
+<tr><td><code>Scene</code></td><td>App</td><td>Babylon scene graph — meshes, lights, cameras, physics plugin</td></tr>
+<tr><td><code>LevelLoader</code> / <code>Level</code></td><td>Kit</td><td>Load manifest + glb; container for entities, subsystems, update loop</td></tr>
+<tr><td><code>Entity</code> / <code>Behavior</code></td><td>Kit</td><td>One Blender object + its SCRIPT instances and component attachments</td></tr>
+<tr><td><code>TransformNode</code> / <code>PhysicsBody</code></td><td>Babylon</td><td>Actual nodes and Havok bodies the kit creates from manifest data</td></tr>
+</tbody></table>
+<p>The kit never calls <code>engine.runRenderLoop</code> — that is always the app. Without it, <code>OnUpdate</code> never runs.</p>
+<h2>App bootstrap (once, at startup)</h2>
+<p>Typical order in <code>main.ts</code>:</p>
+<ol>
+<li><strong>Fetch manifest</strong> (optional but required for large-world rendering) — <code>FetchAndValidateManifest</code> then <code>CreateLevelEngine(canvas, antialias, manifest)</code> from <code>core/bootstrap.ts</code> when the Blender scene enables Large World Rendering.</li>
+<li><code>const scene = new Scene(engine)</code></li>
+<li><code>await EnableHavokPhysics(scene, …)</code> — must run <strong>before</strong> <code>Load</code>; registers Havok on the Babylon scene.</li>
+<li>Register behaviors (<code>BehaviorRegistry</code> + <code>AutoRegisterBehaviors</code>).</li>
+<li><code>const level = await loader.Load(manifestUrl, manifest)</code> — async; builds everything and calls <code>level.Begin()</code> inside <code>FinalizeLevel</code> (see <a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a>).</li>
+<li><code>engine.runRenderLoop(() =&gt; scene.render())</code> — starts the per-frame loop.</li>
+</ol>
+<p>Debug keys (C/I), fallback cameras, and resize handlers are app concerns — see <a href="09-WORKFLOW.html">09 — Workflow</a>.</p>
+<h2>Load time vs run time</h2>
+<table><thead><tr><th>Phase</th><th>When</th><th>What happens</th></tr></thead><tbody>
+<tr><td><strong>Load</strong></td><td><code>LevelLoader.Load()</code> until it returns</td><td>Append glb, build entities, <code>ApplyComponents</code>, <code>InstantiateScripts</code> (no lifecycle hooks yet), second pass for entity refs, <code>FinalizeLevel</code>, then <code>Begin()</code> → every <code>OnStart</code> <strong>once</strong>.</td></tr>
+<tr><td><strong>Run</strong></td><td>Every frame after <code>runRenderLoop</code></td><td><code>scene.render()</code> → Babylon observables → <code>Level.RunFrame</code> → every <code>OnUpdate</code>.</td></tr>
+</tbody></table>
+<p><code>OnStart</code> is <em>not</em> called from the render loop. It runs once at the end of load, after physics bodies, triggers, and constraints exist.</p>
+<h2>The frame loop (how <code>OnUpdate</code> hooks into Babylon)</h2>
+<p>Each browser frame, the app calls <code>scene.render()</code>. Babylon fires <code>onBeforeRenderObservable</code> callbacks, then steps physics, then draws. The kit registers <code>Level.RunFrame</code> on that observable in <code>Level.Begin()</code>.</p>
+<pre class="mermaid">
+sequenceDiagram
+  participant App as main.ts
+  participant Engine as Engine.runRenderLoop
+  participant Scene as Scene.render
+  participant Particles as onBeforeRender_first
+  participant Level as Level.RunFrame
+  participant Physics as Havok_step
+  participant Draw as GPU_draw
+  participant Msdf as onAfterRender
+
+  App-&gt;&gt;Engine: requestAnimationFrame tick
+  Engine-&gt;&gt;Scene: render()
+  Scene-&gt;&gt;Particles: empty emitter positions
+  Scene-&gt;&gt;Level: onBeforeRenderObservable
+  Note over Level: InputManager.Process
+  Note over Level: all behavior.OnUpdate
+  Note over Level: Level.AddUpdater callbacks
+  Note over Level: InputManager.EndFrame
+  Scene-&gt;&gt;Physics: physics engine step
+  Scene-&gt;&gt;Draw: meshes shadows post
+  Scene-&gt;&gt;Msdf: MSDF text pass
+</pre>
+<p>Key facts:</p>
+<ul>
+<li><strong><code>deltaSeconds</code></strong> passed to <code>OnUpdate</code> is <code>scene.getEngine().getDeltaTime() / 1000</code> (seconds, not milliseconds) — read inside the observer registered in <code>Level.Begin</code> (<code>core/Level.ts</code>).</li>
+<li><strong><code>OnUpdate</code> runs once per <code>scene.render()</code></strong>, on <code>onBeforeRenderObservable</code>, typically <em>before</em> Havok's step and <em>before</em> the GPU draw for that frame.</li>
+<li><strong>Particle empty-emitter tracking</strong> also uses <code>onBeforeRenderObservable</code> with <code>insertFirst=true</code>, so it runs before <code>RunFrame</code> (<code>subsystems/particles.ts</code>).</li>
+<li><strong>MSDF text</strong> draws on <code>onAfterRenderObservable</code> — after the main pass (<code>ui/msdfText.ts</code>).</li>
+</ul>
+<p>Inside <code>RunFrame</code>, order is fixed:</p>
+<ol>
+<li><code>InputManager.Process()</code> — poll gamepad, evaluate actions, fire callbacks</li>
+<li>Every behavior's <code>OnUpdate(deltaSeconds)</code> (entity iteration order unspecified)</li>
+<li>Registered <code>Level.AddUpdater</code> callbacks (offset/follow cameras)</li>
+<li><code>InputManager.EndFrame()</code> — so <code>WasPressedThisFrame</code> edges last exactly one frame</li>
+</ol>
+<p>Interactive trace: <a href="trace-runtime-loop.html">trace-runtime-loop</a> · <a href="trace-lifecycle.html">trace-lifecycle</a>.</p>
+<h2>Behavior lifecycle (summary)</h2>
+<p>Full scripting detail: <a href="05-SCRIPTING.html">05 — Scripting</a>. Input polling: <a href="12-INPUT.html">12 — Input</a>.</p>
+<table><thead><tr><th>Hook</th><th>When</th></tr></thead><tbody>
+<tr><td><code>OnStart()</code></td><td>Once, end of load (<code>Level.Begin</code>), after all entity refs resolve</td></tr>
+<tr><td><code>OnUpdate(deltaSeconds)</code></td><td>Every frame, inside <code>RunFrame</code> (see above)</td></tr>
+<tr><td><code>OnDestroy()</code></td><td><code>Level.Dispose</code> — remove observers you added in <code>OnStart</code></td></tr>
+<tr><td><code>OnMessage(message, source)</code></td><td>Triggers, 3D GUI clicks, or <code>Entity.SendMessage</code> — not tied to the frame loop</td></tr>
+</tbody></table>
+<p>Hooks must be <strong>PascalCase</strong> (<code>OnStart</code>, not <code>onStart</code>). Scale continuous motion by <code>deltaSeconds</code>; Babylon <em>velocities</em> are already per-second — do not multiply those by <code>deltaSeconds</code>.</p>
+<h2>Other kit systems on the timeline</h2>
+<table><thead><tr><th>System</th><th>Babylon hook</th><th>When</th><th>Kit entry</th></tr></thead><tbody>
+<tr><td>Behaviors</td><td><code>onBeforeRenderObservable</code></td><td>Before physics/draw each frame</td><td><code>Level.RunFrame</code></td></tr>
+<tr><td>Input actions</td><td>Same observer + keyboard observable</td><td>Process/EndFrame inside RunFrame</td><td><code>InputManager</code></td></tr>
+<tr><td>Particles (empty emitters)</td><td><code>onBeforeRender</code> (insert first)</td><td>Before RunFrame</td><td><code>WireParticleEmitterTracking</code></td></tr>
+<tr><td>Physics (Havok)</td><td>Internal to <code>scene.render()</code></td><td>After beforeRender callbacks</td><td><code>EnableHavokPhysics</code></td></tr>
+<tr><td>Animation clips</td><td><code>AnimationGroup</code></td><td>Babylon animation system each frame</td><td><code>ApplyAutoPlayAnimations</code></td></tr>
+<tr><td>Post / atmosphere</td><td>Camera / effects</td><td>Setup in <code>FinalizeLevel</code>; post after <code>Begin</code></td><td><code>ApplyPostProcessing</code></td></tr>
+<tr><td>MSDF text</td><td><code>onAfterRenderObservable</code></td><td>After main draw</td><td><code>WireMsdfTextRendering</code></td></tr>
+</tbody></table>
+<h2>Physics vs <code>OnUpdate</code></h2>
+<p>Havok steps <strong>after</strong> your <code>OnUpdate</code> callbacks for that frame. Practical rules:</p>
+<ul>
+<li><strong>STATIC</strong> bodies — never move; colliders only.</li>
+<li><strong>DYNAMIC</strong> — use forces, impulses, or set velocity; writing <code>node.position</code> every frame fights the solver unless the body is <strong>ANIMATED</strong>.</li>
+<li><strong>ANIMATED</strong> — drive <code>node</code> transforms in <code>OnUpdate</code> (moving platforms, kinematic characters). See <a href="06-PHYSICS.html#physics-vs-onupdate">06 — Physics</a>.</li>
+</ul>
+<h2>Practical rules for behavior authors</h2>
+<ul>
+<li>Subscribe to Babylon observables in <code>OnStart</code>; remove them in <code>OnDestroy</code>.</li>
+<li>Use <code>@exposed</code> entity refs — they resolve before <code>OnStart</code>; guard <code>null</code> anyway.</li>
+<li>Do not expect a <code>Level</code> handle on behaviors — use <code>level.ById</code> from app code or <code>@exposed</code> fields.</li>
+<li>Component data vs runtime code: TAG/COLLIDER/SCRIPT are manifest <em>components</em>; only SCRIPT rows become <code>Behavior</code> classes. See <a href="trace-components.html">trace-components</a>.</li>
+</ul>
+<h2>Where to go next</h2>
+<ul>
+<li><a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a> — what happens during <code>Load()</code></li>
+<li><a href="05-SCRIPTING.html">05 — Scripting</a> — <code>@exposed</code>, registry, entity API</li>
+<li><a href="12-INPUT.html">12 — Input</a> — action maps and frame edges</li>
+<li><a href="06-PHYSICS.html">06 — Physics</a> — bodies, triggers, constraints</li>
+<li><a href="10-FEATURE-TRACES.html">10 — Feature Traces</a> — Blender → runtime file chains</li>
+</ul>

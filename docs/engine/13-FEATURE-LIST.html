@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 13 — Feature List</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Engine</a>
+    <span class="sep">/</span>
+    <a href="../blender/00-INDEX.html">Blender</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="12-INPUT.html">Prev</a> <span class="dim">·</span> <a href="14-API-GUIDE.html">Next →</a></p>
+  <article><h1>13 — Feature List</h1>
+<p class="doc-links">Pipeline detail per feature: <a href="10-FEATURE-TRACES.html">10 — Feature Traces</a> · Runtime API: <a href="14-API-GUIDE.html">14 — API Guide</a> · Behavior authoring: <a href="../LLM_SCRIPTING_CONTEXT.md">LLM_SCRIPTING_CONTEXT.md</a></p>
+<p>Everything the kit can author in Blender and consume at runtime, in one place. Use this page to answer <strong>“does the kit support X?”</strong> and <strong>“where do I click?”</strong> Follow the trace link when you need the step-by-step file chain.</p>
+
+<h2>I want to…</h2>
+<table><thead><tr><th>Goal</th><th>Start here</th></tr></thead><tbody>
+<tr><td>See how one feature flows Blender → game</td><td><a href="10-FEATURE-TRACES.html">10 — Feature Traces</a> (pick a card)</td></tr>
+<tr><td>Write or debug a behavior script</td><td><a href="14-API-GUIDE.html">14 — API Guide</a> · <a href="05-SCRIPTING.html">05 — Scripting</a></td></tr>
+<tr><td>Understand load order</td><td><a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a> · <a href="trace-load.html">trace-load</a></td></tr>
+<tr><td>Understand the frame loop</td><td><a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="trace-runtime-loop.html">trace-runtime-loop</a></td></tr>
+<tr><td>Fix export warnings</td><td><a href="09-WORKFLOW.html#validator">Validator</a> · <a href="../blender/trace-validate.html">trace-validate</a></td></tr>
+<tr><td>Iterate in Blender (Ctrl+S)</td><td><a href="09-WORKFLOW.html">09 — Workflow</a> · <a href="trace-livelink.html">trace-livelink</a></td></tr>
+</tbody></table>
+
+<h2>Where you click in Blender</h2>
+<table><thead><tr><th>Panel</th><th>Scope</th><th>What it controls</th></tr></thead><tbody>
+<tr><td><strong>Babylon Object</strong> (viewport N-panel)</td><td>Selected object</td><td>Component stack (collider, script, audio, GUI, …), light/camera/animation child panels</td></tr>
+<tr><td><strong>Babylon Scene</strong> (viewport N-panel)</td><td>Whole scene</td><td>Environment, fog, atmosphere, post-processing, input actions, export, Live Link, debug build, large-world rendering</td></tr>
+<tr><td><strong>Properties › Material › Babylon</strong></td><td>Material datablock</td><td>NME JSON, <strong>Scan NME</strong>, <strong>Extract Textures…</strong>, texture/input overrides</td></tr>
+</tbody></table>
+
+<h2>Object components</h2>
+<p>Each row in the Babylon Object <strong>Components</strong> list becomes one entry in <code>entities[].components[]</code> in the manifest (when enabled). Multiple rows of the same type are allowed where noted.</p>
+<table><thead><tr><th>Component</th><th>What it does (plain)</th><th>Runtime result</th><th>Trace</th></tr></thead><tbody>
+<tr><td><strong>TAG</strong></td><td>Text label for queries and trigger filters</td><td><code>entity.tag</code>, attachment row</td><td><a href="10-FEATURE-TRACES.html#tag">feature trace</a></td></tr>
+<tr><td><strong>SCRIPT</strong></td><td>Attach a TypeScript behavior + tunable <code>@exposed</code> fields</td><td><code>Behavior</code> instance on <code>entity.behaviors</code></td><td><a href="10-FEATURE-TRACES.html#script">feature trace</a> · <a href="trace-exposed.html">trace-exposed</a></td></tr>
+<tr><td><strong>COLLIDER</strong></td><td>Collision shape (box, sphere, convex, mesh, …); optional trigger events</td><td>Part of one <code>PhysicsBody</code> per entity (compound if several)</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a> · <a href="trace-physics.html">trace-physics</a></td></tr>
+<tr><td><strong>RIGIDBODY</strong></td><td>Mass, friction, dynamics (static / dynamic / animated)</td><td>Same body as colliders on that object</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a></td></tr>
+<tr><td><strong>CONSTRAINT</strong></td><td>Physics joint to another body (hinge, slider, 6DoF, …)</td><td>Havok constraint on <code>level.constraints</code></td><td><a href="10-FEATURE-TRACES.html#constraint">feature trace</a> · <a href="trace-constraint.html">trace-constraint</a></td></tr>
+<tr><td><strong>CAMERA</strong></td><td>Replace exported camera with orbit / follow / geospatial controls</td><td>Typed Babylon camera; may become <code>level.activeCamera</code></td><td><a href="10-FEATURE-TRACES.html#camera">feature trace</a> · <a href="trace-cameras.html">trace-cameras</a></td></tr>
+<tr><td><strong>AUDIO</strong></td><td>Sound file (2D or 3D spatial)</td><td><code>StaticSound</code> on <code>entity.sounds</code></td><td><a href="10-FEATURE-TRACES.html#audio">feature trace</a> · <a href="trace-audio.html">trace-audio</a></td></tr>
+<tr><td><strong>GUI</strong></td><td>2D HUD or mesh-projected UI from GUI Editor JSON</td><td><code>AdvancedDynamicTexture</code></td><td><a href="10-FEATURE-TRACES.html#gui2d">feature trace</a> · <a href="trace-gui.html">trace-gui</a></td></tr>
+<tr><td><strong>PARTICLE</strong></td><td>Particle or Node Particle system JSON</td><td><code>IParticleSystem</code> on entity</td><td><a href="10-FEATURE-TRACES.html#particles">feature trace</a> · <a href="trace-particles.html">trace-particles</a></td></tr>
+<tr><td><strong>MSDF_TEXT</strong></td><td>Crisp 3D labels (bmfont JSON + atlas PNG)</td><td><code>TextRenderer</code>; draws after main pass</td><td><a href="trace-msdfText.html">trace-msdfText</a> · <a href="11-UI.html">11 — UI</a></td></tr>
+<tr><td><strong>GUI3D_BUTTON</strong></td><td>3D button plate (text or image)</td><td><code>Control3D</code>; click → <code>OnMessage</code></td><td rowspan="9"><a href="10-FEATURE-TRACES.html#gui3d">feature trace</a> · <a href="trace-gui3d.html">trace-gui3d</a></td></tr>
+<tr><td><strong>GUI3D_HOLO</strong></td><td>Holographic button</td><td><code>Control3D</code></td></tr>
+<tr><td><strong>GUI3D_TOUCH_HOLO</strong></td><td>Holographic button with near-touch</td><td><code>Control3D</code></td></tr>
+<tr><td><strong>GUI3D_MESH</strong></td><td>This mesh becomes clickable</td><td><code>Control3D</code></td></tr>
+<tr><td><strong>GUI3D_STACK</strong></td><td>Row/column layout panel for child controls</td><td><code>Control3D</code> panel</td></tr>
+<tr><td><strong>GUI3D_SPHERE</strong></td><td>Arrange controls on a sphere</td><td><code>Control3D</code> panel</td></tr>
+<tr><td><strong>GUI3D_CYLINDER</strong></td><td>Arrange controls on a cylinder</td><td><code>Control3D</code> panel</td></tr>
+<tr><td><strong>GUI3D_PLANE</strong></td><td>Arrange controls on a plane</td><td><code>Control3D</code> panel</td></tr>
+<tr><td><strong>GUI3D_SCATTER</strong></td><td>Randomized scatter layout</td><td><code>Control3D</code> panel</td></tr>
+</tbody></table>
+
+<h2>Auto-derived per object (no component row)</h2>
+<p>These come from ordinary Blender objects and export blocks on the entity — you do not add a component for them.</p>
+<table><thead><tr><th>Blender object</th><th>Manifest block</th><th>Runtime</th><th>Trace</th></tr></thead><tbody>
+<tr><td><strong>Lamp</strong></td><td><code>light</code> (+ optional <code>shadow</code>)</td><td>Babylon light; may cast shadows</td><td><a href="10-FEATURE-TRACES.html#light">lights</a> · <a href="trace-lights.html">trace-lights</a></td></tr>
+<tr><td><strong>Camera</strong></td><td><code>camera</code></td><td>FreeCamera (+ optional CAMERA component override)</td><td><a href="10-FEATURE-TRACES.html#camera">camera</a></td></tr>
+<tr><td><strong>NLA strips</strong></td><td><code>animation</code></td><td>Autoplay chosen clip after load</td><td><a href="10-FEATURE-TRACES.html#animation">animation</a></td></tr>
+<tr><td><strong>Mesh + material</strong></td><td>— (geometry in glb)</td><td>Imported mesh; optional NME override via material</td><td><a href="10-FEATURE-TRACES.html#materials">materials</a></td></tr>
+</tbody></table>
+
+<h2>Scene-wide settings (<code>scene</code> block)</h2>
+<p>Edited in <strong>Babylon Scene</strong>; serialized into the manifest’s <code>scene</code> object (not per-entity components).</p>
+<table><thead><tr><th>Feature</th><th>What it does</th><th>Prose</th><th>Trace</th></tr></thead><tbody>
+<tr><td><strong>Clear / ambient color</strong></td><td>Background and fill light</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="trace-load.html">trace-load</a></td></tr>
+<tr><td><strong>Environment / skybox</strong></td><td>IBL from World texture or default studio HDR</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="../blender/scene-settings.html">scene-settings</a></td></tr>
+<tr><td><strong>Fog</strong></td><td>Linear, exponential, or exponential²</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td>—</td></tr>
+<tr><td><strong>Atmosphere</strong></td><td>Physical sky (replaces env skybox when on)</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="10-FEATURE-TRACES.html#atmosphere">feature trace</a> · <a href="trace-atmosphere.html">trace-atmosphere</a></td></tr>
+<tr><td><strong>Post-processing</strong></td><td>Bloom, DOF, SSAO, tone mapping, LUTs, …</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="10-FEATURE-TRACES.html#post">feature trace</a> · <a href="trace-post.html">trace-post</a></td></tr>
+<tr><td><strong>Input Actions</strong></td><td>Maps, actions, bindings + scene default map</td><td><a href="12-INPUT.html">12 — Input</a></td><td><a href="10-FEATURE-TRACES.html#input">feature trace</a> · <a href="trace-input.html">trace-input</a></td></tr>
+<tr><td><strong>Light budget / clustering</strong></td><td>Forward vs clustered punctual lights</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="trace-lights.html">trace-lights</a></td></tr>
+<tr><td><strong>Freeze shadows</strong></td><td>Bake shadow maps once (static worlds)</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="trace-shadows.html">trace-shadows</a></td></tr>
+<tr><td><strong>Large World Rendering</strong></td><td>Floating-origin engine + Havok region radius</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a></td></tr>
+</tbody></table>
+
+<h2>Material-level (NME)</h2>
+<table><thead><tr><th>Feature</th><th>Blender</th><th>Manifest</th><th>Trace</th></tr></thead><tbody>
+<tr><td><strong>Node materials</strong></td><td>Properties › Material › Babylon — link NME JSON, extract embedded textures, scan textures/inputs</td><td>Top-level <code>materials[]</code> (matched by material name on meshes; JSON may embed <code>data:</code> textures)</td><td><a href="10-FEATURE-TRACES.html#materials">feature trace</a> · <a href="trace-materials.html">trace-materials</a></td></tr>
+</tbody></table>
+
+<h2>Export artifacts</h2>
+<table><thead><tr><th>File / folder</th><th>Contains</th></tr></thead><tbody>
+<tr><td><code>level.glb</code></td><td>Meshes, hierarchy, standard materials, lights, cameras, animation clips, GUIDs in node extras</td></tr>
+<tr><td><code>level.scene.json</code></td><td>Components, scene block, per-entity light/camera/animation, <code>materials[]</code>, <code>debug</code> flag (schema v4)</td></tr>
+<tr><td><code>audio/</code>, <code>gui/</code>, <code>env/</code>, <code>post/</code>, <code>particles/</code>, <code>materials/</code>, <code>fonts/</code></td><td>Sidecar media referenced from the manifest</td></tr>
+</tbody></table>
+
+<h2>Workflow &amp; tooling</h2>
+<table><thead><tr><th>Feature</th><th>What it does</th><th>Trace</th></tr></thead><tbody>
+<tr><td><strong>Export</strong></td><td>Validate + write glb + manifest + sidecars</td><td><a href="../blender/trace-export.html">Blender trace-export</a></td></tr>
+<tr><td><strong>Validator</strong></td><td>Pre-export warnings (missing scripts, bad refs, physics traps, …)</td><td><a href="../blender/trace-validate.html">trace-validate</a></td></tr>
+<tr><td><strong>Live Link</strong></td><td>Ctrl+S re-export + browser reload</td><td><a href="10-FEATURE-TRACES.html#livelink">feature trace</a></td></tr>
+<tr><td><strong>Debug Build</strong></td><td>Gates collider overlay (<strong>C</strong>) and inspector (<strong>I</strong>)</td><td><a href="10-FEATURE-TRACES.html#debug">feature trace</a></td></tr>
+<tr><td><strong>Collider / CoM preview</strong></td><td>Viewport wireframes and center-of-mass cross</td><td><a href="../blender/trace-collider-preview.html">collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a></td></tr>
+<tr><td><strong>Scaffolder</strong> (<code>npm run create</code>)</td><td>New app from playground template</td><td><a href="09-WORKFLOW.html">09 — Workflow</a></td></tr>
+<tr><td><strong>Babylon Launcher</strong></td><td>Desktop hub for editors and docs</td><td><a href="../launcher/00-INDEX.html">Launcher docs</a></td></tr>
+</tbody></table>
+
+<h2>Runtime-only concepts (not authored in Blender)</h2>
+<table><thead><tr><th>Concept</th><th>Meaning</th><th>API</th></tr></thead><tbody>
+<tr><td><strong>Entity</strong></td><td>One exported object + its runtime attachments</td><td><a href="14-API-GUIDE.html#entity">API Guide — Entity</a></td></tr>
+<tr><td><strong>Behavior</strong></td><td>Your TypeScript class from a SCRIPT component</td><td><a href="14-API-GUIDE.html#behavior">API Guide — Behavior</a></td></tr>
+<tr><td><strong>Attachment</strong></td><td>One applied component row (data + runtime object)</td><td><a href="14-API-GUIDE.html#attachments">API Guide — Attachments</a></td></tr>
+<tr><td><strong>Level</strong></td><td>Container for all entities, scene subsystems, frame loop</td><td><a href="14-API-GUIDE.html#level">API Guide — Level</a></td></tr>
+<tr><td><strong>OnMessage</strong></td><td>String messages from triggers, GUI, or <code>SendMessage</code></td><td><a href="10-FEATURE-TRACES.html#trigger">trigger trace</a></td></tr>
+</tbody></table>
+
+<h2>Common mistakes (silent or confusing failures)</h2>
+<aside class="trace-legend">
+<ul>
+<li><strong>MESH-shaped triggers never fire</strong> — use box/sphere/convex for triggers. Validator warns.</li>
+<li><strong>Skinned mesh object</strong> — put GUID, animation, and scripts on the <strong>armature</strong>, not the mesh. Validator warns.</li>
+<li><strong>MESH collider + DYNAMIC body</strong> — not supported; validator warns.</li>
+<li><strong>AREA lights</strong> — not exported to glTF; use SUN/POINT/SPOT.</li>
+<li><strong>Hook names must be PascalCase</strong> — <code>OnStart</code>, not <code>onStart</code>, or they never run.</li>
+<li><strong>GUID matching needs ExtrasAsMetadata</strong> — the loader imports this glTF extension; without it, entities fail to match nodes.</li>
+<li><strong>Right-handed glTF import</strong> — required for correct collider orientation (<a href="06-PHYSICS.html#right-handed">why</a>).</li>
+<li><strong>3D GUI button content</strong> — text/images must be applied <em>after</em> the control is added to a panel (<a href="11-UI.html">11 — UI</a>).</li>
+</ul>
+</aside>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/13-FEATURE-LIST.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

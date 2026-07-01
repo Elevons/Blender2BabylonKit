@@ -1,5 +1,4 @@
 import {
-  Engine,
   Scene,
   ArcRotateCamera,
   Vector3,
@@ -10,6 +9,9 @@ import {
   LevelLoader,
   EnableHavokPhysics,
   AutoRegisterBehaviors,
+  FetchAndValidateManifest,
+  CreateLevelEngine,
+  ResolveHavokPhysicsOptions,
   type Level,
 } from "@bjs/engine";
 
@@ -18,6 +20,8 @@ import {
  * level, wire dev tooling, and start the render loop. Everything level-related
  * lives in the engine — this file is only the wiring.
  */
+
+const MANIFEST_URL = "/levels/Train Scene/Train Scene.scene.json";
 
 /** Register every behavior in ./behaviors by filename stem (the Blender key). */
 function RegisterBehaviors(): BehaviorRegistry
@@ -92,15 +96,19 @@ function BindDebugKeys(scene: Scene, level: Level): void
 async function Main(): Promise<void>
 {
   const canvas = document.getElementById("app") as HTMLCanvasElement;
-  const engine = new Engine(canvas, true);
+
+  // Large-world rendering is an engine option — read the manifest before
+  // creating the Engine/Scene (Blender Scene › Rendering › Large World Rendering).
+  const manifest = await FetchAndValidateManifest(MANIFEST_URL);
+  const engine = CreateLevelEngine(canvas, true, manifest);
   const scene = new Scene(engine);
 
   // Physics must be enabled before loading anything with colliders/bodies.
-  await EnableHavokPhysics(scene);
+  await EnableHavokPhysics(scene, ResolveHavokPhysicsOptions(manifest));
 
   const registry = RegisterBehaviors();
   const loader = new LevelLoader(scene, registry);
-  const level = await loader.Load("/levels/Train Scene/Train Scene.scene.json");
+  const level = await loader.Load(MANIFEST_URL, manifest);
 
   CreateFallbackCameraIfNeeded(scene, canvas);
   BindDebugKeys(scene, level);

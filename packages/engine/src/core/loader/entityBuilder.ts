@@ -210,6 +210,11 @@ function ApplyComponents(
     guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
   } = ClassifyComponents(entity, entityData.components);
 
+  if (colliders.some((collider) => collider.makeInvisible === true))
+  {
+    HideEntityNode(scene, entity.node);
+  }
+
   if (colliders.length > 0 || body !== undefined)
   {
     const physicsBody = BuildPhysics(entity.node, colliders, body, scene);

@@ -7,3 +7,5 @@ Particles are still spawned even if the emitter is set to off
 Colliders are still spawned even if the layer is turned off
 Maybe remove "apply scale" flag for colliders and constraints and make it automatic
 Typing I in the filter view of the scene explorer hides it, C activates collision
+large world rendering needs some work
+sun away from center leads to some weird shadows

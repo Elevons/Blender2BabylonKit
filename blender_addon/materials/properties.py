@@ -1,7 +1,26 @@
 """Per-material Babylon node material (NME) settings on bpy.types.Material."""
 
-from bpy.props import CollectionProperty, StringProperty, IntProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    FloatProperty,
+    FloatVectorProperty,
+    IntProperty,
+    StringProperty,
+)
 from bpy.types import PropertyGroup
+
+NME_INPUT_TYPES = [
+    ('FLOAT', "Float", ""),
+    ('INT', "Int", ""),
+    ('BOOL', "Boolean", ""),
+    ('VECTOR2', "Vector2", ""),
+    ('VECTOR3', "Vector3", ""),
+    ('VECTOR4', "Vector4", ""),
+    ('COLOR3', "Color3", ""),
+    ('COLOR4', "Color4", ""),
+]
 
 
 class BJSNmeTexture(PropertyGroup):
@@ -40,3 +59,43 @@ class BJSNmeTexture(PropertyGroup):
         description="Only patch blocks whose current URL equals this "
                     "(empty = match by block id)",
     )
+
+
+class BJSNmeInput(PropertyGroup):
+    """One inspector-visible InputBlock value patched into the node material JSON."""
+
+    block_id: IntProperty(
+        name="Block ID",
+        default=0,
+        description="NME InputBlock id used to patch the correct value slot",
+    )
+    block_name: StringProperty(
+        name="Block",
+        default="",
+        description="NME InputBlock name (display label)",
+    )
+    value_type: EnumProperty(
+        name="Type",
+        items=NME_INPUT_TYPES,
+        default='FLOAT',
+    )
+    group_in_inspector: StringProperty(
+        name="Group",
+        default="",
+        description="NME inspector group label, when set",
+    )
+    f_val: FloatProperty(name="Value")
+    i_val: IntProperty(name="Value")
+    b_val: BoolProperty(name="Value")
+    v2_val: FloatVectorProperty(name="Value", size=2)
+    v3_val: FloatVectorProperty(name="Value", size=3, subtype='XYZ')
+    v4_val: FloatVectorProperty(name="Value", size=4)
+    c3_val: FloatVectorProperty(
+        name="Value", size=3, subtype='COLOR', min=0.0, max=1.0,
+        default=(1.0, 1.0, 1.0),
+    )
+    c4_rgb: FloatVectorProperty(
+        name="RGB", size=3, subtype='COLOR', min=0.0, max=1.0,
+        default=(1.0, 1.0, 1.0),
+    )
+    c4_a: FloatProperty(name="Alpha", min=0.0, max=1.0, default=1.0)

@@ -4,6 +4,7 @@
  */
 export const KEPT_META_MD = new Set([
   "LLM_KERNEL.md",
+  "LLM_PLAYBOOK.md",
   "LLM_SCRIPTING_CONTEXT.md",
   "STYLE_GUIDE.md",
 ]);

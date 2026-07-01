@@ -4,6 +4,7 @@ export * from "./core/attachments";
 export * from "./core/Entity";
 export * from "./core/Level";
 export * from "./core/LevelLoader";
+export * from "./core/bootstrap";
 
 // Scripting: the Behavior system and its Blender-facing @exposed decorator.
 export * from "./scripting/Behavior";
@@ -18,6 +19,7 @@ export * from "./subsystems/physics";
 export * from "./subsystems/lights";
 export * from "./subsystems/cameras";
 export * from "./subsystems/shadows";
+export * from "./subsystems/clusteredLights";
 export * from "./subsystems/environment";
 export * from "./subsystems/fog";
 export * from "./subsystems/atmosphere";

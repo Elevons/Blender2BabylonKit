@@ -35,6 +35,7 @@ const DOF_BLUR_LEVELS = {
   HIGH: DepthOfFieldEffectBlurLevel.High,
 } as const;
 
+/** True when image processing must run for tone mapping, exposure, or color effects. */
 function NeedsImageProcessing(info: PostProcessingInfo): boolean
 {
   return info.toneMapping === true ||
@@ -45,29 +46,76 @@ function NeedsImageProcessing(info: PostProcessingInfo): boolean
     info.colorCurves?.enabled === true;
 }
 
+/** Copy manifest color-curve settings onto a Babylon ColorCurves instance. */
 function ApplyColorCurves(curves: ColorCurves, settings: ColorCurvesInfo): void
 {
-  if (settings.globalHue !== undefined) curves.globalHue = settings.globalHue;
-  if (settings.globalDensity !== undefined) curves.globalDensity = settings.globalDensity;
-  if (settings.globalSaturation !== undefined) curves.globalSaturation = settings.globalSaturation;
-  if (settings.globalExposure !== undefined) curves.globalExposure = settings.globalExposure;
-  if (settings.highlightsHue !== undefined) curves.highlightsHue = settings.highlightsHue;
-  if (settings.highlightsDensity !== undefined) curves.highlightsDensity = settings.highlightsDensity;
+  if (settings.globalHue !== undefined)
+  {
+    curves.globalHue = settings.globalHue;
+  }
+  if (settings.globalDensity !== undefined)
+  {
+    curves.globalDensity = settings.globalDensity;
+  }
+  if (settings.globalSaturation !== undefined)
+  {
+    curves.globalSaturation = settings.globalSaturation;
+  }
+  if (settings.globalExposure !== undefined)
+  {
+    curves.globalExposure = settings.globalExposure;
+  }
+  if (settings.highlightsHue !== undefined)
+  {
+    curves.highlightsHue = settings.highlightsHue;
+  }
+  if (settings.highlightsDensity !== undefined)
+  {
+    curves.highlightsDensity = settings.highlightsDensity;
+  }
   if (settings.highlightsSaturation !== undefined)
   {
     curves.highlightsSaturation = settings.highlightsSaturation;
   }
-  if (settings.highlightsExposure !== undefined) curves.highlightsExposure = settings.highlightsExposure;
-  if (settings.midtonesHue !== undefined) curves.midtonesHue = settings.midtonesHue;
-  if (settings.midtonesDensity !== undefined) curves.midtonesDensity = settings.midtonesDensity;
-  if (settings.midtonesSaturation !== undefined) curves.midtonesSaturation = settings.midtonesSaturation;
-  if (settings.midtonesExposure !== undefined) curves.midtonesExposure = settings.midtonesExposure;
-  if (settings.shadowsHue !== undefined) curves.shadowsHue = settings.shadowsHue;
-  if (settings.shadowsDensity !== undefined) curves.shadowsDensity = settings.shadowsDensity;
-  if (settings.shadowsSaturation !== undefined) curves.shadowsSaturation = settings.shadowsSaturation;
-  if (settings.shadowsExposure !== undefined) curves.shadowsExposure = settings.shadowsExposure;
+  if (settings.highlightsExposure !== undefined)
+  {
+    curves.highlightsExposure = settings.highlightsExposure;
+  }
+  if (settings.midtonesHue !== undefined)
+  {
+    curves.midtonesHue = settings.midtonesHue;
+  }
+  if (settings.midtonesDensity !== undefined)
+  {
+    curves.midtonesDensity = settings.midtonesDensity;
+  }
+  if (settings.midtonesSaturation !== undefined)
+  {
+    curves.midtonesSaturation = settings.midtonesSaturation;
+  }
+  if (settings.midtonesExposure !== undefined)
+  {
+    curves.midtonesExposure = settings.midtonesExposure;
+  }
+  if (settings.shadowsHue !== undefined)
+  {
+    curves.shadowsHue = settings.shadowsHue;
+  }
+  if (settings.shadowsDensity !== undefined)
+  {
+    curves.shadowsDensity = settings.shadowsDensity;
+  }
+  if (settings.shadowsSaturation !== undefined)
+  {
+    curves.shadowsSaturation = settings.shadowsSaturation;
+  }
+  if (settings.shadowsExposure !== undefined)
+  {
+    curves.shadowsExposure = settings.shadowsExposure;
+  }
 }
 
+/** Load a LUT or color-grading texture from the manifest and enable grading. */
 function ApplyColorGrading(
   scene: Scene,
   baseUrl: string,
@@ -98,6 +146,7 @@ function ApplyColorGrading(
   imageProcessing.colorGradingEnabled = true;
 }
 
+/** Enable sharpen and copy edge/color amounts from the manifest. */
 function ApplySharpen(pipeline: DefaultRenderingPipeline, settings: SharpenInfo): void
 {
   pipeline.sharpenEnabled = true;
@@ -111,6 +160,7 @@ function ApplySharpen(pipeline: DefaultRenderingPipeline, settings: SharpenInfo)
   }
 }
 
+/** Enable depth of field when supported and apply focus/blur settings. */
 function ApplyDepthOfField(pipeline: DefaultRenderingPipeline, settings: DepthOfFieldInfo): void
 {
   if (!pipeline.depthOfField.isSupported)
@@ -135,6 +185,7 @@ function ApplyDepthOfField(pipeline: DefaultRenderingPipeline, settings: DepthOf
   }
 }
 
+/** Enable chromatic aberration and copy lens-distortion parameters. */
 function ApplyChromaticAberration(
   pipeline: DefaultRenderingPipeline,
   settings: ChromaticAberrationInfo
@@ -156,6 +207,7 @@ function ApplyChromaticAberration(
   }
 }
 
+/** Enable film grain and copy intensity/animation from the manifest. */
 function ApplyGrain(pipeline: DefaultRenderingPipeline, settings: GrainInfo): void
 {
   pipeline.grainEnabled = true;
@@ -169,6 +221,7 @@ function ApplyGrain(pipeline: DefaultRenderingPipeline, settings: GrainInfo): vo
   }
 }
 
+/** Enable the glow layer and copy blur/intensity from the manifest. */
 function ApplyGlow(pipeline: DefaultRenderingPipeline, settings: GlowInfo): void
 {
   pipeline.glowLayerEnabled = true;
@@ -187,6 +240,7 @@ function ApplyGlow(pipeline: DefaultRenderingPipeline, settings: GlowInfo): void
   }
 }
 
+/** Enable vignette and copy weight, stretch, and center from the manifest. */
 function ApplyVignette(
   imageProcessing: DefaultRenderingPipeline["imageProcessing"],
   settings: VignetteInfo
@@ -303,6 +357,7 @@ function BuildDefaultPipeline(
   return pipeline;
 }
 
+/** Copy SSAO radius, strength, sample count, and depth range from the manifest. */
 function ApplySsaoSettings(ssao: SSAO2RenderingPipeline, settings: SsaoInfo): void
 {
   if (settings.radius !== undefined)

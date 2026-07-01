@@ -7,11 +7,16 @@ import shutil
 import bpy
 
 from .assets import copy_asset, sanitize_asset_filename, unique_asset_path
+from .visibility import is_renderable
+from ..materials.nme_inputs import row_value_to_json
+from ..materials.nme_textures import texture_is_embedded
 
 _TEXTURE_BLOCK_TYPES = frozenset({
     "BABYLON.ImageSourceBlock",
     "BABYLON.TextureBlock",
 })
+
+_INPUT_BLOCK_TYPE = "BABYLON.InputBlock"
 
 
 def _resolve_json_url(image_file, json_url):
@@ -63,6 +68,7 @@ def _apply_texture_url(tex, rel_url):
     tex["url"] = rel_url
     tex["name"] = rel_url
     tex.pop("base64String", None)
+    tex.pop("internalTextureLabel", None)
     name = tex.get("name") or ""
     if isinstance(name, str) and name.startswith("data:"):
         tex["name"] = rel_url
@@ -101,6 +107,7 @@ def patch_nme_json_textures(json_abs, assignments):
             empty = [
                 block for block in texture_blocks
                 if not ((block.get("texture") or {}).get("url") or "").strip()
+                and not texture_is_embedded(block.get("texture") or {})
             ]
             targets = empty if empty else [texture_blocks[0]]
         else:
@@ -118,15 +125,65 @@ def patch_nme_json_textures(json_abs, assignments):
         json.dump(data, handle, indent=2)
 
 
-def export_node_material(nme_file, textures, output_dir):
-    """Copy the node material JSON and any texture overrides next to the export.
+def _nme_input_blocks(data):
+    blocks = data.get("blocks")
+    if not isinstance(blocks, list):
+        return []
+    return [
+        block for block in blocks
+        if isinstance(block, dict)
+        and block.get("customType") == _INPUT_BLOCK_TYPE
+    ]
 
-    Returns (manifest_path, texture_entries) where texture_entries lists patched
-    textures for the manifest runtime fallback.
+
+def patch_nme_json_inputs(json_abs, assignments):
+    """Write authored values onto matching InputBlock entries in the exported JSON."""
+    if not assignments:
+        return
+
+    with open(json_abs, encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    blocks_by_id = {
+        block["id"]: block
+        for block in _nme_input_blocks(data)
+        if isinstance(block.get("id"), int)
+    }
+
+    for assignment in assignments:
+        block_id = assignment.get("block_id")
+        if not block_id or block_id not in blocks_by_id:
+            continue
+        blocks_by_id[block_id]["value"] = assignment["value"]
+
+    with open(json_abs, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+
+
+def export_node_material(nme_file, textures, inputs, output_dir, exported_nme_json=None):
+    """Copy the node material JSON and any texture / input overrides next to the export.
+
+    Returns (manifest_path, texture_entries, input_entries) where texture_entries
+    lists patched textures and input_entries lists patched inspector inputs for
+    the manifest runtime fallback.
+
+    When several Blender materials share one NME source file, only the first copy
+    writes the JSON; later materials patch the exported copy in place.
     """
-    manifest_path = copy_asset(nme_file, output_dir, "materials")
+    nme_abs = os.path.normpath(bpy.path.abspath(nme_file))
+    if not os.path.isfile(nme_abs):
+        return None, [], []
+
+    manifest_path = None
+    if exported_nme_json is not None:
+        manifest_path = exported_nme_json.get(nme_abs)
+
     if manifest_path is None:
-        return None, []
+        manifest_path = copy_asset(nme_file, output_dir, "materials")
+        if manifest_path is None:
+            return None, [], []
+        if exported_nme_json is not None:
+            exported_nme_json[nme_abs] = manifest_path
 
     assignments = []
     texture_entries = []
@@ -147,18 +204,39 @@ def export_node_material(nme_file, textures, output_dir):
             "file": f"materials/{rel_url}",
         })
 
-    if assignments:
-        json_abs = os.path.join(output_dir, *manifest_path.split("/"))
-        patch_nme_json_textures(json_abs, assignments)
+    input_assignments = []
+    input_entries = []
+    for row in inputs:
+        if not row.block_id:
+            continue
+        value = row_value_to_json(row)
+        if value is None:
+            continue
+        input_assignments.append({
+            "block_id": row.block_id,
+            "value": value,
+        })
+        input_entries.append({
+            "blockId": row.block_id,
+            "blockName": row.block_name,
+            "type": row.value_type,
+            "value": value,
+        })
 
-    return manifest_path, texture_entries
+    json_abs = os.path.join(output_dir, *manifest_path.split("/"))
+    if assignments:
+        patch_nme_json_textures(json_abs, assignments)
+    if input_assignments:
+        patch_nme_json_inputs(json_abs, input_assignments)
+
+    return manifest_path, texture_entries, input_entries
 
 
 def _materials_in_use(context):
     """Materials assigned to exportable mesh objects."""
     used = set()
     for obj in context.scene.objects:
-        if obj.hide_render:
+        if not is_renderable(obj, context):
             continue
         if obj.type != 'MESH':
             continue
@@ -172,15 +250,23 @@ def serialize_materials(context, output_dir):
     """Build the manifest `materials` block for node material overrides."""
     used = _materials_in_use(context)
     materials = []
+    exported_nme_json = {}
     for mat in bpy.data.materials:
         if not mat.bjs_nme_file or mat not in used:
             continue
-        path, textures = export_node_material(
-            mat.bjs_nme_file, mat.bjs_nme_textures, output_dir)
+        path, textures, inputs = export_node_material(
+            mat.bjs_nme_file,
+            mat.bjs_nme_textures,
+            mat.bjs_nme_inputs,
+            output_dir,
+            exported_nme_json,
+        )
         if path is None:
             continue
         entry = {"name": mat.name, "file": path}
         if textures:
             entry["textures"] = textures
+        if inputs:
+            entry["inputs"] = inputs
         materials.append(entry)
     return materials
