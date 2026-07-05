@@ -20,6 +20,11 @@ export interface ShadowOptions {
    * force a one-shot re-render. Default false.
    */
   freeze?: boolean;
+  /**
+   * Log a caster/receiver summary plus any oversize meshes skipped as casters.
+   * Wired to the manifest's Debug Build flag (level.debugEnabled). Default false.
+   */
+  debug?: boolean;
 }
 
 /**
@@ -72,7 +77,7 @@ function MeshWorldExtent(mesh: AbstractMesh): number
  * directional shadow ortho frustum when registered as casters — shadows vanish
  * or turn to mush. Keep them as receivers only; drop outliers vs the next tier.
  */
-function SelectShadowCasters(meshes: AbstractMesh[]): AbstractMesh[]
+function SelectShadowCasters(meshes: AbstractMesh[], debug: boolean): AbstractMesh[]
 {
   const castEnabled = meshes.filter((mesh) => MeshCastsShadows(mesh));
   const withExtents = castEnabled.map((mesh) => ({ mesh, extent: MeshWorldExtent(mesh) }));
@@ -85,19 +90,23 @@ function SelectShadowCasters(meshes: AbstractMesh[]): AbstractMesh[]
     .map((entry) => entry.mesh);
 
   const skippedOutliers = withExtents.filter((entry) => entry.extent > outlierThreshold);
-  for (const entry of skippedOutliers)
-  {
-    console.log(
-      `[bjs] "${entry.mesh.name}" extent ${entry.extent.toFixed(0)} — receive-only ` +
-        `(exceeds shadow caster threshold ${outlierThreshold.toFixed(0)})`
-    );
-  }
 
-  for (const mesh of meshes)
+  // Debug Build exports get one summary line (plus the rare oversize skips,
+  // which are actionable per mesh); release exports stay silent.
+  if (debug)
   {
-    if (!MeshCastsShadows(mesh))
+    const receiveOnlyCount = meshes.length - castEnabled.length;
+    console.log(
+      `[bjs] shadows: ${casters.length} casters, ${receiveOnlyCount} receive-only ` +
+        `(ray-visibility Shadow off), ${skippedOutliers.length} oversize skipped`
+    );
+
+    for (const entry of skippedOutliers)
     {
-      console.log(`[bjs] "${mesh.name}" — receive-only (Blender ray-visibility Shadow off)`);
+      console.log(
+        `[bjs] "${entry.mesh.name}" extent ${entry.extent.toFixed(0)} — receive-only ` +
+          `(exceeds shadow caster threshold ${outlierThreshold.toFixed(0)})`
+      );
     }
   }
 
@@ -209,7 +218,7 @@ export function SetupShadows(
 {
   const defaultMapSize = ClampShadowMapSize(options.mapSize ?? 1024);
   const renderableMeshes: AbstractMesh[] = scene.meshes.filter((mesh) => mesh.getTotalVertices() > 0);
-  const shadowCasters = SelectShadowCasters(renderableMeshes);
+  const shadowCasters = SelectShadowCasters(renderableMeshes, options.debug === true);
 
   for (const mesh of renderableMeshes)
   {

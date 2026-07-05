@@ -8,8 +8,14 @@ import bpy
 from .nme_inputs import (
     read_json_value,
     resolve_nme_input_type,
-    row_value_to_json,
+    snapshot_row_value,
     write_row_value,
+)
+from .nme_gradients import (
+    read_color_steps,
+    setup_gradient_ramp,
+    snapshot_row_steps,
+    write_row_steps,
 )
 from .nme_textures import texture_is_embedded
 
@@ -19,6 +25,7 @@ _TEXTURE_BLOCK_TYPES = frozenset({
 })
 
 _INPUT_BLOCK_TYPE = "BABYLON.InputBlock"
+_GRADIENT_BLOCK_TYPE = "BABYLON.GradientBlock"
 
 
 def _block_type_label(custom_type):
@@ -75,7 +82,7 @@ def sync_material_nme_textures(material):
 
     slots = enumerate_nme_texture_slots(nme_file)
     existing = {
-        tex.block_id: tex
+        tex.block_id: (tex.image_file, tex.json_url)
         for tex in material.bjs_nme_textures
         if tex.block_id
     }
@@ -89,8 +96,7 @@ def sync_material_nme_textures(material):
         row.match_url = slot["match_url"]
         prev = existing.get(slot["block_id"])
         if prev is not None:
-            row.image_file = prev.image_file
-            row.json_url = prev.json_url
+            row.image_file, row.json_url = prev
 
     return len(slots)
 
@@ -148,7 +154,7 @@ def sync_material_nme_inputs(material):
 
     slots = enumerate_nme_input_slots(nme_file)
     existing = {
-        row.block_id: row
+        row.block_id: snapshot_row_value(row)
         for row in material.bjs_nme_inputs
         if row.block_id
     }
@@ -161,16 +167,79 @@ def sync_material_nme_inputs(material):
         row.value_type = slot["value_type"]
         row.group_in_inspector = slot["group_in_inspector"]
         prev = existing.get(slot["block_id"])
-        if prev is not None and prev.value_type == slot["value_type"]:
-            write_row_value(row, row.value_type, row_value_to_json(prev))
+        if prev is not None:
+            prev_type, prev_value = prev
+            if prev_type == slot["value_type"] and prev_value is not None:
+                write_row_value(row, row.value_type, prev_value)
+            else:
+                write_row_value(row, row.value_type, slot["value"])
         else:
             write_row_value(row, row.value_type, slot["value"])
 
     return len(slots)
 
 
+def enumerate_nme_gradient_slots(nme_path):
+    """Return inspector-visible GradientBlock descriptors from an NME JSON file.
+
+    Each entry: block_id, block_name, group_in_inspector, color_steps.
+    """
+    blocks = _load_nme_blocks(nme_path)
+    slots = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        if block.get("customType") != _GRADIENT_BLOCK_TYPE:
+            continue
+        if not block.get("visibleInInspector"):
+            continue
+
+        slots.append({
+            "block_id": int(block.get("id", 0)),
+            "block_name": block.get("name") or f"Block {block.get('id', '?')}",
+            "group_in_inspector": (block.get("groupInInspector") or "").strip(),
+            "color_steps": read_color_steps(block),
+        })
+    return slots
+
+
+def sync_material_nme_gradients(material):
+    """Rebuild bjs_nme_gradients from the assigned NME JSON, keeping edited stops."""
+    nme_file = getattr(material, "bjs_nme_file", "") or ""
+    if not nme_file:
+        return 0
+
+    slots = enumerate_nme_gradient_slots(nme_file)
+    existing = {
+        row.block_id: snapshot_row_steps(row)
+        for row in material.bjs_nme_gradients
+        if row.block_id
+    }
+
+    material.bjs_nme_gradients.clear()
+    for slot in slots:
+        row = material.bjs_nme_gradients.add()
+        row.block_id = slot["block_id"]
+        row.block_name = slot["block_name"]
+        row.group_in_inspector = slot["group_in_inspector"]
+        prev = existing.get(slot["block_id"])
+        if prev is not None:
+            prev_steps, prev_ramp = prev
+            if prev_steps:
+                write_row_steps(row, prev_steps)
+            else:
+                write_row_steps(row, slot["color_steps"])
+            row.ramp_texture = prev_ramp
+        else:
+            write_row_steps(row, slot["color_steps"])
+        setup_gradient_ramp(material, row)
+
+    return len(slots)
+
+
 def sync_material_nme(material):
-    """Rescan textures and inspector inputs from the assigned NME JSON."""
+    """Rescan textures, inspector inputs, and gradients from the assigned NME JSON."""
     texture_count = sync_material_nme_textures(material)
     input_count = sync_material_nme_inputs(material)
-    return texture_count, input_count
+    gradient_count = sync_material_nme_gradients(material)
+    return texture_count, input_count, gradient_count

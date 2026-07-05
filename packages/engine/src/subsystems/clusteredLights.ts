@@ -85,12 +85,38 @@ export function AddContainerToSceneWithLightClustering(
 
   container.addToScene((sceneObject) => !(sceneObject instanceof Light));
 
-  for (const component of scene._serializableComponents)
+  AddContainerSceneComponents(scene, container);
+
+  return result;
+}
+
+/**
+ * `container.addToScene` skips scene *components* (animation groups on
+ * components, layer/glow effects, …) that `addAllToScene` would register —
+ * Babylon only wires those through `scene._serializableComponents`, which is
+ * private API (verified against the pinned @babylonjs/core in package.json).
+ * Isolate the access here and feature-detect it so a Babylon upgrade that
+ * removes the field degrades to a warning instead of a broken load.
+ */
+function AddContainerSceneComponents(scene: Scene, container: AssetContainer): void
+{
+  const serializableComponents = (scene as unknown as Record<string, unknown>)
+    ._serializableComponents;
+
+  if (!Array.isArray(serializableComponents))
+  {
+    console.warn(
+      "[bjs] scene._serializableComponents missing (Babylon private API changed?). " +
+        "Scene components from the glb container were not re-registered — " +
+        "check clusteredLights.ts against the current Babylon version."
+    );
+    return;
+  }
+
+  for (const component of serializableComponents as Scene["_serializableComponents"])
   {
     component.addFromContainer(container);
   }
-
-  return result;
 }
 
 function CountEnabledLights(scene: Scene): number

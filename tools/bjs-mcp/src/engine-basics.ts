@@ -108,7 +108,8 @@ There is no \`entity.manifest\` at runtime.`,
 | Sky / fog / bloom / SSAO | Babylon Scene panels | **Never** |
 | Input bindings | Input Actions panel | \`FindAction("Name")\` |
 | Tunable per-object fields | @exposed + Sync | Declare @exposed in .ts |
-| Trigger → gameplay | COLLIDER › On Enter events | OnMessage on target entity |
+| Trigger → gameplay (data) | COLLIDER › Event Messages | OnMessage on target entity |
+| Collision/trigger hooks | — | OnCollision* / OnTrigger* on own behaviors |
 | 2D HUD / particles | GUI / PARTICLE components | GetGui / GetParticles |
 | MSDF 3D labels | MSDF_TEXT component | GetTextRenderer — update text only |
 

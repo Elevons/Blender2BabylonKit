@@ -9,6 +9,7 @@ import bpy
 from .assets import copy_asset, sanitize_asset_filename, unique_asset_path
 from .visibility import is_renderable
 from ..materials.nme_inputs import row_value_to_json
+from ..materials.nme_gradients import row_steps_to_json
 from ..materials.nme_textures import texture_is_embedded
 
 _TEXTURE_BLOCK_TYPES = frozenset({
@@ -17,6 +18,7 @@ _TEXTURE_BLOCK_TYPES = frozenset({
 })
 
 _INPUT_BLOCK_TYPE = "BABYLON.InputBlock"
+_GRADIENT_BLOCK_TYPE = "BABYLON.GradientBlock"
 
 
 def _resolve_json_url(image_file, json_url):
@@ -72,6 +74,41 @@ def _apply_texture_url(tex, rel_url):
     name = tex.get("name") or ""
     if isinstance(name, str) and name.startswith("data:"):
         tex["name"] = rel_url
+
+
+def _normalize_nme_embedded_texture_urls(data):
+    """Copy data: URIs from texture.name onto texture.url when url is empty."""
+    blocks = data.get("blocks")
+    if not isinstance(blocks, list):
+        return False
+
+    changed = False
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        if block.get("customType") not in _TEXTURE_BLOCK_TYPES:
+            continue
+        tex = block.get("texture")
+        if not isinstance(tex, dict):
+            continue
+        url = (tex.get("url") or "").strip()
+        if url:
+            continue
+        name = tex.get("name") or ""
+        if isinstance(name, str) and name.startswith("data:"):
+            tex["url"] = name.strip()
+            changed = True
+    return changed
+
+
+def normalize_nme_json_embedded_textures(json_abs):
+    """Ensure embedded NME textures load at runtime (name-only data URIs → url)."""
+    with open(json_abs, encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not _normalize_nme_embedded_texture_urls(data):
+        return
+    with open(json_abs, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
 
 
 def patch_nme_json_textures(json_abs, assignments):
@@ -160,19 +197,54 @@ def patch_nme_json_inputs(json_abs, assignments):
         json.dump(data, handle, indent=2)
 
 
-def export_node_material(nme_file, textures, inputs, output_dir, exported_nme_json=None):
-    """Copy the node material JSON and any texture / input overrides next to the export.
+def _nme_gradient_blocks(data):
+    blocks = data.get("blocks")
+    if not isinstance(blocks, list):
+        return []
+    return [
+        block for block in blocks
+        if isinstance(block, dict)
+        and block.get("customType") == _GRADIENT_BLOCK_TYPE
+    ]
 
-    Returns (manifest_path, texture_entries, input_entries) where texture_entries
-    lists patched textures and input_entries lists patched inspector inputs for
-    the manifest runtime fallback.
+
+def patch_nme_json_gradients(json_abs, assignments):
+    """Write authored colorSteps onto matching GradientBlock entries."""
+    if not assignments:
+        return
+
+    with open(json_abs, encoding="utf-8") as handle:
+        data = json.load(handle)
+
+    blocks_by_id = {
+        block["id"]: block
+        for block in _nme_gradient_blocks(data)
+        if isinstance(block.get("id"), int)
+    }
+
+    for assignment in assignments:
+        block_id = assignment.get("block_id")
+        if not block_id or block_id not in blocks_by_id:
+            continue
+        blocks_by_id[block_id]["colorSteps"] = assignment["color_steps"]
+
+    with open(json_abs, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+
+
+def export_node_material(nme_file, textures, inputs, gradients, output_dir, exported_nme_json=None):
+    """Copy the node material JSON and any texture / input / gradient overrides next to the export.
+
+    Returns (manifest_path, texture_entries, input_entries, gradient_entries) where
+    texture_entries lists patched textures, input_entries lists patched inspector inputs,
+    and gradient_entries lists patched GradientBlocks for the manifest runtime fallback.
 
     When several Blender materials share one NME source file, only the first copy
     writes the JSON; later materials patch the exported copy in place.
     """
     nme_abs = os.path.normpath(bpy.path.abspath(nme_file))
     if not os.path.isfile(nme_abs):
-        return None, [], []
+        return None, [], [], []
 
     manifest_path = None
     if exported_nme_json is not None:
@@ -181,7 +253,7 @@ def export_node_material(nme_file, textures, inputs, output_dir, exported_nme_js
     if manifest_path is None:
         manifest_path = copy_asset(nme_file, output_dir, "materials")
         if manifest_path is None:
-            return None, [], []
+            return None, [], [], []
         if exported_nme_json is not None:
             exported_nme_json[nme_abs] = manifest_path
 
@@ -223,13 +295,32 @@ def export_node_material(nme_file, textures, inputs, output_dir, exported_nme_js
             "value": value,
         })
 
+    gradient_assignments = []
+    gradient_entries = []
+    for row in gradients:
+        if not row.block_id or len(row.steps) == 0:
+            continue
+        color_steps = row_steps_to_json(row)
+        gradient_assignments.append({
+            "block_id": row.block_id,
+            "color_steps": color_steps,
+        })
+        gradient_entries.append({
+            "blockId": row.block_id,
+            "blockName": row.block_name,
+            "colorSteps": color_steps,
+        })
+
     json_abs = os.path.join(output_dir, *manifest_path.split("/"))
+    normalize_nme_json_embedded_textures(json_abs)
     if assignments:
         patch_nme_json_textures(json_abs, assignments)
     if input_assignments:
         patch_nme_json_inputs(json_abs, input_assignments)
+    if gradient_assignments:
+        patch_nme_json_gradients(json_abs, gradient_assignments)
 
-    return manifest_path, texture_entries, input_entries
+    return manifest_path, texture_entries, input_entries, gradient_entries
 
 
 def _materials_in_use(context):
@@ -254,10 +345,11 @@ def serialize_materials(context, output_dir):
     for mat in bpy.data.materials:
         if not mat.bjs_nme_file or mat not in used:
             continue
-        path, textures, inputs = export_node_material(
+        path, textures, inputs, gradients = export_node_material(
             mat.bjs_nme_file,
             mat.bjs_nme_textures,
             mat.bjs_nme_inputs,
+            mat.bjs_nme_gradients,
             output_dir,
             exported_nme_json,
         )
@@ -268,5 +360,7 @@ def serialize_materials(context, output_dir):
             entry["textures"] = textures
         if inputs:
             entry["inputs"] = inputs
+        if gradients:
+            entry["gradients"] = gradients
         materials.append(entry)
     return materials

@@ -20,8 +20,10 @@ export default class BasicSwim extends Behavior
   OnStart(): void
   {
     this.initialY = this.node.position.y;
-    // Capture the node's local forward direction (negative Z).
-    this.forwardDir = Vector3.TransformCoordinates(Vector3.Forward(0), this.node.getWorldMatrix()).normalize();
+    // Capture the node's local forward direction (negative Z — the kit loads
+    // scenes right-handed). TransformNormal ignores translation, which would
+    // otherwise corrupt the direction vector.
+    this.forwardDir = Vector3.TransformNormal(Vector3.Forward(true), this.node.getWorldMatrix()).normalize();
   }
 
   OnUpdate(deltaSeconds: number): void

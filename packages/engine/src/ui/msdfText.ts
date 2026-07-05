@@ -14,6 +14,23 @@ import { ResolveManifestAssetUrl } from "../core/loader/manifest";
 
 const fontCache = new Map<string, Promise<FontAsset>>();
 
+/**
+ * Drop cached font assets for a scene. Called from Level.Dispose so repeated
+ * level loads in one session (playground reloads, live link) don't accumulate
+ * entries forever — keys embed scene.uniqueId, so stale scenes never hit again.
+ */
+export function ClearFontCacheForScene(scene: Scene): void
+{
+  const prefix = `${scene.uniqueId}|`;
+  for (const key of fontCache.keys())
+  {
+    if (key.startsWith(prefix))
+    {
+      fontCache.delete(key);
+    }
+  }
+}
+
 type MsdfParagraphOptions = {
   textAlign: MsdfTextComponent["textAlign"];
   maxWidth?: number;
@@ -154,7 +171,6 @@ export async function ApplyMsdfText(
   ConfigureTextRenderer(textRenderer, entity, component);
   textRenderer.addParagraph(component.text, BuildParagraphOptions(component));
 
-  entity.textRenderers.push(textRenderer);
   RegisterAttachment(entity, { type: "MSDF_TEXT", data: component, renderer: textRenderer });
 
   return textRenderer;

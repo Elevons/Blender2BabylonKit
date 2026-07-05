@@ -23,6 +23,26 @@ export interface TagComponent {
   tag: string;
 }
 
+export interface RenderingGroupComponent {
+  type: "RENDERING_GROUP";
+  /** Babylon draw-order group (0–3). Lower groups render first. */
+  renderingGroupId: number;
+  /** When false, this entity's own meshes keep Babylon defaults. Default true. */
+  applyOwnedMeshes?: boolean;
+  /** When true, child entities inherit until one defines its own layer component. */
+  applyChildEntities?: boolean;
+}
+
+export interface LayerMaskComponent {
+  type: "LAYER_MASK";
+  /** Babylon visibility bitmask; camera renders when (mesh.layerMask & camera.layerMask) !== 0. */
+  layerMask: number;
+  /** When false, this entity's own meshes keep Babylon defaults. Default true. */
+  applyOwnedMeshes?: boolean;
+  /** When true, child entities inherit until one defines its own layer component. */
+  applyChildEntities?: boolean;
+}
+
 export interface ColliderComponent {
   type: "COLLIDER";
   shape: "BOX" | "SPHERE" | "CAPSULE" | "CYLINDER" | "CONVEX" | "MESH";
@@ -37,16 +57,33 @@ export interface ColliderComponent {
   height: number;
   center: [number, number, number];
   rotation?: [number, number, number, number]; // quaternion xyzw (manual shapes)
-  /** Authored trigger reactions: on enter, send `message` to `target`. */
-  events?: TriggerEventData[];
+  /** Authored Event Messages: on a physics phase, send `message` to `target`. */
+  eventMessages?: EventMessageData[];
 }
 
-export interface TriggerEventData {
+/** Physics phase for an authored Event Message row on a COLLIDER. */
+export type EventMessagePhase =
+  | "TRIGGER_ENTER"
+  | "TRIGGER_EXIT"
+  | "COLLISION_ENTER"
+  | "COLLISION_EXIT";
+
+export interface EventMessageData {
+  /** When this row fires relative to the collider's physics contact. */
+  when: EventMessagePhase;
   /** GUID of the entity whose behaviors receive the message (null = unset). */
   target: string | null;
   message: string;
   /** Only entities carrying this tag set the event off; empty = any entity. */
   filterTag: string;
+}
+
+/** Contact data surfaced on collision lifecycle hooks. */
+export interface CollisionContact {
+  point: { x: number; y: number; z: number } | null;
+  normal: { x: number; y: number; z: number } | null;
+  impulse: number | null;
+  distance: number;
 }
 
 export interface RigidBodyComponent {
@@ -219,6 +256,29 @@ export interface MsdfTextComponent {
   letterSpacing: number;
 }
 
+export interface ReflectionProbeComponent {
+  type: "REFLECTION_PROBE";
+  /** Cubemap resolution per face (256 / 512 / 1024). */
+  cubeSize: number;
+  /** RenderTargetTexture refresh constant (0 = once, 1 = every frame, …). */
+  refreshRate: number;
+  generateMipMaps: boolean;
+  /** When true, every scene mesh is captured except excludes and the probe host. */
+  renderAll: boolean;
+  /** Entity GUIDs rendered into the cubemap when renderAll is false. */
+  renderList: string[];
+  /** Entity GUIDs skipped when renderAll is true. */
+  renderExcludes: string[];
+  influenceShape: "BOX" | "SPHERE";
+  /** Box full extents or sphere diameter in Babylon Y-up axes. */
+  influenceSize: [number, number, number];
+  influenceOffset: [number, number, number];
+  /** Higher priority wins when influence volumes overlap. */
+  priority: number;
+  realTimeFiltering: boolean;
+  realTimeFilteringQuality: "LOW" | "MEDIUM" | "HIGH";
+}
+
 // ---- 3D GUI components (Babylon's @babylonjs/gui 3D controls + panels) ----
 
 /** One authored click reaction: on click, send `message` to `target`. */
@@ -316,6 +376,8 @@ export type Gui3DComponent = Gui3DControlComponent | Gui3DPanelComponent;
 
 export type Component =
   | TagComponent
+  | RenderingGroupComponent
+  | LayerMaskComponent
   | ColliderComponent
   | RigidBodyComponent
   | ScriptComponent
@@ -325,6 +387,7 @@ export type Component =
   | GuiComponent
   | ParticleComponent
   | MsdfTextComponent
+  | ReflectionProbeComponent
   | Gui3DComponent;
 
 export interface ShadowSettings {
@@ -623,6 +686,23 @@ export interface NodeMaterialInputInfo {
   value: number | boolean | number[];
 }
 
+/** One color stop on an inspector-visible GradientBlock. */
+export interface NodeMaterialGradientColorStep {
+  step: number;
+  color: {
+    r: number;
+    g: number;
+    b: number;
+  };
+}
+
+/** One inspector-visible GradientBlock authored in Blender. */
+export interface NodeMaterialGradientInfo {
+  blockId: number;
+  blockName?: string;
+  colorSteps: NodeMaterialGradientColorStep[];
+}
+
 /** Blender material → Babylon node material override. */
 export interface NodeMaterialOverrideInfo {
   /** Blender / glTF material name used for matching at runtime. */
@@ -633,6 +713,8 @@ export interface NodeMaterialOverrideInfo {
   textures?: NodeMaterialTextureInfo[];
   /** Optional InputBlock overrides (also patched into the exported JSON). */
   inputs?: NodeMaterialInputInfo[];
+  /** Optional GradientBlock overrides (also patched into the exported JSON). */
+  gradients?: NodeMaterialGradientInfo[];
 }
 
 export interface LevelManifest {

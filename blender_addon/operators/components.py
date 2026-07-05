@@ -249,10 +249,10 @@ class BJS_OT_remove_component(Operator):
         return {'FINISHED'}
 
 
-class BJS_OT_trigger_event_add(Operator):
-    """Add a trigger event row to a collider component."""
-    bl_idname = "bjs.trigger_event_add"
-    bl_label = "Add Trigger Event"
+class BJS_OT_event_message_add(Operator):
+    """Add an Event Message row to a collider component."""
+    bl_idname = "bjs.event_message_add"
+    bl_label = "Add Event Message"
     bl_options = {'REGISTER', 'UNDO'}
 
     comp_index: IntProperty()
@@ -263,14 +263,14 @@ class BJS_OT_trigger_event_add(Operator):
             return {'CANCELLED'}
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
-            comps[self.comp_index].trigger_events.add()
+            comps[self.comp_index].event_messages.add()
         return {'FINISHED'}
 
 
-class BJS_OT_trigger_event_remove(Operator):
-    """Remove a trigger event row from a collider component."""
-    bl_idname = "bjs.trigger_event_remove"
-    bl_label = "Remove Trigger Event"
+class BJS_OT_event_message_remove(Operator):
+    """Remove an Event Message row from a collider component."""
+    bl_idname = "bjs.event_message_remove"
+    bl_label = "Remove Event Message"
     bl_options = {'REGISTER', 'UNDO'}
 
     comp_index:  IntProperty()
@@ -282,7 +282,7 @@ class BJS_OT_trigger_event_remove(Operator):
             return {'CANCELLED'}
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
-            events = comps[self.comp_index].trigger_events
+            events = comps[self.comp_index].event_messages
             if 0 <= self.event_index < len(events):
                 events.remove(self.event_index)
         return {'FINISHED'}
@@ -394,6 +394,84 @@ class BJS_OT_particle_texture_remove(Operator):
         return {'FINISHED'}
 
 
+class BJS_OT_probe_render_add(Operator):
+    """Add an object to the reflection probe render list."""
+    bl_idname = "bjs.probe_render_add"
+    bl_label = "Add Render Object"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            comps[self.comp_index].probe_render_list.add()
+        return {'FINISHED'}
+
+
+class BJS_OT_probe_render_remove(Operator):
+    """Remove an object from the reflection probe render list."""
+    bl_idname = "bjs.probe_render_remove"
+    bl_label = "Remove Render Object"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+    entry_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            entries = comps[self.comp_index].probe_render_list
+            if 0 <= self.entry_index < len(entries):
+                entries.remove(self.entry_index)
+        return {'FINISHED'}
+
+
+class BJS_OT_probe_exclude_add(Operator):
+    """Add an object to the reflection probe exclude list."""
+    bl_idname = "bjs.probe_exclude_add"
+    bl_label = "Add Exclude Object"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            comps[self.comp_index].probe_render_excludes.add()
+        return {'FINISHED'}
+
+
+class BJS_OT_probe_exclude_remove(Operator):
+    """Remove an object from the reflection probe exclude list."""
+    bl_idname = "bjs.probe_exclude_remove"
+    bl_label = "Remove Exclude Object"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+    entry_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            entries = comps[self.comp_index].probe_render_excludes
+            if 0 <= self.entry_index < len(entries):
+                entries.remove(self.entry_index)
+        return {'FINISHED'}
+
+
 class BJS_OT_list_add(Operator):
     """Add an item to a LIST exposed variable."""
     bl_idname = "bjs.list_add"
@@ -495,11 +573,15 @@ classes = (
     BJS_OT_paste_component,
     BJS_OT_component_menu,
     BJS_OT_remove_component,
-    BJS_OT_trigger_event_add,
-    BJS_OT_trigger_event_remove,
+    BJS_OT_event_message_add,
+    BJS_OT_event_message_remove,
     BJS_OT_gui3d_event_add,
     BJS_OT_gui3d_event_remove,
     BJS_OT_scan_particle_textures,
     BJS_OT_particle_texture_add,
     BJS_OT_particle_texture_remove,
+    BJS_OT_probe_render_add,
+    BJS_OT_probe_render_remove,
+    BJS_OT_probe_exclude_add,
+    BJS_OT_probe_exclude_remove,
 )

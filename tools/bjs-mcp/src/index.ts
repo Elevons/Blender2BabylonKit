@@ -32,6 +32,7 @@ import {
 } from "./playbooks.js";
 import { FormatDoNotList } from "./pitfalls.js";
 import { GetEngineBasics } from "./engine-basics.js";
+import { FormatChapter, FormatChapterList, SearchDocs } from "./human-docs.js";
 import { FormatAuthoringWorkflow } from "./workflow.js";
 import {
   FormatMovementMode,
@@ -42,7 +43,7 @@ import {
 
 const server = new McpServer({
   name: "bjs-level-kit",
-  version: "1.4.0",
+  version: "1.5.0",
 });
 
 // --- Resources -------------------------------------------------------------
@@ -206,6 +207,46 @@ server.tool(
   },
   async ({ topic }) => ({
     content: [{ type: "text", text: GetEngineBasics(topic) }],
+  })
+);
+
+server.tool(
+  "list_doc_chapters",
+  "List every human documentation chapter (engine, blender, launcher, quickstart, LLM contracts) with slugs for get_doc_chapter. Use when you need engine/Blender knowledge beyond the scripting contract.",
+  {},
+  async () => ({
+    content: [{ type: "text", text: FormatChapterList() }],
+  })
+);
+
+server.tool(
+  "get_doc_chapter",
+  "Return one documentation chapter as markdown — full engine/Blender prose (load pipeline, physics, rendering, components, export, …), not just the LLM contract. Optionally one section.",
+  {
+    chapter: z
+      .string()
+      .describe(
+        'Chapter slug from list_doc_chapters, e.g. "engine/04-load-pipeline", "blender/02-components", "kernel"'
+      ),
+    section: z
+      .string()
+      .optional()
+      .describe('Optional section heading slug. Use section="list" to see the chapter\'s sections.'),
+  },
+  async ({ chapter, section }) => ({
+    content: [{ type: "text", text: FormatChapter(chapter, section) }],
+  })
+);
+
+server.tool(
+  "search_docs",
+  "Full-text search across ALL documentation (engine + Blender prose chapters, quickstart, LLM contract docs). Returns matching sections ranked by hit count with fetch commands. Use when you don't know which chapter covers a topic.",
+  {
+    query: z.string().describe('Search term, e.g. "reflection probe", "disablePreStep", "freeze shadows"'),
+    maxResults: z.number().optional().describe("Max sections to return (default 8)"),
+  },
+  async ({ query, maxResults }) => ({
+    content: [{ type: "text", text: SearchDocs(query, maxResults ?? 8) }],
   })
 );
 

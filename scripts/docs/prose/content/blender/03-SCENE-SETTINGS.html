@@ -1,0 +1,35 @@
+<h1>03 — Scene settings</h1>
+<p>Subsystem diagram: <a href="scene-settings.html">scene-settings.html</a> · Runtime look: <a href="../engine/07-RENDERING.html">07 — Rendering</a> · Feature list: <a href="../engine/13-FEATURE-LIST.html">13 — Feature List</a> (scene block)</p>
+<p>Scene-wide render and input settings live in <strong>Babylon Scene</strong> (viewport N-panel) and serialize into the manifest <code>scene</code> object — not per-entity components.</p>
+
+<h2>Babylon Scene panel map</h2>
+<table><thead><tr><th>Section</th><th>Manifest / runtime</th></tr></thead><tbody>
+<tr><td><strong>Rendering</strong> — clear / ambient color</td><td><code>scene.clearColor</code>, <code>ambientColor</code></td></tr>
+<tr><td><strong>Environment</strong></td><td><code>scene.environment</code> — World texture, default studio IBL, skybox, intensity, rotation</td></tr>
+<tr><td><strong>Fog</strong></td><td><code>scene.fog</code> — linear / exp / exp²</td></tr>
+<tr><td><strong>Atmosphere</strong></td><td>Physical sky addon — pick sun lamp; replaces env skybox when on</td></tr>
+<tr><td><strong>Post-processing</strong></td><td>Bloom, tone mapping, SSAO, LUTs, … on active camera</td></tr>
+<tr><td><strong>Input Actions</strong></td><td><code>scene.inputActions</code> + <code>defaultInputMap</code></td></tr>
+<tr><td><strong>Large World Rendering</strong></td><td>Floating-origin engine + Havok region (see runtime basics)</td></tr>
+<tr><td><strong>Export</strong></td><td>Export Level, Validate, Live Link, Debug Build — <a href="04-WORKFLOW.html">04 — Workflow</a></td></tr>
+</tbody></table>
+
+<h2>Environment and skybox</h2>
+<ul>
+<li><strong>Default Environment</strong> — built-in studio IBL from CDN (<code>useDefault: true</code>); needs network at runtime</li>
+<li><strong>World texture</strong> on active World Output → Background wins over default; copied to <code>env/</code> on export (prefer <code>.env</code>, <code>.hdr</code> works, <code>.exr</code> does not load in-browser)</li>
+<li><strong>Show Skybox</strong> / <strong>Skybox Ignores Fog</strong> — background visibility vs scene fog</li>
+<li><strong>Atmosphere</strong> on forces skybox off in the manifest — the addon renders the physical sky instead</li>
+</ul>
+<p>Intensity and Y-rotation for World textures come from Background/Mapping nodes; for default env from the panel fields. Runtime tuning: <a href="../engine/07-RENDERING.html">07 — Rendering</a>.</p>
+
+<h2>Atmosphere and post</h2>
+<p><strong>Atmosphere</strong> uses a SUN lamp direction for time-of-day. Works best with <strong>Post-processing</strong> HDR tone mapping enabled. Author both in Blender Scene — behaviors should not create these at runtime.</p>
+<p>Post attaches to the active camera; the scene needs an exported camera. Trace: <a href="../engine/trace-post.html">trace-post</a> · <a href="../engine/trace-atmosphere.html">trace-atmosphere</a>.</p>
+
+<h2>Input Actions (scene level)</h2>
+<p>The <strong>Input Actions</strong> subsection defines action maps, bindings, and <strong>Scene Default</strong> map name. First export seeds a built-in Player map if empty. Save/load <code>.inputactions.json</code> to share across scenes.</p>
+<p>Detail: <a href="input-actions.html">input-actions diagram</a> · <a href="trace-input.html">trace-input</a> · <a href="../engine/12-INPUT.html">12 — Input</a>.</p>
+
+<h2>Material-level NME (related)</h2>
+<p>Per-<strong>material</strong> overrides are not in the scene block — open <strong>Properties › Material › Babylon</strong> for Node Material Editor JSON, <strong>Scan NME</strong> (textures, parameters, gradients), and <strong>Extract Textures…</strong>. Trace: <a href="trace-materials.html">trace-materials</a>.</p>

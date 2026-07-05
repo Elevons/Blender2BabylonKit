@@ -4,10 +4,12 @@ import bpy
 from bpy.props import CollectionProperty, StringProperty
 from bpy.types import Material
 
-from .properties import BJSNmeTexture, BJSNmeInput
+from .properties import BJSNmeTexture, BJSNmeInput, BJSNmeGradientStep, BJSNmeGradient
 
 classes = (
     BJSNmeTexture,
+    BJSNmeGradientStep,
+    BJSNmeGradient,
     BJSNmeInput,
 )
 
@@ -25,9 +27,11 @@ def register():
     )
     Material.bjs_nme_textures = CollectionProperty(type=BJSNmeTexture)
     Material.bjs_nme_inputs = CollectionProperty(type=BJSNmeInput)
+    Material.bjs_nme_gradients = CollectionProperty(type=BJSNmeGradient)
 
 
 def unregister():
+    del Material.bjs_nme_gradients
     del Material.bjs_nme_inputs
     del Material.bjs_nme_textures
     del Material.bjs_nme_file

@@ -44,7 +44,7 @@ Or use **Babylon Launcher** → Services → Copy Cursor Config.
 | `bjs://docs/style-guide` | `docs/STYLE_GUIDE.md` |
 | `bjs://behaviors/{Name}` | Playground example `.ts` |
 
-## Tools (v1.4)
+## Tools (v1.5)
 
 ### Route first (weak models)
 
@@ -55,6 +55,14 @@ Or use **Babylon Launcher** → Services → Copy Cursor Config.
 | `get_do_not_list` | Silent failures + which tool fixes each |
 | `get_playbook` / `list_playbooks` | One task recipe from LLM_PLAYBOOK.md |
 | `get_engine_basics` | Architecture, frame loop, Blender vs behavior |
+
+### Human docs (full prose, as markdown)
+
+| Tool | Purpose |
+|------|---------|
+| `search_docs` | Full-text search across every doc (engine, Blender, launcher, contracts) |
+| `list_doc_chapters` | Slugs for every chapter |
+| `get_doc_chapter` | One chapter (or one section) converted to markdown |
 
 ### Scaffold & ground
 
@@ -109,13 +117,14 @@ Full text: `docs/LLM_PLAYBOOK.md` or `get_playbook(name="…")`.
 
 ## Human documentation map
 
-| Question | Doc |
-|----------|-----|
-| What task am I doing? | `docs/LLM_PLAYBOOK.md` |
-| What API exists? | `docs/LLM_SCRIPTING_CONTEXT.md` |
-| How does the engine work? | `docs/engine/00-INDEX.html` |
-| API tables | `docs/engine/14-API-GUIDE.html` |
-| Does the kit support X? | `docs/engine/13-FEATURE-LIST.html` |
-| Frame loop | `docs/engine/02-RUNTIME-BASICS.html` |
+| Question | Doc | MCP tool |
+|----------|-----|----------|
+| What task am I doing? | `docs/LLM_PLAYBOOK.md` | `route_task` / `get_playbook` |
+| What API exists? | `docs/LLM_SCRIPTING_CONTEXT.md` | `get_scripting_context` |
+| How does the engine work? | `docs/engine/00-INDEX.html` | `get_engine_basics` / `get_doc_chapter` |
+| API tables | `docs/engine/14-API-GUIDE.html` | `get_doc_chapter(chapter="engine/14-api-guide")` |
+| Does the kit support X? | `docs/engine/13-FEATURE-LIST.html` | `get_doc_chapter(chapter="engine/13-feature-list")` |
+| Frame loop | `docs/engine/02-RUNTIME-BASICS.html` | `get_doc_chapter(chapter="engine/02-runtime-basics")` |
+| Anything else | — | `search_docs(query)` |
 
 Cursor rule: `.cursor/rules/behavior-authoring.mdc`

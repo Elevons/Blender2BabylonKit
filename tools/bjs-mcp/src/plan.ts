@@ -330,9 +330,10 @@ export function FormatBehaviorPlan(plan: BehaviorPlan): string
   }
 
   lines.push(``, `## Steps`);
-  plan.steps.forEach((step, index) => {
+  for (const [index, step] of plan.steps.entries())
+  {
     lines.push(`${index + 1}. ${step}`);
-  });
+  }
 
   return lines.join("\n");
 }

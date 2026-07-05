@@ -1,5 +1,6 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
 import { Entity } from "../core/Entity";
+import type { CollisionContact } from "../core/types";
 import type { InputActionMap } from "../input/InputActionMap";
 
 /**
@@ -35,8 +36,23 @@ export abstract class Behavior
   OnDestroy(): void {}
 
   /**
-   * Run when another entity (or a trigger event authored in Blender) sends this
+   * Run when another entity (or an Event Message authored in Blender) sends this
    * entity a message via Entity.SendMessage(message, source).
    */
   OnMessage(message: string, source: Entity): void {}
+
+  /** Run when a solid collider on this entity first contacts another entity. */
+  OnCollisionEnter(other: Entity, contact: CollisionContact): void {}
+
+  /** Run while a solid collider on this entity remains in contact (Havok CONTINUED). */
+  OnCollisionStay(other: Entity, contact: CollisionContact): void {}
+
+  /** Run when a solid collider on this entity stops contacting another entity. */
+  OnCollisionExit(other: Entity): void {}
+
+  /** Run when a trigger collider on this entity is first overlapped by another entity. */
+  OnTriggerEnter(other: Entity): void {}
+
+  /** Run when a trigger collider on this entity stops overlapping another entity. */
+  OnTriggerExit(other: Entity): void {}
 }

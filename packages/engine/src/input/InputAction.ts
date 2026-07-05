@@ -29,11 +29,13 @@ export class InputActionEvent
 {
   private callbacks: InputActionCallback[] = [];
 
+  /** Subscribe a callback. Lowercase to mirror Babylon/Unity observable naming. */
   add(callback: InputActionCallback): void
   {
     this.callbacks.push(callback);
   }
 
+  /** Unsubscribe a previously added callback. */
   remove(callback: InputActionCallback): void
   {
     const index = this.callbacks.indexOf(callback);
@@ -60,6 +62,10 @@ export class InputActionEvent
   }
 }
 
+/**
+ * One named action ("Jump", "Move") behaviors poll or subscribe to. See the
+ * file-level comment for the phase semantics each action type follows.
+ */
 export class InputAction
 {
   readonly name: string;

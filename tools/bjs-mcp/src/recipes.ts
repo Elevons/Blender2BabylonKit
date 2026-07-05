@@ -90,7 +90,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     name: "on-message-handler",
-    description: "React to SendMessage or trigger events via OnMessage.",
+    description: "React to SendMessage or Event Messages via OnMessage.",
     keywords: ["message", "trigger", "event", "onclick", "door", "pad", "boost"],
     hooks: ["OnMessage"],
     referenceBehavior: "MessageLogger.ts",
@@ -131,12 +131,21 @@ export const RECIPES: Recipe[] = [
   },
   {
     name: "trigger-logger",
-    description: "Log physics trigger overlaps (needs trigger COLLIDER).",
+    description: "Log physics trigger overlaps via manual body subscription (legacy).",
     keywords: ["trigger", "overlap", "collision", "log", "debug"],
     hooks: ["OnStart"],
     referenceBehavior: "TriggerLogger.ts",
-    pitfalls: ["Requires entity.body and setCollisionCallbackEnabled(true)."],
+    pitfalls: ["Requires entity.body and setCollisionCallbackEnabled(true). Prefer collision-probe for lifecycle hooks."],
     exposedFields: ['@exposed({ label: "Message" }) message = ""'],
+  },
+  {
+    name: "collision-probe",
+    description: "Log Unity-style OnCollision/OnTrigger lifecycle hooks.",
+    keywords: ["collision", "trigger", "overlap", "enter", "exit", "stay", "log", "debug"],
+    hooks: ["OnCollisionEnter", "OnCollisionStay", "OnCollisionExit", "OnTriggerEnter", "OnTriggerExit"],
+    referenceBehavior: "CollisionProbe.ts",
+    pitfalls: ["Requires entity.body; hooks are wired automatically when overridden."],
+    exposedFields: ['@exposed({ label: "Only tag (empty = all)" }) onlyTag = ""'],
   },
   {
     name: "constraint-hinge-motor",
@@ -685,6 +694,67 @@ export default class ${className} extends Behavior
     {
       console.log(\`[trigger] \${this.message.length > 0 ? this.message : this.entity.name}\`, collisionEvent.type);
     });
+  }
+}
+`,
+
+  "collision-probe": (className) => `import { Behavior, exposed } from "@bjs/engine";
+import type { CollisionContact, Entity } from "@bjs/engine";
+
+/** Logs Unity-style collision/trigger lifecycle hooks. */
+export default class ${className} extends Behavior
+{
+  @exposed({ label: "Only tag (empty = all)" })
+  onlyTag = "";
+
+  private ShouldLog(other: Entity): boolean
+  {
+    return this.onlyTag.length === 0 || other.tag === this.onlyTag;
+  }
+
+  OnCollisionEnter(other: Entity, contact: CollisionContact): void
+  {
+    if (!this.ShouldLog(other))
+    {
+      return;
+    }
+    console.log(\`[${className}:\${this.entity.name}] OnCollisionEnter "\${other.name}"\`, contact);
+  }
+
+  OnCollisionStay(other: Entity, contact: CollisionContact): void
+  {
+    if (!this.ShouldLog(other))
+    {
+      return;
+    }
+    console.log(\`[${className}:\${this.entity.name}] OnCollisionStay "\${other.name}"\`, contact.distance);
+  }
+
+  OnCollisionExit(other: Entity): void
+  {
+    if (!this.ShouldLog(other))
+    {
+      return;
+    }
+    console.log(\`[${className}:\${this.entity.name}] OnCollisionExit "\${other.name}"\`);
+  }
+
+  OnTriggerEnter(other: Entity): void
+  {
+    if (!this.ShouldLog(other))
+    {
+      return;
+    }
+    console.log(\`[${className}:\${this.entity.name}] OnTriggerEnter "\${other.name}"\`);
+  }
+
+  OnTriggerExit(other: Entity): void
+  {
+    if (!this.ShouldLog(other))
+    {
+      return;
+    }
+    console.log(\`[${className}:\${this.entity.name}] OnTriggerExit "\${other.name}"\`);
   }
 }
 `,

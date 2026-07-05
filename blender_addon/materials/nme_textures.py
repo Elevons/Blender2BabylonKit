@@ -20,14 +20,24 @@ def _sanitize_filename(label):
     return cleaned.strip("._") or "Texture"
 
 
+def _embedded_data_uri(tex):
+    """Return a data: URI from url or name when NME stored bytes on name only."""
+    url = (tex.get("url") or "").strip()
+    if url.startswith("data:"):
+        return url
+    name = tex.get("name") or ""
+    if isinstance(name, str) and name.startswith("data:"):
+        return name.strip()
+    return ""
+
+
 def texture_is_embedded(tex):
     """Return True when texture bytes live inside the JSON (not an external path)."""
     if not isinstance(tex, dict):
         return False
-    url = (tex.get("url") or "").strip()
     if tex.get("base64String"):
         return True
-    return url.startswith("data:")
+    return bool(_embedded_data_uri(tex))
 
 
 def _ext_from_mime(mime, raw):
@@ -61,8 +71,8 @@ def decode_texture_payload(tex):
         raw = base64.b64decode(b64)
         return raw, _ext_from_bytes(raw)
 
-    url = (tex.get("url") or "").strip()
-    if not url.startswith("data:"):
+    url = _embedded_data_uri(tex)
+    if not url:
         return None
     match = _DATA_URI_RE.match(url)
     if match is None:

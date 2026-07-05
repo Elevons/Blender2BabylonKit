@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/playground",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "tsc --noEmit -p packages/engine && tsc --noEmit -p apps/playground",
+    "typecheck": "tsc --noEmit -p packages/engine && tsc --noEmit -p apps/playground && node scripts/check-component-types.mjs",
+    "check:components": "node scripts/check-component-types.mjs",
     "create": "node scripts/create-app.mjs",
     "docs:build": "node scripts/build-docs.mjs",
     "docs:trace": "node scripts/build-trace-docs.mjs",
@@ -19,6 +20,7 @@
     "docs:prose": "node scripts/build-prose-docs.mjs",
     "docs:validate": "node scripts/docs/validate-docs.mjs",
     "docs:check-links": "node scripts/check-doc-links.mjs",
+    "docs:serve": "npx --yes serve docs -p 4173",
     "input:gen": "node scripts/generate-input-constants.mjs",
     "mcp:build": "npm run build --workspace @bjs/mcp",
     "mcp:start": "npm run start --workspace @bjs/mcp",

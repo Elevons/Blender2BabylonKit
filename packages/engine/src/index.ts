@@ -28,8 +28,10 @@ export * from "./subsystems/animation";
 export * from "./subsystems/audio";
 export * from "./subsystems/particles";
 export * from "./subsystems/materials";
-export * from "./subsystems/triggers";
+export * from "./subsystems/collisions";
 export * from "./subsystems/constraints";
+export * from "./subsystems/reflectionProbes";
+export * from "./subsystems/renderLayers";
 
 // UI: 2D GUI layouts (GUI Editor JSON) and the 3D GUI (buttons + panels).
 export * from "./ui/gui2d";

@@ -12,6 +12,7 @@ export const TOPICS = [
     label: "Getting started",
     blurb: "Architecture, workflow, and the big-picture maps — start here if you are new.",
     startHere: [
+      "QUICKSTART.html",
       "engine/index.html",
       "engine/architecture.html",
       "engine/01-ARCHITECTURE.html",
@@ -176,8 +177,13 @@ export const TOPICS = [
  * Every indexed page href → topic id(s). Hrefs are relative to docs/ (e.g. engine/physics.html).
  */
 export const PAGE_TOPICS = {
-  // — Contributor —
+  // — Contributor / onboarding —
   "BUILDING-DOCS.html": ["contributor", "start"],
+  "QUICKSTART.html": ["start", "export", "blender"],
+  "STYLE_GUIDE.md": ["contributor", "scripting"],
+  "LLM_PLAYBOOK.md": ["scripting", "start"],
+  "LLM_SCRIPTING_CONTEXT.md": ["scripting", "start"],
+  "LLM_KERNEL.md": ["scripting"],
 
   // — Engine subsystem diagrams —
   "engine/index.html": ["start"],
@@ -258,6 +264,10 @@ export const PAGE_TOPICS = {
 
   // — Blender prose —
   "blender/00-INDEX.html": ["blender", "start"],
+  "blender/01-EXPORT.html": ["blender", "export", "start"],
+  "blender/02-COMPONENTS.html": ["blender", "scripting"],
+  "blender/03-SCENE-SETTINGS.html": ["blender", "rendering"],
+  "blender/04-WORKFLOW.html": ["blender", "export", "start"],
   "blender/PREFABS.html": ["blender", "export", "start"],
 
   // — Launcher prose —

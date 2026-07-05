@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 02 — Components</title>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Blender</a>
+    <span class="sep">/</span>
+    <a href="../engine/00-INDEX.html">Engine</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-EXPORT.html">Prev</a> <span class="dim">·</span> <a href="03-SCENE-SETTINGS.html">Next →</a></p>
+  <article><h1>02 — Components</h1>
+<p class="doc-links">Subsystem diagram: <a href="data-model.html">data-model.html</a> · Traces: <a href="trace-components.html">trace-components</a> · <a href="trace-guid.html">trace-guid</a> · <a href="trace-exposed.html">trace-exposed</a> · Feature list: <a href="../engine/13-FEATURE-LIST.html">13 — Feature List</a></p>
+<p>How the <strong>Babylon Object</strong> panel authors per-object gameplay data. The runtime never reads Blender PropertyGroups directly — only the manifest rows you export.</p>
+
+<h2>Component stack UI</h2>
+<p>Select an object → <strong>Babylon Object</strong> → <strong>Add Component</strong>. Each row is one manifest entry when enabled:</p>
+<ul>
+<li><strong>Header</strong> — enable toggle, type name, <strong>▾ menu</strong> (duplicate, copy/cut/paste, reorder, delete)</li>
+<li><strong>Body</strong> — type-specific fields (collider shape, script path, audio file, …)</li>
+<li><strong>Pin</strong> (header) — lock the inspector to this object while you pick targets in the viewport</li>
+</ul>
+<p>Cut/paste moves a component to another object; copy/paste duplicates it. Clipboard is session-scoped.</p>
+
+<h2>GUID identity</h2>
+<p>Adding a component (or <strong>Assign GUID</strong>) stamps <code>bjs_id</code> on the object. That id rides in glTF node extras and manifest <code>entities[].id</code> — renaming the object in Blender does not break links.</p>
+<p>Entity references (<code>@exposed({ type: "entity" })</code>, camera targets, Event Message targets, constraints) store GUIDs, not names. Trace: <a href="trace-guid.html">trace-guid</a>.</p>
+
+<h2>Event Messages (colliders)</h2>
+<p>On any <strong>Collider</strong> component, the <strong>Event Messages</strong> section lists authored reactions: <strong>When</strong> (Trigger Enter/Exit, Collision Enter/Exit), <strong>Target</strong> entity, <strong>Message</strong> string, optional <strong>Only Tag</strong> filter. At runtime the engine dispatches matching rows via <code>SendMessage</code> → target behaviors' <code>OnMessage</code>. Trigger-phase rows on non-trigger colliders (and collision-phase rows on pure triggers) warn at export. See <a href="../engine/06-PHYSICS.html#event-messages">06 — Physics › Event Messages</a>.</p>
+
+<h2>Script components and @exposed</h2>
+<ol>
+<li><strong>Open Script…</strong> — pick a <code>.ts</code> behavior file; registry key = filename stem (<code>Rotator.ts</code> → <code>Rotator</code>)</li>
+<li>Exposed fields appear as typed widgets (parsed from source — not executed)</li>
+<li><strong>Sync</strong> — refresh widgets after you change <code>@exposed</code> / <code>@inputMap</code> in code</li>
+</ol>
+<p>Cross-language rules: decorator stays lowercase <code>@exposed</code>; single-line literal defaults; press Sync after edits. Trace: <a href="trace-exposed.html">trace-exposed</a>. Runtime scripting: <a href="../engine/05-SCRIPTING.html">05 — Scripting</a>.</p>
+
+<h2>Collider preview</h2>
+<p>On a selected object with a <strong>Collider</strong>, enable <strong>Show Preview</strong> to draw a cyan wireframe in the viewport. Manual size/offset/rotation are in Blender axes (what you see); export converts to Babylon Y-up. Convex/mesh shapes use the mesh geometry — no separate wireframe.</p>
+<p>Trace: <a href="trace-collider-preview.html">trace-collider-preview</a>. Dynamic bodies also show a <strong>center-of-mass</strong> cross when preview is on: <a href="trace-cog-preview.html">trace-cog-preview</a>.</p>
+
+<h2>Compound colliders</h2>
+<p>Multiple enabled <strong>Collider</strong> rows on one object merge into one physics body at runtime. The panel numbers headers (<code>Collider 1/3</code>, …) and shows a compound notice.</p>
+
+<h2>Reflection probe preview</h2>
+<p>On a selected object with a <strong>Reflection Probe</strong>, enable <strong>Show Influence Preview</strong> to draw a warm yellow wireframe of the influence volume (box or sphere) in the viewport. Place an <strong>Empty</strong> at the capture point, size the influence box to cover only the glossy meshes that need <em>local</em> reflections (walls, floor, props) — not the whole level. Leave <strong>Refresh Rate</strong> on <strong>Once</strong> unless reflected geometry animates.</p>
+<p><strong>Render All</strong> captures every scene mesh into the cubemap (minus excludes and the probe host). Turn it off to author an explicit render list. At runtime, level meshes inside the influence volume get the probe cubemap on PBR <code>reflectionTexture</code>; the visible skybox is always excluded and keeps scene IBL.</p>
+<p><strong>Real-Time Filtering</strong> (PBR section) improves how glossy materials sample the probe — it does not change what the probe captures. For sky-heavy reflections, use <strong>Babylon Scene › Environment</strong> instead of enlarging the probe volume.</p>
+<p>Runtime: <a href="../engine/07-RENDERING.html#reflection-probes">07 — Rendering › Reflection probes</a>.</p>
+
+<h2>Rendering group &amp; layer mask</h2>
+<p>Two optional components under <strong>Rendering</strong> control how Babylon draws or filters meshes. They are <em>not</em> the same as a logical <strong>Tag</strong> (gameplay label) or Babylon’s 2D <code>Layer</code> overlay class.</p>
+<table><thead><tr><th>Component</th><th>Babylon property</th><th>What it controls</th></tr></thead><tbody>
+<tr><td><strong>Rendering Group</strong></td><td><code>mesh.renderingGroupId</code></td><td><strong>Draw order</strong> — groups 0–3 render in ascending order (useful for transparency sorting and overlays). Also applies to this entity’s particle systems.</td></tr>
+<tr><td><strong>Layer Mask</strong></td><td><code>mesh.layerMask</code></td><td><strong>Camera / light visibility</strong> — a mesh renders when <code>(mesh.layerMask &amp; camera.layerMask) !== 0</code>. Used for multi-camera HUD setups.</td></tr>
+</tbody></table>
+<p>Both components share two toggles:</p>
+<ul>
+<li><strong>Apply to Owned Meshes</strong> (default on) — sets meshes this entity owns (same ownership rule as colliders and reflection probes: own geometry and primitive splits, not nested child-entity meshes).</li>
+<li><strong>Apply to Child Entities</strong> (default off) — propagates the value down the Blender parent hierarchy until a descendant defines its own component of the same kind.</li>
+</ul>
+<p>If a toggle is off, that scope keeps Babylon defaults (rendering group <code>0</code>, layer mask <code>0x0FFFFFFF</code>). A child’s own <strong>Rendering Group</strong> or <strong>Layer Mask</strong> always supersedes the parent for that branch — regardless of the parent’s toggles.</p>
+<p><strong>Layer Mask presets:</strong> Default (<code>0x0FFFFFFF</code>), Slot 0–3 (<code>0x10000000</code> … <code>0x80000000</code> — typical HUD / overlay bits), or Custom (full 32-bit value). Matching cameras must use the same mask in app code for exclusive visibility.</p>
+<p>Runtime detail: <a href="../engine/07-RENDERING.html#render-layers">07 — Rendering › Render layers</a> · Feature trace: <a href="../engine/10-FEATURE-TRACES.html#render-layers">10 — Feature Traces</a>.</p>
+
+<h2>Auto-derived blocks (not components)</h2>
+<p>These appear as child panels when relevant — no Add Component row:</p>
+<ul>
+<li><strong>Light</strong> on lamp objects — color, energy, shadows</li>
+<li><strong>Camera</strong> on camera objects — clip, FOV; optional <strong>Camera</strong> component for orbit/follow/geospatial</li>
+<li><strong>Animation</strong> when NLA strips exist — auto-play clip, loop, speed</li>
+</ul>
+<p>Full component table: <a href="../engine/13-FEATURE-LIST.html">13 — Feature List</a>.</p>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/blender/02-COMPONENTS.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+
+</body>
+</html>

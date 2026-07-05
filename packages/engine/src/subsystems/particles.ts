@@ -261,7 +261,6 @@ export async function ApplyParticles(
       system.emitter = resolvedEmitter.emitter;
     }
 
-    entity.particleSystems.push(system);
     RegisterAttachment(entity, {
       type: "PARTICLE",
       data: particleComponent,

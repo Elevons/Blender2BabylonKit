@@ -16,15 +16,15 @@
 <table><thead><tr><th>Panel</th><th>Scope</th><th>What it controls</th></tr></thead><tbody>
 <tr><td><strong>Babylon Object</strong> (viewport N-panel)</td><td>Selected object</td><td>Component stack (collider, script, audio, GUI, …), light/camera/animation child panels</td></tr>
 <tr><td><strong>Babylon Scene</strong> (viewport N-panel)</td><td>Whole scene</td><td>Environment, fog, atmosphere, post-processing, input actions, export, Live Link, debug build, large-world rendering</td></tr>
-<tr><td><strong>Properties › Material › Babylon</strong></td><td>Material datablock</td><td>NME JSON, <strong>Scan NME</strong>, <strong>Extract Textures…</strong>, texture/input overrides</td></tr>
+<tr><td><strong>Properties › Material › Babylon</strong></td><td>Material datablock</td><td>NME JSON, <strong>Scan NME</strong>, <strong>Extract Textures…</strong>, texture/input/gradient overrides</td></tr>
 </tbody></table>
 
 <h2>Object components</h2>
 <p>Each row in the Babylon Object <strong>Components</strong> list becomes one entry in <code>entities[].components[]</code> in the manifest (when enabled). Multiple rows of the same type are allowed where noted.</p>
 <table><thead><tr><th>Component</th><th>What it does (plain)</th><th>Runtime result</th><th>Trace</th></tr></thead><tbody>
-<tr><td><strong>TAG</strong></td><td>Text label for queries and trigger filters</td><td><code>entity.tag</code>, attachment row</td><td><a href="10-FEATURE-TRACES.html#tag">feature trace</a></td></tr>
+<tr><td><strong>TAG</strong></td><td>Text label for queries and Event Message filters</td><td><code>entity.tag</code>, attachment row</td><td><a href="10-FEATURE-TRACES.html#tag">feature trace</a></td></tr>
 <tr><td><strong>SCRIPT</strong></td><td>Attach a TypeScript behavior + tunable <code>@exposed</code> fields</td><td><code>Behavior</code> instance on <code>entity.behaviors</code></td><td><a href="10-FEATURE-TRACES.html#script">feature trace</a> · <a href="trace-exposed.html">trace-exposed</a></td></tr>
-<tr><td><strong>COLLIDER</strong></td><td>Collision shape (box, sphere, convex, mesh, …); optional trigger events</td><td>Part of one <code>PhysicsBody</code> per entity (compound if several)</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a> · <a href="trace-physics.html">trace-physics</a></td></tr>
+<tr><td><strong>COLLIDER</strong></td><td>Collision shape (box, sphere, convex, mesh, …); optional Event Messages</td><td>Part of one <code>PhysicsBody</code> per entity (compound if several)</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a> · <a href="trace-physics.html">trace-physics</a></td></tr>
 <tr><td><strong>RIGIDBODY</strong></td><td>Mass, friction, dynamics (static / dynamic / animated)</td><td>Same body as colliders on that object</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a></td></tr>
 <tr><td><strong>CONSTRAINT</strong></td><td>Physics joint to another body (hinge, slider, 6DoF, …)</td><td>Havok constraint on <code>level.constraints</code></td><td><a href="10-FEATURE-TRACES.html#constraint">feature trace</a> · <a href="trace-constraint.html">trace-constraint</a></td></tr>
 <tr><td><strong>CAMERA</strong></td><td>Replace exported camera with orbit / follow / geospatial controls</td><td>Typed Babylon camera; may become <code>level.activeCamera</code></td><td><a href="10-FEATURE-TRACES.html#camera">feature trace</a> · <a href="trace-cameras.html">trace-cameras</a></td></tr>
@@ -32,6 +32,9 @@
 <tr><td><strong>GUI</strong></td><td>2D HUD or mesh-projected UI from GUI Editor JSON</td><td><code>AdvancedDynamicTexture</code></td><td><a href="10-FEATURE-TRACES.html#gui2d">feature trace</a> · <a href="trace-gui.html">trace-gui</a></td></tr>
 <tr><td><strong>PARTICLE</strong></td><td>Particle or Node Particle system JSON</td><td><code>IParticleSystem</code> on entity</td><td><a href="10-FEATURE-TRACES.html#particles">feature trace</a> · <a href="trace-particles.html">trace-particles</a></td></tr>
 <tr><td><strong>MSDF_TEXT</strong></td><td>Crisp 3D labels (bmfont JSON + atlas PNG)</td><td><code>TextRenderer</code>; draws after main pass</td><td><a href="trace-msdfText.html">trace-msdfText</a> · <a href="11-UI.html">11 — UI</a></td></tr>
+<tr><td><strong>RENDERING_GROUP</strong></td><td>Babylon draw-order group (0–3); optional propagation to owned meshes / child entities</td><td><code>mesh.renderingGroupId</code> (+ particle systems on entity)</td><td><a href="10-FEATURE-TRACES.html#render-layers">feature trace</a> · <a href="07-RENDERING.html#render-layers">07 — Rendering</a></td></tr>
+<tr><td><strong>LAYER_MASK</strong></td><td>Babylon visibility bitmask for multi-camera / light filtering</td><td><code>mesh.layerMask</code> on owned meshes</td><td><a href="10-FEATURE-TRACES.html#render-layers">feature trace</a> · <a href="07-RENDERING.html#render-layers">07 — Rendering</a></td></tr>
+<tr><td><strong>REFLECTION_PROBE</strong></td><td>Local cubemap for nearby geometry inside an influence volume (not a sky replacement)</td><td><code>ReflectionProbe</code> on entity; skybox keeps IBL</td><td><a href="07-RENDERING.html#reflection-probes">07 — Rendering</a></td></tr>
 <tr><td><strong>GUI3D_BUTTON</strong></td><td>3D button plate (text or image)</td><td><code>Control3D</code>; click → <code>OnMessage</code></td><td rowspan="9"><a href="10-FEATURE-TRACES.html#gui3d">feature trace</a> · <a href="trace-gui3d.html">trace-gui3d</a></td></tr>
 <tr><td><strong>GUI3D_HOLO</strong></td><td>Holographic button</td><td><code>Control3D</code></td></tr>
 <tr><td><strong>GUI3D_TOUCH_HOLO</strong></td><td>Holographic button with near-touch</td><td><code>Control3D</code></td></tr>
@@ -68,7 +71,7 @@
 
 <h2>Material-level (NME)</h2>
 <table><thead><tr><th>Feature</th><th>Blender</th><th>Manifest</th><th>Trace</th></tr></thead><tbody>
-<tr><td><strong>Node materials</strong></td><td>Properties › Material › Babylon — link NME JSON, extract embedded textures, scan textures/inputs</td><td>Top-level <code>materials[]</code> (matched by material name on meshes; JSON may embed <code>data:</code> textures)</td><td><a href="10-FEATURE-TRACES.html#materials">feature trace</a> · <a href="trace-materials.html">trace-materials</a></td></tr>
+<tr><td><strong>Node materials</strong></td><td>Properties › Material › Babylon — link NME JSON, extract embedded textures, scan textures/inputs/gradients</td><td>Top-level <code>materials[]</code> (matched by material name on meshes; JSON may embed <code>data:</code> textures; optional <code>inputs[]</code> and <code>gradients[]</code>)</td><td><a href="10-FEATURE-TRACES.html#materials">feature trace</a> · <a href="trace-materials.html">trace-materials</a></td></tr>
 </tbody></table>
 
 <h2>Export artifacts</h2>
@@ -84,7 +87,7 @@
 <tr><td><strong>Validator</strong></td><td>Pre-export warnings (missing scripts, bad refs, physics traps, …)</td><td><a href="../blender/trace-validate.html">trace-validate</a></td></tr>
 <tr><td><strong>Live Link</strong></td><td>Ctrl+S re-export + browser reload</td><td><a href="10-FEATURE-TRACES.html#livelink">feature trace</a></td></tr>
 <tr><td><strong>Debug Build</strong></td><td>Gates collider overlay (<strong>C</strong>) and inspector (<strong>I</strong>)</td><td><a href="10-FEATURE-TRACES.html#debug">feature trace</a></td></tr>
-<tr><td><strong>Collider / CoM preview</strong></td><td>Viewport wireframes and center-of-mass cross</td><td><a href="../blender/trace-collider-preview.html">collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a></td></tr>
+<tr><td><strong>Collider / CoM / probe preview</strong></td><td>Viewport wireframes, center-of-mass cross, and reflection-probe influence volume</td><td><a href="../blender/trace-collider-preview.html">collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a></td></tr>
 <tr><td><strong>Scaffolder</strong> (<code>npm run create</code>)</td><td>New app from playground template</td><td><a href="09-WORKFLOW.html">09 — Workflow</a></td></tr>
 <tr><td><strong>Babylon Launcher</strong></td><td>Desktop hub for editors and docs</td><td><a href="../launcher/00-INDEX.html">Launcher docs</a></td></tr>
 </tbody></table>
@@ -95,7 +98,7 @@
 <tr><td><strong>Behavior</strong></td><td>Your TypeScript class from a SCRIPT component</td><td><a href="14-API-GUIDE.html#behavior">API Guide — Behavior</a></td></tr>
 <tr><td><strong>Attachment</strong></td><td>One applied component row (data + runtime object)</td><td><a href="14-API-GUIDE.html#attachments">API Guide — Attachments</a></td></tr>
 <tr><td><strong>Level</strong></td><td>Container for all entities, scene subsystems, frame loop</td><td><a href="14-API-GUIDE.html#level">API Guide — Level</a></td></tr>
-<tr><td><strong>OnMessage</strong></td><td>String messages from triggers, GUI, or <code>SendMessage</code></td><td><a href="10-FEATURE-TRACES.html#trigger">trigger trace</a></td></tr>
+<tr><td><strong>OnMessage</strong></td><td>String messages from Event Messages, GUI, or <code>SendMessage</code></td><td><a href="10-FEATURE-TRACES.html#trigger">trigger trace</a></td></tr>
 </tbody></table>
 
 <h2>Common mistakes (silent or confusing failures)</h2>

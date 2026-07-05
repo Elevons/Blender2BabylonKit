@@ -7,7 +7,7 @@ behavior lives in operators/.
 
 import bpy
 
-from . import menus, view3d_panels, scene_panels, material_panels
+from . import menus, view3d_panels, scene_panels, material_panels, nme_context_menu
 
 # Parents must register before children (bl_parent_id).
 classes = (
@@ -21,8 +21,10 @@ classes = (
 def register():
     for c in classes:
         bpy.utils.register_class(c)
+    nme_context_menu.register()
 
 
 def unregister():
+    nme_context_menu.unregister()
     for c in reversed(classes):
         bpy.utils.unregister_class(c)

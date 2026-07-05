@@ -1,0 +1,43 @@
+<h1>01 — Export</h1>
+<p class="doc-links">Subsystem diagram: <a href="export.html">export.html</a> · Code trace: <a href="trace-export.html">trace-export</a> · Runtime: <a href="../engine/01-ARCHITECTURE.html">01 — Architecture</a></p>
+<p>How <strong>Export Level</strong> turns your Blender scene into the two files the runtime loads. Editor-first — for Python module names and axis math, see <a href="../engine/03-BLENDER-ADDON.html">03 — Blender Add-on</a>.</p>
+
+<h2>The two artifacts</h2>
+<table><thead><tr><th>File</th><th>Contains</th></tr></thead><tbody>
+<tr><td><code>level.glb</code></td><td>Meshes, hierarchy, lamps, cameras, materials (standard glTF), animation clips, GUIDs in node <code>extras</code></td></tr>
+<tr><td><code>level.scene.json</code></td><td>Components, scene block (fog, env, post, input), per-entity light/camera/animation, <code>materials[]</code> NME overrides, <code>debug</code> flag</td></tr>
+</tbody></table>
+<p>Sidecar folders appear next to the export when needed: <code>audio/</code>, <code>gui/</code>, <code>env/</code>, <code>post/</code>, <code>particles/</code>, <code>materials/</code>, <code>fonts/</code>.</p>
+
+<h2>Where to click</h2>
+<p><strong>Babylon Scene</strong> (viewport N-panel) → <strong>Export Level</strong>. Pick a <code>.glb</code> path; the manifest is written beside it with the same basename (<code>Arena.glb</code> → <code>Arena.scene.json</code>).</p>
+<p>Same panel: <strong>Validate</strong> (checks only), <strong>Live Link</strong> (auto re-export on save), <strong>Debug Build</strong> (dev keys in the manifest).</p>
+
+<h2>Export pipeline (summary)</h2>
+<ol>
+<li><strong>Validate</strong> — warnings to the report / console (see <a href="04-WORKFLOW.html">04 — Workflow</a>)</li>
+<li><strong>GUID pass</strong> — stable <code>bjs_id</code> on every exported / referenced object; duplicates re-issued</li>
+<li><strong>Write glb</strong> — Blender glTF exporter (+Y-up, render-disabled objects skipped)</li>
+<li><strong>Build manifest</strong> — components, scene block, lights, cameras, animations, materials</li>
+<li><strong>Copy assets</strong> — sounds, GUI JSON, HDR/env, particles, fonts, NME JSON, button images</li>
+<li><strong>Remember path</strong> — for Live Link on the next Ctrl+S</li>
+</ol>
+<p>Step-by-step with source: <a href="trace-export.html">trace-export</a>.</p>
+
+<h2>What gets exported vs skipped</h2>
+<table><thead><tr><th>Blender state</th><th>Result</th></tr></thead><tbody>
+<tr><td><strong>Camera icon</strong> off (not renderable)</td><td>Excluded from glb and manifest entirely</td></tr>
+<tr><td><strong>Eye</strong> off (viewport hidden)</td><td>In glb + manifest with <code>"visible": false</code></td></tr>
+<tr><td><strong>Collider → Make Invisible</strong></td><td>Mesh hidden at runtime; physics kept</td></tr>
+<tr><td><strong>Ray Visibility → Shadow</strong> off</td><td>Mesh receive-only (no shadow casting)</td></tr>
+<tr><td>Object with GUID, no components</td><td>Exported as addressable entity (empty transform node)</td></tr>
+</tbody></table>
+
+<h2>First export checklist</h2>
+<ul>
+<li>Scene has an <strong>active camera</strong></li>
+<li>Script components point at files that exist on disk</li>
+<li>Export path sits under your app's <code>public/levels/</code> (or copy there after export)</li>
+<li>Run <strong>Validate</strong> if anything looks wrong at runtime</li>
+</ul>
+<p>New to the kit? Start with <a href="../QUICKSTART.html">Quickstart</a>.</p>

@@ -4,8 +4,9 @@ import type { Entity } from "../Entity";
 import type { AnimationInfo } from "../types";
 import type { PendingRef } from "../../scripting/exposed";
 import type { ShadowCaster } from "../../subsystems/shadows";
-import type { TriggerRegistration } from "../../subsystems/triggers";
+import type { EventMessageRegistration } from "../../subsystems/collisions";
 import type { ConstraintRegistration } from "../../subsystems/constraints";
+import type { ReflectionProbeRegistration } from "../../subsystems/reflectionProbes";
 import type { Gui3DRegistration } from "../../ui/gui3d/builder";
 import { CreateCameraTargetSets, type CameraTargetSets } from "../../subsystems/cameras";
 import { BuildIdIndex } from "./nodeResolution";
@@ -27,8 +28,9 @@ export interface LoadContext {
   guiTasks: Promise<unknown>[];
   particleTasks: Promise<unknown>[];
   msdfTextTasks: Promise<unknown>[];
-  triggerRegistrations: TriggerRegistration[];
+  eventMessageRegistrations: EventMessageRegistration[];
   constraintRegistrations: ConstraintRegistration[];
+  reflectionProbeRegistrations: ReflectionProbeRegistration[];
   gui3dRegistrations: Gui3DRegistration[];
   /** Scene default map for scripts without @inputMap (from manifest.scene). */
   defaultInputMap: string;
@@ -53,8 +55,9 @@ export function CreateLoadContext(
     guiTasks: [],
     particleTasks: [],
     msdfTextTasks: [],
-    triggerRegistrations: [],
+    eventMessageRegistrations: [],
     constraintRegistrations: [],
+    reflectionProbeRegistrations: [],
     gui3dRegistrations: [],
     defaultInputMap,
   };

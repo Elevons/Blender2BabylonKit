@@ -1,0 +1,82 @@
+<h1>Quickstart — first level in ~15 minutes</h1>
+<p>A linear walkthrough from zero to a rotating object in the browser. Kit version: <strong>__KIT_VERSION__</strong>.</p>
+
+<h2>Before you start</h2>
+<ul>
+<li><strong>Blender</strong> 4.2 or newer (5.x recommended)</li>
+<li><strong>Node.js</strong> 18+ and this repo cloned</li>
+<li><strong><code>babylon_level_kit_extension.zip</code></strong> in the repo root (or build it from <code>blender_addon/</code>)</li>
+</ul>
+
+<h2>1. Install the add-on</h2>
+<ol>
+<li>Blender → <strong>Edit → Preferences → Get Extensions</strong></li>
+<li>Drop-down (top-right) → <strong>Install from Disk…</strong> → pick <code>babylon_level_kit_extension.zip</code></li>
+<li>Enable the extension</li>
+<li>In the 3D viewport press <strong>N</strong> → open the <strong>Babylon Object</strong> / <strong>Babylon Scene</strong> tabs</li>
+</ol>
+<p>You should see <strong>Add Component</strong> on a selected object and <strong>Export Level</strong> under Babylon Scene.</p>
+
+<h2>2. Prepare a simple scene</h2>
+<ol>
+<li>Open or create a Blender scene with at least one mesh (the default cube is fine)</li>
+<li>Add a <strong>Camera</strong> and set it as the scene camera if you don't have one</li>
+<li>Select the cube (or your mesh)</li>
+</ol>
+
+<h2>3. Attach a script behavior</h2>
+<ol>
+<li><strong>Babylon Object</strong> → <strong>Add Component</strong> → <strong>Script</strong></li>
+<li>Click <strong>Open Script…</strong> and pick <code>apps/playground/src/behaviors/Rotator.ts</code> from this repo</li>
+<li>The registry key should read <code>Rotator</code> (filename stem)</li>
+<li>Adjust <strong>Speed</strong> and <strong>Axis</strong> in the exposed fields if you like</li>
+</ol>
+<p>The playground already registers <code>Rotator</code> via <code>AutoRegisterBehaviors</code> — no code changes needed for this step.</p>
+
+<h2>4. Export the level</h2>
+<ol>
+<li><strong>Babylon Scene</strong> → <strong>Export Level</strong></li>
+<li>Choose a folder under the playground, e.g.<br>
+<code>…/apps/playground/public/levels/Quickstart/Quickstart.glb</code></li>
+<li>Confirm you get <code>Quickstart.glb</code> and <code>Quickstart.scene.json</code> side by side</li>
+</ol>
+<p>Optional: click <strong>Validate</strong> first to catch missing scripts or a missing active camera. See <a href="blender/validation.html">validation diagram</a>.</p>
+
+<h2>5. Run the playground</h2>
+<p>From the repo root:</p>
+<pre><code>npm install
+npm run dev</code></pre>
+<p>Point the playground at your export. Either edit <code>apps/playground/src/main.ts</code> to load <code>/levels/Quickstart/Quickstart.scene.json</code>, or copy your two files over an existing level path the app already loads.</p>
+<p>Open the dev URL in a browser. You should see your mesh and it should rotate if the Script component is enabled.</p>
+
+<h2>6. Enable Live Link (optional)</h2>
+<ol>
+<li>In Blender, <strong>Babylon Scene</strong> → export once to the same path as step 4</li>
+<li>Tick <strong>Live Link</strong></li>
+<li>With <code>npm run dev</code> still running, change the exposed <strong>Speed</strong> in Blender and press <strong>Ctrl+S</strong></li>
+<li>The browser should reload with the updated level</li>
+</ol>
+<p>Details: <a href="engine/09-WORKFLOW.html#live-link">09 — Workflow (Live Link)</a> · <a href="blender/livelink.html">livelink diagram</a>.</p>
+
+<h2>7. Debug keys (dev builds)</h2>
+<p>With <strong>Debug Build</strong> enabled in the Export panel:</p>
+<ul>
+<li><strong>C</strong> — toggle physics collider wireframes</li>
+<li><strong>I</strong> — open the Babylon Inspector</li>
+</ul>
+
+<h2>What you built</h2>
+<p>Blender authored a <strong>Script</strong> component and exported two files:</p>
+<ul>
+<li><code>Quickstart.glb</code> — geometry, transforms, GUIDs in glTF extras</li>
+<li><code>Quickstart.scene.json</code> — the Script row, exposed field values, scene settings</li>
+</ul>
+<p>At runtime, <code>LevelLoader.Load</code> appends the glb, matches the cube by GUID, instantiates <code>Rotator</code>, applies your exposed values, then calls <code>OnStart</code> / <code>OnUpdate</code> each frame. See <a href="engine/01-ARCHITECTURE.html">01 — Architecture</a> and <a href="engine/04-LOAD-PIPELINE.html">04 — Load Pipeline</a>.</p>
+
+<h2>Next steps</h2>
+<table><thead><tr><th>I want to…</th><th>Go to</th></tr></thead><tbody>
+<tr><td>Add colliders, audio, UI, …</td><td><a href="engine/13-FEATURE-LIST.html">13 — Feature List</a></td></tr>
+<tr><td>Write my own behavior</td><td><a href="engine/14-API-GUIDE.html">14 — API Guide</a> · <a href="engine/05-SCRIPTING.html">05 — Scripting</a></td></tr>
+<tr><td>More Blender export detail</td><td><a href="blender/00-INDEX.html">Blender docs</a> · <a href="blender/export.html">export diagram</a></td></tr>
+<tr><td>Scaffold a new game app</td><td><a href="../README.md#create-a-new-project">README — Creating a new project</a></td></tr>
+</tbody></table>

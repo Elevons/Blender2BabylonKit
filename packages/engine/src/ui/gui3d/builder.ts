@@ -67,7 +67,6 @@ function BuildPanels(
     manager.addControl(panel);
     panel.linkToTransformNode(registration.entity.node);
 
-    registration.entity.controls3D.push(panel);
     RegisterAttachment(registration.entity, {
       type: registration.component.type,
       data: registration.component,
@@ -120,7 +119,6 @@ function BuildControl(
   ApplyControlContent(control, controlComponent, baseUrl);
   WireClickEvents(control, controlComponent.events, registration.entity, level);
 
-  registration.entity.controls3D.push(control);
   RegisterAttachment(registration.entity, {
     type: controlComponent.type,
     data: controlComponent,

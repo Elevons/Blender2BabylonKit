@@ -1,6 +1,6 @@
 # Babylon Level Kit — Behavior Authoring Kernel
 
-Minimal contract for generating a behavior script (runtime **v0.31.1**). For
+Minimal contract for generating a behavior script (runtime **engine v0.31.1 · Blender add-on v0.32.0**). For
 task-specific steps, call **`route_task(intent, className)`** first — do not
 guess. For API detail, use **`get_scripting_context(section=…)`**.
 
@@ -32,7 +32,8 @@ export default class MyBehavior extends Behavior
 | `OnStart(): void` | Once, after level load and `@exposed` refs resolve |
 | `OnUpdate(deltaSeconds: number): void` | Every frame |
 | `OnDestroy(): void` | Level dispose — remove observers |
-| `OnMessage(message: string, source: Entity): void` | Trigger events or `SendMessage` |
+| `OnMessage(message: string, source: Entity): void` | Event Messages or `SendMessage` |
+| `OnCollisionEnter/Stay/Exit`, `OnTriggerEnter/Exit` | Havok collision/trigger lifecycle (opt-in overrides) |
 
 - Scale continuous motion by `deltaSeconds`. Babylon **velocities** are already
   per-second — do not multiply those by `deltaSeconds`.

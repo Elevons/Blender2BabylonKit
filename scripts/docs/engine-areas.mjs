@@ -153,7 +153,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Physics",
           "sub": "bodies + owned meshes",
-          "desc": "COLLIDER/RIGIDBODY become one Havok V2 body per node. Multiple COLLIDER rows → PhysicsShapeContainer compound. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; OwnedColliderMeshes excludes child entities by GUID so colliders span only their own submeshes.",
+          "desc": "COLLIDER/RIGIDBODY become one Havok V2 body per node. Multiple COLLIDER rows → PhysicsShapeContainer compound. bodyType STATIC/DYNAMIC/ANIMATED → PhysicsMotionType; DYNAMIC may set startAsleep. Auto-fit / convex-mesh / manual paths; the shared ownership rule (core/meshOwnership.ts) excludes child entities by GUID so colliders span only their own submeshes.",
           "meta": [
             [
               "File",
@@ -197,7 +197,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "File",
-              "subsystems/triggers.ts"
+              "subsystems/collisions.ts"
             ],
             [
               "Gotcha",
@@ -712,7 +712,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Validator",
           "sub": "export/validate.py",
-          "desc": "Pre-export checks: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).",
+          "desc": "Pre-export checks: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, Rendering Group id outside 0–3, Custom Layer Mask out of 32-bit range, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).",
           "meta": [
             [
               "Runs from",
@@ -732,7 +732,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Exporter",
           "sub": "export/level.py",
-          "desc": "export_level orchestrates the glb (Blender glTF, +Y-up, GUIDs in extras) and schema-v4 manifest. begin_asset_export + copy_asset (export/assets.py): sanitized names, re-export overwrites stable paths; _2 suffix only when two different sources collide in one pass. serialize_components converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects.",
+          "desc": "export_level orchestrates the glb (Blender glTF, +Y-up, GUIDs in extras) and schema-v4 manifest. begin_asset_export + copy_asset (export/assets.py): sanitized names, re-export overwrites stable paths; _2 suffix only when two different sources collide in one pass. serialize_components dispatches the SERIALIZERS registry (component_serializers.py), which converts axes Blender→Babylon (x,y,z)→(x,z,−y). Force-includes referenced objects.",
           "meta": [
             [
               "Schema",
@@ -848,7 +848,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Sidecar files",
           "sub": "artifact",
-          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (patched particle JSON), materials/ (each NME source copied once; external texture overrides patch URLs and strip embeds; embedded-only slots stay in JSON + InputBlock values). Stable sanitized names; re-export overwrites.",
+          "desc": "Media copied beside the export via copy_asset: audio/, gui/, env/, fonts/, post/, particles/ (patched particle JSON), materials/ (each NME source copied once; external texture overrides patch URLs and strip embeds; embedded-only slots stay in JSON + InputBlock values + GradientBlock colorSteps). Stable sanitized names; re-export overwrites.",
           "meta": [
             [
               "Copied by",
@@ -1076,7 +1076,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FetchAndValidateManifest",
           "sub": "step 1",
-          "desc": "Clear errors for the classic failures: HTTP 404, and the dev server returning index.html (HTML, not JSON).",
+          "desc": "Clear errors for the classic failures: HTTP 404, and the dev server returning index.html (HTML, not JSON). ValidateManifest then checks schema version (must equal SUPPORTED_SCHEMA_VERSION), the glb path, and per-entity id/name/components shape — malformed manifests fail fast with the problem named.",
           "meta": [
             [
               "Output",
@@ -1128,7 +1128,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ProcessEntity (loop)",
           "sub": "step 5",
-          "desc": "Per manifest entity: resolve node, create Entity, back-ref node.metadata.bjsEntity, then ApplyComponents + light/camera processing.",
+          "desc": "Per manifest entity: resolve node, create Entity, back-ref node.metadata.bjsEntity, then ApplyEntityComponents + light/camera processing.",
           "meta": [
             [
               "Light",
@@ -1146,13 +1146,13 @@ export const ENGINE_AREA_PAGES = {
           "y": 240,
           "w": 150,
           "h": 40,
-          "label": "ApplyComponents",
+          "label": "ApplyEntityComponents",
           "sub": "per entity",
-          "desc": "ClassifyComponents collects all COLLIDER rows → HideEntityNode when any collider has makeInvisible → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → InstantiateScripts (inject entity/scene, ApplyExposedVars) → InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "The component registry (loader/componentRegistry.ts): one handler per component type, run in table order. Physics handler collects all COLLIDER rows → HideEntityNode when any collider has makeInvisible → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → script handler (loader/scripts.ts) runs InstantiateScripts (inject entity/scene, ApplyExposedVars) + InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
           "meta": [
             [
-              "Helpers",
-              "InstantiateScripts / InjectInputMaps"
+              "Registry",
+              "COMPONENT_HANDLERS"
             ]
           ]
         },
@@ -1196,7 +1196,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireTriggerEvents → BuildConstraints → BuildGui3DControls → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
+          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → BuildNodeMaterials (single NME compile after IBL) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireCollisionEvents → BuildConstraints → BuildGui3DControls → BuildReflectionProbes + AssignProbeMaterials → ApplyRenderLayers (RENDERING_GROUP / LAYER_MASK on owned meshes) → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1735,7 +1735,7 @@ export const ENGINE_AREA_PAGES = {
           "sub": "entity pass",
           "desc": "@inputMap(\"Name\") on a field → that map; @inputMap() / empty → scene default; no @inputMap fields → behavior.input receives the scene default.",
           "meta": [
-            ["File", "core/loader/entityBuilder.ts"]
+            ["File", "core/loader/scripts.ts"]
           ]
         },
         {
@@ -1821,11 +1821,15 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "OwnedColliderMeshes",
           "sub": "the ownership rule",
-          "desc": "Includes a descendant mesh only if no node on its path up carries bjs_id — so a collider spans its own multi-material submeshes (_primitiveN, no GUID) but never a parented child entity's geometry. All paths route through it.",
+          "desc": "Includes a descendant mesh only if no node on its path up carries bjs_id — so a collider spans its own multi-material submeshes (_primitiveN, no GUID) but never a parented child entity's geometry. The rule lives in core/meshOwnership.ts, shared with reflection probes; all physics paths route through it.",
           "meta": [
             [
               "Fixed in",
               "v0.29.1"
+            ],
+            [
+              "Shared rule",
+              "core/meshOwnership.ts"
             ]
           ]
         },
@@ -1940,7 +1944,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Triggers",
-          "sub": "subsystems/triggers.ts",
+          "sub": "subsystems/collisions.ts",
           "desc": "Authored On-Enter events: one onTriggerCollisionObservable; TRIGGER_ENTERED → trigger body→registration, entering body→metadata.bjsEntity, tag gate → target.SendMessage.",
           "meta": [
             [
@@ -1949,7 +1953,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Cleanup",
-              "level.triggerObserver removed on dispose"
+              "level.collisionEventHandles removed on dispose"
             ]
           ]
         },
@@ -2047,7 +2051,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Lights",
           "sub": "subsystems/lights.ts",
-          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color (exact), intensity (scaled: SUN_SCALE / PUNCTUAL_SCALE), spot cone. SUN bakes world aim (BakeSunLightWorldTransform) and detaches — empty position ignored for shadows. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between). Large rigs: see Punctual light budget.",
+          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color and intensity 1:1 (manifest energy → light.intensity), spot cone. SUN bakes world aim (BakeSunLightWorldTransform) and detaches — empty position ignored for shadows. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between). Atmosphere may override sun intensity to π. Large rigs: see Punctual light budget.",
           "meta": [
             [
               "AREA",
@@ -2159,7 +2163,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Node materials",
           "sub": "subsystems/materials.ts",
-          "desc": "Optional manifest.materials[]: ApplyNodeMaterials matches mesh.material.name, parses NME JSON, replaces PBR. Loads embedded data: / base64String from JSON or relative paths via urlRewriter. Cache per file+name; manifest textures[] always override embeds; blockId via editorData.map; BindManifestTextures + BindManifestInputs.",
+          "desc": "Optional manifest.materials[]: ApplyNodeMaterials parses NME JSON and binds manifest overrides (no build); BuildNodeMaterials in FinalizeLevel compiles once after environment IBL. Cache per file+name; embedded data: / base64String or urlRewriter paths; textures[] override embeds; inputs[] and gradients[] patch InputBlock values and GradientBlock colorSteps; editorData.map for blockId. NME IBL needs ReflectionBlock on PBR reflection input.",
           "meta": [
             [
               "Editor",
@@ -2279,7 +2283,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyAudio",
           "sub": "subsystems/audio.ts",
-          "desc": "Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Queued in ApplyComponents; promises settled in FinalizeLevel. Names = file stem.",
+          "desc": "Audio engine v2: one lazy CreateAudioEngineAsync; CreateSoundAsync per component with spatialEnabled at creation; spatial.attach(entity.node). Queued by the audio handler in the component registry; promises settled in FinalizeLevel. Names = file stem.",
           "meta": [
             [
               "Legacy Sound class",
@@ -2463,7 +2467,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyGui",
           "sub": "ui/gui2d.ts",
-          "desc": "CreateForMesh or CreateFullscreenUI, then parseFromURLAsync. Texture name = file stem → entity.GetGui(\"hud\"). Queued as an async task during ApplyComponents.",
+          "desc": "CreateForMesh or CreateFullscreenUI, then parseFromURLAsync. Texture name = file stem → entity.GetGui(\"hud\"). Queued as an async task by the GUI handler in the component registry.",
           "meta": [
             [
               "Peer dep",
@@ -2683,7 +2687,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyMsdfText",
           "sub": "ui/msdfText.ts",
-          "desc": "FontAsset cached per scene; TextRenderer.CreateTextRendererAsync; parent = entity.node. Queued async during ApplyComponents.",
+          "desc": "FontAsset cached per scene (cleared on Level.Dispose); TextRenderer.CreateTextRendererAsync; parent = entity.node. Queued async by the MSDF text handler in the component registry.",
           "meta": [
             [
               "Storage",

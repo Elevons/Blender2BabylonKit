@@ -346,7 +346,7 @@
 <h2>Blender authoring</h2>
 <p>The asset and <strong>Scene Default</strong> map are authored in Blender's <strong>Input Actions</strong> panel (the <code>input_actions/</code> package: <code>properties.py</code> / <code>serialize.py</code> / <code>operators.py</code>, drawn by <code>ui/input_panel.py</code>) and exported as <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>. If the panel is empty at export, the built-in &quot;Player&quot; map is serialized anyway.</p>
 <h2>Load-time injection</h2>
-<p><code>LevelLoader</code> calls <code>InputManager.LoadAsset</code> before behaviors are built. Map injection (<code>core/loader/entityBuilder.ts</code> → <code>InjectInputMaps</code>):</p>
+<p><code>LevelLoader</code> calls <code>InputManager.LoadAsset</code> before behaviors are built. Map injection (<code>core/loader/scripts.ts</code> → <code>InjectInputMaps</code>):</p>
 <ul>
 <li><code>@inputMap(&quot;Name&quot;)</code> on a field → that map;</li>
 <li><code>@inputMap()</code> or <code>@inputMap(&quot;&quot;)</code> → scene default;</li>

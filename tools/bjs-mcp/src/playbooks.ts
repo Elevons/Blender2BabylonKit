@@ -353,9 +353,10 @@ export function FormatRouteTask(intent: string, className: string): string
     ``,
   ];
 
-  mandatory.forEach((step, index) => {
+  for (const [index, step] of mandatory.entries())
+  {
     lines.push(`${index + 1}. \`${step}\``);
-  });
+  }
 
   lines.push(
     ``,

@@ -15,6 +15,7 @@
 <li><a href="#guid">GUID / entity identity</a></li>
 <li><a href="#visibility">Viewport visibility</a></li>
 <li><a href="#tag">Tag</a></li>
+<li><a href="#render-layers">Rendering group / Layer mask</a></li>
 <li><a href="#collider">Collider / RigidBody</a></li>
 <li><a href="#script">Script + @exposed</a></li>
 <li><a href="#runtime-loop">Runtime loop</a></li>
@@ -68,11 +69,25 @@
 <p class="trace-summary">A text label on an entity so scripts and triggers can find “all enemies” or “the player” without hard-coding names.</p>
 <ol class="trace-flow">
 <li><span class="step-stage">Blender</span><p class="step-what">You add a TAG component and type a label (e.g. <code>Enemy</code>).</p><p class="step-code"><code>blender_addon/components/</code> · TAG component UI</p></li>
-<li><span class="step-stage">Export</span><p class="step-what">Export writes one TAG row into that object’s component list.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Export writes one TAG row into that object’s component list.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · <code>SERIALIZERS</code> registry</p></li>
 <li><span class="step-stage">Manifest</span><p class="step-what">The JSON holds <code>{ "type": "TAG", "tag": "Enemy" }</code>.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">The loader sets <code>entity.tag</code> and records the attachment.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ClassifyComponents</code>, <code>RegisterAttachment</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader sets <code>entity.tag</code> and records the attachment.</p><p class="step-code"><code>packages/engine/src/core/loader/componentRegistry.ts</code> · tag handler, <code>RegisterAttachment</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">Query with <code>level.ByTag("Enemy")</code> or check <code>entity.HasAttachment("TAG")</code>.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>ByTag</code></p></li>
 </ol>
+</section>
+
+<section class="trace-feature">
+<h3 id="render-layers">Rendering group / Layer mask</h3>
+<p class="trace-summary">Control Babylon draw order (rendering groups 0–3) or camera visibility (layer masks) on an entity’s owned meshes, with optional propagation to child entities.</p>
+<ol class="trace-flow">
+<li><span class="step-stage">Blender</span><p class="step-what">Add <strong>Rendering Group</strong> and/or <strong>Layer Mask</strong> under Rendering. Set group id or mask preset; toggle <strong>Apply to Owned Meshes</strong> / <strong>Apply to Child Entities</strong>.</p><p class="step-code"><code>blender_addon/components/constants.py</code> · <code>COMPONENT_TYPES</code>; <code>ui/component_bodies.py</code> · body drawers</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Each enabled row serializes through the <code>SERIALIZERS</code> registry.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · <code>_serialize_rendering_group</code>, <code>_serialize_layer_mask</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">Example rows: <code>{ "type": "RENDERING_GROUP", "renderingGroupId": 2, "applyOwnedMeshes": true, "applyChildEntities": true }</code> and <code>{ "type": "LAYER_MASK", "layerMask": 268435456, … }</code>.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Handlers record attachment rows during the entity pass; mesh values are deferred.</p><p class="step-code"><code>packages/engine/src/core/loader/componentRegistry.ts</code> · <code>RenderingGroupHandler</code>, <code>LayerMaskHandler</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">After every entity, probe, and async asset exists, <code>ApplyRenderLayers</code> walks the manifest parent tree: owned meshes via <code>CollectOwnedMeshes</code>; child propagation stops at the first descendant with its own component of that kind.</p><p class="step-code"><code>packages/engine/src/subsystems/renderLayers.ts</code> · <code>ApplyRenderLayers</code>; called from <code>LevelLoader.FinalizeLevel</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Query authorship with <code>entity.GetAttachment("RENDERING_GROUP")</code> / <code>GetAttachment("LAYER_MASK")</code>. Meshes already carry Babylon properties — no per-frame update.</p><p class="step-code"><code>packages/engine/src/core/meshOwnership.ts</code> · <code>CollectOwnedMeshes</code></p></li>
+</ol>
+<p class="trace-footnote">Not the same as Babylon’s 2D <code>Layer</code> overlay class. Layer-mask presets use high bits (<code>0x10000000</code> …) for HUD cameras — match <code>camera.layerMask</code> in app code. Detail: <a href="07-RENDERING.html#render-layers">07 — Rendering</a>.</p>
 </section>
 
 <section class="trace-feature">
@@ -81,9 +96,9 @@
 <p class="trace-interactive">Walk through the code: <a href="trace-physics.html"><strong>trace-physics</strong></a> · Blender viewport: <a href="../blender/trace-collider-preview.html">collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a></p>
 <ol class="trace-flow">
 <li><span class="step-stage">Blender</span><p class="step-what">You add collider and/or rigid-body rows in the N-panel, pick shapes, and optionally preview wireframes and center-of-mass in the 3D view.</p><p class="step-code"><code>blender_addon/viewport/collider_preview.py</code>, <code>cog_preview.py</code></p></li>
-<li><span class="step-stage">Export</span><p class="step-what">Each enabled row becomes one JSON object; positions are converted from Blender’s axes to the game’s Y-up space. “Make Invisible” and “Apply Object Scale” become flags on that row.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Each enabled row becomes one JSON object; positions are converted from Blender’s axes to the game’s Y-up space. “Make Invisible” and “Apply Object Scale” become flags on that row.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · <code>SERIALIZERS</code> registry</p></li>
 <li><span class="step-stage">Manifest</span><p class="step-what">The level file lists <code>COLLIDER</code> and <code>RIGIDBODY</code> entries under the entity. Multiple colliders on one object are intentional — they combine into one body.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">The loader gathers all colliders for the entity, hides the mesh if requested, then builds physics.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ClassifyComponents</code>, <code>ApplyComponents</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader gathers all colliders for the entity, hides the mesh if requested, then builds physics.</p><p class="step-code"><code>packages/engine/src/core/loader/componentRegistry.ts</code> · physics handler</p></li>
 <li><span class="step-stage">Load</span><p class="step-what">One collider → one shape (auto-fit to mesh, convex hull, or manual box/sphere). Several colliders → one compound body wrapping all shapes.</p><p class="step-code"><code>packages/engine/src/subsystems/physics.ts</code> · <code>BuildPhysics</code>, <code>BuildCompoundBody</code>, <code>OwnedColliderMeshes</code></p></li>
 <li><span class="step-stage">Load</span><p class="step-what">Mass, friction, and center of mass are applied for dynamic bodies.</p><p class="step-code"><code>packages/engine/src/subsystems/physics.ts</code> · <code>ApplyMassProperties</code>, <code>ResolveCenterOfMass</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">The entity gets <code>entity.body</code>; press <strong>C</strong> in debug builds to visualize colliders.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>ShowColliders</code></p></li>
@@ -99,7 +114,7 @@
 <li><span class="step-stage">Blender</span><p class="step-what">You pick a script file and click Sync — the panel fills with fields marked <code>@exposed</code> in the TypeScript source.</p><p class="step-code"><code>blender_addon/core/script_parse.py</code> · <code>parse_exposed</code></p></li>
 <li><span class="step-stage">Export</span><p class="step-what">Your edited values are written into the SCRIPT row’s <code>vars</code> object (entity picks become GUID strings).</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>_serialize_vars</code></p></li>
 <li><span class="step-stage">Manifest</span><p class="step-what">Each scripted object has <code>{ "type": "SCRIPT", "script": "MyBehavior", "vars": { … } }</code>.</p><p class="step-code">manifest · <code>entities[].components[]</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">The loader creates a behavior instance from the registry, injects <code>entity</code> and <code>scene</code>, then copies <code>vars</code> onto the instance.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>InstantiateScripts</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">The loader creates a behavior instance from the registry, injects <code>entity</code> and <code>scene</code>, then copies <code>vars</code> onto the instance.</p><p class="step-code"><code>packages/engine/src/core/loader/scripts.ts</code> · <code>InstantiateScripts</code></p></li>
 <li><span class="step-stage">Load</span><p class="step-what">Entity-reference fields wait until every entity exists, then resolve to the real object.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ResolveObjectReferences</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what"><code>OnStart</code> runs once when the level begins — not during the steps above.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>Begin</code></p></li>
 </ol>
@@ -123,7 +138,7 @@
 <p class="trace-summary">Scripts have four hooks: start once, update every frame, react to messages, and clean up on teardown.</p>
 <p class="trace-interactive">Walk through the code: <a href="trace-lifecycle.html"><strong>trace-lifecycle</strong></a></p>
 <ol class="trace-flow">
-<li><span class="step-stage">Load</span><p class="step-what">Behavior objects are created but none of the hooks run yet.</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>InstantiateScripts</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Behavior objects are created but none of the hooks run yet.</p><p class="step-code"><code>packages/engine/src/core/loader/scripts.ts</code> · <code>InstantiateScripts</code></p></li>
 <li><span class="step-stage">Load</span><p class="step-what">Cross-object references resolve; triggers, constraints, and GUI finish wiring.</p><p class="step-code"><code>packages/engine/src/core/LevelLoader.ts</code> · <code>FinalizeLevel</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what"><code>Begin</code> attaches input, calls every <code>OnStart</code> once, and subscribes <code>RunFrame</code> to the render loop.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>Begin</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">Each frame: read input → all <code>OnUpdate</code> → camera updaters → clear input edges.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>RunFrame</code></p></li>
@@ -137,9 +152,9 @@
 <p class="trace-summary">The component stack in Blender is the master list of “what this object has” — colliders, scripts, audio, GUI, and so on.</p>
 <p class="trace-interactive">Walk through the code: <a href="trace-components.html"><strong>trace-components</strong></a> (runtime) · <a href="../blender/trace-components.html">Blender trace-components</a></p>
 <ol class="trace-flow">
-<li><span class="step-stage">Blender</span><p class="step-what">You add rows in the Babylon Components panel; each row is one feature on that object.</p><p class="step-code"><code>blender_addon/ui/component_draw.py</code> · <code>BJS_PT_components</code></p></li>
-<li><span class="step-stage">Export</span><p class="step-what">Every enabled row becomes one entry in the manifest component array.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">For each entity, the loader sorts components and sends each type to the right subsystem (physics, audio, scripts, …).</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ProcessEntity</code>, <code>ClassifyComponents</code>, <code>ApplyComponents</code></p></li>
+<li><span class="step-stage">Blender</span><p class="step-what">You add rows in the Babylon Components panel; each row is one feature on that object.</p><p class="step-code"><code>blender_addon/ui/component_draw.py</code> + <code>component_bodies.py</code> · <code>draw_component</code>, <code>BODY_DRAWERS</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Every enabled row becomes one entry in the manifest component array.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · <code>SERIALIZERS</code> registry</p></li>
+<li><span class="step-stage">Load</span><p class="step-what">For each entity, the loader sends each component type to its registered handler (physics, audio, scripts, …).</p><p class="step-code"><code>packages/engine/src/core/loader/entityBuilder.ts</code> · <code>ProcessEntity</code>; <code>componentRegistry.ts</code> · <code>ApplyEntityComponents</code></p></li>
 <li><span class="step-stage">Load</span><p class="step-what">Only SCRIPT rows become live TypeScript classes; everything else is applied data (bodies, sounds, textures).</p><p class="step-code"><code>packages/engine/src/core/attachments.ts</code> · <code>RegisterAttachment</code></p></li>
 </ol>
 </section>
@@ -227,14 +242,14 @@
 </section>
 
 <section class="trace-feature">
-<h3 id="trigger">Trigger event → OnMessage</h3>
-<p class="trace-summary">A trigger volume can send a named message to another object when something enters it — scripts receive that in <code>OnMessage</code>.</p>
+<h3 id="trigger">Event Messages &amp; collision hooks</h3>
+<p class="trace-summary">Collider Event Messages send named messages to another object on physics phases; behaviors can also override Unity-style <code>OnCollision*</code> / <code>OnTrigger*</code> hooks.</p>
 <p class="trace-interactive">Walk through the code: <a href="trace-trigger.html"><strong>trace-trigger</strong></a></p>
 <ol class="trace-flow">
-<li><span class="step-stage">Blender</span><p class="step-what">On a trigger collider, you add “On Enter” rows: target object, message name, optional tag filter.</p><p class="step-code"><code>blender_addon/components/</code> · trigger events on COLLIDER</p></li>
-<li><span class="step-stage">Export</span><p class="step-what">Events serialize as <code>events: [{ target, message, filterTag }]</code> on the collider row.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">One physics observer listens for entries; matching bodies call <code>SendMessage</code> on the target.</p><p class="step-code"><code>packages/engine/src/subsystems/triggers.ts</code> · <code>WireTriggerEvents</code></p></li>
-<li><span class="step-stage">Runtime</span><p class="step-what">Target behaviors handle the string in <code>OnMessage(message, source)</code>.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>SendMessage</code></p></li>
+<li><span class="step-stage">Blender</span><p class="step-what">On any collider, add <strong>Event Messages</strong> rows: When (trigger/collision enter/exit), target, message, optional tag filter.</p><p class="step-code"><code>blender_addon/components/</code> · <code>event_messages</code> on COLLIDER</p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Rows serialize as <code>eventMessages: [{ when, target, message, filterTag }]</code> on the collider row.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · <code>SERIALIZERS</code> registry</p></li>
+<li><span class="step-stage">Load</span><p class="step-what"><code>WireCollisionEvents</code> relays Havok collision/trigger observables to hooks and dispatches matching Event Messages via <code>SendMessage</code>.</p><p class="step-code"><code>packages/engine/src/subsystems/collisions.ts</code> · <code>WireCollisionEvents</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">Target behaviors handle messages in <code>OnMessage(message, source)</code>; involved entities receive collision/trigger hooks on their own behaviors.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>SendMessage</code></p></li>
 </ol>
 </section>
 
@@ -244,7 +259,7 @@
 <p class="trace-interactive">Walk through the code: <a href="trace-constraint.html"><strong>trace-constraint</strong></a></p>
 <ol class="trace-flow">
 <li><span class="step-stage">Blender</span><p class="step-what">You add a CONSTRAINT row, pick type and connected body, set pivots and limits.</p><p class="step-code"><code>blender_addon/components/</code> · CONSTRAINT component</p></li>
-<li><span class="step-stage">Export</span><p class="step-what">Pivots and axes convert to game space; the connected object’s GUID is included in the export.</p><p class="step-code"><code>blender_addon/export/components.py</code> · <code>serialize_components</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Pivots and axes convert to game space; the connected object’s GUID is included in the export.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · <code>SERIALIZERS</code> registry</p></li>
 <li><span class="step-stage">Load</span><p class="step-what">After both bodies exist, Havok constraints are built from live world poses (hinge motors optional).</p><p class="step-code"><code>packages/engine/src/subsystems/constraints.ts</code> · <code>BuildConstraints</code></p></li>
 </ol>
 </section>
@@ -256,7 +271,7 @@
 <ol class="trace-flow">
 <li><span class="step-stage">Blender</span><p class="step-what">You author maps, actions, and bindings in the Input Actions panel; pick a scene default map.</p><p class="step-code"><code>blender_addon/input_actions/</code> · Input Actions UI</p></li>
 <li><span class="step-stage">Export</span><p class="step-what">The whole input asset and default map name go into <code>scene.inputActions</code> in the manifest.</p><p class="step-code"><code>blender_addon/input_actions/serialize.py</code> · <code>serialize_input_asset</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">Input loads before behaviors; <code>@inputMap("Name")</code> fields get the matching map injected.</p><p class="step-code"><code>packages/engine/src/input/InputManager.ts</code> · <code>LoadAsset</code>; <code>core/loader/entityBuilder.ts</code> · <code>InjectInputMaps</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">Input loads before behaviors; <code>@inputMap("Name")</code> fields get the matching map injected.</p><p class="step-code"><code>packages/engine/src/input/InputManager.ts</code> · <code>LoadAsset</code>; <code>core/loader/scripts.ts</code> · <code>InjectInputMaps</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">Each frame: poll devices → evaluate actions → scripts read values → clear “pressed this frame” edges.</p><p class="step-code"><code>packages/engine/src/input/InputManager.ts</code> · <code>Process</code>, <code>EndFrame</code> inside <code>Level.RunFrame</code></p></li>
 </ol>
 </section>
@@ -310,10 +325,11 @@
 <p class="trace-summary">Materials authored in Babylon’s Node Material Editor export as JSON plus textures; the game binds them to imported meshes by material name.</p>
 <p class="trace-interactive">Walk through the code: <a href="trace-materials.html"><strong>trace-materials</strong></a> · <a href="../blender/trace-materials.html">Blender trace-materials</a></p>
 <ol class="trace-flow">
-<li><span class="step-stage">Blender</span><p class="step-what">On the material, link an NME JSON; optionally <strong>Extract Textures…</strong> when images are still embedded; scan slots and exposed inputs; assign external images and parameter values.</p><p class="step-code"><code>blender_addon/materials/</code> · <code>Scan NME</code> · <code>Extract Textures…</code></p></li>
-<li><span class="step-stage">Export</span><p class="step-what">Each distinct NME source JSON copies once; picked images copy to <code>materials/</code>; external overrides patch <code>url</code> / <code>name</code> and strip embeds; embedded-only slots ship as-is in the JSON.</p><p class="step-code"><code>blender_addon/export/materials.py</code> · <code>export_node_material</code></p></li>
-<li><span class="step-stage">Manifest</span><p class="step-what">Top-level <code>materials[]</code> lists file, textures, and inspector inputs per material name.</p><p class="step-code">manifest · <code>materials[]</code></p></li>
-<li><span class="step-stage">Load</span><p class="step-what">After the glb loads, matching mesh materials are replaced with parsed node materials.</p><p class="step-code"><code>packages/engine/src/subsystems/materials.ts</code> · <code>ApplyNodeMaterials</code></p></li>
+<li><span class="step-stage">Blender</span><p class="step-what">On the material, link an NME JSON; optionally <strong>Extract Textures…</strong> when images are still embedded; scan slots, exposed inputs, and inspector-visible gradients; assign external images and tune parameter / color-stop values.</p><p class="step-code"><code>blender_addon/materials/</code> · <code>Scan NME</code> · <code>Extract Textures…</code></p></li>
+<li><span class="step-stage">Export</span><p class="step-what">Each distinct NME source JSON copies once; picked images copy to <code>materials/</code>; external overrides patch <code>url</code> / <code>name</code> and strip embeds; inputs and gradients patch <code>value</code> / <code>colorSteps</code>; embedded-only slots ship as-is in the JSON.</p><p class="step-code"><code>blender_addon/export/materials.py</code> · <code>export_node_material</code></p></li>
+<li><span class="step-stage">Manifest</span><p class="step-what">Top-level <code>materials[]</code> lists file, textures, inspector inputs, and gradients per material name.</p><p class="step-code">manifest · <code>materials[]</code></p></li>
+<li><span class="step-stage">Load</span><p class="step-what">After the glb loads, matching mesh materials are replaced with parsed node materials (parse + manifest overrides; no shader compile yet).</p><p class="step-code"><code>packages/engine/src/subsystems/materials.ts</code> · <code>ApplyNodeMaterials</code></p></li>
+<li><span class="step-stage">Finalize</span><p class="step-what">After scene environment IBL is ready, every node material compiles once (<code>whenTexturesReadyAsync</code> then <code>build()</code>) so <code>ReflectionBlock</code> picks up <code>scene.environmentTexture</code>.</p><p class="step-code"><code>packages/engine/src/subsystems/materials.ts</code> · <code>BuildNodeMaterials</code></p></li>
 </ol>
 </section>
 
@@ -322,7 +338,7 @@
 <p class="trace-summary">3D GUI components build floating panels and buttons in world space; clicks can send messages to other entities.</p>
 <p class="trace-interactive">Walk through the code: <a href="trace-gui3d.html"><strong>trace-gui3d</strong></a> · <a href="../blender/trace-gui3d.html">Blender trace-gui3d</a> · <a href="11-UI.html">11 — UI</a></p>
 <ol class="trace-flow">
-<li><span class="step-stage">Blender</span><p class="step-what">You add GUI3D panel/button/handle rows, layout, images, and click → target + message.</p><p class="step-code"><code>blender_addon/export/components.py</code> · GUI3D types in <code>serialize_components</code></p></li>
+<li><span class="step-stage">Blender</span><p class="step-what">You add GUI3D panel/button/handle rows, layout, images, and click → target + message.</p><p class="step-code"><code>blender_addon/export/component_serializers.py</code> · GUI3D serializers in <code>SERIALIZERS</code></p></li>
 <li><span class="step-stage">Load</span><p class="step-what">Panels are built first, then child controls; click handlers wire to <code>SendMessage</code>.</p><p class="step-code"><code>packages/engine/src/ui/gui3d/build.ts</code> · <code>BuildGui3DControls</code>; <code>events.ts</code> · <code>WireClickEvents</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">Target behaviors receive the message in <code>OnMessage</code> — same path as physics triggers.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>SendMessage</code></p></li>
 </ol>

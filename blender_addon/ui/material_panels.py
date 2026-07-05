@@ -4,6 +4,10 @@ import bpy
 from bpy.types import Panel
 
 from ..materials.nme_scan import enumerate_nme_texture_slots
+from ..materials.nme_gradients import (
+    get_gradient_ramp_texture,
+    schedule_ramp_to_steps_sync,
+)
 
 
 def _material_user_count(mat):
@@ -56,6 +60,28 @@ def _draw_nme_input(layout, row):
         col.prop(row, "c4_a", text="Alpha")
 
 
+def _draw_nme_gradient(layout, mat, row):
+    """Draw one inspector-visible GradientBlock row using Blender's ColorRamp widget."""
+    label = row.block_name or "Gradient"
+    if row.block_id:
+        label = f"{label} (id {row.block_id})"
+
+    box = layout.box()
+    box.label(text=label, icon='COLOR')
+
+    texture = get_gradient_ramp_texture(row)
+    if texture is None:
+        box.label(text="Scan NME to load the gradient editor", icon='INFO')
+        return
+
+    box.template_color_ramp(texture, "color_ramp", expand=True)
+    box.label(
+        text="NME uses linear blends between stops (Ease/Constant are not exported)",
+        icon='INFO',
+    )
+    schedule_ramp_to_steps_sync(mat, row)
+
+
 def draw_babylon_material(layout, mat):
     """Shared draw routine for the material's Babylon / NME settings."""
     users = _material_user_count(mat)
@@ -94,6 +120,17 @@ def draw_babylon_material(layout, mat):
                 current_group = group
                 params.label(text=group, icon='NONE')
             _draw_nme_input(params, row)
+
+    if len(mat.bjs_nme_gradients) > 0:
+        gradients = layout.box()
+        gradients.label(text="Gradients", icon='COLOR')
+        current_group = None
+        for grad_i, row in enumerate(mat.bjs_nme_gradients):
+            group = row.group_in_inspector or ""
+            if group and group != current_group:
+                current_group = group
+                gradients.label(text=group, icon='NONE')
+            _draw_nme_gradient(gradients, mat, row)
 
     box = layout.box()
     header = box.row()

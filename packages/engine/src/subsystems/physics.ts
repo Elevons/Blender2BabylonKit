@@ -21,8 +21,8 @@ import {
   type PhysicsShape,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
-import { ID_KEY } from "../core/types";
 import type { ColliderComponent, RigidBodyComponent } from "../core/types";
+import { CollectOwnedChildMeshes } from "../core/meshOwnership";
 import { LocalScaleAxes, ApplyObjectScaleEnabled } from "../core/nodeScale";
 
 /**
@@ -99,48 +99,13 @@ interface LocalBounds {
 
 /**
  * The meshes whose geometry this node's collider should use: the node's own
- * mesh and its multi-material submeshes, but NOT meshes belonging to child
- * *entities* parented under it in Blender.
- *
- * The two cases look identical in the scene graph (both are descendant meshes),
- * so we discriminate by GUID: the glTF loader gives every authored object a
- * `bjs_id` in node.metadata.gltf.extras, while material-split submeshes
- * (`<name>_primitive0`, ...) inherit none. A descendant is "owned" only if no
- * node on its path up to `node` carries a bjs_id — i.e. it isn't, and isn't
- * under, a separate entity.
+ * multi-material submeshes, but NOT meshes belonging to child *entities*
+ * parented under it in Blender. The GUID-based rule lives in
+ * core/meshOwnership.ts, shared with reflection probes.
  */
 function OwnedColliderMeshes(node: TransformNode): Mesh[]
 {
-  const owned: Mesh[] = [];
-
-  for (const descendant of node.getChildMeshes(false))
-  {
-    if (!(descendant instanceof Mesh) || descendant.getTotalVertices() === 0)
-    {
-      continue;
-    }
-
-    // Walk up to `node`; if any intermediate node is its own entity, this mesh
-    // belongs to that child entity, not to us.
-    let belongsToChildEntity = false;
-    let ancestor: TransformNode | null = descendant;
-    while (ancestor !== null && ancestor !== node)
-    {
-      if (ancestor.metadata?.gltf?.extras?.[ID_KEY] !== undefined)
-      {
-        belongsToChildEntity = true;
-        break;
-      }
-      ancestor = ancestor.parent as TransformNode | null;
-    }
-
-    if (!belongsToChildEntity)
-    {
-      owned.push(descendant);
-    }
-  }
-
-  return owned;
+  return CollectOwnedChildMeshes(node);
 }
 
 /**
@@ -758,6 +723,13 @@ function ApplyBodyDynamics(
   {
     physicsBody.setLinearDamping(body.linearDamping);
     physicsBody.setAngularDamping(body.angularDamping);
+
+    // ANIMATED bodies are driven by code/animation on transformNode — push that
+    // pose into Havok each step (disablePreStep defaults to true for perf).
+    if (body.bodyType === "ANIMATED")
+    {
+      physicsBody.disablePreStep = false;
+    }
   }
 }
 

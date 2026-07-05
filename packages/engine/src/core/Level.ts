@@ -3,17 +3,20 @@ import {
   PhysicsViewer,
   type Camera,
   type ShadowGenerator,
-  type Observer,
-  type IBasePhysicsCollisionEvent,
   type PhysicsConstraint,
 } from "@babylonjs/core";
+import type { CollisionEventHandles } from "../subsystems/collisions";
+import { DisposeCollisionEvents } from "../subsystems/collisions";
 import type { GUI3DManager } from "@babylonjs/gui";
 import type { MsdfTextManager } from "../ui/msdfText";
+import { ClearFontCacheForScene } from "../ui/msdfText";
 import type { ParticleEmitterManager } from "../subsystems/particles";
+import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import { Entity } from "./Entity";
 import { InputManager } from "../input";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
 import type { AtmosphereHandle } from "../subsystems/atmosphere";
+import { DisposeReflectionProbes } from "../subsystems/reflectionProbes";
 import type { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
 import type { PunctualLightingMode } from "../subsystems/clusteredLights";
 
@@ -39,8 +42,8 @@ export class Level
   atmosphere?: AtmosphereHandle;
   /** From the manifest's "Debug Build" export flag; gates debug keys/tools. */
   debugEnabled = true;
-  /** The Havok trigger-event observer, when any trigger events were authored. */
-  triggerObserver: Observer<IBasePhysicsCollisionEvent> | null = null;
+  /** Havok collision/trigger observers, when hooks or Event Messages are wired. */
+  collisionEventHandles: CollisionEventHandles | null = null;
   /** Joints built from CONSTRAINT components (disposed with the level). */
   constraints: PhysicsConstraint[] = [];
   /** Shared 3D GUI manager, present when any GUI3D_* component was authored. */
@@ -49,6 +52,8 @@ export class Level
   msdfTextManager?: MsdfTextManager;
   /** Empty-node particle emitter sync, present when any such emitter was authored. */
   particleEmitterManager?: ParticleEmitterManager;
+  /** Reflection probes built from REFLECTION_PROBE components. */
+  reflectionProbes: ReflectionProbe[] = [];
 
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
@@ -218,10 +223,10 @@ export class Level
       this.scene.onBeforeRenderObservable.remove(this.observer);
     }
 
-    if (this.triggerObserver !== null)
+    if (this.collisionEventHandles !== null)
     {
-      this.triggerObserver.remove();
-      this.triggerObserver = null;
+      DisposeCollisionEvents(this.collisionEventHandles);
+      this.collisionEventHandles = null;
     }
 
     for (const constraint of this.constraints)
@@ -242,12 +247,16 @@ export class Level
       this.msdfTextManager.dispose();
       this.msdfTextManager = undefined;
     }
+    ClearFontCacheForScene(this.scene);
 
     if (this.particleEmitterManager !== undefined)
     {
       this.particleEmitterManager.dispose();
       this.particleEmitterManager = undefined;
     }
+
+    DisposeReflectionProbes(this.reflectionProbes);
+    this.reflectionProbes.length = 0;
 
     if (this.atmosphere !== undefined)
     {
@@ -298,6 +307,8 @@ export class Level
         renderer.dispose();
       }
       entity.textRenderers.length = 0;
+
+      entity.reflectionProbes.length = 0;
 
       // The controls themselves were disposed with the manager above.
       entity.controls3D.length = 0;

@@ -384,8 +384,14 @@ export default class Patrol extends Behavior
 <tr><td><code>OnStart(): void</code></td><td>Once, after load finishes and all <code>@exposed</code> entity refs resolve</td></tr>
 <tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every frame, inside <code>Level.RunFrame</code> (before physics step)</td></tr>
 <tr><td><code>OnDestroy(): void</code></td><td>When the level is disposed</td></tr>
-<tr><td><code>OnMessage(message, source): void</code></td><td>When this entity receives a message (triggers, 3D GUI, <code>SendMessage</code>)</td></tr>
+<tr><td><code>OnMessage(message, source): void</code></td><td>When this entity receives a message (Event Messages, 3D GUI, <code>SendMessage</code>)</td></tr>
+<tr><td><code>OnCollisionEnter(other, contact): void</code></td><td>Solid collider first contacts another entity (<code>contact</code> is a <code>CollisionContact</code>: point, normal, impulse, distance)</td></tr>
+<tr><td><code>OnCollisionStay(other, contact): void</code></td><td>While solid contact continues (Havok <code>COLLISION_CONTINUED</code>; stops when bodies sleep)</td></tr>
+<tr><td><code>OnCollisionExit(other): void</code></td><td>Solid contact ends</td></tr>
+<tr><td><code>OnTriggerEnter(other): void</code></td><td>Trigger volume on this entity first overlapped</td></tr>
+<tr><td><code>OnTriggerExit(other): void</code></td><td>Trigger overlap ends (no <code>OnTriggerStay</code> — track overlap state in code if needed)</td></tr>
 </tbody></table>
+<p>Physics hooks are opt-in: override one and the engine enables the matching Havok callbacks automatically — no manual observable subscription. Both bodies in a solid contact receive collision hooks (Unity semantics); trigger hooks fire on the trigger entity's behaviors. Details: <a href="06-PHYSICS.html#collision-hooks">06 — Physics › Collision lifecycle hooks</a>.</p>
 <h3>Injected members</h3>
 <table><thead><tr><th>Member</th><th>Type</th><th>When set</th></tr></thead><tbody>
 <tr><td><code>entity</code></td><td><code>Entity</code></td><td>Before <code>OnStart</code></td></tr>
@@ -412,6 +418,7 @@ export default class Patrol extends Behavior
 <tr><td><code>controls3D</code></td><td>3D GUI controls from GUI3D_* components</td></tr>
 <tr><td><code>particleSystems</code></td><td>Particle systems from PARTICLE components</td></tr>
 <tr><td><code>textRenderers</code></td><td>MSDF renderers from MSDF_TEXT components</td></tr>
+<tr><td><code>reflectionProbes</code></td><td>Reflection probes from REFLECTION_PROBE components</td></tr>
 </tbody></table>
 <h3>Methods</h3>
 <table><thead><tr><th>Method</th><th>Returns</th><th>Notes</th></tr></thead><tbody>
@@ -426,6 +433,8 @@ export default class Patrol extends Behavior
 <tr><td><code>GetControl3D(name)</code></td><td><code>Control3D?</code></td><td>Control name</td></tr>
 <tr><td><code>GetParticles(name)</code></td><td><code>IParticleSystem?</code></td><td>System JSON stem</td></tr>
 <tr><td><code>GetTextRenderer(name)</code></td><td><code>TextRenderer?</code></td><td>Font JSON stem</td></tr>
+<tr><td><code>GetReflectionProbe()</code></td><td><code>ReflectionProbe?</code></td><td>First probe attachment on this entity</td></tr>
+<tr><td><code>GetReflectionProbes()</code></td><td><code>ReflectionProbe[]</code></td><td>All probe attachments</td></tr>
 <tr><td><code>SendMessage(message, source)</code></td><td><code>void</code></td><td>Calls <code>OnMessage</code> on every behavior on this entity</td></tr>
 </tbody></table>
 
@@ -440,8 +449,13 @@ export default class Patrol extends Behavior
 <tr><td><code>post?</code></td><td>Post-processing handles</td></tr>
 <tr><td><code>atmosphere?</code></td><td>Atmosphere addon handle</td></tr>
 <tr><td><code>constraints</code></td><td>Built physics joints</td></tr>
+<tr><td><code>clusteredLights?</code></td><td>Clustered-light container when clustering ran</td></tr>
 <tr><td><code>debugEnabled</code></td><td>From manifest <code>debug</code> flag</td></tr>
 <tr><td><code>gui3DManager?</code></td><td>Shared 3D GUI manager</td></tr>
+<tr><td><code>collisionEventHandles?</code></td><td>Havok collision/trigger observers (removed on dispose)</td></tr>
+<tr><td><code>particleEmitterManager?</code></td><td>Empty-emitter tracking handle</td></tr>
+<tr><td><code>msdfTextManager?</code></td><td>MSDF text render-pass handle</td></tr>
+<tr><td><code>reflectionProbes</code></td><td>All built reflection probes (dispose with level)</td></tr>
 </tbody></table>
 <h3>Methods</h3>
 <table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody>
@@ -458,6 +472,8 @@ export default class Patrol extends Behavior
 <p>Each successfully applied component becomes one row on <code>entity.attachments</code>. Types match manifest component types plus GUI3D variants.</p>
 <table><thead><tr><th><code>type</code></th><th><code>data</code></th><th>Runtime object on row</th></tr></thead><tbody>
 <tr><td><code>TAG</code></td><td>tag string</td><td>—</td></tr>
+<tr><td><code>RENDERING_GROUP</code></td><td>group id + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
+<tr><td><code>LAYER_MASK</code></td><td>mask + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>COLLIDER</code></td><td>collider manifest</td><td><code>body</code> (shared per entity)</td></tr>
 <tr><td><code>RIGIDBODY</code></td><td>body manifest</td><td><code>body</code> (same ref as colliders)</td></tr>
 <tr><td><code>SCRIPT</code></td><td>script + vars</td><td><code>behavior</code></td></tr>
@@ -465,6 +481,7 @@ export default class Patrol extends Behavior
 <tr><td><code>GUI</code></td><td>gui manifest</td><td><code>texture</code></td></tr>
 <tr><td><code>PARTICLE</code></td><td>particle manifest</td><td><code>system</code>, optional <code>emptyEmitter</code></td></tr>
 <tr><td><code>MSDF_TEXT</code></td><td>font paths + text</td><td><code>renderer</code></td></tr>
+<tr><td><code>REFLECTION_PROBE</code></td><td>probe capture + influence settings</td><td><code>probe</code> (<code>ReflectionProbe</code>)</td></tr>
 <tr><td><code>CONSTRAINT</code></td><td>constraint manifest</td><td><code>constraint</code></td></tr>
 <tr><td><code>GUI3D_*</code></td><td>layout + events</td><td><code>control</code></td></tr>
 </tbody></table>
@@ -530,6 +547,7 @@ const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></
 <tr><td><code>shadows</code></td><td><code>true</code></td><td>Create shadow generators</td></tr>
 <tr><td><code>shadowMapSize</code></td><td><code>1024</code></td><td>Shadow map resolution</td></tr>
 <tr><td><code>freezeShadows</code></td><td>from manifest</td><td>Static shadow bake</td></tr>
+<tr><td><code>cleanBoneMatrixWeights</code></td><td><code>false</code></td><td>Scrub imprecise skeleton bone weights on load (fixes garbled shadows on skinned meshes)</td></tr>
 <tr><td><code>debugColliders</code></td><td><code>false</code></td><td>Wireframes on load (also gated by debug flag)</td></tr>
 <tr><td><code>clusterPunctualLights</code></td><td>from manifest</td><td>Light clustering policy</td></tr>
 <tr><td><code>lightBudget</code></td><td><code>8</code></td><td>Max forward punctual lights</td></tr>
@@ -539,7 +557,7 @@ const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></
 <p>When an entity has a body: <code>this.entity.body</code> is a Babylon <code>PhysicsBody</code>. Use Havok APIs for impulses, velocities, etc. Collider overlay: app debug key → <code>level.ShowColliders()</code> (when <code>level.debugEnabled</code>).</p>
 
 <h2 id="messages">Messages</h2>
-<p>Triggers and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target gets <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
+<p>Authored Event Messages and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target gets <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
 
 <h2>Related exports</h2>
 <p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types.ts</code>), subsystem helpers (physics, lights, …), and UI loaders — mainly for app code and advanced scripts. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>

@@ -5,6 +5,7 @@ import type {
   StaticSound,
   IParticleSystem,
 } from "@babylonjs/core";
+import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import type { AdvancedDynamicTexture, Control3D } from "@babylonjs/gui";
 import type { TextRenderer } from "@babylonjs/addons/msdfText";
 // Type-only import: Entity references Behavior, Behavior references Entity.
@@ -16,6 +17,11 @@ import type {
   EntityAttachment,
 } from "./attachments";
 
+/**
+ * One Blender object at runtime: its Babylon node plus everything the loader
+ * applied from the manifest — behaviors, physics body, sounds, GUI, particles,
+ * text renderers, probes — queryable per-row through `attachments`.
+ */
 export class Entity
 {
   readonly id: string;
@@ -38,6 +44,8 @@ export class Entity
   particleSystems: IParticleSystem[] = [];
   /** MSDF text renderers created from MSDF_TEXT components. */
   textRenderers: TextRenderer[] = [];
+  /** Reflection probes created from REFLECTION_PROBE components. */
+  reflectionProbes: ReflectionProbe[] = [];
 
   constructor(id: string, name: string, node: TransformNode)
   {
@@ -154,6 +162,18 @@ export class Entity
     }
 
     return this.particleSystems.find((system) => system.name.toLowerCase().includes(wanted));
+  }
+
+  /** The first reflection probe attachment on this entity, if any. */
+  GetReflectionProbe(): ReflectionProbe | undefined
+  {
+    return this.GetAttachment("REFLECTION_PROBE")?.probe;
+  }
+
+  /** Every reflection probe attachment on this entity. */
+  GetReflectionProbes(): ReflectionProbe[]
+  {
+    return this.GetAttachmentsOfType("REFLECTION_PROBE").map((attachment) => attachment.probe);
   }
 
   /** Find one of this entity's MSDF text renderers by font file stem (exact, then contains). */

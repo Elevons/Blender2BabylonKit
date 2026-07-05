@@ -1,0 +1,64 @@
+<h1>02 — Components</h1>
+<p class="doc-links">Subsystem diagram: <a href="data-model.html">data-model.html</a> · Traces: <a href="trace-components.html">trace-components</a> · <a href="trace-guid.html">trace-guid</a> · <a href="trace-exposed.html">trace-exposed</a> · Feature list: <a href="../engine/13-FEATURE-LIST.html">13 — Feature List</a></p>
+<p>How the <strong>Babylon Object</strong> panel authors per-object gameplay data. The runtime never reads Blender PropertyGroups directly — only the manifest rows you export.</p>
+
+<h2>Component stack UI</h2>
+<p>Select an object → <strong>Babylon Object</strong> → <strong>Add Component</strong>. Each row is one manifest entry when enabled:</p>
+<ul>
+<li><strong>Header</strong> — enable toggle, type name, <strong>▾ menu</strong> (duplicate, copy/cut/paste, reorder, delete)</li>
+<li><strong>Body</strong> — type-specific fields (collider shape, script path, audio file, …)</li>
+<li><strong>Pin</strong> (header) — lock the inspector to this object while you pick targets in the viewport</li>
+</ul>
+<p>Cut/paste moves a component to another object; copy/paste duplicates it. Clipboard is session-scoped.</p>
+
+<h2>GUID identity</h2>
+<p>Adding a component (or <strong>Assign GUID</strong>) stamps <code>bjs_id</code> on the object. That id rides in glTF node extras and manifest <code>entities[].id</code> — renaming the object in Blender does not break links.</p>
+<p>Entity references (<code>@exposed({ type: "entity" })</code>, camera targets, Event Message targets, constraints) store GUIDs, not names. Trace: <a href="trace-guid.html">trace-guid</a>.</p>
+
+<h2>Event Messages (colliders)</h2>
+<p>On any <strong>Collider</strong> component, the <strong>Event Messages</strong> section lists authored reactions: <strong>When</strong> (Trigger Enter/Exit, Collision Enter/Exit), <strong>Target</strong> entity, <strong>Message</strong> string, optional <strong>Only Tag</strong> filter. At runtime the engine dispatches matching rows via <code>SendMessage</code> → target behaviors' <code>OnMessage</code>. Trigger-phase rows on non-trigger colliders (and collision-phase rows on pure triggers) warn at export. See <a href="../engine/06-PHYSICS.html#event-messages">06 — Physics › Event Messages</a>.</p>
+
+<h2>Script components and @exposed</h2>
+<ol>
+<li><strong>Open Script…</strong> — pick a <code>.ts</code> behavior file; registry key = filename stem (<code>Rotator.ts</code> → <code>Rotator</code>)</li>
+<li>Exposed fields appear as typed widgets (parsed from source — not executed)</li>
+<li><strong>Sync</strong> — refresh widgets after you change <code>@exposed</code> / <code>@inputMap</code> in code</li>
+</ol>
+<p>Cross-language rules: decorator stays lowercase <code>@exposed</code>; single-line literal defaults; press Sync after edits. Trace: <a href="trace-exposed.html">trace-exposed</a>. Runtime scripting: <a href="../engine/05-SCRIPTING.html">05 — Scripting</a>.</p>
+
+<h2>Collider preview</h2>
+<p>On a selected object with a <strong>Collider</strong>, enable <strong>Show Preview</strong> to draw a cyan wireframe in the viewport. Manual size/offset/rotation are in Blender axes (what you see); export converts to Babylon Y-up. Convex/mesh shapes use the mesh geometry — no separate wireframe.</p>
+<p>Trace: <a href="trace-collider-preview.html">trace-collider-preview</a>. Dynamic bodies also show a <strong>center-of-mass</strong> cross when preview is on: <a href="trace-cog-preview.html">trace-cog-preview</a>.</p>
+
+<h2>Compound colliders</h2>
+<p>Multiple enabled <strong>Collider</strong> rows on one object merge into one physics body at runtime. The panel numbers headers (<code>Collider 1/3</code>, …) and shows a compound notice.</p>
+
+<h2>Reflection probe preview</h2>
+<p>On a selected object with a <strong>Reflection Probe</strong>, enable <strong>Show Influence Preview</strong> to draw a warm yellow wireframe of the influence volume (box or sphere) in the viewport. Place an <strong>Empty</strong> at the capture point, size the influence box to cover only the glossy meshes that need <em>local</em> reflections (walls, floor, props) — not the whole level. Leave <strong>Refresh Rate</strong> on <strong>Once</strong> unless reflected geometry animates.</p>
+<p><strong>Render All</strong> captures every scene mesh into the cubemap (minus excludes and the probe host). Turn it off to author an explicit render list. At runtime, level meshes inside the influence volume get the probe cubemap on PBR <code>reflectionTexture</code>; the visible skybox is always excluded and keeps scene IBL.</p>
+<p><strong>Real-Time Filtering</strong> (PBR section) improves how glossy materials sample the probe — it does not change what the probe captures. For sky-heavy reflections, use <strong>Babylon Scene › Environment</strong> instead of enlarging the probe volume.</p>
+<p>Runtime: <a href="../engine/07-RENDERING.html#reflection-probes">07 — Rendering › Reflection probes</a>.</p>
+
+<h2>Rendering group &amp; layer mask</h2>
+<p>Two optional components under <strong>Rendering</strong> control how Babylon draws or filters meshes. They are <em>not</em> the same as a logical <strong>Tag</strong> (gameplay label) or Babylon’s 2D <code>Layer</code> overlay class.</p>
+<table><thead><tr><th>Component</th><th>Babylon property</th><th>What it controls</th></tr></thead><tbody>
+<tr><td><strong>Rendering Group</strong></td><td><code>mesh.renderingGroupId</code></td><td><strong>Draw order</strong> — groups 0–3 render in ascending order (useful for transparency sorting and overlays). Also applies to this entity’s particle systems.</td></tr>
+<tr><td><strong>Layer Mask</strong></td><td><code>mesh.layerMask</code></td><td><strong>Camera / light visibility</strong> — a mesh renders when <code>(mesh.layerMask &amp; camera.layerMask) !== 0</code>. Used for multi-camera HUD setups.</td></tr>
+</tbody></table>
+<p>Both components share two toggles:</p>
+<ul>
+<li><strong>Apply to Owned Meshes</strong> (default on) — sets meshes this entity owns (same ownership rule as colliders and reflection probes: own geometry and primitive splits, not nested child-entity meshes).</li>
+<li><strong>Apply to Child Entities</strong> (default off) — propagates the value down the Blender parent hierarchy until a descendant defines its own component of the same kind.</li>
+</ul>
+<p>If a toggle is off, that scope keeps Babylon defaults (rendering group <code>0</code>, layer mask <code>0x0FFFFFFF</code>). A child’s own <strong>Rendering Group</strong> or <strong>Layer Mask</strong> always supersedes the parent for that branch — regardless of the parent’s toggles.</p>
+<p><strong>Layer Mask presets:</strong> Default (<code>0x0FFFFFFF</code>), Slot 0–3 (<code>0x10000000</code> … <code>0x80000000</code> — typical HUD / overlay bits), or Custom (full 32-bit value). Matching cameras must use the same mask in app code for exclusive visibility.</p>
+<p>Runtime detail: <a href="../engine/07-RENDERING.html#render-layers">07 — Rendering › Render layers</a> · Feature trace: <a href="../engine/10-FEATURE-TRACES.html#render-layers">10 — Feature Traces</a>.</p>
+
+<h2>Auto-derived blocks (not components)</h2>
+<p>These appear as child panels when relevant — no Add Component row:</p>
+<ul>
+<li><strong>Light</strong> on lamp objects — color, energy, shadows</li>
+<li><strong>Camera</strong> on camera objects — clip, FOV; optional <strong>Camera</strong> component for orbit/follow/geospatial</li>
+<li><strong>Animation</strong> when NLA strips exist — auto-play clip, loop, speed</li>
+</ul>
+<p>Full component table: <a href="../engine/13-FEATURE-LIST.html">13 — Feature List</a>.</p>

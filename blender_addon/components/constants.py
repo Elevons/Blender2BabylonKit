@@ -19,6 +19,14 @@ COMPONENT_TYPES = [
     ('PARTICLE', "Particles", "Attach a Babylon particle system (.json from the Particle Editor)"),
     ('MSDF_TEXT', "MSDF Text", "Crisp scalable 3D text via Babylon's MSDF TextRenderer"),
 
+    ("", "Rendering", ""),
+    ('RENDERING_GROUP', "Rendering Group",
+     "Babylon draw-order group (0–3); lower groups render first"),
+    ('LAYER_MASK', "Layer Mask",
+     "Babylon visibility bitmask for multi-camera / light filtering"),
+    ('REFLECTION_PROBE', "Reflection Probe",
+     "Realtime cubemap reflections for nearby PBR materials"),
+
     ("", "3D GUI — Controls", ""),
     ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),
     ('GUI3D_HOLO',       "3D Holographic Button",       "MRTK-style holographic button with text/image/tooltip"),
@@ -39,6 +47,14 @@ GUI3D_CONTROLS = {'GUI3D_BUTTON', 'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO', 'GUI3D_MESH'
 GUI3D_PANELS = {'GUI3D_STACK', 'GUI3D_SPHERE', 'GUI3D_CYLINDER', 'GUI3D_PLANE', 'GUI3D_SCATTER'}
 # Controls that render text/image content (everything but the mesh button).
 GUI3D_TEXTURED = {'GUI3D_BUTTON', 'GUI3D_HOLO', 'GUI3D_TOUCH_HOLO'}
+
+# Physics phases for authored Event Message rows on COLLIDER components.
+EVENT_MESSAGE_WHEN = [
+    ('TRIGGER_ENTER',    "Trigger Enter",    "When another body enters this trigger volume"),
+    ('TRIGGER_EXIT',     "Trigger Exit",     "When another body leaves this trigger volume"),
+    ('COLLISION_ENTER',  "Collision Enter",  "When this solid collider first contacts another body"),
+    ('COLLISION_EXIT',   "Collision Exit",   "When this solid collider stops contacting another body"),
+]
 
 MSDF_TEXT_ALIGNS = [
     ('left', "Left", ""),
@@ -160,3 +176,52 @@ LIST_ELEM_SLOT = {
 # Separator used to pack ENUM choices into one StringProperty — the unit
 # separator control character is safe inside option strings.
 ENUM_SEP = "\x1f"
+
+LAYER_MASK_PRESETS = [
+    ('DEFAULT', "Default", "All cameras and lights (0x0FFFFFFF)"),
+    ('SLOT_0', "Slot 0", "0x10000000 — typical HUD / overlay slot"),
+    ('SLOT_1', "Slot 1", "0x20000000"),
+    ('SLOT_2', "Slot 2", "0x40000000"),
+    ('SLOT_3', "Slot 3", "0x80000000"),
+    ('CUSTOM', "Custom", "Use the custom bitmask below"),
+]
+
+# Resolved at export; CUSTOM reads layer_mask_custom on the component.
+LAYER_MASK_PRESET_VALUES = {
+    'DEFAULT': 0x0FFFFFFF,
+    'SLOT_0': 0x10000000,
+    'SLOT_1': 0x20000000,
+    'SLOT_2': 0x40000000,
+    'SLOT_3': 0x80000000,
+}
+
+REFLECTION_PROBE_CUBE_SIZES = [
+    ('256', "256", "Low resolution (faster)"),
+    ('512', "512", "Medium resolution (default)"),
+    ('1024', "1024", "High resolution (slower)"),
+]
+
+REFLECTION_PROBE_REFRESH_RATES = [
+    ('ONCE', "Once", "Capture once at load (best for static scenes)"),
+    ('EVERY_FRAME', "Every Frame", "Update every frame (expensive — 6 faces per frame)"),
+    ('EVERY_TWO_FRAMES', "Every 2 Frames", "Update every other frame"),
+    ('CUSTOM', "Custom", "Custom frame interval (see Custom Interval)"),
+]
+
+# Babylon RenderTargetTexture refresh constants.
+REFLECTION_PROBE_REFRESH_TO_BABYLON = {
+    'ONCE': 0,
+    'EVERY_FRAME': 1,
+    'EVERY_TWO_FRAMES': 2,
+}
+
+REFLECTION_PROBE_INFLUENCE_SHAPES = [
+    ('BOX', "Box", "Axis-aligned influence box"),
+    ('SPHERE', "Sphere", "Spherical influence volume"),
+]
+
+REFLECTION_PROBE_FILTER_QUALITY = [
+    ('LOW', "Low", "Fastest PBR probe filtering"),
+    ('MEDIUM', "Medium", "Balanced quality and performance"),
+    ('HIGH', "High", "Best glossiness / roughness filtering (slowest)"),
+]

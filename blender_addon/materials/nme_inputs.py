@@ -80,6 +80,16 @@ def write_row_value(row, value_type, value):
         row.c4_a = float(vals[3]) if len(vals) > 3 else 1.0
 
 
+def snapshot_row_value(row):
+    """Capture an input row's typed value as plain data (safe across collection clear)."""
+    return row.value_type, row_value_to_json(row)
+
+
+def copy_row_value(src_row, dst_row):
+    """Copy the typed value from one BJSNmeInput row to another."""
+    write_row_value(dst_row, src_row.value_type, row_value_to_json(src_row))
+
+
 def row_value_to_json(row):
     """Serialize a BJSNmeInput row back to an NME JSON `value`."""
     value_type = row.value_type

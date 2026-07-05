@@ -5,7 +5,7 @@
 <h2>The core idea: two artifacts</h2>
 <blockquote><p>If glTF can already express it, the glb owns it and the engine writes no code for it. If it can't, it goes in the manifest and a small subsystem applies it.</p></blockquote>
 <p>For how the loaded <code>Level</code> hooks into Babylon's render loop (<code>runRenderLoop</code>, <code>OnUpdate</code>, delta time), read <a href="02-RUNTIME-BASICS.html"><strong>02 — Runtime Basics</strong></a> next.</p>
-<table><thead><tr><th>Artifact</th><th>Carries</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>level.glb</code></td><td>geometry, transforms, hierarchy, materials (standard PBR), lights, cameras, animation clips</td><td>Babylon's glTF importer</td></tr><tr><td><code>level.scene.json</code></td><td>components (TAG/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT), optional <code>materials[]</code> (Node Material Editor overrides), per-light/camera/scene settings, <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>, schema <strong>v4</strong></td><td>our <code>LevelLoader</code></td></tr></tbody></table>
+<table><thead><tr><th>Artifact</th><th>Carries</th><th>Consumed by</th></tr></thead><tbody><tr><td><code>level.glb</code></td><td>geometry, transforms, hierarchy, materials (standard PBR), lights, cameras, animation clips</td><td>Babylon's glTF importer</td></tr><tr><td><code>level.scene.json</code></td><td>components (TAG/RENDERING_GROUP/LAYER_MASK/COLLIDER/RIGIDBODY/SCRIPT/CAMERA/AUDIO/CONSTRAINT/…), optional <code>materials[]</code> (Node Material Editor overrides), per-light/camera/scene settings, <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>, schema <strong>v4</strong></td><td>our <code>LevelLoader</code></td></tr></tbody></table>
 <p>The manifest never duplicates the glb — it only adds. This is why there's a <code>subsystems/physics.ts</code> but no <code>meshes.ts</code>: meshes ride entirely in the glb.</p>
 
 <h2>Entity identity (GUIDs)</h2>
@@ -17,7 +17,7 @@
 <p>Optional detail — skip on first read unless you're debugging invisible objects or shadow casters.</p>
 <ul>
 <li><strong>Viewport hidden</strong> (Blender eye icon, still render-enabled) — transient <code>bjs_visible: false</code> (<code>VISIBLE_KEY</code>) in glTF extras; <code>ApplyNodeVisibility</code> sets <code>node.isVisible = false</code> and disables child lights/cameras.</li>
-<li><strong>Collider › Make Invisible</strong> — <code>makeInvisible: true</code> on the COLLIDER row; <code>ApplyComponents</code> calls <code>HideEntityNode</code> so collision-only props can stay visible in Blender while shipping invisible.</li>
+<li><strong>Collider › Make Invisible</strong> — <code>makeInvisible: true</code> on the COLLIDER row; the loader's physics handler calls <code>HideEntityNode</code> so collision-only props can stay visible in Blender while shipping invisible.</li>
 <li><strong>Shadow ray off</strong> (<code>visible_shadow = False</code>) — <code>bjs_cast_shadows: 0</code> (<code>CAST_SHADOWS_KEY</code>); meshes stay visible and <strong>receive</strong> shadows, but <code>SetupShadows</code> omits them from casters.</li>
 <li><strong>Render disabled</strong> (<code>hide_render</code>, camera icon) — omitted from glb and manifest (<code>use_renderable=True</code> on the glTF exporter matches the manifest filter).</li>
 </ul>
@@ -29,7 +29,7 @@
     src/
       index.ts            #   public barrel (apps import &quot;@bjs/engine&quot;)
       core/               #   types.ts (schema) · attachments.ts · Entity.ts · Level.ts · LevelLoader.ts
-                          #   loader/ (manifest · nodeResolution · entityBuilder · sceneSettings)
+                          #   loader/ (manifest · nodeResolution · entityBuilder · componentRegistry · scripts · sceneSettings)
       scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts
       input/              #   InputManager · maps/actions/bindings · @inputMap
       subsystems/         #   physics lights cameras/ shadows constraints audio

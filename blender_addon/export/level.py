@@ -27,7 +27,7 @@ from .visibility import (
 )
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def _casts_shadows(obj):

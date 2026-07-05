@@ -1,7 +1,7 @@
 # Babylon Level Kit — Behavior Authoring Context
 
 Context for an LLM **generating a behavior script** for this engine (runtime
-**v0.31.1**). Each behavior is one self-contained `.ts` file the runtime loads
+**engine v0.31.1 · Blender add-on v0.32.0**). Each behavior is one self-contained `.ts` file the runtime loads
 and runs per-frame. This file is the **behavior authoring contract** — you do
 not need engine internals to write one.
 
@@ -50,7 +50,7 @@ Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engi
 
 | Section slug | Topic |
 |--------------|-------|
-| `lifecycle` | OnStart / OnUpdate / OnDestroy / OnMessage |
+| `lifecycle` | OnStart / OnUpdate / OnDestroy / OnMessage / collision & trigger hooks |
 | `entity` | Entity API, attachments |
 | `exposed` | `@exposed` types and Blender parse rules |
 | `input` | Input Actions, `@inputMap` |
@@ -65,12 +65,12 @@ Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engi
 
 | Need | Author in Blender | Write in behavior |
 |------|-------------------|-------------------|
-| Collider / rigid body / joint | COLLIDER, RIGIDBODY, CONSTRAINT components | Read `entity.body`, drive motors, react to triggers |
+| Collider / rigid body / joint | COLLIDER, RIGIDBODY, CONSTRAINT components | Read `entity.body`, drive motors, override `OnCollision*` / `OnTrigger*` hooks |
 | Camera type (orbit, globe) | CAMERA component on camera object | Rare: `flyToPointAsync` on GeospatialCamera only |
 | Sky / atmosphere / bloom / SSAO | Babylon Scene panels | **Never** — loader owns these |
 | Input bindings | Input Actions panel | Poll `FindAction("Move")` by **name** |
 | Tunable fields per object | `@exposed` on SCRIPT + **Sync** | Declare fields; runtime values applied before `OnStart` |
-| Trigger → gameplay | COLLIDER trigger events → target entity | `OnMessage` on target behaviors |
+| Trigger → gameplay (data) | COLLIDER Event Messages → target entity | `OnMessage` on target behaviors |
 | 2D HUD / particles / 3D buttons | GUI / PARTICLE / GUI3D_* components | `GetGui` / `GetParticles` / `GetControl3D` |
 | MSDF labels | MSDF_TEXT component | `GetTextRenderer` — update paragraphs only |
 
@@ -103,7 +103,14 @@ export default class MyBehavior extends Behavior
 OnStart(): void                       // once, after the level + all @exposed refs are resolved
 OnUpdate(deltaSeconds: number): void  // every frame; deltaSeconds = seconds since last frame
 OnDestroy(): void                     // on level dispose — unsubscribe observers, dispose constraints
-OnMessage(message: string, source: Entity): void  // a message arrived (trigger event or SendMessage)
+OnMessage(message: string, source: Entity): void  // Event Message, 3D GUI click, or SendMessage
+
+// Unity-style physics hooks (opt-in — override only what you need)
+OnCollisionEnter(other: Entity, contact: CollisionContact): void
+OnCollisionStay(other: Entity, contact: CollisionContact): void   // Havok CONTINUED; stops when bodies sleep
+OnCollisionExit(other: Entity): void
+OnTriggerEnter(other: Entity): void
+OnTriggerExit(other: Entity): void   // no OnTriggerStay — track overlap state in code if needed
 ```
 
 - Names are **PascalCase** (`OnStart`, not `onStart`) — a lowercase name silently
@@ -148,6 +155,7 @@ entity.guiTextures: AdvancedDynamicTexture[]      // from GUI components (@babyl
 entity.particleSystems: IParticleSystem[]         // from PARTICLE components
 entity.controls3D: Control3D[]                    // from GUI3D_* components (buttons + panels)
 entity.textRenderers: TextRenderer[]              // from MSDF_TEXT components
+entity.reflectionProbes: ReflectionProbe[]        // from REFLECTION_PROBE components
 entity.GetAttachments(): readonly EntityAttachment[]
 entity.GetAttachment(type): AttachmentOfType | undefined   // first row of that type
 entity.GetAttachmentsOfType(type): AttachmentOfType[]      // every row of that type
@@ -159,6 +167,8 @@ entity.GetGui(name): AdvancedDynamicTexture | undefined      // exact match, the
 entity.GetParticles(name): IParticleSystem | undefined       // exact match, then contains
 entity.GetControl3D(name): Control3D | undefined             // exact match, then contains
 entity.GetTextRenderer(fontStem): TextRenderer | undefined   // MSDF font JSON file stem
+entity.GetReflectionProbe(): ReflectionProbe | undefined     // first REFLECTION_PROBE attachment
+entity.GetReflectionProbes(): ReflectionProbe[]              // every REFLECTION_PROBE attachment
 entity.SendMessage(message, source): void              // deliver to all its behaviors' OnMessage
 ```
 
@@ -205,6 +215,8 @@ for (const row of entity.GetAttachmentsOfType("AUDIO"))
 | `GetAttachment` type | Runtime field on the row |
 |---|---|
 | `"TAG"` | `data` only |
+| `"RENDERING_GROUP"` | `data` only (mesh `renderingGroupId` set in `FinalizeLevel`) |
+| `"LAYER_MASK"` | `data` only (mesh `layerMask` set in `FinalizeLevel`) |
 | `"COLLIDER"` / `"RIGIDBODY"` | `data` + `body` |
 | `"SCRIPT"` | `data` + `behavior` |
 | `"AUDIO"` | `data` + `sound` |
@@ -213,6 +225,7 @@ for (const row of entity.GetAttachmentsOfType("AUDIO"))
 | `"CONSTRAINT"` | `data` + `constraint` |
 | `"GUI3D_*"` | `data` + `control` |
 | `"MSDF_TEXT"` | `data` + `renderer` |
+| `"REFLECTION_PROBE"` | `data` + `probe` |
 
 Use `GetBehavior(MyClass)` when you know the behavior **class**; use
 `GetAttachment("SCRIPT")` when you care about the component row or manifest
@@ -365,7 +378,7 @@ concern — it is authored under **Babylon Scene** and exported in
 |---|---|---|
 | Environment / IBL | Environment (Default Environment, Intensity, Rotation Y, Show Skybox) | None — IBL only when Atmosphere replaces the skybox |
 | **Atmosphere** (physical sky) | Atmosphere (SUN lamp + scattering) | None — time of day follows the sun lamp direction |
-| **Sun shadow penumbra** | Sun lamp **Angle** (0–45° → PCSS softness; clamped above) | `level.shadowGenerators` for runtime tuning |
+| **Sun shadow penumbra** | Sun lamp **Angle** (0–45° → PCSS softness; clamped above) | None — `level.shadowGenerators` is app-level, not available in behaviors |
 | Fog | Babylon Scene › Fog | None |
 | Default pipeline (bloom, DOF, …) | Post-Processing › Default Pipeline | None |
 | SSAO | Post-Processing › SSAO | None |
@@ -504,14 +517,23 @@ colliders overlap at rest.
   override (see `CarController.ts`: arcade visuals vs physics wheels).
 - Spring travel limits are **meters**; hinge limits are **degrees**.
 
-Hand-built `Physics6DoFConstraint` in code is still possible — reuse
-`ComputeConstraintFrame` / limit patterns from `subsystems/constraints.ts`.
+Hand-built `Physics6DoFConstraint` in code is still possible — follow the
+pivot/axis frame and limit patterns in `subsystems/constraints.ts` (its helpers
+are internal, not exported from `@bjs/engine`).
 
-### Triggers
+### Event Messages and collision hooks
 
-Trigger colliders can be authored in Blender with **On Enter Events** (target
-GUID, message, optional **filter tag**). **MESH-shaped triggers never fire** in
-Havok — use box/sphere/capsule/convex. Receive events via `OnMessage`.
+**Event Messages** (authored in Blender on any COLLIDER): each row has **When**
+(`TRIGGER_ENTER` / `TRIGGER_EXIT` / `COLLISION_ENTER` / `COLLISION_EXIT`),
+target GUID, message, optional **filter tag**. At runtime matching rows call
+`target.SendMessage(message, source)` → `OnMessage` on the target. **MESH-shaped
+triggers never fire** in Havok — use box/sphere/capsule/convex.
+
+**Programmatic hooks** on the entity's own behaviors: `OnCollisionEnter` /
+`OnCollisionStay` / `OnCollisionExit` (solid colliders) and `OnTriggerEnter` /
+`OnTriggerExit` (trigger volumes). Both bodies in a contact receive collision
+hooks. No manual subscription — override the hook and the engine wires Havok.
+No `OnTriggerStay` (Havok has no continued trigger event).
 
 ## Input
 
@@ -606,16 +628,16 @@ and playback rate — spatial sounds follow `entity.node` automatically. Sounds 
 Auto Play start after the browser's first user gesture (autoplay policy); calling
 `.play()` from input handlers is always safe.
 
-Trigger colliders and 3D GUI buttons can send messages on enter/click — receive
-them by overriding `OnMessage`. Optional **filter tag** on trigger events
-drops enterers whose `entity.tag` doesn't match.
+Event Messages and 3D GUI buttons can send messages on physics phases or click —
+receive them by overriding `OnMessage`. Optional **filter tag** on Event Message
+rows drops enterers whose `entity.tag` doesn't match.
 
 ## GUI & particles
 
 GUI layouts and particle systems are authored in Blender as **GUI** / **Particles**
 components pointing at a Babylon-editor `.json`. On the **Particles**
 component, **Scan Textures** lists `ParticleTextureSourceBlock` slots from the
-JSON (NME materials use **Scan NME** on **Properties › Material › Babylon**, which also lists inspector-visible shader parameters); per-slot image picks
+JSON (NME materials use **Scan NME** on **Properties › Material › Babylon**, which also lists inspector-visible shader parameters and gradient color stops); per-slot image picks
 copy into `particles/` on export and patch texture URLs in the exported JSON.
 The runtime resolves those paths beside the particle file (`rootUrl` in
 `LoadParticleSystems`). Behaviors drive the already-built objects:
@@ -645,7 +667,7 @@ creates a `TextRenderer` and draws after the main pass — behaviors **update**
 copy, they do not create renderers.
 
 ```ts
-import type { TextRenderer } from "@babylonjs/core";
+import type { TextRenderer } from "@babylonjs/addons/msdfText";
 
 const label = this.entity.GetTextRenderer("roboto-regular"); // font JSON file stem
 if (label !== undefined)
@@ -662,33 +684,46 @@ if (label !== undefined)
 Custom shaders are authored per **Blender Material** on **Properties › Material › Babylon**
 (not per object). Point at a `.json` from the
 [Node Material Editor](https://nme.babylonjs.com); use **Scan NME** to list
-`ImageSourceBlock` / `TextureBlock` slots and inspector-visible `InputBlock`
-parameters (mark uniforms **Visible in Inspector** in NME). NME may embed image
+`ImageSourceBlock` / `TextureBlock` slots, inspector-visible `InputBlock`
+parameters (mark uniforms **Visible in Inspector** in NME), and inspector-visible
+`GradientBlock` color stops (mark the gradient block **Visible in Inspector** in
+NME). NME may embed image
 bytes in the JSON (`texture.url` as `data:…;base64,…`, or `base64String`) — the
 runtime loads these without external files. Use **Extract Textures…** to write
 PNG/JPG beside the JSON and wire relative paths when you want smaller manifests or
 Blender-side image picks. Assign image files for external texture slots; tune floats,
-colors, vectors, and booleans in the **Parameters** box. Export copies JSON + picked
+colors, vectors, and booleans in the **Parameters** box; edit gradient color stops in
+**Gradients**. Export copies JSON + picked
 images to `materials/` (each distinct NME source file is copied once per export;
 several Blender materials can share one exported JSON and accumulate patches).
 External texture overrides strip embedded `base64String` / `internalTextureLabel`
 from the exported JSON and write manifest `textures[]`; embedded-only slots ship
-unchanged in the JSON:
+unchanged in the JSON. Authored inputs and gradients also write manifest
+`inputs[]` / `gradients[]`:
 
 ```json
 "materials": [
   { "name": "Water", "file": "materials/water.json",
     "textures": [{ "blockId": 42, "blockName": "albedo", "file": "materials/albedo.png" }],
-    "inputs": [{ "blockId": 21, "blockName": "fillColor", "type": "COLOR4", "value": [0.15, 0.4, 1, 0.35] }] }
+    "inputs": [{ "blockId": 21, "blockName": "fillColor", "type": "COLOR4", "value": [0.15, 0.4, 1, 0.35] }],
+    "gradients": [{ "blockId": 22553, "blockName": "Gradient", "colorSteps": [
+      { "step": 0, "color": { "r": 0, "g": 0, "b": 0 } },
+      { "step": 1, "color": { "r": 1, "g": 1, "b": 1 } }
+    ]}] }
 ]
 ```
 
-At load, `ApplyNodeMaterials` runs after the glb import and replaces
-`mesh.material` when the glTF material **name** matches. Parsed materials are cached
-per `file` + Blender material `name`. Embedded textures load from `data:` / `base64String`
-in the JSON; manifest `textures[]` always wins over embedded JSON when present; block
-ids resolve through `editorData.map`. No behavior API — meshes using that
-material pick up the node shader automatically.
+At load, `ApplyNodeMaterials` runs after the glb import: parse NME JSON,
+bind manifest `textures[]` / `inputs[]` / `gradients[]`, and replace `mesh.material` when the
+glTF material **name** matches. **No shader compile yet** — `BuildNodeMaterials`
+runs once in `FinalizeLevel`, immediately after `ApplySceneSettings` (so
+`scene.environmentTexture` exists when the manifest declares environment IBL).
+Parsed materials are cached per `file` + Blender material `name`. Embedded
+textures load from `data:` / `base64String` in the JSON; manifest `textures[]`
+always wins over embedded JSON when present; block ids resolve through
+`editorData.map`. NME shaders need a `ReflectionBlock` on the PBR `reflection`
+input for IBL (leave its texture empty to use scene IBL). No behavior API —
+meshes using that material pick up the node shader automatically.
 
 ## 3D GUI
 

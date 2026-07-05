@@ -1,292 +1,26 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
 import { Entity } from "../Entity";
-import { RegisterAttachment } from "../attachments";
 import type {
   EntityData,
-  Component,
-  ColliderComponent,
-  RigidBodyComponent,
-  ScriptComponent,
   CameraComponent,
-  AudioComponent,
-  ConstraintComponent,
-  GuiComponent,
-  ParticleComponent,
-  MsdfTextComponent,
-  Gui3DComponent,
   LightInfo,
   CameraInfo,
 } from "../types";
 import type { Level } from "../Level";
 import type { BehaviorRegistry } from "../../scripting/BehaviorRegistry";
-import { ApplyExposedVars, type PendingRef } from "../../scripting/exposed";
-import { InputManager, GetInputMapFields } from "../../input";
-import type { InputActionMap } from "../../input/InputActionMap";
-import type { Behavior } from "../../scripting/Behavior";
-import { BuildPhysics } from "../../subsystems/physics";
+import type { PendingRef } from "../../scripting/exposed";
 import { ApplyBlenderLight } from "../../subsystems/lights";
 import { ApplyBlenderCamera, BuildTypedCamera, QueueCameraTargets } from "../../subsystems/cameras";
-import { ApplyAudio } from "../../subsystems/audio";
-import { ApplyGui } from "../../ui/gui2d";
-import { ApplyParticles } from "../../subsystems/particles";
-import { ApplyMsdfText } from "../../ui/msdfText";
 import { FindNodeByName, HideEntityNode } from "./nodeResolution";
+import { ApplyEntityComponents } from "./componentRegistry";
 import type { LoadContext } from "./context";
 
 /**
  * The per-entity build pass: resolve each manifest entity to its glTF node,
- * create the Entity, interpret its components (physics, audio, triggers,
- * joints, scripts), and apply auto-derived lights/cameras. Anything that needs
- * every entity to exist first is queued on the LoadContext for a post-pass.
+ * create the Entity, apply its components through the component registry
+ * (componentRegistry.ts), and apply auto-derived lights/cameras. Anything that
+ * needs every entity to exist first is queued on the LoadContext for a post-pass.
  */
-
-/** An entity's components, sorted by kind for the apply steps. */
-function ClassifyComponents(entity: Entity, components: Component[]): {
-  colliders: ColliderComponent[];
-  body: RigidBodyComponent | undefined;
-  scripts: ScriptComponent[];
-  audioComponents: AudioComponent[];
-  constraintComponents: ConstraintComponent[];
-  guiComponents: GuiComponent[];
-  particleComponents: ParticleComponent[];
-  msdfTextComponents: MsdfTextComponent[];
-  gui3dComponents: Gui3DComponent[];
-}
-{
-  const colliders: ColliderComponent[] = [];
-  let body: RigidBodyComponent | undefined;
-  const scripts: ScriptComponent[] = [];
-  const audioComponents: AudioComponent[] = [];
-  const constraintComponents: ConstraintComponent[] = [];
-  const guiComponents: GuiComponent[] = [];
-  const particleComponents: ParticleComponent[] = [];
-  const msdfTextComponents: MsdfTextComponent[] = [];
-  const gui3dComponents: Gui3DComponent[] = [];
-
-  for (const component of components)
-  {
-    switch (component.type)
-    {
-      case "TAG":
-        entity.tag = component.tag;
-        RegisterAttachment(entity, { type: "TAG", data: component });
-        break;
-      case "COLLIDER":
-        colliders.push(component);
-        break;
-      case "RIGIDBODY":
-        body = component;
-        break;
-      case "SCRIPT":
-        scripts.push(component);
-        break;
-      case "AUDIO":
-        audioComponents.push(component);
-        break;
-      case "CONSTRAINT":
-        constraintComponents.push(component);
-        break;
-      case "GUI":
-        guiComponents.push(component);
-        break;
-      case "PARTICLE":
-        particleComponents.push(component);
-        break;
-      case "MSDF_TEXT":
-        msdfTextComponents.push(component);
-        break;
-      case "GUI3D_BUTTON":
-      case "GUI3D_HOLO":
-      case "GUI3D_TOUCH_HOLO":
-      case "GUI3D_MESH":
-      case "GUI3D_STACK":
-      case "GUI3D_SPHERE":
-      case "GUI3D_CYLINDER":
-      case "GUI3D_PLANE":
-      case "GUI3D_SCATTER":
-        gui3dComponents.push(component);
-        break;
-    }
-  }
-
-  return {
-    colliders, body, scripts, audioComponents, constraintComponents,
-    guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
-  };
-}
-
-/** Resolve a map name; blank uses the scene default, then the asset's first map. */
-function ResolveInputMap(mapName: string, sceneDefaultMap: string): InputActionMap | undefined
-{
-  const resolvedName = mapName.length > 0 ? mapName : sceneDefaultMap;
-  return InputManager.GetMap(resolvedName) ?? InputManager.GetDefaultMap();
-}
-
-/**
- * Fill @inputMap fields with Action Map handles. Scripts with no @inputMap
- * fields receive the scene default map on `behavior.input`.
- */
-function InjectInputMaps(behavior: object, scriptName: string, sceneDefaultMap: string): void
-{
-  const fields = GetInputMapFields(behavior);
-
-  if (fields.length === 0)
-  {
-    const map = ResolveInputMap("", sceneDefaultMap);
-    if (map === undefined)
-    {
-      console.warn(
-        `[bjs] script "${scriptName}": no @inputMap and scene default map ` +
-        `"${sceneDefaultMap}" not found — define it in Blender's Input Actions panel`
-      );
-      return;
-    }
-    (behavior as Behavior).input = map;
-    return;
-  }
-
-  for (const entry of fields)
-  {
-    const map = ResolveInputMap(entry.map, sceneDefaultMap);
-    if (map === undefined)
-    {
-      const label = entry.map.length > 0 ? entry.map : sceneDefaultMap;
-      console.warn(
-        `[bjs] script "${scriptName}": @inputMap("${entry.map}") has no matching ` +
-        `action map "${label}" — create it in Blender's Input Actions panel`
-      );
-      continue;
-    }
-    (behavior as Record<string, unknown>)[entry.field] = map;
-  }
-}
-
-/** Instantiate SCRIPT behaviors, inject entity/scene, apply @exposed values. */
-function InstantiateScripts(
-  entity: Entity,
-  scripts: ScriptComponent[],
-  scene: Scene,
-  registry: BehaviorRegistry,
-  sceneDefaultMap: string
-): PendingRef[]
-{
-  const pendingReferences: PendingRef[] = [];
-
-  for (const scriptComponent of scripts)
-  {
-    const behavior = registry.Create(scriptComponent.script);
-    if (behavior === undefined)
-    {
-      continue;
-    }
-
-    behavior.entity = entity;
-    behavior.scene = scene;
-    pendingReferences.push(...ApplyExposedVars(behavior, scriptComponent.vars));
-    InjectInputMaps(behavior, scriptComponent.script, sceneDefaultMap);
-    entity.behaviors.push(behavior);
-    RegisterAttachment(entity, { type: "SCRIPT", data: scriptComponent, behavior });
-  }
-
-  return pendingReferences;
-}
-
-/**
- * Interpret an entity's components: build one physics body from any COLLIDER(s) /
- * RIGIDBODY, register authored trigger reactions, queue sound creation, set the
- * tag, and instantiate SCRIPT behaviors (deferring their entity references).
- * Returns the deferred references for the second pass.
- */
-function ApplyComponents(
-  entity: Entity,
-  entityData: EntityData,
-  scene: Scene,
-  registry: BehaviorRegistry,
-  context: LoadContext
-): PendingRef[]
-{
-  const {
-    colliders, body, scripts, audioComponents, constraintComponents,
-    guiComponents, particleComponents, msdfTextComponents, gui3dComponents,
-  } = ClassifyComponents(entity, entityData.components);
-
-  if (colliders.some((collider) => collider.makeInvisible === true))
-  {
-    HideEntityNode(scene, entity.node);
-  }
-
-  if (colliders.length > 0 || body !== undefined)
-  {
-    const physicsBody = BuildPhysics(entity.node, colliders, body, scene);
-    entity.body = physicsBody;
-
-    if (physicsBody !== undefined)
-    {
-      for (const collider of colliders)
-      {
-        RegisterAttachment(entity, { type: "COLLIDER", data: collider, body: physicsBody });
-      }
-      if (body !== undefined)
-      {
-        RegisterAttachment(entity, { type: "RIGIDBODY", data: body, body: physicsBody });
-      }
-    }
-  }
-
-  // Authored trigger reactions need the plugin observable; wired in a post-pass.
-  const triggerEvents = colliders.flatMap((collider) =>
-    collider.isTrigger && collider.events !== undefined && collider.events.length > 0
-      ? collider.events
-      : []
-  );
-  if (triggerEvents.length > 0)
-  {
-    context.triggerRegistrations.push({ sourceEntity: entity, events: triggerEvents });
-  }
-
-  // Sound creation is async (fetch + decode); collected and awaited after the loop.
-  for (const audioComponent of audioComponents)
-  {
-    context.audioTasks.push(ApplyAudio(entity, audioComponent, context.baseUrl));
-  }
-
-  // Joints need BOTH bodies to exist; built in a post-pass (FinalizeLevel).
-  for (const constraintComponent of constraintComponents)
-  {
-    context.constraintRegistrations.push({ ownerEntity: entity, component: constraintComponent });
-  }
-
-  // GUI layouts and particle systems are fetched/parsed from JSON; collect the
-  // promises and settle them after the entity loop (like audio).
-  for (const guiComponent of guiComponents)
-  {
-    context.guiTasks.push(ApplyGui(entity, guiComponent, context.baseUrl));
-  }
-
-  for (const particleComponent of particleComponents)
-  {
-    context.particleTasks.push(ApplyParticles(entity, particleComponent, context.baseUrl));
-  }
-
-  for (const msdfTextComponent of msdfTextComponents)
-  {
-    context.msdfTextTasks.push(ApplyMsdfText(entity, msdfTextComponent, context.baseUrl));
-  }
-
-  // 3D GUI needs panels before child controls and resolvable click targets,
-  // so everything is queued and built in a post-pass (FinalizeLevel). The
-  // parent GUID is how a control finds the panel it belongs to.
-  for (const gui3dComponent of gui3dComponents)
-  {
-    context.gui3dRegistrations.push({
-      entity,
-      component: gui3dComponent,
-      parentId: entityData.parent,
-    });
-  }
-
-  return InstantiateScripts(entity, scripts, scene, registry, context.defaultInputMap);
-}
 
 /** Apply a Blender lamp's settings and remember it if it casts shadows. */
 function ProcessLightForEntity(
@@ -309,12 +43,13 @@ function ProcessLightForEntity(
 
 /** Apply a Blender camera, optionally override its type, and track its target. */
 function ProcessCameraForEntity(
-  node: TransformNode,
+  entity: Entity,
   entityData: EntityData,
   scene: Scene,
   context: LoadContext
 ): void
 {
+  const node = entity.node;
   const cameraInfo = entityData.camera as CameraInfo;
   let camera = ApplyBlenderCamera(scene, node, cameraInfo);
 
@@ -326,7 +61,7 @@ function ProcessCameraForEntity(
   {
     const built = BuildTypedCamera(scene, camera, cameraComponent);
     camera = built.camera;
-    QueueCameraTargets(built, cameraComponent, context.cameraTargets);
+    QueueCameraTargets(built, cameraComponent, context.cameraTargets, entity.id);
   }
 
   if (camera !== null && cameraInfo.active)
@@ -368,7 +103,7 @@ export function ProcessEntity(
   }
 
   context.pendingReferences.push(
-    ...ApplyComponents(entity, entityData, scene, registry, context)
+    ...ApplyEntityComponents({ entity, entityData, scene, behaviorRegistry: registry, context })
   );
 
   if (entityData.animation !== undefined)
@@ -383,7 +118,7 @@ export function ProcessEntity(
 
   if (entityData.camera !== undefined)
   {
-    ProcessCameraForEntity(resolvedNode, entityData, scene, context);
+    ProcessCameraForEntity(entity, entityData, scene, context);
   }
 }
 

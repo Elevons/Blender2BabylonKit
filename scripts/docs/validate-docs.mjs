@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 
 import { PROSE_CHAPTERS } from "./prose/manifest.mjs";
 import { PAGE_TOPICS } from "./topics.mjs";
+import { KEPT_META_MD } from "./prose-config.mjs";
 import { ENGINE_AREA_PAGES } from "./engine-areas.mjs";
 import { TRACES as ENGINE_TRACES } from "../build-trace-docs.mjs";
 import { AREA_PAGES as BLENDER_AREA_PAGES, TRACES as BLENDER_TRACES } from "../build-blender-docs.mjs";
@@ -103,6 +104,64 @@ function ValidateEngineChapterChain()
   }
 }
 
+function ValidateBlenderChapterChain()
+{
+  const numbered = PROSE_CHAPTERS.filter((chapter) =>
+    /^blender\/0[1-4]-/.test(chapter.href));
+  const prose = PROSE_CHAPTERS.filter((chapter) =>
+    chapter.href.startsWith("blender/"));
+  const byBasename = new Map(prose.map((chapter) =>
+    [path.basename(chapter.href), chapter]));
+
+  for (const chapter of prose)
+  {
+    const basename = path.basename(chapter.href);
+
+    if (chapter.prev !== undefined && chapter.prev !== null)
+    {
+      const prevChapter = byBasename.get(chapter.prev);
+      if (prevChapter === undefined)
+      {
+        errors.push(`manifest prev "${chapter.prev}" not found (from ${chapter.href})`);
+      }
+      else if (prevChapter.next !== basename)
+      {
+        errors.push(`prev/next mismatch: ${chapter.href} prev→${chapter.prev}, but ${chapter.prev} next→${prevChapter.next ?? "null"}`);
+      }
+    }
+
+    if (chapter.next !== undefined && chapter.next !== null)
+    {
+      const nextChapter = byBasename.get(chapter.next);
+      if (nextChapter === undefined)
+      {
+        errors.push(`manifest next "${chapter.next}" not found (from ${chapter.href})`);
+      }
+      else if (nextChapter.prev !== basename)
+      {
+        errors.push(`prev/next mismatch: ${chapter.href} next→${chapter.next}, but ${chapter.next} prev→${nextChapter.prev ?? "null"}`);
+      }
+    }
+  }
+
+  const indexChapter = PROSE_CHAPTERS.find((chapter) => chapter.href === "blender/00-INDEX.html");
+  if (indexChapter !== undefined && indexChapter.next !== "01-EXPORT.html")
+  {
+    errors.push(`blender/00-INDEX.html should next→01-EXPORT.html (got ${indexChapter.next ?? "null"})`);
+  }
+
+  const lastChapter = PROSE_CHAPTERS.find((chapter) => chapter.href === "blender/PREFABS.html");
+  if (lastChapter !== undefined && lastChapter.next !== undefined && lastChapter.next !== null)
+  {
+    errors.push("blender/PREFABS.html should be the last Blender chapter (next should be omitted)");
+  }
+
+  if (numbered.length !== 4)
+  {
+    warnings.push(`expected 4 numbered Blender chapters (01–04), found ${numbered.length}`);
+  }
+}
+
 function ValidateDiagramAndTraceTopics()
 {
   for (const file of Object.keys(ENGINE_AREA_PAGES))
@@ -130,6 +189,7 @@ function ValidateOrphanPageTopics()
 {
   const expected = new Set([
     ...PROSE_CHAPTERS.map((chapter) => chapter.href),
+    ...KEPT_META_MD,
     ...Object.keys(ENGINE_AREA_PAGES).map((file) => `engine/${file}`),
     ...ENGINE_TRACES.map((trace) => `engine/trace-${trace.id}.html`),
     ...Object.keys(BLENDER_AREA_PAGES).map((file) => `blender/${file}`),
@@ -147,6 +207,7 @@ function ValidateOrphanPageTopics()
 
 ValidateProseFragments();
 ValidateEngineChapterChain();
+ValidateBlenderChapterChain();
 ValidateDiagramAndTraceTopics();
 ValidateOrphanPageTopics();
 

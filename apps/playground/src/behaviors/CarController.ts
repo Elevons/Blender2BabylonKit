@@ -32,7 +32,7 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 100, label: "Motor Speed" })
   speed = 10;
 
-  @exposed({ min: 0, max: 1000, label: "Motor Force" })
+  @exposed({ min: 0, label: "Motor Force" })
   force = 100;
 
   @exposed({ min: 0, max: 5, label: "Place Hold (s)" })
@@ -54,11 +54,14 @@ export default class CarController extends Behavior
   OnStart(): void
   {
     // Collect all exposed wheel entities, resolve hinges, keep them in array order
-    const entities = [this.frontLeftWheel, this.frontRightWheel, this.rearLeftWheel, this.rearRightWheel];
-    for (const ent of entities)
+    const wheelEntities = [this.frontLeftWheel, this.frontRightWheel, this.rearLeftWheel, this.rearRightWheel];
+    for (const wheelEntity of wheelEntities)
     {
-      const hinge = this.ResolveWheelHinge(ent);
-      if (hinge) this.hinges.push(hinge);
+      const hinge = this.ResolveWheelHinge(wheelEntity);
+      if (hinge !== undefined)
+      {
+        this.hinges.push(hinge);
+      }
     }
   }
 
@@ -87,59 +90,83 @@ export default class CarController extends Behavior
     const left = this.player.FindAction("Left")?.IsPressed() === true;
     const right = this.player.FindAction("Right")?.IsPressed() === true;
 
-    // Speeds per wheel: [FL, FR, RL, RR]
-    // Outer wheels spin at full speed; inner wheels spin at turnRatio × speed.
-    // turnRatio = 1 → all wheels equal (wide arc). turnRatio = 0 → inner wheels locked (sharp pivot).
-    const s = this.speed;
-
-    let speeds: number[] = [0, 0, 0, 0];
-
-    if (!this.isPlacing) {
-      const dir = forward ? 1 : backward ? -1 : 0;
-      const turning = left || right;
-
-      // Outer wheels always spin at full speed; direction defaults to +1 for tank-turning.
-      const outerSpeed = (dir !== 0 ? dir : 1) * s;
-
-      if (turning) {
-        if (dir !== 0) {
-          // Forward/Backward + Turn → differential: inner wheels same direction, slower.
-          const innerSpeed = outerSpeed * this.turnRatio;
-          if (left) {
-            speeds = [innerSpeed, outerSpeed, innerSpeed, outerSpeed];
-          } else {
-            speeds = [outerSpeed, innerSpeed, outerSpeed, innerSpeed];
-          }
-        } else {
-          // Left/Right alone → tank controls: inner wheels spin opposite.
-          const innerSpeed = outerSpeed * this.turnRatio;
-          if (left) {
-            speeds = [-innerSpeed, outerSpeed, -innerSpeed, outerSpeed];
-          } else {
-            speeds = [outerSpeed, -innerSpeed, outerSpeed, -innerSpeed];
-          }
-        }
-      } else if (dir !== 0) {
-        // Straight forward/backward
-        speeds = [outerSpeed, outerSpeed, outerSpeed, outerSpeed];
-      }
-    }
+    const speeds = this.isPlacing
+      ? [0, 0, 0, 0]
+      : this.ComputeWheelSpeeds(forward, backward, left, right);
 
     // Apply each wheel's speed
-    for (let i = 0; i < this.hinges.length; i++)
+    for (let wheelIndex = 0; wheelIndex < this.hinges.length; wheelIndex++)
     {
-      this.SetWheelMotor(this.hinges[i], speeds[i]);
+      this.SetWheelMotor(this.hinges[wheelIndex], speeds[wheelIndex]);
     }
+  }
+
+  /**
+   * Compute per-wheel motor speeds [FL, FR, RL, RR] from the pressed directions.
+   * Outer wheels spin at full speed; inner wheels spin at turnRatio × speed
+   * (turnRatio = 1 → all wheels equal, wide arc; 0 → inner wheels locked, sharp
+   * pivot). Left/Right alone gives tank controls: inner wheels spin opposite.
+   */
+  private ComputeWheelSpeeds(
+    forward: boolean,
+    backward: boolean,
+    left: boolean,
+    right: boolean
+  ): number[]
+  {
+    let direction = 0;
+    if (forward)
+    {
+      direction = 1;
+    }
+    else if (backward)
+    {
+      direction = -1;
+    }
+
+    const turning = left || right;
+
+    // Outer wheels always spin at full speed; direction defaults to +1 for tank-turning.
+    const outerSpeed = (direction !== 0 ? direction : 1) * this.speed;
+
+    if (!turning)
+    {
+      if (direction === 0)
+      {
+        return [0, 0, 0, 0];
+      }
+
+      // Straight forward/backward
+      return [outerSpeed, outerSpeed, outerSpeed, outerSpeed];
+    }
+
+    // Forward/Backward + Turn → differential: inner wheels same direction, slower.
+    // Turn alone → tank controls: inner wheels spin opposite.
+    const innerSpeed = direction !== 0
+      ? outerSpeed * this.turnRatio
+      : -outerSpeed * this.turnRatio;
+
+    if (left)
+    {
+      return [innerSpeed, outerSpeed, innerSpeed, outerSpeed];
+    }
+    return [outerSpeed, innerSpeed, outerSpeed, innerSpeed];
   }
 
   /** Resolve the HINGE constraint attachment on a wheel entity (built at load time). */
   private ResolveWheelHinge(wheelEntity: Entity | null): Physics6DoFConstraint | undefined
   {
-    if (wheelEntity === null) return undefined;
+    if (wheelEntity === null)
+    {
+      return undefined;
+    }
 
     for (const row of wheelEntity.GetAttachmentsOfType("CONSTRAINT"))
     {
-      if (row.data.constraintType !== "HINGE") continue;
+      if (row.data.constraintType !== "HINGE")
+      {
+        continue;
+      }
       if (row.constraint instanceof Physics6DoFConstraint)
       {
         return row.constraint;
@@ -177,7 +204,10 @@ export default class CarController extends Behavior
   private BeginPlacement(): void
   {
     const body = this.body?.body;
-    if (body === undefined || this.body === null) return;
+    if (body === undefined || this.body === null)
+    {
+      return;
+    }
 
     this.isPlacing = true;
     this.placeTimer = 0;
@@ -206,7 +236,10 @@ export default class CarController extends Behavior
   private EndPlacement(): void
   {
     const body = this.body?.body;
-    if (body === undefined || this.body === null) return;
+    if (body === undefined || this.body === null)
+    {
+      return;
+    }
 
     this.isPlacing = false;
 

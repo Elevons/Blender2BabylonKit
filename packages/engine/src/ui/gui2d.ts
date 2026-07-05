@@ -59,7 +59,6 @@ export async function ApplyGui(
   }
 
   await texture.parseFromURLAsync(url);
-  entity.guiTextures.push(texture);
   RegisterAttachment(entity, { type: "GUI", data: guiComponent, texture });
 
   return texture;

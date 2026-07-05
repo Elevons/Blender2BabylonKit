@@ -20,6 +20,7 @@ import {
 } from "./build-blender-docs.mjs";
 import { TOPICS, TopicsForHref } from "./docs/topics.mjs";
 import { PROSE_CHAPTERS } from "./docs/prose/manifest.mjs";
+import { KEPT_META_MD } from "./docs/prose-config.mjs";
 import { ReadProseFragment, StripHtml } from "./build-prose-docs.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -207,6 +208,61 @@ function buildingDocsEntry()
   });
 }
 
+function metaMdEntries()
+{
+  /** @type {Record<string, string>} */
+  const summaries = {
+    "STYLE_GUIDE.md": "C#-style TypeScript conventions for engine code and behaviors.",
+    "LLM_PLAYBOOK.md": "Task playbooks for LLM / MCP behavior authoring.",
+    "LLM_SCRIPTING_CONTEXT.md": "Behavior authoring contract for LLM script generation.",
+    "LLM_KERNEL.md": "Minimal behavior authoring kernel for LLM script generation.",
+  };
+
+  return [...KEPT_META_MD].map((file) =>
+  {
+    const filePath = path.join(ROOT, "docs", file);
+    const plain = fs.readFileSync(filePath, "utf8");
+    const title = path.basename(file, ".md").replaceAll("_", " ");
+
+    return withTopics({
+      side: "engine",
+      kind: "meta",
+      href: file,
+      title,
+      summary: summaries[file] ?? "Contributor meta documentation.",
+      text: plain.toLowerCase(),
+    });
+  });
+}
+
+function metaProseEntries()
+{
+  return PROSE_CHAPTERS
+    .filter((chapter) => chapter.layout === "meta" && chapter.href !== "BUILDING-DOCS.html")
+    .map((chapter) =>
+    {
+      const html = ReadProseFragment(chapter.fragment);
+      const plain = StripHtml(html);
+      let title = chapter.title;
+      const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+      if (h1)
+      {
+        title = StripHtml(h1[1]).trim();
+      }
+
+      const summary = plain.replace(title, "").trim().slice(0, 200);
+
+      return withTopics({
+        side: chapter.side,
+        kind: "meta",
+        href: chapter.href,
+        title,
+        summary: summary || "Meta guide.",
+        text: plain.toLowerCase(),
+      });
+    });
+}
+
 function proseEntries()
 {
   return PROSE_CHAPTERS.filter((ch) => ch.layout !== "meta").map(proseEntry);
@@ -235,6 +291,8 @@ function BuildIndex()
   }
   entries.push(...proseEntries());
   entries.push(buildingDocsEntry());
+  entries.push(...metaProseEntries());
+  entries.push(...metaMdEntries());
 
   return entries;
 }
@@ -435,6 +493,11 @@ function gettingStartedInnerHtml()
 {
   return `
     <section class="getting-started">
+      <h2 class="section-title">Install &amp; first run</h2>
+      <ul class="ref-links">
+        <li><a href="QUICKSTART.html">Quickstart</a> — first level in ~15 minutes</li>
+        <li><a href="../README.md">README</a> — install the add-on zip and run the playground</li>
+      </ul>
       <h2 class="section-title">Engine — choose your path</h2>
       <table class="path-table">
         <thead><tr><th>Goal</th><th>Start here</th></tr></thead>
@@ -445,6 +508,18 @@ function gettingStartedInnerHtml()
         </tbody>
       </table>
       <p class="path-more"><a href="engine/00-INDEX.html">Full engine index</a> — all chapters, diagrams, and traces</p>
+      <h2 class="section-title">Blender — choose your path</h2>
+      <table class="path-table">
+        <thead><tr><th>Goal</th><th>Start here</th></tr></thead>
+        <tbody>
+          <tr><td>Export my first level</td><td><a href="blender/export.html">Export diagram</a> → <a href="blender/trace-export.html">trace-export</a></td></tr>
+          <tr><td>Fix export warnings</td><td><a href="blender/validation.html">Validation</a> → <a href="blender/trace-validate.html">trace-validate</a></td></tr>
+          <tr><td>Iterate with Ctrl+S</td><td><a href="blender/livelink.html">Live Link</a> → <a href="blender/trace-livelink.html">trace-livelink</a></td></tr>
+          <tr><td>Set up input actions</td><td><a href="blender/input-actions.html">Input Actions</a> → <a href="blender/trace-input.html">trace-input</a></td></tr>
+          <tr><td>Reuse props across scenes</td><td><a href="blender/PREFABS.html">Prefabs</a></td></tr>
+        </tbody>
+      </table>
+      <p class="path-more"><a href="blender/00-INDEX.html">Full Blender index</a> — diagrams, traces, and prose</p>
       <h2 class="section-title">Reference</h2>
       <ul class="ref-links">
         <li><a href="engine/13-FEATURE-LIST.html">Feature list</a> — every component and scene setting</li>

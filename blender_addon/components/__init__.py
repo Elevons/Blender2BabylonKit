@@ -16,7 +16,8 @@ from .exposed_vars import BJSListItem, BJSExposedVar
 from .component import (
     BJSConstraintAxisDoF,
     BJSParticleTexture,
-    BJSTriggerEvent,
+    BJSProbeObjectRef,
+    BJSEventMessage,
     BJSComponent,
 )
 
@@ -27,7 +28,8 @@ classes = (
     BJSExposedVar,
     BJSConstraintAxisDoF,
     BJSParticleTexture,
-    BJSTriggerEvent,
+    BJSProbeObjectRef,
+    BJSEventMessage,
     BJSComponent,
     BJSLightShadow,
     BJSAnimationSettings,

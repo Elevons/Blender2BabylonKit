@@ -29,6 +29,9 @@ from .constants import (
     CONSTRAINT_TYPES, CONSTRAINT_AXES, CONSTRAINT_DOF_AXES,
     CONSTRAINT_AXIS_MODES, CUSTOM_AXIS_DEFAULTS,
     CAMERA_TYPES, CAMERA_KEY_SCHEMES, FOLLOW_MODES,
+    REFLECTION_PROBE_CUBE_SIZES, REFLECTION_PROBE_REFRESH_RATES,
+    REFLECTION_PROBE_INFLUENCE_SHAPES, REFLECTION_PROBE_FILTER_QUALITY,
+    LAYER_MASK_PRESETS, EVENT_MESSAGE_WHEN,
 )
 from .exposed_vars import BJSExposedVar
 
@@ -51,6 +54,12 @@ def _on_cam_target_update(self, context):
     """Follow-camera target: assign it a GUID so the runtime can resolve it."""
     if self.cam_target is not None:
         ensure_object_id(self.cam_target)
+
+
+def _on_probe_obj_ref_update(self, context):
+    """Reflection-probe object list entry: assign a GUID for manifest export."""
+    if self.obj_ref is not None:
+        ensure_object_id(self.obj_ref)
 
 
 def ensure_custom_constraint_axes(comp):
@@ -124,10 +133,22 @@ class BJSParticleTexture(PropertyGroup):
     )
 
 
-class BJSTriggerEvent(PropertyGroup):
-    """One authored trigger reaction: when something enters this trigger
-    collider, send `message` to `target`'s behaviors (OnMessage). An optional
-    tag filter restricts which entities may set it off."""
+class BJSProbeObjectRef(PropertyGroup):
+    """One entity reference in a reflection probe render list or exclude list."""
+    obj_ref: PointerProperty(
+        name="Object", type=Object, update=_on_probe_obj_ref_update,
+        description="Entity whose meshes are included or excluded from the probe render list",
+    )
+
+
+class BJSEventMessage(PropertyGroup):
+    """One authored Event Message: on a physics phase (or 3D GUI click), send
+    `message` to `target`'s behaviors (OnMessage). An optional tag filter
+    restricts which entities may set collider rows off."""
+    when:       EnumProperty(name="When", items=EVENT_MESSAGE_WHEN,
+                             default='TRIGGER_ENTER',
+                             description="Physics phase that fires this message "
+                                         "(ignored for 3D GUI On Click rows)")
     target:     PointerProperty(name="Target", type=Object,
                                 description="The entity whose behaviors receive the message")
     message:    StringProperty(name="Message", default="",
@@ -143,6 +164,33 @@ class BJSComponent(PropertyGroup):
 
     # --- TAG ---
     tag: StringProperty(name="Tag", default="Untagged")
+
+    # --- RENDERING_GROUP / LAYER_MASK (shared propagation toggles) ---
+    rendering_group_id: IntProperty(
+        name="Rendering Group",
+        description="Babylon draw-order group (0–3); lower groups render first",
+        default=0,
+    )
+    layer_mask_preset: EnumProperty(
+        name="Layer Mask Preset",
+        items=LAYER_MASK_PRESETS,
+        default='DEFAULT',
+    )
+    layer_mask_custom: IntProperty(
+        name="Custom Layer Mask",
+        description="Full 32-bit mask; camera renders when (mesh.layerMask & camera.layerMask) !== 0",
+        default=0x0FFFFFFF,
+    )
+    render_layer_apply_owned: BoolProperty(
+        name="Apply to Owned Meshes",
+        description="Set this entity's own meshes (and particle systems for rendering groups)",
+        default=True,
+    )
+    render_layer_apply_children: BoolProperty(
+        name="Apply to Child Entities",
+        description="Propagate to child entities until one defines its own layer component",
+        default=False,
+    )
 
     # --- COLLIDER ---
     collider_shape: EnumProperty(name="Shape", items=COLLIDER_SHAPES, default='BOX')
@@ -196,7 +244,7 @@ class BJSComponent(PropertyGroup):
                                          description="Custom center of mass offset, in Blender axes")
 
     # --- COLLIDER: trigger events (shown when Is Trigger is on) ---
-    trigger_events: CollectionProperty(type=BJSTriggerEvent)
+    event_messages: CollectionProperty(type=BJSEventMessage)
 
     # --- AUDIO ---
     audio_file:     StringProperty(name="Sound File", subtype='FILE_PATH', default="",
@@ -279,7 +327,7 @@ class BJSComponent(PropertyGroup):
         name="Content Resolution", default=512, min=64, max=4096,
         description="Texture resolution rendering the 3D Button's content")
     # On Click reactions: reuses the trigger-event rows (target + message).
-    gui3d_events:  CollectionProperty(type=BJSTriggerEvent)
+    gui3d_events:  CollectionProperty(type=BJSEventMessage)
     gui3d_margin:  FloatProperty(name="Margin", default=0.02, min=0.0,
                                  description="Distance between child controls")
     gui3d_columns: IntProperty(name="Columns", default=10, min=0,
@@ -386,3 +434,55 @@ class BJSComponent(PropertyGroup):
     cam_check_collisions: BoolProperty(
         name="Check Collisions", default=False,
         description="Use the scene collision system to keep the camera out of geometry")
+
+    # --- REFLECTION_PROBE ---
+    probe_cube_size: EnumProperty(
+        name="Cube Size", items=REFLECTION_PROBE_CUBE_SIZES, default='512',
+        description="Cubemap resolution per face (higher = sharper, slower)",
+    )
+    probe_refresh_rate: EnumProperty(
+        name="Refresh Rate", items=REFLECTION_PROBE_REFRESH_RATES, default='ONCE',
+        description="How often the probe re-renders its six cubemap faces",
+    )
+    probe_refresh_custom: IntProperty(
+        name="Custom Interval", default=3, min=1,
+        description="Frames between probe updates when Refresh Rate is Custom",
+    )
+    probe_generate_mipmaps: BoolProperty(
+        name="Generate Mip Maps", default=True,
+        description="Mip maps for correct PBR roughness filtering",
+    )
+    probe_render_all: BoolProperty(
+        name="Render All", default=True,
+        description="Capture every scene mesh except excludes and this probe's own meshes",
+    )
+    probe_render_list: CollectionProperty(type=BJSProbeObjectRef)
+    probe_render_excludes: CollectionProperty(type=BJSProbeObjectRef)
+    probe_influence_shape: EnumProperty(
+        name="Influence Shape", items=REFLECTION_PROBE_INFLUENCE_SHAPES, default='BOX',
+        description="Volume that receives this probe's cubemap on PBR materials",
+    )
+    probe_influence_size: FloatVectorProperty(
+        name="Influence Size", size=3, default=(4.0, 4.0, 4.0), min=0.0, subtype='XYZ',
+        description="Box full extents (Blender axes); sphere uses X as diameter",
+    )
+    probe_influence_offset: FloatVectorProperty(
+        name="Influence Offset", size=3, default=(0.0, 0.0, 0.0), subtype='XYZ',
+        description="Local offset of the influence volume from this object",
+    )
+    probe_priority: IntProperty(
+        name="Priority", default=0,
+        description="When volumes overlap, higher priority wins; ties break by distance",
+    )
+    probe_realtime_filtering: BoolProperty(
+        name="Real-Time Filtering", default=True,
+        description="Correct PBR glossiness with probe cubemaps (more GPU cost)",
+    )
+    probe_filter_quality: EnumProperty(
+        name="Filter Quality", items=REFLECTION_PROBE_FILTER_QUALITY, default='MEDIUM',
+        description="Quality of real-time probe filtering on assigned materials",
+    )
+    probe_show_preview: BoolProperty(
+        name="Show Influence Preview", default=True,
+        description="Draw the influence volume in the viewport when selected",
+    )

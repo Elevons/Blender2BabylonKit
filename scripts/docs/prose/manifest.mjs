@@ -23,6 +23,13 @@ export const PROSE_CHAPTERS = [
     fragment: "meta/BUILDING-DOCS.html",
     layout: "meta",
   },
+  {
+    href: "QUICKSTART.html",
+    side: "engine",
+    title: "Quickstart — first level in 15 minutes",
+    fragment: "meta/QUICKSTART.html",
+    layout: "meta",
+  },
   // — Engine —
   {
     href: "engine/00-INDEX.html",
@@ -148,6 +155,38 @@ export const PROSE_CHAPTERS = [
     side: "blender",
     title: "Blender Add-on Documentation",
     fragment: "blender/00-INDEX.html",
+    next: "01-EXPORT.html",
+  },
+  {
+    href: "blender/01-EXPORT.html",
+    side: "blender",
+    title: "01 — Export",
+    fragment: "blender/01-EXPORT.html",
+    prev: "00-INDEX.html",
+    next: "02-COMPONENTS.html",
+  },
+  {
+    href: "blender/02-COMPONENTS.html",
+    side: "blender",
+    title: "02 — Components",
+    fragment: "blender/02-COMPONENTS.html",
+    prev: "01-EXPORT.html",
+    next: "03-SCENE-SETTINGS.html",
+  },
+  {
+    href: "blender/03-SCENE-SETTINGS.html",
+    side: "blender",
+    title: "03 — Scene settings",
+    fragment: "blender/03-SCENE-SETTINGS.html",
+    prev: "02-COMPONENTS.html",
+    next: "04-WORKFLOW.html",
+  },
+  {
+    href: "blender/04-WORKFLOW.html",
+    side: "blender",
+    title: "04 — Workflow",
+    fragment: "blender/04-WORKFLOW.html",
+    prev: "03-SCENE-SETTINGS.html",
     next: "PREFABS.html",
   },
   {
@@ -155,7 +194,7 @@ export const PROSE_CHAPTERS = [
     side: "blender",
     title: "Prefabs (linked .blend files)",
     fragment: "blender/PREFABS.html",
-    prev: "00-INDEX.html",
+    prev: "04-WORKFLOW.html",
   },
   // — Launcher —
   {

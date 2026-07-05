@@ -20,6 +20,8 @@ Then \`preflight_behavior\` for the checklist. Skim \`get_do_not_list\` once per
 |------|------|
 | \`get_kernel\` | Invariant rules only (~90 lines) |
 | \`get_engine_basics(topic?)\` | How the engine works (architecture, frame loop, …) |
+| \`search_docs(query)\` | Full-text search across all human docs |
+| \`list_doc_chapters\` / \`get_doc_chapter(chapter, section?)\` | Full engine/Blender prose chapters as markdown |
 | \`get_authoring_workflow\` | This page |
 | \`plan_behavior(intent, className)\` | Recipes, sections, fragments, pitfalls |
 
@@ -65,9 +67,11 @@ Then \`preflight_behavior\` for the checklist. Skim \`get_do_not_list\` once per
 | API contract | \`docs/LLM_SCRIPTING_CONTEXT.md\` · \`get_scripting_context\` |
 | Minimal rules | \`docs/LLM_KERNEL.md\` · \`get_kernel\` |
 | Engine concepts | \`get_engine_basics\` → \`docs/engine/*.html\` |
-| API tables | \`docs/engine/14-API-GUIDE.html\` |
-| Feature inventory | \`docs/engine/13-FEATURE-LIST.html\` |
-| Frame loop | \`docs/engine/02-RUNTIME-BASICS.html\` |
+| Full prose chapters | \`list_doc_chapters\` · \`get_doc_chapter\` (engine + blender + launcher as markdown) |
+| Anything else | \`search_docs(query)\` — full-text across every doc |
+| API tables | \`get_doc_chapter(chapter="engine/14-api-guide")\` or \`docs/engine/14-API-GUIDE.html\` |
+| Feature inventory | \`get_doc_chapter(chapter="engine/13-feature-list")\` or \`docs/engine/13-FEATURE-LIST.html\` |
+| Frame loop | \`get_doc_chapter(chapter="engine/02-runtime-basics")\` or \`docs/engine/02-RUNTIME-BASICS.html\` |
 | Doc index | \`docs/engine/00-INDEX.html\` |
 
 ## Resources (attach in Cursor)

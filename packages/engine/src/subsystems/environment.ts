@@ -37,7 +37,8 @@ const SKYBOX_MESH_NAMES = new Set([
   "BackgroundPlane",
 ]);
 
-function IsSkyboxMesh(mesh: AbstractMesh): boolean
+/** Runtime sky / IBL background meshes — must not receive probe cubemap overrides. */
+export function IsSkyboxMesh(mesh: AbstractMesh): boolean
 {
   return SKYBOX_MESH_NAMES.has(mesh.name);
 }
@@ -359,6 +360,10 @@ export async function ApplyEnvironment(
       ApplyEnvironmentRotation(scene, skyboxTexture, rotationY);
     }
     ConfigureSkyboxMesh(skybox, ignoreFog);
+  }
+  else
+  {
+    await WhenTextureReady(environmentTexture, "world environment");
   }
 
   return environmentTexture;

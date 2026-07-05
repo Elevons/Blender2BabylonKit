@@ -80,30 +80,119 @@ def _check_physics(obj, warnings):
                 f"each shape keeps its own trigger flag in the compound body")
 
 
-def _check_triggers(obj, warnings):
-    """Havok limitation: MESH-shaped trigger volumes never fire trigger events.
-    Also catch trigger events authored on a collider that isn't a trigger, and
-    audio files that don't exist on disk."""
+def _check_event_messages(obj, warnings):
+    """Phase-aware Event Message checks plus Havok trigger-shape limitations."""
+    TRIGGER_PHASES = {'TRIGGER_ENTER', 'TRIGGER_EXIT'}
+    COLLISION_PHASES = {'COLLISION_ENTER', 'COLLISION_EXIT'}
+
     for comp in obj.bjs_components:
         if comp.comp_type == 'COLLIDER':
             if comp.is_trigger and comp.collider_shape == 'MESH':
                 warnings.append(
                     f"{obj.name}: MESH-shaped triggers never fire events in "
                     f"Havok — use BOX/SPHERE/CAPSULE/CYLINDER/CONVEX")
-            if len(comp.trigger_events) > 0 and not comp.is_trigger:
-                warnings.append(
-                    f"{obj.name}: collider has trigger events but 'Is Trigger' "
-                    f"is off — they will never fire")
-            for ev in comp.trigger_events:
+
+            for ev in comp.event_messages:
                 if ev.target is None:
                     warnings.append(
-                        f"{obj.name}: a trigger event has no target object")
+                        f"{obj.name}: an Event Message has no target object")
+                    continue
+
+                phase = ev.when
+                if phase in TRIGGER_PHASES and not comp.is_trigger:
+                    warnings.append(
+                        f"{obj.name}: Event Message '{phase}' on a non-trigger "
+                        f"collider — it will never fire")
+                elif phase in COLLISION_PHASES and comp.is_trigger:
+                    warnings.append(
+                        f"{obj.name}: Event Message '{phase}' on a trigger "
+                        f"collider — it will never fire")
         elif comp.comp_type == 'AUDIO':
             if not comp.audio_file:
                 warnings.append(f"{obj.name}: Audio component has no sound file")
             elif not os.path.isfile(bpy.path.abspath(comp.audio_file)):
                 warnings.append(
                     f"{obj.name}: audio file not found: {comp.audio_file}")
+
+
+def _check_render_layers(obj, warnings):
+    """Babylon rendering groups are 0–3; custom layer masks are 32-bit unsigned."""
+    for comp in obj.bjs_components:
+        if not comp.enabled:
+            continue
+        if comp.comp_type == 'RENDERING_GROUP':
+            group_id = int(comp.rendering_group_id)
+            if group_id < 0 or group_id > 3:
+                warnings.append(
+                    f"{obj.name}: Rendering Group id {group_id} is out of range — "
+                    f"Babylon only supports groups 0–3")
+        elif comp.comp_type == 'LAYER_MASK' and comp.layer_mask_preset == 'CUSTOM':
+            mask = int(comp.layer_mask_custom)
+            if mask < 0:
+                warnings.append(
+                    f"{obj.name}: Custom Layer Mask must be non-negative")
+            elif mask > 0xFFFFFFFF:
+                warnings.append(
+                    f"{obj.name}: Custom Layer Mask exceeds 32-bit range "
+                    f"(max 0xFFFFFFFF)")
+
+
+def _check_reflection_probes(obj, context, warnings):
+    """Reflection probes need a non-zero influence volume and a valid render list."""
+    for comp in obj.bjs_components:
+        if not comp.enabled or comp.comp_type != 'REFLECTION_PROBE':
+            continue
+
+        sx, sy, sz = comp.probe_influence_size
+        if comp.probe_influence_shape == 'SPHERE':
+            if sx <= 0.0:
+                warnings.append(
+                    f"{obj.name}: Reflection Probe sphere diameter must be > 0")
+        elif sx <= 0.0 or sy <= 0.0 or sz <= 0.0:
+            warnings.append(
+                f"{obj.name}: Reflection Probe influence box size must be > 0 on all axes")
+
+        if not comp.probe_render_all and len(comp.probe_render_list) == 0:
+            warnings.append(
+                f"{obj.name}: Reflection Probe has Render All off but an empty "
+                f"render list — add objects or enable Render All")
+
+        if comp.probe_refresh_rate == 'EVERY_FRAME' and comp.probe_render_all:
+            warnings.append(
+                f"{obj.name}: Reflection Probe updates every frame with Render All "
+                f"— very expensive (6 cubemap faces per frame)")
+
+        for entry in comp.probe_render_list:
+            if entry.obj_ref is not None and not is_renderable(entry.obj_ref, context):
+                warnings.append(
+                    f"{obj.name}: render list references '{entry.obj_ref.name}', "
+                    f"which is render-disabled and won't be exported")
+        for entry in comp.probe_render_excludes:
+            if entry.obj_ref is not None and not is_renderable(entry.obj_ref, context):
+                warnings.append(
+                    f"{obj.name}: render exclude references '{entry.obj_ref.name}', "
+                    f"which is render-disabled and won't be exported")
+
+
+def _check_probe_overlaps(context, warnings):
+    """Informational warning when multiple probes share the same priority."""
+    probes = []
+    for obj in context.scene.objects:
+        if not is_renderable(obj, context):
+            continue
+        for comp in obj.bjs_components:
+            if comp.enabled and comp.comp_type == 'REFLECTION_PROBE':
+                probes.append((obj.name, comp.probe_priority))
+
+    by_priority = {}
+    for name, priority in probes:
+        by_priority.setdefault(priority, []).append(name)
+    for priority, names in by_priority.items():
+        if len(names) > 1:
+            joined = ", ".join(names)
+            warnings.append(
+                f"Reflection Probes with priority {priority} overlap ({joined}) "
+                f"— ties break by distance to mesh center")
 
 
 def _check_media(obj, warnings):
@@ -425,8 +514,10 @@ def validate_scene(context):
             continue
         _check_scripts(obj, warnings)
         _check_entity_refs(obj, context, warnings)
+        _check_reflection_probes(obj, context, warnings)
+        _check_render_layers(obj, warnings)
         _check_physics(obj, warnings)
-        _check_triggers(obj, warnings)
+        _check_event_messages(obj, warnings)
         _check_media(obj, warnings)
         _check_gui3d(obj, warnings)
         _check_constraints(obj, warnings)
@@ -439,5 +530,6 @@ def validate_scene(context):
     _check_atmosphere(context, warnings)
     _check_large_world_rendering(context, warnings)
     _check_materials(context, warnings)
+    _check_probe_overlaps(context, warnings)
 
     return warnings

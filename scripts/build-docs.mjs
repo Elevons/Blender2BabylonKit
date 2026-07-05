@@ -14,6 +14,7 @@ import { BuildEngineDocs } from "./build-trace-docs.mjs";
 import { BuildBlenderDocs } from "./build-blender-docs.mjs";
 import { BuildProseDocs } from "./build-prose-docs.mjs";
 import { BuildLandingPage } from "./build-landing.mjs";
+import { StampMetaMarkdown } from "./stamp-meta-md.mjs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +24,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 BuildEngineDocs();
 BuildBlenderDocs();
 BuildProseDocs();
+StampMetaMarkdown();
 BuildLandingPage();
 
 for (const script of ["scripts/docs/validate-docs.mjs", "scripts/check-doc-links.mjs"])

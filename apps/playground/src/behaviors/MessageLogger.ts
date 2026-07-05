@@ -2,8 +2,8 @@ import { Behavior, exposed } from "@bjs/engine";
 import type { Entity } from "@bjs/engine";
 
 /**
- * TEST/demo for trigger messaging. Attach to the entity a trigger event targets
- * and it logs every message it receives (optionally filtered to one message),
+ * TEST/demo for Event Message delivery. Attach to the entity an Event Message
+ * targets and it logs every message it receives (optionally filtered to one message),
  * and can play one of this entity's sounds in response — wire a door creak to a
  * doorway trigger with zero custom code.
  */

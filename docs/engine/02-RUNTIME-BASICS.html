@@ -365,7 +365,7 @@
 <p>Debug keys (C/I), fallback cameras, and resize handlers are app concerns — see <a href="09-WORKFLOW.html">09 — Workflow</a>.</p>
 <h2>Load time vs run time</h2>
 <table><thead><tr><th>Phase</th><th>When</th><th>What happens</th></tr></thead><tbody>
-<tr><td><strong>Load</strong></td><td><code>LevelLoader.Load()</code> until it returns</td><td>Append glb, build entities, <code>ApplyComponents</code>, <code>InstantiateScripts</code> (no lifecycle hooks yet), second pass for entity refs, <code>FinalizeLevel</code>, then <code>Begin()</code> → every <code>OnStart</code> <strong>once</strong>.</td></tr>
+<tr><td><strong>Load</strong></td><td><code>LevelLoader.Load()</code> until it returns</td><td>Append glb, build entities, <code>ApplyEntityComponents</code> (the component registry), <code>InstantiateScripts</code> (no lifecycle hooks yet), second pass for entity refs, <code>FinalizeLevel</code>, then <code>Begin()</code> → every <code>OnStart</code> <strong>once</strong>.</td></tr>
 <tr><td><strong>Run</strong></td><td>Every frame after <code>runRenderLoop</code></td><td><code>scene.render()</code> → Babylon observables → <code>Level.RunFrame</code> → every <code>OnUpdate</code>.</td></tr>
 </tbody></table>
 <p><code>OnStart</code> is <em>not</em> called from the render loop. It runs once at the end of load, after physics bodies, triggers, and constraints exist.</p>

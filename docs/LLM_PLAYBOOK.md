@@ -12,7 +12,7 @@ Use MCP tool **`route_task(intent, className)`** first — it picks a playbook a
 ## Golden rules (never violate)
 
 1. **One class per file** — `export default class Name extends Behavior`; **Name === filename stem**.
-2. **PascalCase hooks** — `OnStart`, `OnUpdate`, `OnDestroy`, `OnMessage` (lowercase = silent no-op).
+2. **PascalCase hooks** — `OnStart`, `OnUpdate`, `OnDestroy`, `OnMessage`, `OnCollision*`, `OnTrigger*` (lowercase = silent no-op).
 3. **Lowercase decorators** — `@exposed`, `@inputMap` (Blender parses these literals).
 4. **Never invent** input action names or entity names — call `list_input_actions` / `list_scene_entities`.
 5. **Never write** `node.position` every frame on a **DYNAMIC** body — use velocity or ANIMATED mode.
@@ -25,7 +25,8 @@ Use MCP tool **`route_task(intent, className)`** first — it picks a playbook a
 |--------------|---------------|--------|
 | First empty script | `first-behavior` | `minimal-behavior` |
 | WASD / stick mover | `player-mover` | `input-poll-move` |
-| React to trigger zone | `trigger-reaction` | `on-message-handler` |
+| React to trigger zone (data) | `trigger-reaction` | `on-message-handler` |
+| Collision/trigger hooks (code) | — | override `OnCollision*` / `OnTrigger*` |
 | Moving platform | `moving-platform` | `patrol-oscillate` |
 | Patrol through points | `waypoint-patrol` | `waypoint-path` |
 | Train on rails + throttle | `train-on-path` | `path-follow-advanced` |
@@ -109,7 +110,7 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 ## Playbook: trigger-reaction
 
 ### Blender setup
-1. **Trigger object:** COLLIDER → Is Trigger → **On Enter Events** → pick target entity + message string (e.g. `"door_open"`).
+1. **Trigger object:** COLLIDER → Is Trigger → **Event Messages** → When = Trigger Enter → pick target entity + message string (e.g. `"door_open"`).
 2. **Target object:** SCRIPT component with your behavior (e.g. `DoorLogic.ts`).
 3. Trigger shape: box/sphere/capsule/convex — **not MESH**.
 
@@ -125,7 +126,7 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 5. `validate_behavior(source, "DoorLogic.ts")`
 
 ### Do not
-- Use `OnStart` expecting trigger overlap — triggers call **OnMessage**.
+- Use `OnStart` expecting trigger overlap — Event Messages and hooks use **OnMessage** / **OnTrigger***.
 - Put trigger logic on the trigger volume unless you also listen there.
 
 ---
@@ -276,7 +277,7 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 
 ### Blender setup
 - Hidden object: viewport eye off OR Collider › Make Invisible.
-- Trigger → On Enter → message `"reveal"` → target = hidden object's behavior.
+- Trigger → Event Message (Trigger Enter) → message `"reveal"` → target = hidden object's behavior.
 
 ### Behavior file
 - Recipe: `reveal-on-message`

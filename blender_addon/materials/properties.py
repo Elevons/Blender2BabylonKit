@@ -7,9 +7,10 @@ from bpy.props import (
     FloatProperty,
     FloatVectorProperty,
     IntProperty,
+    PointerProperty,
     StringProperty,
 )
-from bpy.types import PropertyGroup
+from bpy.types import PropertyGroup, Texture
 
 NME_INPUT_TYPES = [
     ('FLOAT', "Float", ""),
@@ -58,6 +59,54 @@ class BJSNmeTexture(PropertyGroup):
         default="",
         description="Only patch blocks whose current URL equals this "
                     "(empty = match by block id)",
+    )
+
+
+class BJSNmeGradientStep(PropertyGroup):
+    """One color stop on an inspector-visible GradientBlock."""
+
+    step_value: FloatProperty(
+        name="Step",
+        min=0.0,
+        max=1.0,
+        default=0.0,
+        precision=3,
+        step=1,
+        description="Position along the gradient (0–1)",
+    )
+    color: FloatVectorProperty(
+        name="Color",
+        size=3,
+        subtype='COLOR',
+        min=0.0,
+        max=1.0,
+        default=(1.0, 1.0, 1.0),
+    )
+
+
+class BJSNmeGradient(PropertyGroup):
+    """One inspector-visible GradientBlock patched into the node material JSON."""
+
+    block_id: IntProperty(
+        name="Block ID",
+        default=0,
+        description="NME GradientBlock id used to patch the correct colorSteps",
+    )
+    block_name: StringProperty(
+        name="Block",
+        default="",
+        description="NME GradientBlock name (display label)",
+    )
+    group_in_inspector: StringProperty(
+        name="Group",
+        default="",
+        description="NME inspector group label, when set",
+    )
+    steps: CollectionProperty(type=BJSNmeGradientStep)
+    ramp_texture: PointerProperty(
+        type=Texture,
+        name="Gradient Ramp",
+        description="Internal BLEND texture used only to host a ColorRamp for the UI",
     )
 
 

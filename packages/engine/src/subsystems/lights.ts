@@ -1,25 +1,6 @@
-import { Scene, Light, SpotLight, DirectionalLight, Color3, Vector3 } from "@babylonjs/core";
+import { Scene, Light, SpotLight, DirectionalLight, Color3 } from "@babylonjs/core";
 import type { Node } from "@babylonjs/core";
 import type { LightInfo } from "../core/types";
-
-/**
- * Blender energy -> Babylon intensity. Real-time lighting can't match
- * Cycles/EEVEE exactly, so these are pragmatic starting points. If a scene
- * reads too bright or dim, tune these two numbers in one place.
- */
-const SUN_SCALE = 1.0;        // Blender sun strength (W/m^2) ~ directional intensity
-const PUNCTUAL_SCALE = 0.001; // Blender point/spot watts -> intensity (1000 W -> 1.0)
-
-/** Convert a Blender lamp's energy to a Babylon intensity by light type. */
-function MapIntensity(lightInfo: LightInfo): number
-{
-  if (lightInfo.type === "SUN")
-  {
-    return lightInfo.energy * SUN_SCALE;
-  }
-
-  return lightInfo.energy * PUNCTUAL_SCALE;
-}
 
 /**
  * The glb already created a Babylon light with the correct, coordinate-converted
@@ -91,12 +72,7 @@ export function ApplyBlenderLight(
   const lightColor = new Color3(lightInfo.color[0], lightInfo.color[1], lightInfo.color[2]);
   light.diffuse = lightColor;
   light.specular = lightColor;
-  light.intensity = MapIntensity(lightInfo);
-
-  console.log(
-    `[bjs] light "${light.name}" <- color`, lightInfo.color,
-    `intensity ${light.intensity.toFixed(3)}`
-  );
+  light.intensity = lightInfo.energy;
 
   if (typeof lightInfo.range === "number" && lightInfo.range > 0 && "range" in light)
   {

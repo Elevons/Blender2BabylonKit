@@ -121,5 +121,7 @@ directly by the loader.
 At runtime, successfully applied components are recorded on
 `entity.attachments` (`core/attachments.ts`) — one row per component, each pairing
 manifest `data` with its runtime object (`body`, `behavior`, `sound`, …). Query
-with `GetAttachment` / `GetAttachmentsOfType` / `HasAttachment`; convenience
-fields (`entity.body`, `entity.behaviors`, …) mirror attachments for now.
+with `GetAttachment` / `GetAttachmentsOfType` / `HasAttachment`. Convenience
+fields (`entity.body`, `entity.behaviors`, …) mirror attachments;
+`RegisterAttachment` is the **single write path** that maintains both — never
+push to a convenience array directly.

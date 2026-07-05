@@ -45,6 +45,9 @@ export const DOCS = {
   styleGuide: join(REPO_ROOT, "docs/STYLE_GUIDE.md"),
 } as const;
 
+/** Prose chapter HTML fragments — the source the built docs/ pages are generated from. */
+export const PROSE_CONTENT = join(REPO_ROOT, "scripts/docs/prose/content");
+
 export const PLAYGROUND_BEHAVIORS = join(REPO_ROOT, "apps/playground/src/behaviors");
 export const PLAYGROUND_LEVELS = join(REPO_ROOT, "apps/playground/public/levels");
 export const INPUT_ACTIONS_TS = join(REPO_ROOT, "apps/playground/src/InputActions.ts");

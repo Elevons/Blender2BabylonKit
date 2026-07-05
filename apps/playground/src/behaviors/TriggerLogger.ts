@@ -1,6 +1,6 @@
 import { Behavior, exposed } from "@bjs/engine";
 
-/** Logs when a trigger collider is overlapped (needs a trigger COLLIDER). */
+/** Logs when a trigger collider is overlapped. Prefer CollisionProbe for lifecycle hooks. */
 export default class TriggerLogger extends Behavior
 {
   @exposed({ label: "Message" })

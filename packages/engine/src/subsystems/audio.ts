@@ -69,7 +69,6 @@ export async function ApplyAudio(
     sound.spatial.maxDistance = audioComponent.maxDistance;
   }
 
-  entity.sounds.push(sound);
   RegisterAttachment(entity, { type: "AUDIO", data: audioComponent, sound });
 
   // Autoplay must wait for the browser's gesture unlock; don't block loading on it.

@@ -20,7 +20,7 @@ import {
 } from "../subsystems/clusteredLights";
 import type { ClusteredLightsResult } from "../subsystems/clusteredLights";
 import { ResolveCameraTargets } from "../subsystems/cameras";
-import { WireTriggerEvents } from "../subsystems/triggers";
+import { WireCollisionEvents } from "../subsystems/collisions";
 import { BuildConstraints } from "../subsystems/constraints";
 import { BuildGui3DControls } from "../ui/gui3d/builder";
 import { CollectTextRenderers, WireMsdfTextRendering } from "../ui/msdfText";
@@ -28,14 +28,19 @@ import {
   CollectEmptyParticleEmitters,
   WireParticleEmitterTracking,
 } from "../subsystems/particles";
-import { FetchAndValidateManifest, GetDirectory } from "./loader/manifest";
+import { FetchAndValidateManifest, GetDirectory, ValidateManifest } from "./loader/manifest";
 import { ApplyNodeVisibility, NeutralizeGltfRoot } from "./loader/nodeResolution";
 import { CreateLoadContext, type LoadContext } from "./loader/context";
 import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
 import { ApplyPostProcessing } from "../subsystems/postprocess";
 import { ApplyAtmosphere } from "../subsystems/atmosphere";
-import { ApplyNodeMaterials } from "../subsystems/materials";
+import { ApplyNodeMaterials, BuildNodeMaterials } from "../subsystems/materials";
+import {
+  AssignProbeMaterials,
+  BuildReflectionProbes,
+} from "../subsystems/reflectionProbes";
+import { ApplyRenderLayers } from "../subsystems/renderLayers";
 
 /** Await a batch of asset-load promises, logging any that rejected. */
 async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
@@ -97,7 +102,11 @@ export class LevelLoader
    */
   async Load(manifestUrl: string, prefetchedManifest?: LevelManifest): Promise<Level>
   {
-    const manifest = prefetchedManifest ?? await FetchAndValidateManifest(manifestUrl);
+    // Prefetched manifests (engine bootstrap) validate here too — the app may
+    // have fetched the JSON without going through FetchAndValidateManifest.
+    const manifest = prefetchedManifest !== undefined
+      ? ValidateManifest(prefetchedManifest)
+      : await FetchAndValidateManifest(manifestUrl);
     const baseUrl = GetDirectory(manifestUrl);
 
     // The scene's Input Actions asset must exist BEFORE behaviors are built,
@@ -203,7 +212,16 @@ export class LevelLoader
       context.level.shadowGenerators = SetupShadows(this.scene, context.shadowLights, {
         mapSize: this.options.shadowMapSize,
         freeze,
+        debug: context.level.debugEnabled,
       });
+    }
+
+    if (context.level.debugEnabled)
+    {
+      console.log(
+        `[bjs] lights: ${this.scene.lights.length} in scene, ` +
+          `${context.shadowLights.length} shadow-casting`
+      );
     }
 
     if (manifest.scene !== undefined)
@@ -228,6 +246,10 @@ export class LevelLoader
       }
     }
 
+    // Single NME compile pass — after environment IBL exists when the manifest
+    // declares one, and after manifest texture/input overrides are bound.
+    await BuildNodeMaterials(this.scene);
+
     ApplyAutoPlayAnimations(this.scene, context.animatedEntities);
 
     // Asset-backed components (audio, GUI, particles) load in parallel during
@@ -248,8 +270,8 @@ export class LevelLoader
       CollectTextRenderers(context.level.entities.values())
     );
 
-    context.level.triggerObserver =
-      WireTriggerEvents(this.scene, context.level, context.triggerRegistrations);
+    context.level.collisionEventHandles =
+      WireCollisionEvents(this.scene, context.level, context.eventMessageRegistrations);
 
     context.level.constraints =
       BuildConstraints(this.scene, context.level, context.constraintRegistrations);
@@ -257,6 +279,16 @@ export class LevelLoader
     context.level.gui3DManager = BuildGui3DControls(
       this.scene, context.level, context.gui3dRegistrations, context.baseUrl
     );
+
+    const builtProbes = BuildReflectionProbes(
+      this.scene,
+      context.level,
+      context.reflectionProbeRegistrations
+    );
+    AssignProbeMaterials(this.scene, builtProbes);
+    context.level.reflectionProbes = builtProbes.map((built) => built.probe);
+
+    ApplyRenderLayers(manifest, context.level);
 
     context.level.Begin();
 

@@ -1,7 +1,8 @@
-import { Vector3, Matrix, Tools } from "@babylonjs/core";
-import type { FollowCamera, ArcRotateCamera, UniversalCamera, TransformNode } from "@babylonjs/core";
+import { Vector3, Matrix, Tools, Quaternion } from "@babylonjs/core";
+import type { Camera, FollowCamera, ArcRotateCamera, UniversalCamera, TransformNode } from "@babylonjs/core";
 import type { CameraComponent } from "../../core/types";
 import type { Level } from "../../core/Level";
+import type { Entity } from "../../core/Entity";
 import type { TypedCameraResult } from "./typed";
 
 /**
@@ -19,12 +20,14 @@ export interface CameraTargetSets {
   followCams: { followCamera: FollowCamera; guid: string; eye: Vector3; derive: boolean }[];
   arcCams: { arcCamera: ArcRotateCamera; guid: string; eye: Vector3; track: boolean }[];
   offsetCams: { offsetCamera: UniversalCamera; guid: string; eye: Vector3 }[];
+  /** Typed cameras that replaced the glb camera — source entity node is synced each frame. */
+  entityNodeSync: { camera: Camera; sourceEntityId: string }[];
 }
 
-/** A fresh, empty target collection for one load pass. */
+/** A fresh, empty target collection for one level load pass. */
 export function CreateCameraTargetSets(): CameraTargetSets
 {
-  return { followCams: [], arcCams: [], offsetCams: [] };
+  return { followCams: [], arcCams: [], offsetCams: [], entityNodeSync: [] };
 }
 
 /**
@@ -34,9 +37,15 @@ export function CreateCameraTargetSets(): CameraTargetSets
 export function QueueCameraTargets(
   built: TypedCameraResult,
   cameraComponent: CameraComponent,
-  sets: CameraTargetSets
+  sets: CameraTargetSets,
+  sourceEntityId: string
 ): void
 {
+  if (cameraComponent.cameraType !== "FREE")
+  {
+    sets.entityNodeSync.push({ camera: built.camera, sourceEntityId });
+  }
+
   if (built.followTarget !== undefined)
   {
     sets.followCams.push({
@@ -166,6 +175,66 @@ function ResolveOffsetCameras(level: Level, offsetCams: CameraTargetSets["offset
   }
 }
 
+/** Copy a typed camera's world pose onto its source entity node (child probes follow). */
+function SyncTypedCameraToEntityNode(camera: Camera, entity: Entity): void
+{
+  camera.computeWorldMatrix();
+  const worldMatrix = camera.getWorldMatrix();
+  const position = worldMatrix.getTranslation();
+  const rotationQuaternion = Quaternion.FromRotationMatrix(worldMatrix);
+
+  entity.node.setAbsolutePosition(position);
+  if (entity.node.rotationQuaternion === null)
+  {
+    entity.node.rotationQuaternion = rotationQuaternion;
+  }
+  else
+  {
+    entity.node.rotationQuaternion.copyFrom(rotationQuaternion);
+  }
+}
+
+/** Whether the entity's node subtree carries any physics body (worth syncing). */
+function EntitySubtreeHasPhysics(entity: Entity): boolean
+{
+  if (entity.body !== undefined)
+  {
+    return true;
+  }
+
+  return entity.node
+    .getDescendants(false)
+    .some((descendant) => (descendant as TransformNode).physicsBody != null);
+}
+
+/**
+ * Drive each typed camera's source entity node so physics children track the
+ * view. Only wired when the subtree actually has a physics body — pure-visual
+ * camera entities skip the per-frame matrix copy.
+ */
+function WireCameraEntityNodeSync(level: Level, syncEntries: CameraTargetSets["entityNodeSync"]): void
+{
+  for (const syncEntry of syncEntries)
+  {
+    const sourceEntity = level.ById(syncEntry.sourceEntityId);
+    if (sourceEntity === undefined)
+    {
+      console.warn(`[bjs] camera entity sync: ${syncEntry.sourceEntityId} not found`);
+      continue;
+    }
+
+    if (!EntitySubtreeHasPhysics(sourceEntity))
+    {
+      continue;
+    }
+
+    level.AddUpdater(() =>
+    {
+      SyncTypedCameraToEntityNode(syncEntry.camera, sourceEntity);
+    });
+  }
+}
+
 /**
  * Resolve FollowCamera / ArcRotate orbit / offset-follow targets by GUID now
  * that all entities are built.
@@ -175,4 +244,5 @@ export function ResolveCameraTargets(level: Level, sets: CameraTargetSets): void
   ResolveFollowCameras(level, sets.followCams);
   ResolveArcCameras(level, sets.arcCams);
   ResolveOffsetCameras(level, sets.offsetCams);
+  WireCameraEntityNodeSync(level, sets.entityNodeSync);
 }
