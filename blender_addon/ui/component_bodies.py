@@ -66,7 +66,7 @@ def _draw_var(layout, comp_index, var_index, v):
 
     slot = {
         'FLOAT': "f_val", 'BOOL': "b_val", 'STRING': "s_val",
-        'VECTOR3': "v_val", 'COLOR': "c_val", 'ENTITY': "obj_val",
+        'VECTOR2': "v2_val", 'VECTOR3': "v_val", 'COLOR': "c_val", 'ENTITY': "obj_val",
     }.get(v.vtype, "f_val")
     layout.prop(v, slot, text=label)
 
@@ -179,6 +179,15 @@ def _draw_layer_mask(body, obj, comp, index):
         body.prop(comp, "layer_mask_custom")
     body.prop(comp, "render_layer_apply_owned")
     body.prop(comp, "render_layer_apply_children")
+
+
+def _draw_collision_layer(body, obj, comp, index):
+    body.prop(comp, "collision_layer_select")
+    body.prop(comp, "collision_layer_apply_owned")
+    body.prop(comp, "collision_layer_apply_children")
+    if not any(c.enabled and c.comp_type in {'COLLIDER', 'RIGIDBODY'} for c in obj.bjs_components):
+        info = body.box()
+        info.label(text="No Collider/Rigid Body — layer has no effect", icon='INFO')
 
 
 def _draw_collider(body, obj, comp, index):
@@ -529,6 +538,7 @@ BODY_DRAWERS = {
     'SCRIPT': _draw_script,
     'CAMERA': _draw_camera,
     'CONSTRAINT': _draw_constraint,
+    'COLLISION_LAYER': _draw_collision_layer,
     'AUDIO': _draw_audio,
     'GUI': _draw_gui,
     'PARTICLE': _draw_particle,

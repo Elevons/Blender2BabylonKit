@@ -3,7 +3,6 @@
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
-    EnumProperty,
     FloatProperty,
     FloatVectorProperty,
     IntProperty,
@@ -12,6 +11,8 @@ from bpy.props import (
 )
 from bpy.types import PropertyGroup, Texture
 
+# UI labels for NME InputBlock kinds. value_type is stored as a string id (see
+# BJSNmeInput below), so this list can be reordered freely.
 NME_INPUT_TYPES = [
     ('FLOAT', "Float", ""),
     ('INT', "Int", ""),
@@ -123,11 +124,9 @@ class BJSNmeInput(PropertyGroup):
         default="",
         description="NME InputBlock name (display label)",
     )
-    value_type: EnumProperty(
-        name="Type",
-        items=NME_INPUT_TYPES,
-        default='FLOAT',
-    )
+    # String id ('FLOAT', 'VECTOR3', …) — not EnumProperty. Set by Scan NME from
+    # the JSON block type; artists never pick it from a dropdown.
+    value_type: StringProperty(default='FLOAT')
     group_in_inspector: StringProperty(
         name="Group",
         default="",

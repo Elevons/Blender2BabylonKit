@@ -19,6 +19,7 @@ from ..scene.environment import find_world_env_node
 from .common import draw_export_controls
 from .post_panels import classes as post_panel_classes
 from .input_panel import classes as input_panel_classes
+from .collision_layers_panel import classes as collision_layers_panel_classes
 
 
 def _atmosphere(context):
@@ -179,5 +180,6 @@ classes = (
     BJS_PT_scene_atmosphere,
     *post_panel_classes,
     *input_panel_classes,
+    *collision_layers_panel_classes,
     BJS_PT_scene_export,
 )

@@ -157,7 +157,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "File",
-              "subsystems/physics.ts"
+              "subsystems/physics/"
             ],
             [
               "Engine",
@@ -1048,7 +1048,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "File",
-              "subsystems/physics.ts"
+              "subsystems/physics/"
             ]
           ]
         },
@@ -1805,7 +1805,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "File",
-              "subsystems/physics.ts"
+              "subsystems/physics/"
             ],
             [
               "Input struct",
@@ -1913,7 +1913,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "File",
-              "subsystems/physics.ts"
+              "subsystems/physics/"
             ]
           ]
         },
@@ -2162,7 +2162,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Node materials",
-          "sub": "subsystems/materials.ts",
+          "sub": "subsystems/materials/",
           "desc": "Optional manifest.materials[]: ApplyNodeMaterials parses NME JSON and binds manifest overrides (no build); BuildNodeMaterials in FinalizeLevel compiles once after environment IBL. Cache per file+name; embedded data: / base64String or urlRewriter paths; textures[] override embeds; inputs[] and gradients[] patch InputBlock values and GradientBlock colorSteps; editorData.map for blockId. NME IBL needs ReflectionBlock on PBR reflection input.",
           "meta": [
             [

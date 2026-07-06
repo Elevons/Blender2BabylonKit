@@ -7,13 +7,64 @@ from bpy.types import Operator
 
 from ..core import script_parse
 from ..core.inspector import inspector_object
-from ..components.exposed_vars import sync_exposed_vars
+from ..components.exposed_vars import sync_exposed_vars, build_fields_from_component
 
 
-def _sync_component_vars(comp):
+def _override_source_component(obj, comp, comp_index):
+    """For a library-override (linked prefab) object, the matching SCRIPT
+    component on the read-only source object reached via
+    `override_library.reference`. That source is the structural authority for
+    @exposed vars, since an override cannot remove its linked base rows. Returns
+    None for local objects, so they fall back to parsing the .ts directly."""
+    override = getattr(obj, "override_library", None)
+    if override is None or override.reference is None:
+        return None
+
+    source_obj = override.reference
+    source_comps = getattr(source_obj, "bjs_components", None)
+    if not source_comps:
+        return None
+
+    name = comp.script_name
+    matches = [
+        c for c in source_comps
+        if c.comp_type == 'SCRIPT' and name and c.script_name == name
+    ]
+    if len(matches) == 1:
+        return matches[0]
+
+    # Ambiguous (same script twice) or no name match: try the same index.
+    if 0 <= comp_index < len(source_comps):
+        candidate = source_comps[comp_index]
+        if candidate.comp_type == 'SCRIPT':
+            return candidate
+    return matches[0] if matches else None
+
+
+def _sync_component_vars(obj, comp, comp_index):
+    """Sync a SCRIPT component's exposed vars. On a library override we reconcile
+    against the prefab source object (never modifying it — we only read its
+    structure); otherwise we parse the .ts. Returns (count, from_source)."""
+    source_comp = _override_source_component(obj, comp, comp_index)
+    if source_comp is not None:
+        fields = build_fields_from_component(source_comp)
+        # An override forbids remove() on its exposed-var rows, so corruption
+        # strays a plain resync leaves behind can't be deleted one by one.
+        # clear() is allowed and drops only the locally-inserted rows while
+        # keeping the linked base rows (which mirror the source) — so clearing
+        # the strays, then reconciling the survivors in place, makes the instance
+        # match the prefab. No rows are re-added (the linked ones already match by
+        # name), so this avoids the duplication a clear()+rebuild would cause.
+        try:
+            comp.exposed_vars.clear()
+        except TypeError:
+            pass
+        sync_exposed_vars(comp, fields)
+        return len(fields), True
+
     fields = script_parse.parse_exposed(bpy.path.abspath(comp.script_path))
     sync_exposed_vars(comp, fields)
-    return len(fields)
+    return len(fields), False
 
 
 class BJS_OT_pick_script(Operator):
@@ -52,7 +103,7 @@ class BJS_OT_pick_script(Operator):
 
         # Setting script_path triggers its update() which derives script_name.
         comp.script_path = path
-        _sync_component_vars(comp)
+        _sync_component_vars(obj, comp, self.comp_index)
         self.report({'INFO'}, f"Script: {comp.script_name}")
         return {'FINISHED'}
 
@@ -73,8 +124,9 @@ class BJS_OT_sync_vars(Operator):
         if not comp.script_path:
             self.report({'WARNING'}, "Pick a script first")
             return {'CANCELLED'}
-        n = _sync_component_vars(comp)
-        self.report({'INFO'}, f"Synced {n} variable(s)")
+        n, from_source = _sync_component_vars(obj, comp, self.comp_index)
+        origin = " from prefab source" if from_source else ""
+        self.report({'INFO'}, f"Synced {n} variable(s){origin}")
         return {'FINISHED'}
 
 

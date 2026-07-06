@@ -1,7 +1,7 @@
 import { Engine } from "@babylonjs/core";
 
 import type { LevelManifest } from "./types";
-import type { HavokPhysicsOptions } from "../subsystems/physics";
+import type { HavokPhysicsOptions } from "../subsystems/physics/index";
 
 /** Default Havok floating-origin region radius (matches Babylon HavokPlugin). */
 export const DEFAULT_FLOATING_ORIGIN_WORLD_RADIUS = 100_000;

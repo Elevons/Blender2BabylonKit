@@ -56,7 +56,7 @@
   "checkReadyOnlyOnce": false,
   "state": "",
   "alpha": 1,
-  "backFaceCulling": true,
+  "backFaceCulling": false,
   "textureRepetitionMode": 0,
   "textureRepetitionHexTilingParams": [
     1,
@@ -64,7 +64,7 @@
     7,
     0.5
   ],
-  "cullBackFaces": true,
+  "cullBackFaces": false,
   "sideOrientation": 1,
   "_alphaMode": [
     2
@@ -1542,7 +1542,7 @@
       "valueType": "BABYLON.Vector2",
       "value": [
         0.009999999776482582,
-        0.0
+        0.009999999776482582
       ]
     },
     {
@@ -2386,7 +2386,7 @@
         {
           "name": "opacity",
           "inputName": "opacity",
-          "targetBlockId": 179321,
+          "targetBlockId": 179351,
           "targetConnectionName": "output",
           "isExposedOnFrame": true,
           "exposedPortPosition": -1
@@ -3058,8 +3058,8 @@
       "convertToLinearSpace": false,
       "valueType": "BABYLON.Vector2",
       "value": [
-        0.02500000037252903,
-        0.02500000037252903
+        0.0,
+        0.0
       ]
     },
     {
@@ -3973,8 +3973,8 @@
       "convertToLinearSpace": false,
       "valueType": "BABYLON.Vector2",
       "value": [
-        0.009999999776482582,
-        0.009999999776482582
+        0.0,
+        0.0
       ]
     },
     {
@@ -4928,7 +4928,7 @@
       "convertToGammaSpace": false,
       "convertToLinearSpace": false,
       "valueType": "number",
-      "value": 1
+      "value": 1.0
     },
     {
       "customType": "BABYLON.SubtractBlock",
@@ -5170,9 +5170,77 @@
       ]
     },
     {
+      "customType": "BABYLON.VectorSplitterBlock",
+      "id": 179355,
+      "name": "Top Normal Split",
+      "comments": "",
+      "visibleInInspector": false,
+      "visibleOnFrame": false,
+      "target": 4,
+      "inputs": [
+        {
+          "name": "xyzw",
+          "inputName": "xyzw",
+          "targetBlockId": 179215,
+          "targetConnectionName": "output",
+          "isExposedOnFrame": true,
+          "exposedPortPosition": -1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "xyz"
+        },
+        {
+          "name": "xy"
+        },
+        {
+          "name": "zw"
+        },
+        {
+          "name": "x"
+        },
+        {
+          "name": "y"
+        },
+        {
+          "name": "z"
+        },
+        {
+          "name": "w"
+        }
+      ]
+    },
+    {
+      "customType": "BABYLON.ClampBlock",
+      "id": 179356,
+      "name": "Top Surface Weight",
+      "comments": "",
+      "visibleInInspector": false,
+      "visibleOnFrame": false,
+      "target": 4,
+      "inputs": [
+        {
+          "name": "value",
+          "inputName": "value",
+          "targetBlockId": 179355,
+          "targetConnectionName": "y",
+          "isExposedOnFrame": true,
+          "exposedPortPosition": -1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output"
+        }
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    {
       "customType": "BABYLON.ConditionalBlock",
-      "id": 179321,
-      "name": "Behind Water Opacity",
+      "id": 179360,
+      "name": "Sky Opacity",
       "comments": "",
       "visibleInInspector": false,
       "visibleOnFrame": false,
@@ -5189,15 +5257,15 @@
         {
           "name": "b",
           "inputName": "b",
-          "targetBlockId": 179294,
-          "targetConnectionName": "z",
+          "targetBlockId": 179335,
+          "targetConnectionName": "output",
           "isExposedOnFrame": true,
           "exposedPortPosition": -1
         },
         {
           "name": "true",
           "inputName": "true",
-          "targetBlockId": 179304,
+          "targetBlockId": 179302,
           "targetConnectionName": "output",
           "isExposedOnFrame": true,
           "exposedPortPosition": -1
@@ -5205,7 +5273,7 @@
         {
           "name": "false",
           "inputName": "false",
-          "targetBlockId": 179330,
+          "targetBlockId": 179304,
           "targetConnectionName": "output",
           "isExposedOnFrame": true,
           "exposedPortPosition": -1
@@ -5216,7 +5284,47 @@
           "name": "output"
         }
       ],
-      "condition": 2
+      "condition": 5
+    },
+    {
+      "customType": "BABYLON.LerpBlock",
+      "id": 179351,
+      "name": "Surface Opacity",
+      "comments": "",
+      "visibleInInspector": false,
+      "visibleOnFrame": false,
+      "target": 4,
+      "inputs": [
+        {
+          "name": "left",
+          "inputName": "left",
+          "targetBlockId": 179302,
+          "targetConnectionName": "output",
+          "isExposedOnFrame": true,
+          "exposedPortPosition": -1
+        },
+        {
+          "name": "right",
+          "inputName": "right",
+          "targetBlockId": 179360,
+          "targetConnectionName": "output",
+          "isExposedOnFrame": true,
+          "exposedPortPosition": -1
+        },
+        {
+          "name": "gradient",
+          "inputName": "gradient",
+          "targetBlockId": 179356,
+          "targetConnectionName": "output",
+          "isExposedOnFrame": true,
+          "exposedPortPosition": -1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output"
+        }
+      ]
     },
     {
       "customType": "BABYLON.VectorMergerBlock",
@@ -5713,55 +5821,6 @@
       "convertToLinearSpace": false,
       "valueType": "number",
       "value": 0
-    },
-    {
-      "customType": "BABYLON.ConditionalBlock",
-      "id": 179330,
-      "name": "Fallback Opacity",
-      "comments": "",
-      "visibleInInspector": false,
-      "visibleOnFrame": false,
-      "target": 4,
-      "inputs": [
-        {
-          "name": "a",
-          "inputName": "a",
-          "targetBlockId": 179291,
-          "targetConnectionName": "depth",
-          "isExposedOnFrame": true,
-          "exposedPortPosition": -1
-        },
-        {
-          "name": "b",
-          "inputName": "b",
-          "targetBlockId": 179335,
-          "targetConnectionName": "output",
-          "isExposedOnFrame": true,
-          "exposedPortPosition": -1
-        },
-        {
-          "name": "true",
-          "inputName": "true",
-          "targetBlockId": 179303,
-          "targetConnectionName": "output",
-          "isExposedOnFrame": true,
-          "exposedPortPosition": -1
-        },
-        {
-          "name": "false",
-          "inputName": "false",
-          "targetBlockId": 179302,
-          "targetConnectionName": "output",
-          "isExposedOnFrame": true,
-          "exposedPortPosition": -1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output"
-        }
-      ],
-      "condition": 2
     },
     {
       "customType": "BABYLON.SceneDepthBlock",

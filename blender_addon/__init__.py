@@ -36,11 +36,11 @@ if "components" in locals():
     for _name in _names:
         importlib.reload(sys.modules[_name])
 
-from . import components, scene, input_actions, materials, export, operators, ui, viewport
+from . import components, scene, input_actions, collision_layers, materials, export, operators, ui, viewport
 
 # Registration order: data first (properties the UI reads), then behavior,
 # then presentation, then overlays. core/ is pure functions — nothing to register.
-_modules = (components, scene, input_actions, materials, export, operators, ui, viewport)
+_modules = (components, scene, input_actions, collision_layers, materials, export, operators, ui, viewport)
 
 
 def register():

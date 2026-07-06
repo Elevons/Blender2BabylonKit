@@ -39,6 +39,53 @@ COMPONENT_TYPES = [
     ('GUI3D_CYLINDER', "3D Cylinder Panel", "Arrange child 3D buttons on a cylinder surface"),
     ('GUI3D_PLANE',    "3D Plane Panel",    "Arrange child 3D buttons on a plane"),
     ('GUI3D_SCATTER',  "3D Scatter Panel",  "Scatter child 3D buttons with randomized placement"),
+
+    # APPEND ONLY — comp_type is EnumProperty; Blender persists indices in .blend files.
+    ('COLLISION_LAYER', "Collision Layer",
+     "Named Havok collision layer from the scene matrix"),
+]
+
+# Add Component menu — section order for artists. May differ from COMPONENT_TYPES
+# (which must stay append-only for comp_type index stability in .blend files).
+ADD_COMPONENT_MENU = [
+    ("", "General", ""),
+    ('TAG',    "Tag",    "Assign a tag / layer name to this entity"),
+    ('SCRIPT', "Script", "Attach a named behavior script with parameters"),
+
+    ("", "Physics", ""),
+    ('COLLIDER',   "Collider",   "Physics collision shape"),
+    ('RIGIDBODY',  "Rigid Body", "Physics body (mass, dynamics)"),
+    ('CONSTRAINT', "Constraint", "Physics joint to another body (hinge, slider, spring...)"),
+    ('COLLISION_LAYER', "Collision Layer",
+     "Named Havok collision layer from the scene matrix"),
+
+    ("", "Media & UI", ""),
+    ('CAMERA',   "Camera",   "Override the camera type (ArcRotate / Follow / ...)"),
+    ('AUDIO',    "Audio",    "Attach a sound to this entity (ambient or 3D-positioned)"),
+    ('GUI',      "GUI",      "Attach a Babylon GUI (.json from the GUI Editor) as a HUD or on this mesh"),
+    ('PARTICLE', "Particles", "Attach a Babylon particle system (.json from the Particle Editor)"),
+    ('MSDF_TEXT', "MSDF Text", "Crisp scalable 3D text via Babylon's MSDF TextRenderer"),
+
+    ("", "Rendering", ""),
+    ('RENDERING_GROUP', "Rendering Group",
+     "Babylon draw-order group (0–3); lower groups render first"),
+    ('LAYER_MASK', "Layer Mask",
+     "Babylon visibility bitmask for multi-camera / light filtering"),
+    ('REFLECTION_PROBE', "Reflection Probe",
+     "Realtime cubemap reflections for nearby PBR materials"),
+
+    ("", "3D GUI — Controls", ""),
+    ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),
+    ('GUI3D_HOLO',       "3D Holographic Button",       "MRTK-style holographic button with text/image/tooltip"),
+    ('GUI3D_TOUCH_HOLO', "3D Touch Holographic Button", "Holographic button with XR near-touch support"),
+    ('GUI3D_MESH',       "3D Mesh Button",              "Make this object's own mesh a clickable 3D control"),
+
+    ("", "3D GUI — Layout", ""),
+    ('GUI3D_STACK',    "3D Stack Panel",    "Stack child 3D buttons in a row or column"),
+    ('GUI3D_SPHERE',   "3D Sphere Panel",   "Arrange child 3D buttons on a sphere surface"),
+    ('GUI3D_CYLINDER', "3D Cylinder Panel", "Arrange child 3D buttons on a cylinder surface"),
+    ('GUI3D_PLANE',    "3D Plane Panel",    "Arrange child 3D buttons on a plane"),
+    ('GUI3D_SCATTER',  "3D Scatter Panel",  "Scatter child 3D buttons with randomized placement"),
 ]
 
 # Membership sets for the 3D GUI family: interactive controls carry On Click
@@ -155,10 +202,13 @@ SHADOW_FILTERS = [
     ('NONE',     "Hard",           "No filtering — hard, aliased edges"),
 ]
 
+# UI labels for @exposed var kinds. vtype is stored as a string id (see exposed_vars.py),
+# so this list can be reordered freely — it is not persisted by index.
 VAR_TYPES = [
     ('FLOAT',   "Float",   ""),
     ('BOOL',    "Bool",    ""),
     ('STRING',  "String",  ""),
+    ('VECTOR2', "Vector2", ""),
     ('VECTOR3', "Vector3", ""),
     ('COLOR',   "Color",   ""),
     ('ENTITY',  "Object",  "Reference to another object in the scene"),

@@ -26,6 +26,7 @@ export type ListElement =
   | "int"
   | "string"
   | "bool"
+  | "vector2"
   | "vector3"
   | "color"
   | "entity";
@@ -37,6 +38,7 @@ export interface ExposeOptions {
   label?: string;
   type?:
     | "color"
+    | "vector2"
     | "vector3"
     | "float"
     | "int"

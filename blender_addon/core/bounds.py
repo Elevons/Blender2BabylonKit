@@ -1,6 +1,6 @@
 """Local-space bounding boxes for collider preview and fit-to-bounds.
 
-Mirrors ``ComputeLocalBounds`` in ``packages/engine/src/subsystems/physics.ts``:
+Mirrors ``ComputeLocalBounds`` in ``packages/engine/src/subsystems/physics/geometry.ts``:
 own mesh + owned child meshes (excluding separate child entities), with modifiers
 applied via the evaluated depsgraph (matching glTF ``export_apply=True``).
 """

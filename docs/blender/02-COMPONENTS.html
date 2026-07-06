@@ -365,7 +365,7 @@
 <li>Exposed fields appear as typed widgets (parsed from source — not executed)</li>
 <li><strong>Sync</strong> — refresh widgets after you change <code>@exposed</code> / <code>@inputMap</code> in code</li>
 </ol>
-<p>Cross-language rules: decorator stays lowercase <code>@exposed</code>; single-line literal defaults; press Sync after edits. Trace: <a href="trace-exposed.html">trace-exposed</a>. Runtime scripting: <a href="../engine/05-SCRIPTING.html">05 — Scripting</a>.</p>
+<p>Cross-language rules: decorator stays lowercase <code>@exposed</code>; single-line literal defaults; press Sync after edits. Entity fields need <code>type: "entity"</code> in the decorator. Trace: <a href="trace-exposed.html">trace-exposed</a>. Runtime scripting: <a href="../engine/05-SCRIPTING.html">05 — Scripting</a>.</p>
 
 <h2>Collider preview</h2>
 <p>On a selected object with a <strong>Collider</strong>, enable <strong>Show Preview</strong> to draw a cyan wireframe in the viewport. Manual size/offset/rotation are in Blender axes (what you see); export converts to Babylon Y-up. Convex/mesh shapes use the mesh geometry — no separate wireframe.</p>
@@ -394,6 +394,17 @@
 <p>If a toggle is off, that scope keeps Babylon defaults (rendering group <code>0</code>, layer mask <code>0x0FFFFFFF</code>). A child’s own <strong>Rendering Group</strong> or <strong>Layer Mask</strong> always supersedes the parent for that branch — regardless of the parent’s toggles.</p>
 <p><strong>Layer Mask presets:</strong> Default (<code>0x0FFFFFFF</code>), Slot 0–3 (<code>0x10000000</code> … <code>0x80000000</code> — typical HUD / overlay bits), or Custom (full 32-bit value). Matching cameras must use the same mask in app code for exclusive visibility.</p>
 <p>Runtime detail: <a href="../engine/07-RENDERING.html#render-layers">07 — Rendering › Render layers</a> · Feature trace: <a href="../engine/10-FEATURE-TRACES.html#render-layers">10 — Feature Traces</a>.</p>
+
+<h2 id="collision-layer">Collision layer (physics)</h2>
+<p>Under <strong>Physics</strong>, the optional <strong>Collision Layer</strong> component assigns one named layer from the scene master list (authored in <strong>Babylon Scene › Collision Layers</strong>). At runtime the engine resolves the scene matrix into Havok <code>filterMembershipMask</code> / <code>filterCollideMask</code> on every physics shape on the entity's body.</p>
+<p>Two toggles mirror render layers:</p>
+<ul>
+<li><strong>Apply to Owned Colliders</strong> (default on) — sets filters on this entity's physics shapes (requires a Collider and/or Rigid Body).</li>
+<li><strong>Apply to Child Entities</strong> (default off) — propagates the layer down the Blender parent hierarchy until a descendant defines its own <strong>Collision Layer</strong>.</li>
+</ul>
+<p>Entities without this component (and no inherited propagation) keep Havok defaults — they collide with everything. Filtered pairs will not generate contacts or trigger events.</p>
+<p>The component stores the layer <em>name</em>, so removing or reordering layers in the scene panel never silently retargets other components. If you rename a layer, re-pick it on components that used the old name — <strong>Validate</strong> flags stale layer names.</p>
+<p>Runtime detail: <a href="../engine/06-PHYSICS.html#collision-layers">06 — Physics › Collision layers</a> · Feature trace: <a href="../engine/10-FEATURE-TRACES.html#collision-layers">10 — Feature Traces</a>.</p>
 
 <h2>Auto-derived blocks (not components)</h2>
 <p>These appear as child panels when relevant — no Add Component row:</p>

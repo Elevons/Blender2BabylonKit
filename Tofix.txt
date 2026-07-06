@@ -10,3 +10,4 @@ Typing I in the filter view of the scene explorer hides it, C activates collisio
 large world rendering needs some work
 sun away from center leads to some weird shadows
 Test reflection probes - done?
+collision/render layers need testing

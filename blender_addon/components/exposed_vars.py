@@ -10,7 +10,8 @@ from ..core.props import (
 )
 
 from ..core.ids import ensure_object_id
-from .constants import VAR_TYPES, LIST_ELEM_SLOT, ENUM_SEP
+from ..core.prop_copy import remove_collection_item
+from .constants import LIST_ELEM_SLOT, ENUM_SEP
 
 # Keeps dynamically-generated enum item tuples alive (Blender will crash if the
 # strings returned by an EnumProperty items callback get garbage collected).
@@ -57,7 +58,7 @@ def _list_count_set(self, value):
     lets the user type a length instead of repeatedly hitting +."""
     value = max(0, value)
     while len(self.list_items) > value:
-        self.list_items.remove(len(self.list_items) - 1)
+        remove_collection_item(self.list_items, len(self.list_items) - 1)
     while len(self.list_items) < value:
         add_list_item(self)
     self.list_index = max(0, len(self.list_items) - 1)
@@ -79,12 +80,15 @@ class BJSExposedVar(PropertyGroup):
     """One @exposed variable parsed from a behavior script. Auto-populated by
     syncing; the value slot used depends on `vtype`."""
     name:  StringProperty()
-    vtype: EnumProperty(items=VAR_TYPES, default='FLOAT')
+    # String id ('ENTITY', 'COLOR', …) — not EnumProperty, so .blend files survive
+    # reordering VAR_TYPES. Set by sync from script_parse, never user-edited.
+    vtype: StringProperty(default='FLOAT')
     label: StringProperty()
 
     f_val: FloatProperty(name="Value")
     b_val: BoolProperty(name="Value")
     s_val: StringProperty(name="Value")
+    v2_val: FloatVectorProperty(name="Value", size=2, subtype='XYZ')
     v_val: FloatVectorProperty(name="Value", size=3, subtype='XYZ')
     c_val: FloatVectorProperty(name="Value", size=3, subtype='COLOR',
                                min=0.0, max=1.0, default=(1.0, 1.0, 1.0))
@@ -139,6 +143,10 @@ def _init_var_value(v, f):
         v.b_val = bool(default)
     elif t in ('STRING', 'ENUM'):
         v.s_val = str(default) if default is not None else ""
+    elif t == 'VECTOR2':
+        vals = list(default)[:2]
+        vals += [0.0] * (2 - len(vals))
+        v.v2_val = tuple(vals)
     elif t == 'VECTOR3':
         v.v_val = tuple(default)[:3]
     elif t == 'COLOR':
@@ -151,39 +159,105 @@ def _init_var_value(v, f):
             add_list_item(v, el)
 
 
+def _retype_var(v, f):
+    """Change a var's type in place and re-init its value slots, preserving an
+    entity pick that survived in obj_val across a stale/other-type slot."""
+    kept_obj = v.obj_val if f["vtype"] == 'ENTITY' else None
+    v.vtype = f["vtype"]
+    v.elem_type = f.get("elem_type") or 'FLOAT'
+    _init_var_value(v, f)
+    if kept_obj is not None:
+        v.obj_val = kept_obj
+
+
 def sync_exposed_vars(comp, fields):
     """Reconcile a component's exposed_vars with freshly parsed `fields`,
-    preserving existing values where the name and type still match."""
-    existing = {v.name: v for v in comp.exposed_vars}
+    updating rows in place (never clear()+rebuild — that duplicates linked rows
+    on library-override prefabs). Existing values are preserved when the name and
+    type still match; type changes re-init the value slots.
+
+    Also de-duplicates: earlier bugs could leave two rows with the same name, so
+    only the first occurrence of each name is kept before reconciling."""
     keep = {f["name"] for f in fields}
 
-    # Prune vars no longer exposed by the script.
-    for i in range(len(comp.exposed_vars) - 1, -1, -1):
-        if comp.exposed_vars[i].name not in keep:
-            comp.exposed_vars.remove(i)
+    # Prune rows no longer exposed, plus duplicate-name rows (keep the first).
+    first_index = {}
+    for index, v in enumerate(comp.exposed_vars):
+        first_index.setdefault(v.name, index)
+    for index in range(len(comp.exposed_vars) - 1, -1, -1):
+        name = comp.exposed_vars[index].name
+        if name not in keep or first_index[name] != index:
+            remove_collection_item(comp.exposed_vars, index)
+
+    existing = {v.name: v for v in comp.exposed_vars}
 
     for f in fields:
         v = existing.get(f["name"])
         new_type = f["vtype"]
         new_elem = f.get("elem_type") or 'FLOAT'
-        # A list whose element type changed must be rebuilt; same for any type swap.
-        recreate = (
-            v is None
-            or v.vtype != new_type
-            or (new_type == 'LIST' and v.elem_type != new_elem)
-        )
-        if recreate:
-            if v is not None:
-                comp.exposed_vars.remove(list(comp.exposed_vars).index(v))
+        if v is None:
             v = comp.exposed_vars.add()
             v.name = f["name"]
             v.vtype = new_type
             v.elem_type = new_elem
             _init_var_value(v, f)
-        # Enum choices can change without a type change, so refresh every sync.
+        elif v.vtype != new_type or (new_type == 'LIST' and v.elem_type != new_elem):
+            _retype_var(v, f)
+        # else: same type — keep the authored value untouched.
+
         if new_type == 'ENUM':
             v.enum_options = ENUM_SEP.join(f.get("options") or [])
             choices = _enum_choices(v)
             if choices and v.s_val not in choices:
                 v.s_val = choices[0]
         v.label = f["label"]
+
+
+def _source_var_default(v):
+    """The current value of an exposed var expressed as a script_parse-style
+    `default`, so it can seed a newly-added row when syncing an override against
+    its source (the prefab value becomes the starting value on the instance)."""
+    t = v.vtype
+    if t == 'FLOAT':
+        return v.f_val
+    if t == 'BOOL':
+        return v.b_val
+    if t in ('STRING', 'ENUM'):
+        return v.s_val
+    if t == 'VECTOR2':
+        return list(v.v2_val)
+    if t == 'VECTOR3':
+        return list(v.v_val)
+    if t == 'COLOR':
+        return list(v.c_val)
+    if t == 'ENTITY':
+        return None
+    if t == 'LIST':
+        slot = LIST_ELEM_SLOT.get(v.elem_type, "f_val")
+        items = []
+        for item in v.list_items:
+            value = getattr(item, slot)
+            items.append(list(value) if slot in ("v_val", "c_val") else value)
+        return items
+    return 0.0
+
+
+def build_fields_from_component(comp):
+    """Produce script_parse-style field dicts from a component's own exposed_vars.
+
+    Used to sync a library-override (linked prefab) instance against its source
+    object instead of re-parsing the .ts: an override cannot remove its linked
+    base rows, so the source component is the structural authority. Feeding these
+    fields back through `sync_exposed_vars` makes the instance mirror the prefab
+    and drops only the removable local stray rows a bad earlier sync left behind."""
+    fields = []
+    for v in comp.exposed_vars:
+        fields.append({
+            "name": v.name,
+            "label": v.label,
+            "vtype": v.vtype,
+            "elem_type": v.elem_type or 'FLOAT',
+            "options": _enum_choices(v),
+            "default": _source_var_default(v),
+        })
+    return fields

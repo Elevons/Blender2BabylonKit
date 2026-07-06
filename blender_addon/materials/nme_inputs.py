@@ -16,7 +16,7 @@ _SKIP_INPUT_TYPE_CODES = frozenset({128, 256})
 
 
 def resolve_nme_input_type(block):
-    """Map an NME InputBlock dict to our value_type enum, or None if unsupported."""
+    """Map an NME InputBlock dict to a value_type id, or None if unsupported."""
     if block.get("customType") != _INPUT_BLOCK_TYPE:
         return None
     if block.get("isBoolean"):

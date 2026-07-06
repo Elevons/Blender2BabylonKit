@@ -15,6 +15,7 @@ from ..materials.nme_inputs import write_row_value
 from ..materials.nme_gradients import setup_gradient_ramp, write_row_steps
 from ..materials.nme_textures import extract_nme_textures
 from ..materials.context import panel_material
+from ..core.prop_copy import remove_collection_item
 from .launcher_ops import _infer_project_level, _asset_filename, _launcher_url
 
 
@@ -157,8 +158,7 @@ class BJS_OT_nme_texture_remove(Operator):
             self.report({'ERROR'}, "No active material")
             return {'CANCELLED'}
         textures = mat.bjs_nme_textures
-        if 0 <= self.texture_index < len(textures):
-            textures.remove(self.texture_index)
+        remove_collection_item(textures, self.texture_index)
         return {'FINISHED'}
 
 

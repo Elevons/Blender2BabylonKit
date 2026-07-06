@@ -63,6 +63,8 @@ def _serialize_vars(comp):
             # s_val holds the selected choice; clamp to a valid option if needed.
             choices = [o for o in v.enum_options.split(ENUM_SEP) if o != ""]
             out[v.name] = v.s_val if (v.s_val in choices or not choices) else choices[0]
+        elif v.vtype == 'VECTOR2':
+            out[v.name] = list(v.v2_val)
         elif v.vtype == 'VECTOR3':
             out[v.name] = list(v.v_val)
         elif v.vtype == 'COLOR':
@@ -92,6 +94,12 @@ def _serialize_layer_mask(comp, out, output_dir):
     out["layerMask"] = mask
     out["applyOwnedMeshes"] = bool(comp.render_layer_apply_owned)
     out["applyChildEntities"] = bool(comp.render_layer_apply_children)
+
+
+def _serialize_collision_layer(comp, out, output_dir):
+    out["layer"] = comp.collision_layer
+    out["applyOwnedColliders"] = bool(comp.collision_layer_apply_owned)
+    out["applyChildEntities"] = bool(comp.collision_layer_apply_children)
 
 
 def _serialize_collider(comp, out, output_dir):
@@ -321,6 +329,7 @@ SERIALIZERS = {
     'TAG': _serialize_tag,
     'RENDERING_GROUP': _serialize_rendering_group,
     'LAYER_MASK': _serialize_layer_mask,
+    'COLLISION_LAYER': _serialize_collision_layer,
     'COLLIDER': _serialize_collider,
     'RIGIDBODY': _serialize_rigidbody,
     'SCRIPT': _serialize_script,

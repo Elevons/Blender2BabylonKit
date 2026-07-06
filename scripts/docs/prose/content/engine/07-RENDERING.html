@@ -205,7 +205,7 @@
   &quot;realTimeFilteringQuality&quot;: &quot;MEDIUM&quot;
 }</code></pre>
 <p><strong>Smoke test (overlapping probes).</strong> Place two empties with probes whose influence boxes overlap a glossy mesh; set probe A <code>priority: 1</code> and probe B <code>priority: 0</code>. Export and load in the playground — the mesh should use probe A's cubemap. Set both to priority 0 to verify the closer probe wins.</p>
-<h2>Node materials (<code>subsystems/materials.ts</code>)</h2>
+<h2>Node materials (<code>subsystems/materials/</code>)</h2>
 <p>Standard glTF PBR from Blender rides in the <code>.glb</code>. For custom shaders authored in the <a href="https://nme.babylonjs.com">Node Material Editor</a>, open <strong>Properties › Material</strong>, select the material in the slot list, and use the <strong>Babylon</strong> panel (per material datablock, not per object). Export copies the JSON to <code>materials/</code> and writes a top-level manifest block:</p>
 <pre><code class="language-json">&quot;materials&quot;: [
   {

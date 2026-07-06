@@ -1,4 +1,4 @@
-import type { Scene, TransformNode } from "@babylonjs/core";
+import type { Scene, TransformNode, PhysicsShape } from "@babylonjs/core";
 import { Level } from "../Level";
 import type { Entity } from "../Entity";
 import type { AnimationInfo } from "../types";
@@ -32,6 +32,8 @@ export interface LoadContext {
   constraintRegistrations: ConstraintRegistration[];
   reflectionProbeRegistrations: ReflectionProbeRegistration[];
   gui3dRegistrations: Gui3DRegistration[];
+  /** Physics shapes built per entity id (for collision layer filter masks). */
+  physicsShapesByEntity: Map<string, PhysicsShape[]>;
   /** Scene default map for scripts without @inputMap (from manifest.scene). */
   defaultInputMap: string;
 }
@@ -59,6 +61,7 @@ export function CreateLoadContext(
     constraintRegistrations: [],
     reflectionProbeRegistrations: [],
     gui3dRegistrations: [],
+    physicsShapesByEntity: new Map(),
     defaultInputMap,
   };
 }

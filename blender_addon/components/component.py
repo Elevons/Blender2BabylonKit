@@ -42,6 +42,48 @@ def _script_name_from_path(path):
     return os.path.splitext(base)[0]
 
 
+# Keeps dynamically-generated enum item tuples alive (Blender will crash if the
+# strings returned by an EnumProperty items callback get garbage collected).
+_COLLISION_LAYER_ITEMS_CACHE = {}
+
+
+def _collision_layer_names(scene):
+    """Trimmed scene layer names in list order (Default when the list is empty)."""
+    from ..collision_layers.defaults import DEFAULT_LAYER_NAME
+    if scene is None:
+        return [DEFAULT_LAYER_NAME]
+    names = [
+        layer.name.strip() or DEFAULT_LAYER_NAME
+        for layer in scene.bjs_collision_layers
+    ]
+    return names or [DEFAULT_LAYER_NAME]
+
+
+def _collision_layer_enum_items(self, context):
+    """Enum items for the COLLISION_LAYER dropdown — from the scene master list."""
+    from ..collision_layers.properties import ensure_collision_layers
+    if context is not None:
+        ensure_collision_layers(context.scene)
+    names = _collision_layer_names(context.scene if context is not None else None)
+    items = [(name, name, "") for name in names]
+    _COLLISION_LAYER_ITEMS_CACHE[self.as_pointer()] = items
+    return _COLLISION_LAYER_ITEMS_CACHE[self.as_pointer()]
+
+
+def _collision_layer_get(self):
+    names = _collision_layer_names(bpy.context.scene)
+    try:
+        return names.index(self.collision_layer)
+    except ValueError:
+        return 0
+
+
+def _collision_layer_set(self, value):
+    names = _collision_layer_names(bpy.context.scene)
+    if 0 <= value < len(names):
+        self.collision_layer = names[value]
+
+
 def _on_script_path_update(self, context):
     """When a script file is picked/typed, derive the runtime registry key."""
     if self.script_path:
@@ -189,6 +231,28 @@ class BJSComponent(PropertyGroup):
     render_layer_apply_children: BoolProperty(
         name="Apply to Child Entities",
         description="Propagate to child entities until one defines its own layer component",
+        default=False,
+    )
+
+    # --- COLLISION_LAYER ---
+    # Layer NAME stored as a string — not an enum index — so saved components
+    # survive reordering/removing scene layers. The dropdown is a UI proxy.
+    collision_layer: StringProperty(name="Layer", default="Default")
+    collision_layer_select: EnumProperty(
+        name="Layer",
+        items=_collision_layer_enum_items,
+        get=_collision_layer_get,
+        set=_collision_layer_set,
+        overridable=False,
+    )
+    collision_layer_apply_owned: BoolProperty(
+        name="Apply to Owned Colliders",
+        description="Set Havok filter masks on this entity's physics shapes",
+        default=True,
+    )
+    collision_layer_apply_children: BoolProperty(
+        name="Apply to Child Entities",
+        description="Propagate to child entities until one defines its own collision layer component",
         default=False,
     )
 

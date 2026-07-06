@@ -43,6 +43,23 @@ export interface LayerMaskComponent {
   applyChildEntities?: boolean;
 }
 
+export interface CollisionLayerComponent {
+  type: "COLLISION_LAYER";
+  /** Named layer from scene.collisionLayers.layers. */
+  layer: string;
+  /** When false, this entity's physics shapes keep Havok defaults. Default true. */
+  applyOwnedColliders?: boolean;
+  /** When true, child entities inherit until one defines its own collision layer component. */
+  applyChildEntities?: boolean;
+}
+
+/** Scene-wide named collision layers + matrix (Blender Collision Layers panel). */
+export interface CollisionLayersInfo {
+  layers: string[];
+  /** matrix[row][col] — row layer collides with column layer when true. */
+  matrix: boolean[][];
+}
+
 export interface ColliderComponent {
   type: "COLLIDER";
   shape: "BOX" | "SPHERE" | "CAPSULE" | "CYLINDER" | "CONVEX" | "MESH";
@@ -378,6 +395,7 @@ export type Component =
   | TagComponent
   | RenderingGroupComponent
   | LayerMaskComponent
+  | CollisionLayerComponent
   | ColliderComponent
   | RigidBodyComponent
   | ScriptComponent
@@ -610,6 +628,8 @@ export interface SceneInfo {
   inputActions?: InputActionAssetData | null;
   /** Map name injected when a script has no @inputMap (default "Player"). */
   defaultInputMap?: string;
+  /** Named collision layers + matrix from Blender Collision Layers panel. */
+  collisionLayers?: CollisionLayersInfo;
   /**
    * When false, never cluster punctual lights (UBO fallback if over budget).
    * Default: auto-cluster when the scene exceeds {@link lightBudget}.

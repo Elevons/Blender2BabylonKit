@@ -15,7 +15,7 @@ export * from "./scripting/BehaviorRegistry";
 export * from "./input";
 
 // Subsystems: each applies one slice of the manifest the glb can't express.
-export * from "./subsystems/physics";
+export * from "./subsystems/physics/index";
 export * from "./subsystems/lights";
 export * from "./subsystems/cameras";
 export * from "./subsystems/shadows";
@@ -27,11 +27,12 @@ export * from "./subsystems/postprocess";
 export * from "./subsystems/animation";
 export * from "./subsystems/audio";
 export * from "./subsystems/particles";
-export * from "./subsystems/materials";
+export * from "./subsystems/materials/index";
 export * from "./subsystems/collisions";
 export * from "./subsystems/constraints";
 export * from "./subsystems/reflectionProbes";
 export * from "./subsystems/renderLayers";
+export * from "./subsystems/collisionLayers";
 
 // UI: 2D GUI layouts (GUI Editor JSON) and the 3D GUI (buttons + panels).
 export * from "./ui/gui2d";

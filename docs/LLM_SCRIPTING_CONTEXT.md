@@ -217,6 +217,7 @@ for (const row of entity.GetAttachmentsOfType("AUDIO"))
 | `"TAG"` | `data` only |
 | `"RENDERING_GROUP"` | `data` only (mesh `renderingGroupId` set in `FinalizeLevel`) |
 | `"LAYER_MASK"` | `data` only (mesh `layerMask` set in `FinalizeLevel`) |
+| `"COLLISION_LAYER"` | `data` only (Havok filter masks set in `FinalizeLevel`) |
 | `"COLLIDER"` / `"RIGIDBODY"` | `data` + `body` |
 | `"SCRIPT"` | `data` + `behavior` |
 | `"AUDIO"` | `data` + `sound` |
@@ -244,6 +245,7 @@ name is lowercase `@exposed` — never rename it** (Blender parses the literal t
 @exposed() enabled = true;                                   // boolean -> checkbox
 @exposed() title = "hi";                                     // string
 @exposed() dir: [number, number, number] = [0, 1, 0];       // 3-array -> vector3
+@exposed({ type: "vector2" }) range: [number, number] = [10, 100]; // XY fields
 @exposed({ type: "color" }) tint = new Color3(1, 0, 0);     // color picker
 @exposed({ type: "entity" }) target: Entity | null = null;  // object picker
 @exposed({ type: "enum", options: ["idle","walk"] }) state = "idle"; // dropdown -> string
@@ -252,7 +254,7 @@ name is lowercase `@exposed` — never rename it** (Blender parses the literal t
 ```
 
 Options object: `{ min?, max?, step?, label?, type?, options?, of? }`.
-`type` ∈ `float | int | bool | string | vector3 | color | entity | enum | list`.
+`type` ∈ `float | int | bool | string | vector2 | vector3 | color | entity | enum | list`.
 `of` (list element type) ∈ `float | int | string | bool | vector3 | color | entity`.
 
 **Authoring rules that affect codegen:**
@@ -484,6 +486,14 @@ calling `setTargetTransform` once on kinematic (body drifts forever).
   returns the first row — use `entity.attachments.filter(a => a.type === "COLLIDER")`
   to inspect each authored shape. Prefer manual offsets per collider; auto-fit
   on each row fits the full mesh bounds.
+- **Collision layers** (Unity-style): define named layers + a collision matrix in
+  **Babylon Scene › Collision Layers** (`scene.collisionLayers` in the manifest).
+  Assign one layer per object with the **Collision Layer** component (`COLLISION_LAYER`
+  row). At load, `ApplyCollisionLayers` sets Havok `filterMembershipMask` /
+  `filterCollideMask` on every physics shape. Propagation toggles mirror render
+  layers (`applyOwnedColliders`, `applyChildEntities`). Entities without the
+  component (and no inherited layer) keep Havok defaults — they collide with
+  everything. Filtered pairs skip contacts and trigger events.
 - **Joints are authored in Blender, not in behavior scripts.** There is no
   `@exposed` for constraints — add a **Constraint** component in the N-panel.
   The loader builds them in a post-pass and stores them on the `Level` object

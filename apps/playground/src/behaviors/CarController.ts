@@ -1,33 +1,64 @@
 import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
 import type { InputActionMap } from "@bjs/engine";
 import {
+  HavokPlugin,
   Physics6DoFConstraint,
+  PhysicsBody,
   PhysicsConstraintAxis,
   PhysicsConstraintMotorType,
   PhysicsMotionType,
   Quaternion,
   Vector3,
+  type IPhysicsCollisionEvent,
+  type Observer,
 } from "@babylonjs/core";
 
+/** One driven wheel: hinge motor + optional ground-contact tracking for anti-slip. */
+interface WheelSlot
+{
+  entity: Entity;
+  hinge: Physics6DoFConstraint;
+  /** Index into the 8-wheel speed layout (0–7). */
+  layoutIndex: number;
+  contactCount: number;
+}
+
 /**
- * CarController drives the wheel hinge motors from input, and provides a
+ * CarController drives wheel hinge motors from input, and provides a
  * one-shot "recover" maneuver on the Reset action: it lifts the body,
  * straightens it to zero rotation, holds briefly, then automatically hands
  * control back to physics so the car drops upright from rest.
+ *
+ * Wheel layout indices (outer + inner per corner):
+ *   0 FL outer, 1 FL inner, 2 FR outer, 3 FR inner,
+ *   4 RL outer, 5 RL inner, 6 RR outer, 7 RR inner.
+ * Inner wheel refs are optional — assign only the outers for a 4-wheel rig.
  */
 export default class CarController extends Behavior
 {
-  @exposed({ label: "Front Left Wheel", type: "entity" })
+  @exposed({ label: "Front Left Outer", type: "entity" })
   frontLeftWheel: Entity | null = null;
 
-  @exposed({ label: "Front Right Wheel", type: "entity" })
+  @exposed({ label: "Front Left Inner", type: "entity" })
+  frontLeftInner: Entity | null = null;
+
+  @exposed({ label: "Front Right Outer", type: "entity" })
   frontRightWheel: Entity | null = null;
 
-  @exposed({ label: "Rear Left Wheel", type: "entity" })
+  @exposed({ label: "Front Right Inner", type: "entity" })
+  frontRightInner: Entity | null = null;
+
+  @exposed({ label: "Rear Left Outer", type: "entity" })
   rearLeftWheel: Entity | null = null;
 
-  @exposed({ label: "Rear Right Wheel", type: "entity" })
+  @exposed({ label: "Rear Left Inner", type: "entity" })
+  rearLeftInner: Entity | null = null;
+
+  @exposed({ label: "Rear Right Outer", type: "entity" })
   rearRightWheel: Entity | null = null;
+
+  @exposed({ label: "Rear Right Inner", type: "entity" })
+  rearRightInner: Entity | null = null;
 
   @exposed({ min: 0, max: 100, label: "Motor Speed" })
   speed = 10;
@@ -41,6 +72,15 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 1, label: "Turn Ratio" })
   turnRatio = 0.5;
 
+  @exposed({ label: "Anti-Slip" })
+  antiSlip = true;
+
+  @exposed({ min: 0, max: 1, label: "Grounded Power" })
+  groundedGrip = 1;
+
+  @exposed({ min: 0, max: 1, label: "Airborne Power" })
+  airborneGrip = 0;
+
   @exposed({ label: "Body", type: "entity" })
   body: Entity | null = null;
 
@@ -48,21 +88,25 @@ export default class CarController extends Behavior
 
   private isPlacing = false;
   private placeTimer = 0;
-  private hinges: Physics6DoFConstraint[] = [];
+  private wheelSlots: WheelSlot[] = [];
+  private carEntityIds = new Set<string>();
   private debounceTime = Date.now();
+  private collisionObserver: Observer<IPhysicsCollisionEvent> | null = null;
+  private collisionEndedObserver: Observer<IPhysicsCollisionEvent> | null = null;
 
   OnStart(): void
   {
-    // Collect all exposed wheel entities, resolve hinges, keep them in array order
-    const wheelEntities = [this.frontLeftWheel, this.frontRightWheel, this.rearLeftWheel, this.rearRightWheel];
-    for (const wheelEntity of wheelEntities)
-    {
-      const hinge = this.ResolveWheelHinge(wheelEntity);
-      if (hinge !== undefined)
-      {
-        this.hinges.push(hinge);
-      }
-    }
+    this.BuildCarEntityIds();
+    this.BuildWheelSlots();
+    this.WireGroundContactTracking();
+  }
+
+  OnDestroy(): void
+  {
+    this.collisionObserver?.remove();
+    this.collisionEndedObserver?.remove();
+    this.collisionObserver = null;
+    this.collisionEndedObserver = null;
   }
 
   OnUpdate(deltaSeconds: number): void
@@ -91,23 +135,155 @@ export default class CarController extends Behavior
     const right = this.player.FindAction("Right")?.IsPressed() === true;
 
     const speeds = this.isPlacing
-      ? [0, 0, 0, 0]
+      ? new Array(8).fill(0)
       : this.ComputeWheelSpeeds(forward, backward, left, right);
 
-    // Apply each wheel's speed
-    for (let wheelIndex = 0; wheelIndex < this.hinges.length; wheelIndex++)
+    for (const slot of this.wheelSlots)
     {
-      this.SetWheelMotor(this.hinges[wheelIndex], speeds[wheelIndex]);
+      const grip = this.GetWheelGrip(slot);
+      const targetSpeed = speeds[slot.layoutIndex] * grip;
+      this.SetWheelMotor(slot.hinge, targetSpeed, grip);
     }
   }
 
+  /** Register every entity that should not count as "ground" for anti-slip. */
+  private BuildCarEntityIds(): void
+  {
+    this.carEntityIds.clear();
+    this.carEntityIds.add(this.entity.id);
+
+    if (this.body !== null)
+    {
+      this.carEntityIds.add(this.body.id);
+    }
+
+    for (const wheelEntity of this.CollectWheelEntities())
+    {
+      if (wheelEntity !== null)
+      {
+        this.carEntityIds.add(wheelEntity.id);
+      }
+    }
+  }
+
+  /** Resolve hinges for every assigned wheel in layout order. */
+  private BuildWheelSlots(): void
+  {
+    this.wheelSlots = [];
+
+    const wheelEntities = this.CollectWheelEntities();
+    for (let layoutIndex = 0; layoutIndex < wheelEntities.length; layoutIndex++)
+    {
+      const wheelEntity = wheelEntities[layoutIndex];
+      if (wheelEntity === null)
+      {
+        continue;
+      }
+
+      const hinge = this.ResolveWheelHinge(wheelEntity);
+      if (hinge === undefined)
+      {
+        continue;
+      }
+
+      this.wheelSlots.push({
+        entity: wheelEntity,
+        hinge,
+        layoutIndex,
+        contactCount: 0,
+      });
+    }
+  }
+
+  /** Enable Havok collision callbacks on wheels and track non-car contacts. */
+  private WireGroundContactTracking(): void
+  {
+    if (!this.antiSlip)
+    {
+      return;
+    }
+
+    const physicsEngine = this.scene.getPhysicsEngine();
+    const plugin = physicsEngine?.getPhysicsPlugin();
+    if (!(plugin instanceof HavokPlugin))
+    {
+      console.warn(`[${this.entity.name}] Anti-slip needs Havok physics`);
+      return;
+    }
+
+    for (const slot of this.wheelSlots)
+    {
+      const wheelBody = slot.entity.body;
+      if (wheelBody === undefined)
+      {
+        continue;
+      }
+
+      wheelBody.setCollisionCallbackEnabled(true);
+      wheelBody.setCollisionEndedCallbackEnabled(true);
+    }
+
+    this.collisionObserver = plugin.onCollisionObservable.add((collisionEvent) =>
+    {
+      if (collisionEvent.type === "COLLISION_STARTED")
+      {
+        this.AdjustWheelContact(collisionEvent.collider, collisionEvent.collidedAgainst, 1);
+        this.AdjustWheelContact(collisionEvent.collidedAgainst, collisionEvent.collider, 1);
+      }
+    });
+
+    this.collisionEndedObserver = plugin.onCollisionEndedObservable.add((collisionEvent) =>
+    {
+      this.AdjustWheelContact(collisionEvent.collider, collisionEvent.collidedAgainst, -1);
+      this.AdjustWheelContact(collisionEvent.collidedAgainst, collisionEvent.collider, -1);
+    });
+  }
+
+  /** Wheel layout order: outer and inner per corner (nulls allowed). */
+  private CollectWheelEntities(): (Entity | null)[]
+  {
+    return [
+      this.frontLeftWheel,
+      this.frontLeftInner,
+      this.frontRightWheel,
+      this.frontRightInner,
+      this.rearLeftWheel,
+      this.rearLeftInner,
+      this.rearRightWheel,
+      this.rearRightInner,
+    ];
+  }
+
   /**
-   * Compute per-wheel motor speeds [FL, FR, RL, RR] from the pressed directions.
-   * Outer wheels spin at full speed; inner wheels spin at turnRatio × speed
-   * (turnRatio = 1 → all wheels equal, wide arc; 0 → inner wheels locked, sharp
-   * pivot). Left/Right alone gives tank controls: inner wheels spin opposite.
+   * Compute per-wheel motor speeds for the 8-wheel layout from pressed directions.
+   * Corner speeds follow the 4-wheel differential model; each corner's inner
+   * wheel scales by turnRatio while turning.
    */
   private ComputeWheelSpeeds(
+    forward: boolean,
+    backward: boolean,
+    left: boolean,
+    right: boolean
+  ): number[]
+  {
+    const cornerSpeeds = this.ComputeCornerSpeeds(forward, backward, left, right);
+    const turning = left || right;
+    const innerScale = turning ? this.turnRatio : 1;
+
+    return [
+      cornerSpeeds[0], cornerSpeeds[0] * innerScale,
+      cornerSpeeds[1], cornerSpeeds[1] * innerScale,
+      cornerSpeeds[2], cornerSpeeds[2] * innerScale,
+      cornerSpeeds[3], cornerSpeeds[3] * innerScale,
+    ];
+  }
+
+  /**
+   * Four-corner differential [FL, FR, RL, RR]. Outer wheels on a turn side
+   * spin at full speed; the opposite side uses turnRatio. Left/Right alone
+   * gives tank controls.
+   */
+  private ComputeCornerSpeeds(
     forward: boolean,
     backward: boolean,
     left: boolean,
@@ -125,8 +301,6 @@ export default class CarController extends Behavior
     }
 
     const turning = left || right;
-
-    // Outer wheels always spin at full speed; direction defaults to +1 for tank-turning.
     const outerSpeed = (direction !== 0 ? direction : 1) * this.speed;
 
     if (!turning)
@@ -136,12 +310,9 @@ export default class CarController extends Behavior
         return [0, 0, 0, 0];
       }
 
-      // Straight forward/backward
       return [outerSpeed, outerSpeed, outerSpeed, outerSpeed];
     }
 
-    // Forward/Backward + Turn → differential: inner wheels same direction, slower.
-    // Turn alone → tank controls: inner wheels spin opposite.
     const innerSpeed = direction !== 0
       ? outerSpeed * this.turnRatio
       : -outerSpeed * this.turnRatio;
@@ -151,6 +322,52 @@ export default class CarController extends Behavior
       return [innerSpeed, outerSpeed, innerSpeed, outerSpeed];
     }
     return [outerSpeed, innerSpeed, outerSpeed, innerSpeed];
+  }
+
+  /** Grip multiplier from ground contact when anti-slip is enabled. */
+  private GetWheelGrip(slot: WheelSlot): number
+  {
+    if (!this.antiSlip)
+    {
+      return 1;
+    }
+
+    const grounded = slot.contactCount > 0;
+    return grounded ? this.groundedGrip : this.airborneGrip;
+  }
+
+  /** Bump ground-contact count when a wheel touches something outside the car. */
+  private AdjustWheelContact(
+    wheelBody: PhysicsBody,
+    otherBody: PhysicsBody,
+    delta: number
+  ): void
+  {
+    const wheelEntity = this.EntityFromPhysicsBody(wheelBody);
+    const otherEntity = this.EntityFromPhysicsBody(otherBody);
+    if (wheelEntity === null || otherEntity === null)
+    {
+      return;
+    }
+
+    if (this.carEntityIds.has(otherEntity.id))
+    {
+      return;
+    }
+
+    const slot = this.wheelSlots.find((candidate) => candidate.entity.id === wheelEntity.id);
+    if (slot === undefined)
+    {
+      return;
+    }
+
+    slot.contactCount = Math.max(0, slot.contactCount + delta);
+  }
+
+  private EntityFromPhysicsBody(body: PhysicsBody): Entity | null
+  {
+    const metadata = body.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
+    return metadata?.bjsEntity ?? null;
   }
 
   /** Resolve the HINGE constraint attachment on a wheel entity (built at load time). */
@@ -180,12 +397,14 @@ export default class CarController extends Behavior
   /** Drive a hinge motor at the given speed (degrees per second). */
   private SetWheelMotor(
     hinge: Physics6DoFConstraint,
-    speedDegreesPerSecond: number
+    speedDegreesPerSecond: number,
+    grip: number
   ): void
   {
     const motorAxis = PhysicsConstraintAxis.ANGULAR_X;
+    const maxForce = this.force * grip;
 
-    if (speedDegreesPerSecond === 0)
+    if (speedDegreesPerSecond === 0 || maxForce === 0)
     {
       hinge.setAxisMotorTarget(motorAxis, 0);
       return;
@@ -193,7 +412,7 @@ export default class CarController extends Behavior
 
     hinge.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
     hinge.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
-    hinge.setAxisMotorMaxForce(motorAxis, this.force);
+    hinge.setAxisMotorMaxForce(motorAxis, maxForce);
   }
 
   /**

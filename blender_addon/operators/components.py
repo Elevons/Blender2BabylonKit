@@ -9,7 +9,8 @@ from bpy.types import Operator
 from ..core.bounds import compute_local_bounds
 from ..core.ids import ensure_object_id
 from ..core.inspector import inspector_object
-from ..components.constants import COMPONENT_TYPES
+from ..core.prop_copy import remove_collection_item
+from ..components.constants import ADD_COMPONENT_MENU
 from ..components.exposed_vars import add_list_item
 from ..components.clipboard import copy_component
 from ..components.particle_scan import sync_component_particle_textures
@@ -39,7 +40,7 @@ class BJS_OT_add_component(Operator):
     bl_label = "Add Component"
     bl_options = {'REGISTER', 'UNDO'}
 
-    comp_type: EnumProperty(items=COMPONENT_TYPES, name="Type")
+    comp_type: EnumProperty(items=ADD_COMPONENT_MENU, name="Type")
 
     def execute(self, context):
         obj = inspector_object(context)
@@ -144,7 +145,7 @@ class BJS_OT_cut_component(Operator):
         clip = context.window_manager.bjs_clipboard
         clip.clear()
         copy_component(obj.bjs_components[self.index], clip.add())
-        obj.bjs_components.remove(self.index)
+        remove_collection_item(obj.bjs_components, self.index)
         obj.bjs_components_index = min(self.index, len(obj.bjs_components) - 1)
         return {'FINISHED'}
 
@@ -244,7 +245,7 @@ class BJS_OT_remove_component(Operator):
     def execute(self, context):
         obj = inspector_object(context)
         if obj and 0 <= self.index < len(obj.bjs_components):
-            obj.bjs_components.remove(self.index)
+            remove_collection_item(obj.bjs_components, self.index)
             obj.bjs_components_index = min(self.index, len(obj.bjs_components) - 1)
         return {'FINISHED'}
 
@@ -283,8 +284,7 @@ class BJS_OT_event_message_remove(Operator):
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             events = comps[self.comp_index].event_messages
-            if 0 <= self.event_index < len(events):
-                events.remove(self.event_index)
+            remove_collection_item(events, self.event_index)
         return {'FINISHED'}
 
 
@@ -322,8 +322,7 @@ class BJS_OT_gui3d_event_remove(Operator):
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             events = comps[self.comp_index].gui3d_events
-            if 0 <= self.event_index < len(events):
-                events.remove(self.event_index)
+            remove_collection_item(events, self.event_index)
         return {'FINISHED'}
 
 
@@ -389,8 +388,7 @@ class BJS_OT_particle_texture_remove(Operator):
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             textures = comps[self.comp_index].particle_textures
-            if 0 <= self.particle_texture_index < len(textures):
-                textures.remove(self.particle_texture_index)
+            remove_collection_item(textures, self.particle_texture_index)
         return {'FINISHED'}
 
 
@@ -428,8 +426,7 @@ class BJS_OT_probe_render_remove(Operator):
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             entries = comps[self.comp_index].probe_render_list
-            if 0 <= self.entry_index < len(entries):
-                entries.remove(self.entry_index)
+            remove_collection_item(entries, self.entry_index)
         return {'FINISHED'}
 
 
@@ -467,8 +464,7 @@ class BJS_OT_probe_exclude_remove(Operator):
         comps = obj.bjs_components
         if 0 <= self.comp_index < len(comps):
             entries = comps[self.comp_index].probe_render_excludes
-            if 0 <= self.entry_index < len(entries):
-                entries.remove(self.entry_index)
+            remove_collection_item(entries, self.entry_index)
         return {'FINISHED'}
 
 
@@ -552,8 +548,7 @@ class BJS_OT_list_remove(Operator):
         if not (0 <= self.var_index < len(comp.exposed_vars)):
             return {'CANCELLED'}
         v = comp.exposed_vars[self.var_index]
-        if 0 <= self.item_index < len(v.list_items):
-            v.list_items.remove(self.item_index)
+        remove_collection_item(v.list_items, self.item_index)
         return {'FINISHED'}
 
 

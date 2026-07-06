@@ -223,7 +223,17 @@
         }
       ]
     },
-    "defaultInputMap": "Player"
+    "defaultInputMap": "Player",
+    "collisionLayers": {
+      "layers": [
+        "Default"
+      ],
+      "matrix": [
+        [
+          true
+        ]
+      ]
+    }
   },
   "entities": [
     {
@@ -332,7 +342,7 @@
           "height": 0.0,
           "center": [
             0.0,
-            -1000.0,
+            -980.0,
             -0.0
           ],
           "rotation": [
@@ -347,7 +357,25 @@
           "script": "FogChanger",
           "path": "//../src/behaviors/FogChanger.ts",
           "vars": {
-            "movingObject": "161b6bdb08f345e2b3e15276592a139e"
+            "movingObject": "161b6bdb08f345e2b3e15276592a139e",
+            "fogAColor": [
+              0.75,
+              0.800000011920929,
+              0.8500000238418579
+            ],
+            "fogARange": [
+              2000.0,
+              4000.0
+            ],
+            "fogBColor": [
+              0.013702131807804108,
+              0.28315332531929016,
+              0.31855452060699463
+            ],
+            "fogBRange": [
+              0.0,
+              1000.0
+            ]
           }
         }
       ]
@@ -370,7 +398,7 @@
         "shadow": {
           "mapSize": 8192,
           "bias": 0.0010000000474974513,
-          "normalBias": 0.019999999552965164,
+          "normalBias": 0.009999999776482582,
           "darkness": 0.0,
           "minZ": 0.0,
           "maxZ": 0.0,
@@ -388,7 +416,7 @@
         {
           "type": "COLLIDER",
           "shape": "BOX",
-          "isTrigger": false,
+          "isTrigger": true,
           "makeInvisible": false,
           "autoFit": false,
           "applyObjectScale": true,
@@ -431,8 +459,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -500,11 +528,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -586,26 +614,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -619,11 +647,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -705,26 +733,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -738,8 +766,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -807,8 +835,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -876,8 +904,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -945,11 +973,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1031,26 +1059,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -1064,11 +1092,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1150,26 +1178,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -1183,11 +1211,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1269,26 +1297,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -1302,8 +1330,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1371,11 +1399,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1457,26 +1485,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 20000.0,
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
               "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -1490,8 +1518,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1559,8 +1587,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1628,8 +1656,8 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 5.0,
-          "friction": 3.0,
+          "mass": 10.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1697,11 +1725,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1783,26 +1811,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -1816,11 +1844,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 100.0,
+          "mass": 10.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 100.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1902,26 +1930,26 @@
             {
               "axis": "ANGULAR_X",
               "mode": "spring",
-              "min": -3.0,
-              "max": 3.0,
-              "stiffness": 200000.0,
-              "damping": 200000.0
+              "min": -10.0,
+              "max": 10.0,
+              "stiffness": 800000.0,
+              "damping": 20000.0
             },
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": 0.0,
-              "max": 0.0,
-              "stiffness": 100.0,
-              "damping": 10.0
+              "min": -1.0,
+              "max": 1.0,
+              "stiffness": 1000.0,
+              "damping": 100.0
             }
           ]
         }
@@ -1967,8 +1995,8 @@
             "frontRightWheel": "a4d8494367754a15b4fe2aaf4b7fdaa8",
             "rearLeftWheel": "da55807f3f654ff08426862b1e8a5cd3",
             "rearRightWheel": "f4af1a53adc841d399dfe48ba660f955",
-            "speed": 100.0,
-            "force": 40000.0,
+            "speed": 300.0,
+            "force": 80000.0,
             "body": "bc2042e80fcf404e988e0c9160a85b94",
             "holdSeconds": 0.5,
             "turnRatio": 0.5
@@ -1983,8 +2011,8 @@
             "frontRightWheel": "5289be0774ba4b21a0e1e8835de946fe",
             "rearLeftWheel": "49d565ba2c3b4efe911c2528098aba83",
             "rearRightWheel": "0806f0e60b8f4c26a3fd0902e6b7e203",
-            "speed": 100.0,
-            "force": 40000.0,
+            "speed": 300.0,
+            "force": 80000.0,
             "body": "bc2042e80fcf404e988e0c9160a85b94",
             "holdSeconds": 0.5,
             "turnRatio": 0.5
@@ -1993,11 +2021,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
-          "friction": 0.0,
-          "restitution": 0.0,
+          "mass": 1000.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
-          "angularDamping": 0.0,
+          "angularDamping": 0.5,
           "startAsleep": false,
           "centerOfMassAutoFit": false,
           "centerOfMass": [
@@ -2116,7 +2144,7 @@
           "type": "VECTOR2",
           "value": [
             0.009999999776482582,
-            0.0
+            0.009999999776482582
           ]
         },
         {
@@ -2148,8 +2176,8 @@
           "blockName": "Bump Speed",
           "type": "VECTOR2",
           "value": [
-            0.02500000037252903,
-            0.02500000037252903
+            0.0,
+            0.0
           ]
         },
         {
@@ -2169,8 +2197,8 @@
           "blockName": "Foam Speed",
           "type": "VECTOR2",
           "value": [
-            0.009999999776482582,
-            0.009999999776482582
+            0.0,
+            0.0
           ]
         },
         {
@@ -2184,6 +2212,12 @@
           "blockName": "Shallow Opacity",
           "type": "FLOAT",
           "value": 0.10000000149011612
+        },
+        {
+          "blockId": 179312,
+          "blockName": "Depth Probe Drop",
+          "type": "FLOAT",
+          "value": 1.0
         },
         {
           "blockId": 179299,

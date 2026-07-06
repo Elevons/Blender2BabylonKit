@@ -10,10 +10,11 @@ import type {
   Gui3DComponent,
   RenderingGroupComponent,
   LayerMaskComponent,
+  CollisionLayerComponent,
 } from "../types";
 import type { BehaviorRegistry } from "../../scripting/BehaviorRegistry";
 import type { PendingRef } from "../../scripting/exposed";
-import { BuildPhysics } from "../../subsystems/physics";
+import { BuildPhysics } from "../../subsystems/physics/index";
 import { ApplyAudio } from "../../subsystems/audio";
 import { ApplyGui } from "../../ui/gui2d";
 import { ApplyParticles } from "../../subsystems/particles";
@@ -106,6 +107,25 @@ const LayerMaskHandler: ComponentHandler = {
   },
 };
 
+/** COLLISION_LAYER: attachment only; Havok filters applied in FinalizeLevel. */
+const CollisionLayerHandler: ComponentHandler = {
+  types: ["COLLISION_LAYER"],
+  Apply(components, { entity }): PendingRef[]
+  {
+    for (const component of components)
+    {
+      if (component.type === "COLLISION_LAYER")
+      {
+        RegisterAttachment(entity, {
+          type: "COLLISION_LAYER",
+          data: component as CollisionLayerComponent,
+        });
+      }
+    }
+    return [];
+  },
+};
+
 /**
  * COLLIDER + RIGIDBODY: build one Havok body from all colliders and the
  * (optional) rigid body, hide meshes marked invisible, and queue authored
@@ -127,7 +147,14 @@ const PhysicsHandler: ComponentHandler = {
       HideEntityNode(scene, entity.node);
     }
 
-    const physicsBody = BuildPhysics(entity.node, colliders, body, scene);
+    const physicsBody = BuildPhysics(
+      entity.node,
+      colliders,
+      body,
+      scene,
+      entity.id,
+      context.physicsShapesByEntity
+    );
     if (physicsBody !== undefined)
     {
       for (const collider of colliders)
@@ -314,6 +341,7 @@ const COMPONENT_HANDLERS: readonly ComponentHandler[] = [
   TagHandler,
   RenderingGroupHandler,
   LayerMaskHandler,
+  CollisionLayerHandler,
   PhysicsHandler,
   ScriptHandler,
   AudioHandler,

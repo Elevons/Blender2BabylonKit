@@ -14,6 +14,7 @@ import type {
   TagComponent,
   RenderingGroupComponent,
   LayerMaskComponent,
+  CollisionLayerComponent,
   ColliderComponent,
   RigidBodyComponent,
   ScriptComponent,
@@ -31,6 +32,7 @@ export type EntityAttachment =
   | { type: "TAG"; data: TagComponent }
   | { type: "RENDERING_GROUP"; data: RenderingGroupComponent }
   | { type: "LAYER_MASK"; data: LayerMaskComponent }
+  | { type: "COLLISION_LAYER"; data: CollisionLayerComponent }
   | { type: "COLLIDER"; data: ColliderComponent; body: PhysicsBody }
   | { type: "RIGIDBODY"; data: RigidBodyComponent; body: PhysicsBody }
   | { type: "SCRIPT"; data: ScriptComponent; behavior: Behavior }
@@ -99,7 +101,8 @@ export function RegisterAttachment(entity: Entity, attachment: EntityAttachment)
 
     case "RENDERING_GROUP":
     case "LAYER_MASK":
-      // Data-only attachments; mesh values are applied in ApplyRenderLayers.
+    case "COLLISION_LAYER":
+      // Data-only attachments; mesh/layer values are applied in FinalizeLevel.
       break;
 
     default:

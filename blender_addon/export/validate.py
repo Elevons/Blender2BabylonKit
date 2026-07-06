@@ -137,6 +137,62 @@ def _check_render_layers(obj, warnings):
                     f"(max 0xFFFFFFFF)")
 
 
+def _check_collision_layers(context, warnings):
+    """Scene collision layer list/matrix and per-object COLLISION_LAYER refs."""
+    from ..collision_layers.matrix import layer_names, resize_matrix_for_layer_count
+
+    scene = context.scene
+    resize_matrix_for_layer_count(scene)
+    names = layer_names(scene)
+
+    seen = set()
+    for name in names:
+        if name in seen:
+            warnings.append(f"Collision layer name duplicated: '{name}'")
+        seen.add(name)
+
+    n = len(names)
+    matrix = scene.bjs_collision_matrix
+    if len(matrix) != n:
+        warnings.append(
+            "Collision matrix row count does not match layer count — "
+            "use Collision Layers panel to refresh")
+    else:
+        for row_index, row in enumerate(matrix):
+            if len(row.cells) != n:
+                warnings.append(
+                    f"Collision matrix row '{names[row_index]}' has wrong column count")
+                break
+
+
+def _check_collision_layer_component(obj, context, warnings):
+    """COLLISION_LAYER must reference a scene layer; needs collider/rigidbody."""
+    from ..collision_layers.matrix import layer_names, resize_matrix_for_layer_count
+
+    scene = context.scene
+    resize_matrix_for_layer_count(scene)
+    valid_names = set(layer_names(scene))
+
+    has_physics = False
+    for comp in obj.bjs_components:
+        if comp.enabled and comp.comp_type in {'COLLIDER', 'RIGIDBODY'}:
+            has_physics = True
+            break
+
+    for comp in obj.bjs_components:
+        if not comp.enabled or comp.comp_type != 'COLLISION_LAYER':
+            continue
+        layer_name = (comp.collision_layer or "").strip()
+        if layer_name not in valid_names:
+            warnings.append(
+                f"{obj.name}: Collision Layer '{layer_name}' is not in the scene "
+                f"Collision Layers list")
+        if not has_physics:
+            warnings.append(
+                f"{obj.name}: Collision Layer component has no Collider/Rigid Body — "
+                f"no physics shapes to filter")
+
+
 def _check_reflection_probes(obj, context, warnings):
     """Reflection probes need a non-zero influence volume and a valid render list."""
     for comp in obj.bjs_components:
@@ -516,6 +572,7 @@ def validate_scene(context):
         _check_entity_refs(obj, context, warnings)
         _check_reflection_probes(obj, context, warnings)
         _check_render_layers(obj, warnings)
+        _check_collision_layer_component(obj, context, warnings)
         _check_physics(obj, warnings)
         _check_event_messages(obj, warnings)
         _check_media(obj, warnings)
@@ -525,6 +582,7 @@ def validate_scene(context):
         _check_lights(obj, warnings)
 
     _check_input_map(scene, warnings)
+    _check_collision_layers(context, warnings)
     _check_duplicate_guids(context, warnings)
     _check_active_camera(context, warnings)
     _check_atmosphere(context, warnings)

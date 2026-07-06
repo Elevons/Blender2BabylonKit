@@ -10,6 +10,7 @@ Supported forms (one field per match):
     @exposed({ min: 0, max: 360, label: "Speed" }) speed = 45;
     @exposed() axis: [number, number, number] = [0, 1, 0];
     @exposed({ type: "color" }) tint = [1, 0, 0];
+    @exposed({ type: "vector2" }) range = [10, 100];
     @exposed() enabled = true;
     @exposed() title = "hello";
     @exposed({ type: "enum", options: ["a", "b"] }) mode = "a";
@@ -141,8 +142,12 @@ def _parse_default(literal, type_hint):
         return ("BOOL", lit == "true")
 
     if lit.startswith("["):
-        nums = re.findall(r'-?\d+(?:\.\d+)?', lit)[:3]
-        vals = [float(n) for n in nums]
+        nums = [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', lit)]
+        if type_hint == "vector2":
+            vals = nums[:2]
+            vals += [0.0] * (2 - len(vals))
+            return ("VECTOR2", vals[:2])
+        vals = nums[:3]
         vals += [0.0] * (3 - len(vals))
         return ("COLOR" if type_hint == "color" else "VECTOR3", vals[:3])
 

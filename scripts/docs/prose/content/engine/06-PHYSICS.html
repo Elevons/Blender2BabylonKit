@@ -1,6 +1,6 @@
 <h1>06 — Physics: bodies, constraints, triggers</h1>
 <p class="doc-links">Subsystem diagram: <a href="physics.html">physics.html</a> · Code traces: <a href="trace-physics.html">Physics</a> · <a href="trace-constraint.html">Constraints</a> · <a href="trace-trigger.html">Triggers</a> · Blender viewport: <a href="../blender/trace-collider-preview.html">Collider preview</a> · <a href="../blender/trace-cog-preview.html">CoM preview</a></p>
-<p>All in <code>subsystems/physics.ts</code>, <code>constraints.ts</code>, <code>collisions.ts</code>. Havok <strong>V2</strong>. <code>EnableHavokPhysics(scene)</code> must run before <code>Load</code>.</p>
+<p>All in <code>subsystems/physics/</code>, <code>constraints.ts</code>, <code>collisions.ts</code>. Havok <strong>V2</strong>. <code>EnableHavokPhysics(scene)</code> must run before <code>Load</code>.</p>
 <h2>Bodies (<code>BuildPhysics</code>)</h2>
 <p>One or more COLLIDER components and/or one RIGIDBODY → one node-attached <code>PhysicsBody</code>: collider-only = static/trigger; rigidbody-only = dynamic + auto-fit box; both = shape from collider(s), dynamics from body.</p>
 <h3>Multiple colliders (compound body)</h3>
@@ -55,6 +55,32 @@
 <li><strong>CUSTOM</strong> — manifest <code>axes[]</code> lists each of the six DOFs as <code>free</code>, <code>locked</code>, <code>limited</code>, or <code>spring</code> (<code>BuildCustomAxisLimits</code>). Angular limits are authored in degrees, converted at runtime. Use for combined joints (e.g. trailer hitch: ANGULAR_X free for pitch, LINEAR_Y spring for vertical compliance) — stacking two preset constraints on the same body pair over-constrains rotation.</li>
 </ul>
 <p><code>ComputeConstraintFrame</code> derives the target-side pivot/axes from <strong>live world transforms</strong>, pinning the as-placed relative pose — nothing snaps on load. <strong>Apply Object Scale</strong> is on by default: authored pivot and linear limits are multiplied by the owner's <strong>local</strong> scale (parent scale comes from the world transform). Turn off in Blender to opt out. Angular limits stay in degrees. Motors (<code>setAxisMotorType(VELOCITY)</code> + target + max force) apply to HINGE/SLIDER presets only. <strong><code>collision</code></strong> (Blender <strong>Bodies Collide</strong>, default off) maps to Havok's pairwise <code>isCollisionsEnabled</code> on the joint — when off, the two connected bodies should not generate contact impulses against each other (overlap can still cause constraint solver fighting; keep colliders separated or use auto-fit sizes that don't intersect). Joints land in <code>level.constraints</code>, disposed with the level.</p>
+<h2 id="collision-layers">Collision layers (<code>subsystems/collisionLayers.ts</code>)</h2>
+<p>Unity-style named collision filtering: a scene-wide layer list + collision matrix (Blender <strong>Babylon Scene › Collision Layers</strong>) and a per-object <strong>Collision Layer</strong> component that picks one layer name. At load, the engine converts names to bit indices and matrix rows to Havok filter masks on every registered <code>PhysicsShape</code>.</p>
+<p><strong>Havok rule:</strong> two shapes collide (and triggers fire) only when <code>(A.membership &amp; B.collide) !== 0</code> <em>and</em> <code>(B.membership &amp; A.collide) !== 0</code>. Layer index <code>i</code> → membership bit <code>1 &lt;&lt; i</code>; row <code>i</code>'s collide mask is the OR of column bits where <code>matrix[i][j]</code> is true. Up to <strong>32</strong> named layers.</p>
+<table><thead><tr><th>Blender setting</th><th>Manifest</th><th>Runtime</th></tr></thead><tbody>
+<tr><td><strong>Collision Layers</strong> panel — layer list + matrix</td><td><code>scene.collisionLayers</code> — <code>layers[]</code> + <code>matrix[][]</code></td><td><code>BuildCollisionLayerResolver</code> → name → masks</td></tr>
+<tr><td><strong>Collision Layer</strong> component — layer picker</td><td><code>{ "type": "COLLISION_LAYER", "layer": "Player", … }</code></td><td><code>ApplyCollisionLayers</code> walks parent tree (same propagation rules as render layers)</td></tr>
+<tr><td><strong>Apply to Owned Colliders</strong></td><td><code>applyOwnedColliders</code> (default <code>true</code>)</td><td>When <code>false</code>, this entity's shapes keep Havok defaults</td></tr>
+<tr><td><strong>Apply to Child Entities</strong></td><td><code>applyChildEntities</code> (default <code>false</code>)</td><td>When <code>true</code>, propagate until a child defines its own component</td></tr>
+</tbody></table>
+<p>Shapes are registered during <code>BuildPhysics</code> (including compound <code>PhysicsShapeContainer</code> children). Applied in <code>FinalizeLevel</code> via <code>ApplyCollisionLayers</code> after constraints and alongside <code>ApplyRenderLayers</code>, before <code>level.Begin()</code>. Entities without the component (and no inherited layer) are unchanged — they collide with everything.</p>
+<h4>Manifest examples</h4>
+<pre><code class="language-json">"collisionLayers": {
+  "layers": ["Default", "Player", "Environment"],
+  "matrix": [
+    [true, true, true],
+    [true, false, true],
+    [true, true, true]
+  ]
+}</code></pre>
+<pre><code class="language-json">{
+  "type": "COLLISION_LAYER",
+  "layer": "Player",
+  "applyOwnedColliders": true,
+  "applyChildEntities": false
+}</code></pre>
+<p>Collision layers affect physics only — not rendering. Render layers do not affect collision.</p>
 <h2>Collision lifecycle hooks (<code>WireCollisionEvents</code>) <a name="collision-hooks"></a></h2>
 <p>Behaviors may override Unity-style hooks: <code>OnCollisionEnter</code> / <code>OnCollisionStay</code> / <code>OnCollisionExit</code> (solid colliders) and <code>OnTriggerEnter</code> / <code>OnTriggerExit</code> (trigger volumes). <code>WireCollisionEvents</code> relays Havok plugin observables — <code>COLLISION_STARTED</code> / <code>CONTINUED</code> / <code>FINISHED</code> and <code>TRIGGER_ENTERED</code> / <code>EXITED</code>. Both bodies in a contact receive hook callbacks (Unity semantics). Collision callbacks are opt-in (overridden hook or collision-phase Event Message); trigger hooks need no per-body flag. No <code>OnTriggerStay</code> — Havok has no continued trigger event. Handles stored on <code>level.collisionEventHandles</code>, removed on dispose.</p>
 <p>Usage — override a hook on any behavior whose entity has a COLLIDER (+ RIGIDBODY for solid contacts); no subscription code needed:</p>

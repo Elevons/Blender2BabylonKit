@@ -133,6 +133,7 @@ export default class Patrol extends Behavior
 <tr><td><code>TAG</code></td><td>tag string</td><td>—</td></tr>
 <tr><td><code>RENDERING_GROUP</code></td><td>group id + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>LAYER_MASK</code></td><td>mask + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
+<tr><td><code>COLLISION_LAYER</code></td><td>layer name + propagation flags</td><td>— (Havok filter masks applied in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>COLLIDER</code></td><td>collider manifest</td><td><code>body</code> (shared per entity)</td></tr>
 <tr><td><code>RIGIDBODY</code></td><td>body manifest</td><td><code>body</code> (same ref as colliders)</td></tr>
 <tr><td><code>SCRIPT</code></td><td>script + vars</td><td><code>behavior</code></td></tr>
@@ -152,6 +153,7 @@ export default class Patrol extends Behavior
 <tr><td><code>float</code> / <code>int</code> (+ min, max, step)</td><td>Number slider</td><td><code>number</code></td></tr>
 <tr><td><code>bool</code></td><td>Checkbox</td><td><code>boolean</code></td></tr>
 <tr><td><code>string</code></td><td>Text field</td><td><code>string</code></td></tr>
+<tr><td><code>type: "vector2"</code></td><td>XY fields</td><td><code>[number, number]</code></td></tr>
 <tr><td><code>vector3</code> or <code>[n,n,n]</code> default</td><td>XYZ fields</td><td><code>Vector3</code></td></tr>
 <tr><td><code>color</code> or <code>Color3</code> default</td><td>Color picker</td><td><code>Color3</code></td></tr>
 <tr><td><code>type: "entity"</code></td><td>Object picker</td><td><code>Entity</code> (resolved before <code>OnStart</code>)</td></tr>

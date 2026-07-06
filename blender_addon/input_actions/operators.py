@@ -13,6 +13,7 @@ from bpy.props import IntProperty, StringProperty
 from bpy.types import Operator
 
 from ..core import script_parse
+from ..core.prop_copy import remove_collection_item
 from .defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME
 from .serialize import (
     COMPOSITE_PART_ORDER, apply_input_asset, serialize_input_asset,
@@ -68,7 +69,7 @@ class BJS_OT_input_map_edit(Operator):
             m.active_action = -1
             scene.bjs_input_map_active = len(maps) - 1
         elif self.action == "remove" and 0 <= self.index < len(maps):
-            maps.remove(self.index)
+            remove_collection_item(maps, self.index)
             scene.bjs_input_map_active = min(scene.bjs_input_map_active, len(maps) - 1)
         return {'FINISHED'}
 
@@ -94,7 +95,7 @@ class BJS_OT_input_action_edit(Operator):
             a.active_binding = -1
             m.active_action = len(m.actions) - 1
         elif self.action == "remove" and 0 <= self.index < len(m.actions):
-            m.actions.remove(self.index)
+            remove_collection_item(m.actions, self.index)
             m.active_action = min(m.active_action, len(m.actions) - 1)
         return {'FINISHED'}
 
@@ -134,7 +135,7 @@ class BJS_OT_input_binding_edit(Operator):
                     count += 1
                     probe += 1
             for _ in range(count):
-                a.bindings.remove(self.index)
+                remove_collection_item(a.bindings, self.index)
         return {'FINISHED'}
 
 

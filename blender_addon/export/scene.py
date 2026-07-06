@@ -7,6 +7,7 @@ import os
 import bpy
 
 from ..input_actions.serialize import serialize_input_asset
+from ..collision_layers.serialize import serialize_collision_layers
 from ..scene.environment import find_world_env_node, world_background_strength
 from .assets import copy_asset, save_image_asset
 from .post_processing import serialize_post_processing
@@ -101,6 +102,7 @@ def serialize_scene(context, output_dir):
     data["postProcessing"] = serialize_post_processing(s, output_dir)
     data["inputActions"] = serialize_input_asset(context.scene)
     data["defaultInputMap"] = context.scene.bjs_input_default_map
+    data["collisionLayers"] = serialize_collision_layers(context.scene)
 
     if s.use_large_world_rendering:
         data["largeWorldRendering"] = True
