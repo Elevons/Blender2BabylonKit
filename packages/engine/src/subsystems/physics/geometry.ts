@@ -1,4 +1,6 @@
 import {
+  AbstractMesh,
+  InstancedMesh,
   Mesh,
   Matrix,
   Quaternion,
@@ -16,7 +18,7 @@ import type { LocalBounds } from "./types";
  * parented under it in Blender. The GUID-based rule lives in
  * core/meshOwnership.ts, shared with reflection probes.
  */
-export function OwnedColliderMeshes(node: TransformNode): Mesh[]
+export function OwnedColliderMeshes(node: TransformNode): AbstractMesh[]
 {
   return CollectOwnedChildMeshes(node);
 }
@@ -37,8 +39,8 @@ export function ComputeLocalBounds(node: TransformNode): LocalBounds
 
   // If the node itself is a mesh with geometry, include it alongside any owned
   // submeshes (a single-material mesh has no submesh children).
-  const sources: Mesh[] = ownedMeshes.slice();
-  if (node instanceof Mesh && node.getTotalVertices() > 0 && !sources.includes(node))
+  const sources: AbstractMesh[] = ownedMeshes.slice();
+  if (node instanceof AbstractMesh && node.getTotalVertices() > 0 && !sources.includes(node))
   {
     sources.push(node);
   }
@@ -74,10 +76,26 @@ export function ScaleLocalBounds(bounds: LocalBounds, node: TransformNode): Loca
   };
 }
 
-/** Clone one child mesh and bake its geometry into the wrapper's local frame. */
-function CloneChildIntoLocalFrame(childMesh: Mesh, inverseWorld: Matrix): Mesh | null
+/** Clone renderable geometry (Mesh or glTF-instanced reuse) for physics baking. */
+function CloneMeshGeometry(source: AbstractMesh, cloneName: string): Mesh | null
 {
-  const clone = childMesh.clone(`${childMesh.name}__cphys`, null);
+  if (source instanceof InstancedMesh)
+  {
+    return source.sourceMesh.clone(cloneName, null);
+  }
+
+  if (source instanceof Mesh)
+  {
+    return source.clone(cloneName, null);
+  }
+
+  return null;
+}
+
+/** Clone one child mesh and bake its geometry into the wrapper's local frame. */
+function CloneChildIntoLocalFrame(childMesh: AbstractMesh, inverseWorld: Matrix): Mesh | null
+{
+  const clone = CloneMeshGeometry(childMesh, `${childMesh.name}__cphys`);
   if (clone === null)
   {
     return null;
@@ -139,22 +157,56 @@ export function MergeChildrenIntoLocalMesh(node: TransformNode): Mesh | undefine
  * When applyObjectScale is on, local scale is baked into vertices (same rule as
  * manual primitives). Returns undefined if there is no usable geometry.
  */
+/** Resolve Mesh or InstancedMesh into a standalone Mesh for Havok shape builders. */
+function ResolvePhysicsMesh(source: AbstractMesh): { mesh: Mesh; disposeSource: boolean }
+{
+  if (source instanceof Mesh)
+  {
+    return { mesh: source, disposeSource: false };
+  }
+
+  if (source instanceof InstancedMesh)
+  {
+    const clone = source.sourceMesh.clone(`${source.name}__colliderSource`, null);
+    if (clone === null)
+    {
+      throw new Error(`[bjs] "${source.name}" has no cloneable mesh geometry for a collider.`);
+    }
+
+    clone.parent = null;
+    clone.position = Vector3.Zero();
+    clone.rotationQuaternion = Quaternion.Identity();
+    clone.scaling = Vector3.One();
+    clone.bakeTransformIntoVertices(source.computeWorldMatrix(true));
+    return { mesh: clone, disposeSource: true };
+  }
+
+  throw new Error(`[bjs] "${source.name}" has no cloneable mesh geometry for a collider.`);
+}
+
 export function BakeColliderScaleIntoMesh(
-  mesh: Mesh,
+  mesh: AbstractMesh,
   node: TransformNode,
   collider: ColliderComponent | undefined
 ): { mesh: Mesh; disposeSource: boolean }
 {
+  const { mesh: resolvedMesh, disposeSource: disposeResolved } = ResolvePhysicsMesh(mesh);
+
   if (!ApplyObjectScaleEnabled(collider?.applyObjectScale))
   {
-    return { mesh, disposeSource: false };
+    return { mesh: resolvedMesh, disposeSource: disposeResolved };
   }
 
   const { sx, sy, sz } = LocalScaleAxes(node);
-  const scaled = mesh.clone(`${mesh.name}__colliderScale`, null);
+  const scaled = resolvedMesh.clone(`${resolvedMesh.name}__colliderScale`, null);
   if (scaled === null)
   {
-    return { mesh, disposeSource: false };
+    return { mesh: resolvedMesh, disposeSource: disposeResolved };
+  }
+
+  if (disposeResolved)
+  {
+    resolvedMesh.dispose();
   }
 
   scaled.bakeTransformIntoVertices(Matrix.Scaling(sx, sy, sz));

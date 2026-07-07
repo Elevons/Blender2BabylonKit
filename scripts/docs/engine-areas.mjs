@@ -712,7 +712,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Validator",
           "sub": "export/validate.py",
-          "desc": "Pre-export checks: missing scripts, dangling refs, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, Rendering Group id outside 0–3, Custom Layer Mask out of 32-bit range, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).",
+          "desc": "Pre-export checks: missing scripts, dangling refs, stale prefab entity pointers, MESH+DYNAMIC, mesh triggers, constraint ends without physics, skinned-mesh components, Rendering Group id outside 0–3, Custom Layer Mask out of 32-bit range, area lights, duplicate GUIDs, missing camera/audio, Input Actions (duplicate names, empty bindings, bad @inputMap refs, missing Scene Default map).",
           "meta": [
             [
               "Runs from",
@@ -1821,7 +1821,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "OwnedColliderMeshes",
           "sub": "the ownership rule",
-          "desc": "Includes a descendant mesh only if no node on its path up carries bjs_id — so a collider spans its own multi-material submeshes (_primitiveN, no GUID) but never a parented child entity's geometry. The rule lives in core/meshOwnership.ts, shared with reflection probes; all physics paths route through it.",
+          "desc": "Includes a descendant mesh only if no node on its path up carries bjs_id — so a collider spans its own multi-material submeshes (_primitiveN, no GUID) and glTF-instanced reuse (InstancedMesh) but never a parented child entity's geometry. The rule lives in core/meshOwnership.ts, shared with reflection probes; all physics paths route through it.",
           "meta": [
             [
               "Fixed in",

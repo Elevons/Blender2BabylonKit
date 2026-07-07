@@ -1,6 +1,8 @@
 import { Behavior, exposed } from "@bjs/engine";
 import type { AttachmentOfType, Entity } from "@bjs/engine";
 import { Color3, Scene } from "@babylonjs/core";
+import { InputBlock } from "@babylonjs/core/Materials/Node/Blocks/Input/inputBlock";
+import { NodeMaterial } from "@babylonjs/core/Materials/Node/nodeMaterial";
 
 /**
  * Lives on a trigger volume. Swaps scene linear fog between two authored presets
@@ -118,10 +120,35 @@ export default class FogChanger extends Behavior
     range: [number, number]
   ): void
   {
+    this.scene.fogEnabled = true;
     this.scene.fogMode = Scene.FOGMODE_LINEAR;
     this.scene.fogColor = this.ResolveColor(color);
     this.scene.fogStart = range[0];
     this.scene.fogEnd = range[1];
+    this.SyncWaterFogOpacityRange(range);
+  }
+
+  /** Keep water NME fog-alpha inputs aligned with the active scene fog range. */
+  private SyncWaterFogOpacityRange(range: [number, number]): void
+  {
+    for (const material of this.scene.materials)
+    {
+      if (!(material instanceof NodeMaterial))
+      {
+        continue;
+      }
+
+      const fogStartBlock = material.getBlockByName("Fog Start");
+      const fogEndBlock = material.getBlockByName("Fog End");
+
+      if (!(fogStartBlock instanceof InputBlock) || !(fogEndBlock instanceof InputBlock))
+      {
+        continue;
+      }
+
+      fogStartBlock.value = range[0];
+      fogEndBlock.value = range[1];
+    }
   }
 
   /** Coerce an @exposed color (RGB tuple) or Color3 into a Babylon Color3. */

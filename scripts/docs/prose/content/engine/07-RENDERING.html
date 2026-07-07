@@ -151,7 +151,7 @@
 <tr><td><strong>Apply to Owned Meshes</strong></td><td><code>applyOwnedMeshes</code> (default <code>true</code>)</td><td>When <code>false</code>, this entity’s own meshes keep Babylon defaults</td></tr>
 <tr><td><strong>Apply to Child Entities</strong></td><td><code>applyChildEntities</code> (default <code>false</code>)</td><td>When <code>true</code>, propagate down Blender parents until a child defines its own component of that kind</td></tr>
 </tbody></table>
-<p>Mesh ownership matches physics and reflection probes: <code>CollectOwnedMeshes</code> in <code>core/meshOwnership.ts</code> — own submeshes and primitive splits, excluding geometry that belongs to a nested child entity (a descendant node with its own <code>bjs_id</code>).</p>
+<p>Mesh ownership matches physics and reflection probes: <code>CollectOwnedMeshes</code> in <code>core/meshOwnership.ts</code> — own submeshes and primitive splits (including glTF-instanced reuse as <code>InstancedMesh</code>), excluding geometry that belongs to a nested child entity (a descendant node with its own <code>bjs_id</code>).</p>
 <p>Applied in <code>FinalizeLevel</code> via <code>ApplyRenderLayers(manifest, level)</code> after reflection probes and before <code>level.Begin()</code>. Handlers only register attachment rows during the entity pass.</p>
 <h4>Manifest examples</h4>
 <pre><code class="language-json">{

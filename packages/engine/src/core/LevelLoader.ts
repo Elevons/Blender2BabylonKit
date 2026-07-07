@@ -247,10 +247,6 @@ export class LevelLoader
       }
     }
 
-    // Single NME compile pass — after environment IBL exists when the manifest
-    // declares one, and after manifest texture/input overrides are bound.
-    await BuildNodeMaterials(this.scene);
-
     ApplyAutoPlayAnimations(this.scene, context.animatedEntities);
 
     // Asset-backed components (audio, GUI, particles) load in parallel during
@@ -293,6 +289,10 @@ export class LevelLoader
     ApplyCollisionLayers(manifest, context.level, context.physicsShapesByEntity);
 
     context.level.Begin();
+
+    // NME compile after Begin() so runtime fog (e.g. FogChanger OnStart) is active
+    // before FogBlock decides whether to emit the FOG shader define.
+    await BuildNodeMaterials(this.scene);
 
     // Post-processing attaches to cameras; apply after Begin() so behaviors that
     // create a runtime camera in OnStart (e.g. TrainCamera) receive the stack.

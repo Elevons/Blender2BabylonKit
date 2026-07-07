@@ -11,6 +11,7 @@ const FOG_MODES: Record<FogInfo["mode"], number> =
 /** Apply the manifest's fog block to the scene. */
 export function ApplyFog(scene: Scene, fogInfo: FogInfo): void
 {
+  scene.fogEnabled = true;
   scene.fogMode = FOG_MODES[fogInfo.mode] ?? Scene.FOGMODE_LINEAR;
   scene.fogColor = Color3.FromArray(fogInfo.color);
   scene.fogDensity = fogInfo.density; // used by EXP / EXP2

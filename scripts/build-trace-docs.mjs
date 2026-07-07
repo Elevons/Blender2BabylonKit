@@ -50,7 +50,7 @@ export const TRACES = [
       { file: "packages/engine/src/subsystems/physics/bodyBuild.ts", symbol: "BuildBodyInput",
         note: "The data every path shares: motion type (STATIC/DYNAMIC/ANIMATED), mass (DYNAMIC only), startAsleep (DYNAMIC only), material, colliders[], and the geometry facts (isMesh / hasGeometry via the ownership rule below)." },
       { file: "packages/engine/src/core/meshOwnership.ts", symbol: "CollectOwnedChildMeshes",
-        note: "THE ownership rule (v0.29.1), shared with reflection probes: include a descendant mesh only if no node on its path up carries bjs_id — multi-material submeshes yes, parented child entities no. physics/geometry routes through it via OwnedColliderMeshes." },
+        note: "THE ownership rule (v0.29.1), shared with reflection probes: include a descendant mesh only if no node on its path up carries bjs_id — multi-material submeshes yes, parented child entities no; InstancedMesh (shared glTF mesh across prefab duplicates) counts too. physics/geometry routes through it via OwnedColliderMeshes." },
       { file: "packages/engine/src/subsystems/physics/bodyBuild.ts", symbol: "BuildAutoFitBody",
         note: "Default path. Real mesh → PhysicsAggregate sizes the primitive. Multi-material wrapper → FitColliderShape over ComputeLocalBounds (an aggregate would crash on the non-mesh node)." },
       { file: "packages/engine/src/subsystems/physics/bodyBuild.ts", symbol: "AttachShape",

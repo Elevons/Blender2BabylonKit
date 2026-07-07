@@ -6,12 +6,86 @@ the live link) call validate_scene() and surface the returned warnings.
 """
 
 import os
+import re
 
 import bpy
 
 from ..core.ids import ID_KEY
 from ..components.constants import GUI3D_CONTROLS, GUI3D_PANELS, GUI3D_TEXTURED
 from .visibility import is_renderable
+
+_DUP_SUFFIX = re.compile(r"^(.*)(\.\d{3})$")
+
+
+def _duplicate_suffix(name):
+    match = _DUP_SUFFIX.match(name)
+    return match.group(2) if match else None
+
+
+def _base_name(name):
+    match = _DUP_SUFFIX.match(name)
+    return match.group(1) if match else name
+
+
+def _is_descendant(child, ancestor):
+    parent = child.parent
+    while parent is not None:
+        if parent == ancestor:
+            return True
+        parent = parent.parent
+    return False
+
+
+def _instance_root(obj):
+    root = obj
+    while root.parent is not None:
+        root = root.parent
+    return root
+
+
+def _same_prefab_family(root_a, root_b):
+    if root_a == root_b:
+        return True
+    return _base_name(root_a.name) == _base_name(root_b.name)
+
+
+def _stale_prefab_pointer_warning(owner_obj, ref_obj, label):
+    """Warn when a picked object likely belongs to a different prefab instance."""
+    if ref_obj is None or owner_obj is None or ref_obj == owner_obj:
+        return None
+
+    owner_root = _instance_root(owner_obj)
+    if _is_descendant(ref_obj, owner_root):
+        return None
+
+    ref_root = _instance_root(ref_obj)
+    owner_suffix = _duplicate_suffix(owner_root.name)
+    ref_suffix = _duplicate_suffix(ref_root.name)
+
+    if _same_prefab_family(owner_root, ref_root):
+        if ref_root == owner_root:
+            return None
+        return (
+            f"{owner_obj.name}: '{label}' points at '{ref_obj.name}' from a "
+            f"different copy of the same prefab — re-pick the target on this "
+            f"level override"
+        )
+
+    if owner_suffix is not None and ref_suffix is not None and owner_suffix != ref_suffix:
+        return (
+            f"{owner_obj.name}: '{label}' points at '{ref_obj.name}' ({ref_suffix}) "
+            f"but this instance is {owner_suffix} — re-pick the target on this "
+            f"level override"
+        )
+
+    if owner_suffix is not None and ref_suffix is None:
+        return (
+            f"{owner_obj.name}: '{label}' points at '{ref_obj.name}' (no instance "
+            f"suffix) but {owner_root.name} is {owner_suffix} — verify this is "
+            f"the intended cross-prefab target on this level override"
+        )
+
+    return None
 
 
 def _check_scripts(obj, warnings):
@@ -29,26 +103,35 @@ def _check_scripts(obj, warnings):
                     f"{obj.name}: script file not found: {comp.script_path}")
 
 
+def _append_entity_ref_warnings(owner_obj, label, target, context, warnings):
+    """Shared checks for stale prefab pointers and render-disabled targets."""
+    stale = _stale_prefab_pointer_warning(owner_obj, target, label)
+    if stale is not None:
+        warnings.append(stale)
+    if not is_renderable(target, context):
+        warnings.append(
+            f"{owner_obj.name}: '{label}' references '{target.name}', which is "
+            f"render-disabled and won't be exported")
+
+
 def _check_entity_refs(obj, context, warnings):
-    """Entity references to render-disabled or GUID-less objects resolve to
-    nothing at runtime (the target won't be in the manifest)."""
+    """Entity references to render-disabled objects won't resolve at runtime."""
     for comp in obj.bjs_components:
-        refs = []
         if comp.comp_type == 'CAMERA' and comp.cam_target is not None:
-            refs.append(("Camera target", comp.cam_target))
+            _append_entity_ref_warnings(
+                obj, "Camera target", comp.cam_target, context, warnings)
+        if comp.comp_type == 'CONSTRAINT' and comp.con_target is not None:
+            _append_entity_ref_warnings(
+                obj, "Constraint target", comp.con_target, context, warnings)
         for v in comp.exposed_vars:
             if v.vtype == 'ENTITY' and v.obj_val is not None:
-                refs.append((v.name, v.obj_val))
+                _append_entity_ref_warnings(
+                    obj, v.name, v.obj_val, context, warnings)
             elif v.vtype == 'LIST' and v.elem_type == 'ENTITY':
                 for item in v.list_items:
                     if item.obj_val is not None:
-                        refs.append((v.name, item.obj_val))
-
-        for label, target in refs:
-            if not is_renderable(target, context):
-                warnings.append(
-                    f"{obj.name}: '{label}' references '{target.name}', which is "
-                    f"render-disabled and won't be exported")
+                        _append_entity_ref_warnings(
+                            obj, v.name, item.obj_val, context, warnings)
 
 
 def _check_physics(obj, warnings):

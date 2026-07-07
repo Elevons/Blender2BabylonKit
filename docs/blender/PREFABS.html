@@ -400,7 +400,8 @@
   <li><strong>Assign GUID</strong> in the Babylon Object panel on the overridden object.</li>
   <li>Or override the <code>bjs_id</code> custom property in Blender’s Object Properties → Custom Properties (separate from RNA components).</li>
 </ul>
-<p>References inside a prefab (camera targets, constraint partners, <code>@exposed</code> entity fields) should point at objects <strong>inside the same prefab hierarchy</strong> when possible, so overrides move together. Pointing at level-only objects works but those pointers are level-specific overrides.</p>
+<p>Duplicated linked instances often keep RNA entity pointers aimed at the <strong>first</strong> linked copy (e.g. <code>Small Rover.003</code> still constraining to <code>Engine Rover</code> instead of the paired engine instance). Export does <strong>not</strong> guess or remap — it serializes the object you picked and that object's <code>bjs_id</code>. Re-pick cross-prefab targets on the <strong>level override</strong> (camera → vehicle, trailer → engine, constraint partners across prefabs). Validation warns when a pointer's instance suffix does not match the owner's.</p>
+<p>References inside one prefab (wheels, arms, <code>body</code> self-ref) should point at objects <strong>inside that prefab hierarchy</strong> in the prefab source file. When you duplicate the prefab in the level, stale same-prefab pointers also need a level override re-pick — or fix them once in the prefab source before linking.</p>
 
 <h2>What overrides well vs what stays in the library</h2>
 <table>
@@ -423,7 +424,7 @@
 <p>Iterating on a prefab: save the library → switch to the level → save (or export once) to push changes through.</p>
 
 <h2>Runtime</h2>
-<p>The engine has no prefab loader — export produces a flat level. Each manifest entity is a glTF node plus components; parenting from Blender is preserved. Multiple instances of the same linked prefab appear as separate entities (with distinct GUIDs after dedupe).</p>
+<p>The engine has no prefab loader — export produces a flat level. Each manifest entity is a glTF node plus components; parenting from Blender is preserved. Multiple instances of the same linked prefab appear as separate entities (with distinct GUIDs after dedupe). When instances share mesh data in the glb, later copies may load as Babylon <code>InstancedMesh</code>; colliders and reflection probes still resolve their geometry via the shared ownership rule in <code>core/meshOwnership.ts</code>.</p>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/blender/PREFABS.html</code>, then <code>npm run docs:build</code>.

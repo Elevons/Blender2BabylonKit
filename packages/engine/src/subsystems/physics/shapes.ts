@@ -1,5 +1,6 @@
 import {
   Mesh,
+  AbstractMesh,
   Matrix,
   Quaternion,
   TransformNode,
@@ -89,7 +90,7 @@ export function BuildHullOrMeshShape(
   if (isMesh)
   {
     const { mesh: sourceMesh, disposeSource } = BakeColliderScaleIntoMesh(
-      node as Mesh, node, collider
+      node as AbstractMesh, node, collider
     );
     const shape = makeShape(sourceMesh);
     if (disposeSource)

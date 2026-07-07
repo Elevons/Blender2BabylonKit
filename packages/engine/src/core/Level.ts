@@ -19,6 +19,7 @@ import type { AtmosphereHandle } from "../subsystems/atmosphere";
 import { DisposeReflectionProbes } from "../subsystems/reflectionProbes";
 import type { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
 import type { PunctualLightingMode } from "../subsystems/clusteredLights";
+import { DisposeDirectionalShadowMaintenance } from "../subsystems/shadows";
 
 /**
  * Runtime container for a loaded level: the entity map, the active camera,
@@ -269,6 +270,8 @@ export class Level
       this.clusteredLights.dispose();
       this.clusteredLights = undefined;
     }
+
+    DisposeDirectionalShadowMaintenance(this.scene);
 
     for (const entity of this.entities.values())
     {
