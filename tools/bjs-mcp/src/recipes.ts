@@ -167,7 +167,8 @@ export const RECIPES: Recipe[] = [
     pitfalls: [
       "Joints are authored in Blender — resolve via GetAttachmentsOfType(\"CONSTRAINT\").",
       "Do not overwrite wheel node.rotation when hinge motors drive physics.",
-      "Use list_input_actions for real action names (Forward/Backward/Left/Right vs Move).",
+      "Use list_input_actions for real action names (Vehicle/Main Control vs legacy Forward/Backward).",
+      "Author Main Control as Value + Vector 2: WASD 2D Vector + Left Stick (not four axis-half rows).",
       "Constrained bodies work best as siblings, not parented to each other.",
     ],
     exposedFields: [
@@ -347,7 +348,8 @@ export const RECIPES: Recipe[] = [
       "HINGE constraints must be authored in Blender on each wheel entity.",
       "Use GetAttachmentsOfType(\"CONSTRAINT\") — one row per wheel.",
       "Do not overwrite wheel node.rotation when motors drive physics.",
-      "list_input_actions for real action names (Forward/Backward/Left/Right).",
+      "list_input_actions for real action names (Vehicle/Main Control).",
+      "Author Main Control: Value + Vector 2, WASD + Left Stick.",
     ],
     exposedFields: [
       '@exposed({ type: "list", of: "entity", label: "Wheels" }) wheels: (Entity | null)[] = []',

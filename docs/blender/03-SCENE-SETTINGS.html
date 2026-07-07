@@ -371,6 +371,7 @@
 
 <h2>Input Actions (scene level)</h2>
 <p>The <strong>Input Actions</strong> subsection defines action maps, bindings, and <strong>Scene Default</strong> map name. First export seeds a built-in Player map if empty. Save/load <code>.inputactions.json</code> to share across scenes.</p>
+<p>Gamepad rows use <strong>labeled</strong> button/axis/stick pickers (W3C standard mapping). LT/RT are <strong>axis</strong> bindings (not face buttons). For 2D actions use <strong>Stick</strong> (not four axis-half rows). Set <strong>Type = Value</strong> and <strong>Control Type = Vector 2</strong> when scripts call <code>ReadVector2()</code>. Composite axis rows support <strong>Axis Half</strong> for 1D throttle — see <a href="../engine/12-INPUT.html#choosing-bindings">12 — Input › Choosing bindings</a> and <a href="../engine/12-INPUT.html#axis-half">Axis half</a>.</p>
 <p>Detail: <a href="input-actions.html">input-actions diagram</a> · <a href="trace-input.html">trace-input</a> · <a href="../engine/12-INPUT.html">12 — Input</a>.</p>
 
 <h2>Collision Layers (scene level)</h2>

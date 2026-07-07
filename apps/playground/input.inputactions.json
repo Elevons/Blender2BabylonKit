@@ -74,6 +74,36 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Vehicle",
+      "actions": [
+        {
+          "name": "Main Control",
+          "type": "VALUE",
+          "controlType": "VECTOR2",
+          "bindings": [
+            {
+              "composite": "2DVECTOR",
+              "parts": {
+                "up": { "device": "KEYBOARD", "control": "w" },
+                "down": { "device": "KEYBOARD", "control": "s" },
+                "left": { "device": "KEYBOARD", "control": "a" },
+                "right": { "device": "KEYBOARD", "control": "d" }
+              }
+            },
+            { "device": "GAMEPAD", "control": "stick", "index": 0 }
+          ]
+        },
+        {
+          "name": "Reset",
+          "type": "BUTTON",
+          "controlType": "BUTTON",
+          "bindings": [
+            { "device": "KEYBOARD", "control": "r" }
+          ]
+        }
+      ]
     }
   ]
 }

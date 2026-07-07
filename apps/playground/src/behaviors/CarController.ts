@@ -76,10 +76,20 @@ export default class CarController extends Behavior
   @exposed({ label: "Swap Steering" })
   swapSteering = false;
 
+  @exposed({ min: 0, max: 1, label: "Steer Zone Width" })
+  steerZoneWidth = 0.6;
+
+  @exposed({ min: 0, max: 1, label: "Steer Zone Priority" })
+  steerZonePriority = 0.9;
+
   @exposed({ label: "Body", type: "entity" })
   body: Entity | null = null;
 
-  @inputMap("Player") player!: InputActionMap;
+  @inputMap("Vehicle") vehicle!: InputActionMap;
+
+  private static readonly throttleDeadzone = 0.15;
+  /** Steer is already deadzoned in bindings; keep a tiny epsilon only. */
+  private static readonly steerEpsilon = 0.01;
 
   private isPlacing = false;
   private placeTimer = 0;
@@ -96,7 +106,7 @@ export default class CarController extends Behavior
 
   OnUpdate(deltaSeconds: number): void
   {
-    const reset = this.player.FindAction("Reset")?.IsPressed() === true;
+    const reset = this.vehicle.FindAction("Reset")?.IsPressed() === true;
 
     // Reset starts the recover sequence (debounced, and ignored while already placing).
     if (reset && !this.isPlacing && Date.now() - this.debounceTime >= 1000)
@@ -114,28 +124,27 @@ export default class CarController extends Behavior
       }
     }
 
-    let forward = this.player.FindAction("Forward")?.IsPressed() === true;
-    let backward = this.player.FindAction("Backward")?.IsPressed() === true;
-    let left = this.player.FindAction("Left")?.IsPressed() === true;
-    let right = this.player.FindAction("Right")?.IsPressed() === true;
+    const control = this.vehicle.FindAction("Main Control")?.ReadVector2() ?? { x: 0, y: 0 };
+    let throttle = control.y;
+    let steer = control.x;
 
     if (this.swapMovement)
     {
-      const swapForward = forward;
-      forward = backward;
-      backward = swapForward;
+      throttle = -throttle;
     }
 
     if (this.swapSteering)
     {
-      const swapLeft = left;
-      left = right;
-      right = swapLeft;
+      steer = -steer;
     }
+
+    const remapped = this.ApplySteerZone(throttle, steer);
+    throttle = remapped.throttle;
+    steer = remapped.steer;
 
     const speeds = this.isPlacing
       ? this.CollectWheelEntities().map(() => 0)
-      : this.ComputeWheelSpeeds(forward, backward, left, right);
+      : this.ComputeWheelSpeeds(throttle, steer);
 
     for (let slotIndex = 0; slotIndex < this.wheelDrives.length; slotIndex++)
     {
@@ -163,17 +172,42 @@ export default class CarController extends Behavior
   }
 
   /**
+   * In wide left/right stick wedges, bleed throttle and ramp steer toward ±1 so
+   * input favors turning over forward/back (tank-style at full lateral).
+   */
+  private ApplySteerZone(throttle: number, steer: number): { throttle: number; steer: number }
+  {
+    const steerAbs = Math.abs(steer);
+    const axisSum = steerAbs + Math.abs(throttle);
+    if (axisSum <= CarController.steerEpsilon)
+    {
+      return { throttle: 0, steer: 0 };
+    }
+
+    const lateralRatio = steerAbs / axisSum;
+    const zoneStart = 1 - this.steerZoneWidth;
+    if (lateralRatio <= zoneStart)
+    {
+      return { throttle, steer };
+    }
+
+    const zoneBlend = Math.min(1, (lateralRatio - zoneStart) / (1 - zoneStart));
+    const priority = zoneBlend * this.steerZonePriority;
+    const steerSign = Math.sign(steer);
+
+    return {
+      throttle: throttle * (1 - priority),
+      steer: steerSign * Math.min(1, steerAbs + priority * (1 - steerAbs)),
+    };
+  }
+
+  /**
    * Per-wheel motor speeds [FL, FR, RL, RR, FLi, FRi, RLi, RRi]. Each inner/outer
    * pair on a corner shares the same corner speed from ComputeCornerSpeeds().
    */
-  private ComputeWheelSpeeds(
-    forward: boolean,
-    backward: boolean,
-    left: boolean,
-    right: boolean
-  ): number[]
+  private ComputeWheelSpeeds(throttle: number, steer: number): number[]
   {
-    const cornerSpeeds = this.ComputeCornerSpeeds(forward, backward, left, right);
+    const cornerSpeeds = this.ComputeCornerSpeeds(throttle, steer);
     return [
       cornerSpeeds[0],
       cornerSpeeds[1],
@@ -192,27 +226,30 @@ export default class CarController extends Behavior
    * 1 → all equal, wide arc; 0 → inside locked, sharp pivot). Left/Right alone
    * gives tank controls: inside track spins opposite.
    */
-  private ComputeCornerSpeeds(
-    forward: boolean,
-    backward: boolean,
-    left: boolean,
-    right: boolean
-  ): number[]
+  private ComputeCornerSpeeds(throttle: number, steer: number): number[]
   {
+    const throttleDeadzone = CarController.throttleDeadzone;
+    const steerEpsilon = CarController.steerEpsilon;
     let direction = 0;
-    if (forward)
+    if (throttle > throttleDeadzone)
     {
       direction = 1;
     }
-    else if (backward)
+    else if (throttle < -throttleDeadzone)
     {
       direction = -1;
     }
 
-    const turning = left || right;
+    const throttleMagnitude = direction !== 0 ? Math.min(1, Math.abs(throttle)) : 0;
+    const steerMagnitude = Math.abs(steer);
+    const steerSign = steerMagnitude > steerEpsilon ? Math.sign(steer) : 0;
+    const turning = steerSign !== 0;
+    const turnStrength = Math.min(1, steerMagnitude);
 
     // Outside track at full speed; direction defaults to +1 for tank-turning.
-    const outsideSpeed = (direction !== 0 ? direction : 1) * this.speed;
+    const outsideSpeed = (direction !== 0 ? direction : 1)
+      * this.speed
+      * (direction !== 0 ? throttleMagnitude : 1);
 
     if (!turning)
     {
@@ -224,13 +261,17 @@ export default class CarController extends Behavior
       return [outsideSpeed, outsideSpeed, outsideSpeed, outsideSpeed];
     }
 
-    // Forward/back + turn → inside track same direction, slower.
+    // Forward/back + turn → inside track same direction, slower (scaled by steer).
     // Turn alone → tank controls: inside track spins opposite.
-    const insideSpeed = direction !== 0
-      ? outsideSpeed * this.turnRatio
-      : -outsideSpeed * this.turnRatio;
+    const innerScale = direction !== 0
+      ? 1 - turnStrength * (1 - this.turnRatio)
+      : this.turnRatio * turnStrength;
 
-    if (left)
+    const insideSpeed = direction !== 0
+      ? outsideSpeed * innerScale
+      : -outsideSpeed * innerScale;
+
+    if (steerSign < 0)
     {
       return [insideSpeed, outsideSpeed, insideSpeed, outsideSpeed];
     }

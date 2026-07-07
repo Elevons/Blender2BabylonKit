@@ -549,11 +549,26 @@ No `OnTriggerStay` (Havok has no continued trigger event).
 
 The input system clones Unity's Input System: an **InputActionAsset** of
 **Action Maps** ("Player", "UI") containing **Actions** ("Jump", "Move") with
-**Bindings** (keys, gamepad buttons/sticks, and 1D-axis / 2D-vector
+**Bindings** (keys, gamepad buttons/sticks/axes, and 1D-axis / 2D-vector
 composites). Maps enable/disable as a unit. The scene's asset and **Scene
 Default** map are authored in Blender's **Input Actions** panel and exported as
 `scene.inputActions` + `scene.defaultInputMap` in the manifest. The canvas needs
 focus (the user clicks the viewport once).
+
+### Blender gamepad authoring
+
+- **Labeled pickers** — face buttons, stick axes, and sticks use W3C standard-mapping names (not raw indices).
+- **LT / RT** — bind as **Axis** → **LT / L2** (index 4) or **RT / R2** (index 5), not as face buttons. Use **Value** actions for analog throttle.
+- **Control type matters** — for `ReadVector2()` set **Type = Value** and **Control Type = Vector 2**. **Button** control type flattens 2D bindings to a scalar; `ReadVector2()` then breaks (throttle/steer on wrong axes).
+- **Choosing bindings:**
+  - **2D move / drive + steer** → **Vector 2** action: keyboard **2D Vector** (WASD) + gamepad **Stick** (Left Stick). **Do not** rebuild a stick with a 2D Vector of four axis-half rows.
+  - **1D throttle or brake only** → **Axis** action: **1D Axis** composite on stick Y with **+ Half** / **− Half**.
+  - **One digital direction** → **Button** action: direct key or direct axis with half.
+- **Composites** — **+ 1D Axis** (`positive − negative` scalar); **+ 2D Vector** (WASD keys). Default Move = 2D Vector + Left Stick binding.
+- **Axis half** — on composite **axis** rows only (not Stick bindings): **+ Half** / **− Half** so one stick axis can mean forward vs back. Manifest: `"axisHalf": "POSITIVE"` | `"NEGATIVE"` (export uppercase; runtime accepts any case). Stick Y (indices 1, 3) flipped at runtime (`OrientGamepadAxis`) so **+ Half = stick up**.
+- **Disambiguation** — multiple bindings on one action: **most-actuated whole binding wins** (not per-axis merge). Use one device at a time (full stick *or* full WASD).
+- **Vehicle / `CarController`** — `@inputMap("Vehicle")`, action **Main Control** (Value, Vector 2): WASD 2D Vector + Left Stick; `throttle = control.y`, `steer = control.x`.
+- **Capture** — record icon binds keyboard or gamepad (Linux js device; Xbox-style remap).
 
 **Three ways to get a map handle** (all injected before `OnStart`):
 

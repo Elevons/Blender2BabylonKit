@@ -655,6 +655,9 @@ export type InputControlType = "BUTTON" | "AXIS" | "VECTOR2";
 export type InputActionType = "BUTTON" | "VALUE" | "PASSTHROUGH";
 export type InputCompositeType = "1DAXIS" | "2DVECTOR";
 
+/** When binding a gamepad axis inside a composite, read only + or - direction. */
+export type InputAxisHalf = "NONE" | "POSITIVE" | "NEGATIVE";
+
 /**
  * One binding: either a direct control read (a keyboard key, a gamepad button,
  * or a gamepad axis) or a composite combining part bindings into an axis or
@@ -668,6 +671,11 @@ export interface InputBindingData {
   index?: number;
   /** Multiplier applied to an analog value (-1 flips a stick). */
   scale?: number;
+  /**
+   * For gamepad axis bindings in a composite: POSITIVE = only + direction,
+   * NEGATIVE = only - direction (as a positive magnitude). NONE = full -1..1.
+   */
+  axisHalf?: InputAxisHalf;
   /** When set, this binding composes its `parts` instead of reading a control. */
   composite?: InputCompositeType | null;
   /** 1DAXIS parts: negative/positive. 2DVECTOR parts: up/down/left/right. */

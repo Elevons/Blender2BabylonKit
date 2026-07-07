@@ -97,11 +97,11 @@ export const AREA_PAGES = {
   "input-actions.html": {
     title: "Input Actions",
     nodes: [
-      N(1, 40, 80, "Input Actions panel", "Babylon Scene", "Scene-level asset editor in ui/input_panel.py (BJS_PT_input_map): Action Maps > Actions > Bindings, Scene Default map picker, seed/sync operators.", [["Panel", "Babylon Scene"], ["File", "ui/input_panel.py"]]),
-      N(2, 280, 40, "properties.py", "data model", "BJSInputActionMap / Action / Binding PropertyGroups on Scene — the in-Blender representation of the Unity-style asset.", [["Package", "input_actions/"]]),
+      N(1, 40, 80, "Input Actions panel", "Babylon Scene", "Scene-level editor (ui/input_panel.py): maps/actions/bindings, Scene Default, labeled gamepad pickers, Stick vs 1D/2D composites, axis-half on 1D axis parts, key/gamepad capture, .inputactions.json save/load.", [["Panel", "Babylon Scene"], ["File", "ui/input_panel.py"]]),
+      N(2, 280, 40, "properties.py", "data model", "BJSInputBinding: gp_button/gp_axis/gp_stick pickers, axis_half on composite parts, index + gp_control for manifest export.", [["Package", "input_actions/"]]),
       N(3, 280, 150, "defaults.py", "built-in Player", "Seeded on first export when the panel is empty — must stay in sync with engine DefaultAsset.ts.", [["Map", "Move Look Jump …"]]),
-      N(4, 280, 270, "serialize.py", "→ manifest", "serialize_input_asset + defaultInputMap string → scene.inputActions and scene.defaultInputMap in the manifest scene block (called from export/scene.py).", [["Keys", "inputActions · defaultInputMap"]]),
-      N(5, 520, 80, "operators.py", "seed / sync", "Create default asset, sync maps used by @inputMap from script_parse, duplicate/rename maps and actions.", [["Triggers", "panel buttons"]]),
+      N(4, 280, 270, "serialize.py", "→ manifest", "serialize_input_asset: axisHalf POSITIVE/NEGATIVE, gamepad axis 4/5 for LT/RT, stick binding for 2D → scene.inputActions + defaultInputMap.", [["Keys", "inputActions · defaultInputMap"]]),
+      N(5, 520, 80, "operators.py", "seed / sync / capture", "Default asset, sync @inputMap maps, input_capture_key + input_capture_gamepad (Linux js).", [["Triggers", "panel buttons"]]),
       N(6, 520, 220, "script_parse.py", "@inputMap scan", "Regex-reads @inputMap(\"Name\") from behavior .ts — lowercase literal like @exposed. Used to validate refs and seed maps.", [["File", "core/script_parse.py"]]),
       N(7, 760, 150, "InputManager.LoadAsset", "runtime", "Engine loads the asset before behaviors; @inputMap fields and behavior.input injected during ApplyComponents.", [["Diagram", "../engine/input.html"], ["Trace", "trace-input.html"]]),
     ],
@@ -234,8 +234,9 @@ export const TRACES = [
     title: "Input Actions: panel → manifest",
     intro: "How the scene-level Input Actions asset and Scene Default map reach the runtime.",
     steps: [
-      { file: "blender_addon/ui/input_panel.py", symbol: "BJS_PT_input_map", note: "The Input Actions editor in the **Babylon Scene** N-panel. Scene Default picker, maps/actions/bindings editor, load/save .inputactions.json. Draw logic is a reusable mixin." },
-      { file: "blender_addon/input_actions/serialize.py", symbol: "serialize_input_asset", note: "Maps/actions/bindings → scene.inputActions (built-in Player asset when the panel is empty). Lives with its inverse (apply_input_asset) and the friendly-key aliases." },
+      { file: "blender_addon/ui/input_panel.py", symbol: "BJS_PT_input_map", note: "Input Actions in **Babylon Scene**: Scene Default, maps/actions/bindings, labeled gamepad pickers (W3C mapping), Stick vs 1D/2D composites, Axis Half on 1D axis composite parts, key/gamepad capture, load/save .inputactions.json." },
+      { file: "blender_addon/input_actions/gamepad_mapping.py", symbol: "GamepadAxisLabel", note: "W3C labels for gamepad pickers — stick axes 0–3, LT/RT as axis indices 4/5 (runtime maps those to analog triggers)." },
+      { file: "blender_addon/input_actions/serialize.py", symbol: "serialize_input_asset", note: "Maps/actions/bindings → scene.inputActions, including axisHalf on composite axis parts, stick bindings for 2D, gamepad axis 4/5 for triggers. Built-in Player when panel empty." },
       { file: "blender_addon/export/scene.py", symbol: "serialize_scene", note: "Writes scene.defaultInputMap alongside inputActions — the map scripts without @inputMap receive on behavior.input." },
       { file: "blender_addon/export/validate.py", symbol: "_check_input_map", note: "Duplicate map/action names, actions without bindings, @inputMap refs without a matching map, and a Scene Default that doesn't exist." },
       { file: "blender_addon/core/script_parse.py", symbol: "parse_input_maps", note: "Regex-scans behavior sources for @inputMap(\"Name\") so Sync / validate can create and check map references." },

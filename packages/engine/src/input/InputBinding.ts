@@ -1,5 +1,5 @@
-import type { InputBindingData } from "../core/types";
-import { NormalizeKey } from "./Devices";
+import type { InputAxisHalf, InputBindingData } from "../core/types";
+import { GAMEPAD_DEADZONE, GAMEPAD_TRIGGER_AXIS_LEFT, GAMEPAD_TRIGGER_AXIS_RIGHT, NormalizeKey, OrientGamepadAxis } from "./Devices";
 import type { DeviceState } from "./Devices";
 
 /**
@@ -11,8 +11,10 @@ import type { DeviceState } from "./Devices";
  * Raw tokens (browser-native, no Unity control paths):
  *   KEYBOARD: control = KeyboardEvent.key value ("w", "space", "shift")
  *   GAMEPAD:  control = "button" | "axis" | "stick", index = standard-mapping
- *             index (stick 0 = left, 1 = right). Sticks report Unity-style
- *             up = +1 (the browser's raw Y is flipped here).
+ *             index (stick 0 = left, 1 = right; axis 4/5 = LT/RT as 0..1).
+ *             axisHalf on composite axis parts: POSITIVE / NEGATIVE read one
+ *             direction only (Unity-style stick up vs down on the same axis).
+ *             Sticks report Unity-style up = +1 (the browser's raw Y is flipped here).
  */
 
 export interface Vector2Value {
@@ -33,6 +35,45 @@ export function ValueMagnitude(value: InputValue): number
   return Math.hypot(value.x, value.y);
 }
 
+/** Apply directional filtering for composite axis parts (Unity 1D/2D axis style). */
+function ApplyAxisHalf(value: number, axisHalf: InputAxisHalf | string | undefined): number
+{
+  const half = axisHalf === undefined ? "NONE" : axisHalf.toUpperCase();
+
+  if (half !== "POSITIVE" && half !== "NEGATIVE")
+  {
+    return Math.abs(value) > GAMEPAD_DEADZONE ? value : 0;
+  }
+
+  if (half === "POSITIVE")
+  {
+    return value > GAMEPAD_DEADZONE ? value : 0;
+  }
+
+  return value < -GAMEPAD_DEADZONE ? -value : 0;
+}
+
+/** Read a gamepad stick axis with optional composite half-filtering. */
+function ReadGamepadAxis(
+  devices: DeviceState,
+  index: number,
+  axisHalf: InputAxisHalf | string | undefined,
+  scale: number
+): number
+{
+  if (index === GAMEPAD_TRIGGER_AXIS_LEFT)
+  {
+    return devices.gamepad.Trigger(0) * scale;
+  }
+  if (index === GAMEPAD_TRIGGER_AXIS_RIGHT)
+  {
+    return devices.gamepad.Trigger(1) * scale;
+  }
+
+  const raw = OrientGamepadAxis(index, devices.gamepad.AxisRaw(index));
+  return ApplyAxisHalf(raw, axisHalf) * scale;
+}
+
 /** Read a direct (non-composite) binding's scalar value from the devices. */
 function ResolveDirectScalar(binding: InputBindingData, devices: DeviceState): number
 {
@@ -49,9 +90,9 @@ function ResolveDirectScalar(binding: InputBindingData, devices: DeviceState): n
     const index = binding.index ?? 0;
     if (binding.control === "axis")
     {
-      return devices.gamepad.Axis(index) * scale;
+      return ReadGamepadAxis(devices, index, binding.axisHalf, scale);
     }
-    // Default gamepad control is a button.
+    // Default gamepad control is a button (legacy LT/RT as buttons 6/7 still work).
     return devices.gamepad.Button(index) * scale;
   }
 
@@ -65,7 +106,7 @@ function ResolveStick(binding: InputBindingData, devices: DeviceState): Vector2V
   const scale = binding.scale ?? 1;
   return {
     x: devices.gamepad.Axis(stickIndex * 2) * scale,
-    y: -devices.gamepad.Axis(stickIndex * 2 + 1) * scale,
+    y: devices.gamepad.Axis(stickIndex * 2 + 1) * scale,
   };
 }
 

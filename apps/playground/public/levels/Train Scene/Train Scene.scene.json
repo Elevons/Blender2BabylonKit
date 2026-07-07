@@ -126,7 +126,7 @@
                 },
                 {
                   "device": "GAMEPAD",
-                  "control": "button",
+                  "control": "stick",
                   "index": 0
                 }
               ]
@@ -142,7 +142,7 @@
                 },
                 {
                   "device": "GAMEPAD",
-                  "control": "button",
+                  "control": "axis",
                   "index": 2
                 }
               ]
@@ -174,7 +174,7 @@
                 },
                 {
                   "device": "GAMEPAD",
-                  "control": "button",
+                  "control": "stick",
                   "index": 1
                 }
               ]
@@ -187,6 +187,11 @@
                 {
                   "device": "KEYBOARD",
                   "control": "w"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
                 }
               ]
             },
@@ -198,6 +203,11 @@
                 {
                   "device": "KEYBOARD",
                   "control": "s"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
                 }
               ]
             },
@@ -231,6 +241,48 @@
                 {
                   "device": "KEYBOARD",
                   "control": "r"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Vehicle",
+          "actions": [
+            {
+              "name": "Main Control",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "w",
+                      "axisHalf": "positive"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "s",
+                      "axisHalf": "negative"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "a",
+                      "axisHalf": "negative"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "d",
+                      "axisHalf": "positive"
+                    }
+                  }
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
                 }
               ]
             }
@@ -467,6 +519,49 @@
       ]
     },
     {
+      "id": "29216a0a5f804bd5a05f87949b22caf1",
+      "name": "Ramp",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "STATIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
+        }
+      ]
+    },
+    {
       "id": "f4af1a53adc841d399dfe48ba660f955",
       "name": "RR.Wheel.002",
       "parent": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
@@ -475,7 +570,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -543,11 +638,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -662,11 +757,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -782,7 +877,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -851,7 +946,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -920,7 +1015,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -988,11 +1083,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1107,11 +1202,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1226,11 +1321,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1346,7 +1441,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1414,11 +1509,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1508,18 +1603,18 @@
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": -5.0,
-              "max": 5.0,
-              "stiffness": 10000.0,
-              "damping": 10000.0
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": -5.0,
-              "max": 5.0,
-              "stiffness": 10000.0,
-              "damping": 10000.0
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
             }
           ]
         }
@@ -1534,7 +1629,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1603,7 +1698,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1672,7 +1767,7 @@
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
           "mass": 5.0,
-          "friction": 3.0,
+          "friction": 1.0,
           "restitution": 0.0,
           "linearDamping": 0.0,
           "angularDamping": 0.0,
@@ -1740,11 +1835,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1859,11 +1954,11 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 500.0,
+          "mass": 200.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
-          "angularDamping": 10.0,
+          "angularDamping": 0.0,
           "startAsleep": false,
           "centerOfMassAutoFit": true
         },
@@ -1953,18 +2048,18 @@
             {
               "axis": "ANGULAR_Y",
               "mode": "locked",
-              "min": -5.0,
-              "max": 5.0,
-              "stiffness": 10000.0,
-              "damping": 10000.0
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
             },
             {
               "axis": "ANGULAR_Z",
               "mode": "locked",
-              "min": -5.0,
-              "max": 5.0,
-              "stiffness": 10000.0,
-              "damping": 10000.0
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
             }
           ]
         }
@@ -2010,8 +2105,8 @@
             "frontRightWheel": "a4d8494367754a15b4fe2aaf4b7fdaa8",
             "rearLeftWheel": "da55807f3f654ff08426862b1e8a5cd3",
             "rearRightWheel": "f4af1a53adc841d399dfe48ba660f955",
-            "speed": 2000.0,
-            "force": 50000.0,
+            "speed": 1000.0,
+            "force": 80000.0,
             "body": "bc2042e80fcf404e988e0c9160a85b94",
             "holdSeconds": 0.5,
             "frontLeftInner": "7dd53a6e90a641e3991c48255b3209ae",
@@ -2020,7 +2115,9 @@
             "rearRightInner": "0806f0e60b8f4c26a3fd0902e6b7e203",
             "swapMovement": false,
             "swapSteering": false,
-            "turnRatio": 0.5
+            "turnRatio": 0.5,
+            "steerZoneWidth": 0.6000000238418579,
+            "steerZonePriority": 0.8999999761581421
           }
         },
         {
@@ -2028,15 +2125,15 @@
           "bodyType": "DYNAMIC",
           "mass": 1000.0,
           "friction": 0.5,
-          "restitution": 0.0,
+          "restitution": 0.20000000298023224,
           "linearDamping": 0.0,
           "angularDamping": 0.5,
           "startAsleep": false,
           "centerOfMassAutoFit": false,
           "centerOfMass": [
             0.0,
-            -20.579999923706055,
-            27.64057159423828
+            -6.0,
+            0.8205709457397461
           ]
         }
       ]
@@ -2283,7 +2380,7 @@
             "rearLeftInner": null,
             "rearRightInner": null,
             "speed": 1000.0,
-            "force": 4000.0,
+            "force": 8000.0,
             "holdSeconds": 0.5,
             "turnRatio": 0.5,
             "body": "98cdbaac898a4428951c085bdb580291",
@@ -2420,7 +2517,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -2658,7 +2755,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -2896,7 +2993,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -3134,7 +3231,7 @@
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -3342,8 +3439,8 @@
       ]
     },
     {
-      "id": "a3d773a865da451c9955477a7bf40191",
-      "name": "Small Rover.004",
+      "id": "61b251440f47484eb10ea93f890bf2cb",
+      "name": "Small Rover.006",
       "parent": null,
       "components": [
         {
@@ -3478,19 +3575,19 @@
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
           "vars": {
-            "frontLeftWheel": "5ba48d0c2c784c7d93a482971c210da4",
-            "frontRightWheel": "7a469b672ec345f1a763d2ff69134b66",
-            "rearLeftWheel": "1d75e5fe6da64bd8a2b7063f72a527fe",
-            "rearRightWheel": "db6cb4486ffa4e919d18b29591a7a8f5",
+            "frontLeftWheel": "117895fbd3114a6388ef28dec0cbdc1b",
+            "frontRightWheel": "3e812415ab944a10808a1b50a8b8eb2d",
+            "rearLeftWheel": "b52f09fbfd1c4ed8a2935869c59e27f9",
+            "rearRightWheel": "ac541a24b5104eaca69429c093728430",
             "frontLeftInner": null,
             "frontRightInner": null,
             "rearLeftInner": null,
             "rearRightInner": null,
             "speed": 1000.0,
-            "force": 4000.0,
+            "force": 8000.0,
             "holdSeconds": 0.5,
             "turnRatio": 0.5,
-            "body": "a3d773a865da451c9955477a7bf40191",
+            "body": "61b251440f47484eb10ea93f890bf2cb",
             "swapMovement": false,
             "swapSteering": false
           }
@@ -3498,9 +3595,9 @@
       ]
     },
     {
-      "id": "c74cadf872da4af7b462bf0bd62e3382",
+      "id": "ac541a24b5104eaca69429c093728430",
       "name": "RR.Wheel.004",
-      "parent": "b6ec2f9c971b4fd5a8030d8fff15eda5",
+      "parent": "f237f5fe2e79491888f4a30274ac7dc3",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -3516,7 +3613,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "b6ec2f9c971b4fd5a8030d8fff15eda5",
+          "target": "f237f5fe2e79491888f4a30274ac7dc3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -3617,14 +3714,14 @@
       ]
     },
     {
-      "id": "b6ec2f9c971b4fd5a8030d8fff15eda5",
+      "id": "f237f5fe2e79491888f4a30274ac7dc3",
       "name": "RR.Arm.004",
-      "parent": "a3d773a865da451c9955477a7bf40191",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -3661,7 +3758,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "a3d773a865da451c9955477a7bf40191",
+          "target": "61b251440f47484eb10ea93f890bf2cb",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -3736,9 +3833,9 @@
       ]
     },
     {
-      "id": "94d8a4d1a1424d1686b1a7819ff5e84a",
+      "id": "b52f09fbfd1c4ed8a2935869c59e27f9",
       "name": "RL.Wheel.010",
-      "parent": "e66b5cb8500b4ccc9992c7d7b7850dec",
+      "parent": "d6ec683bf91947b1a0bc1d360d586dc5",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -3754,7 +3851,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "e66b5cb8500b4ccc9992c7d7b7850dec",
+          "target": "d6ec683bf91947b1a0bc1d360d586dc5",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -3855,14 +3952,14 @@
       ]
     },
     {
-      "id": "e66b5cb8500b4ccc9992c7d7b7850dec",
+      "id": "d6ec683bf91947b1a0bc1d360d586dc5",
       "name": "RL.Arm.004",
-      "parent": "a3d773a865da451c9955477a7bf40191",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -3899,7 +3996,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "a3d773a865da451c9955477a7bf40191",
+          "target": "61b251440f47484eb10ea93f890bf2cb",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -3974,9 +4071,9 @@
       ]
     },
     {
-      "id": "35e48f9bb665412688b9823aa79de5e6",
+      "id": "3e812415ab944a10808a1b50a8b8eb2d",
       "name": "FR.Wheel.004",
-      "parent": "f0d7ab60c92e4e7ca144288f5f9512f2",
+      "parent": "617710f907ac43cb9b70eca9eac34ab5",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -3992,7 +4089,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "f0d7ab60c92e4e7ca144288f5f9512f2",
+          "target": "617710f907ac43cb9b70eca9eac34ab5",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4093,14 +4190,14 @@
       ]
     },
     {
-      "id": "f0d7ab60c92e4e7ca144288f5f9512f2",
+      "id": "617710f907ac43cb9b70eca9eac34ab5",
       "name": "FR.Arm.004",
-      "parent": "a3d773a865da451c9955477a7bf40191",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -4137,7 +4234,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "a3d773a865da451c9955477a7bf40191",
+          "target": "61b251440f47484eb10ea93f890bf2cb",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4212,9 +4309,9 @@
       ]
     },
     {
-      "id": "39d066466fce47bf8abbee7132648eb9",
+      "id": "117895fbd3114a6388ef28dec0cbdc1b",
       "name": "FL.Wheel.010",
-      "parent": "f7f22565e81e4a96987dfe4cc959e526",
+      "parent": "21291b700a284290b51f2c558c7b1fa0",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4256,7 +4353,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "f7f22565e81e4a96987dfe4cc959e526",
+          "target": "21291b700a284290b51f2c558c7b1fa0",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4331,14 +4428,14 @@
       ]
     },
     {
-      "id": "f7f22565e81e4a96987dfe4cc959e526",
+      "id": "21291b700a284290b51f2c558c7b1fa0",
       "name": "Fl.Arm.004",
-      "parent": "a3d773a865da451c9955477a7bf40191",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -4375,7 +4472,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "a3d773a865da451c9955477a7bf40191",
+          "target": "61b251440f47484eb10ea93f890bf2cb",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4450,90 +4547,15 @@
       ]
     },
     {
-      "id": "337b19b9eacd45e181faa229969d8dc9",
+      "id": "7e82f7fdaccc4564a5bca2bef88388c0",
       "name": "Diaper.002",
-      "parent": "a3d773a865da451c9955477a7bf40191",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
       "components": []
     },
     {
-      "id": "7c5aabd63a8e4702a2fa8d95f115b985",
-      "name": "Bubbles.012",
-      "parent": "a3d773a865da451c9955477a7bf40191",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "706726316ab74bf5bf33fdc0df7f2bfd",
-      "name": "Bubbles.013",
-      "parent": "a3d773a865da451c9955477a7bf40191",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "b729adbef7414b17a2d7da76cd01d324",
-      "name": "Bubbles.014",
-      "parent": "a3d773a865da451c9955477a7bf40191",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "95a27a67d3dd4a008b27c80096f8af90",
-      "name": "Bubbles.015",
-      "parent": "a3d773a865da451c9955477a7bf40191",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "70786b77813d49c1929206471a829d33",
-      "name": "Bubbles.016",
-      "parent": "a3d773a865da451c9955477a7bf40191",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "ca3ec8a658674a63b870aa238e857bee",
+      "id": "fb9412e6f7aa4b1397cf2a5e7164f8eb",
       "name": "Bubbles.017",
-      "parent": "a3d773a865da451c9955477a7bf40191",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
       "components": [
         {
           "type": "PARTICLE",
@@ -4546,8 +4568,83 @@
       ]
     },
     {
-      "id": "649e42af43164820a34ddce1e14e0780",
-      "name": "Small Rover.001",
+      "id": "1a7d4e1df82f42a6aa8c83c2324a251f",
+      "name": "Bubbles.016",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "5d0ca3553f6241fba72bcf553c4ba5b0",
+      "name": "Bubbles.015",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "cfbd2de8e4e34694802f80d54f6e75ce",
+      "name": "Bubbles.014",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "01fb2a347b7e4d5dbcd53748654d0733",
+      "name": "Bubbles.013",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "c758504b00c9487398db2b07f93f26cc",
+      "name": "Bubbles.012",
+      "parent": "61b251440f47484eb10ea93f890bf2cb",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "c2faa517435a449089a8053438873fce",
+      "name": "Small Rover.007",
       "parent": null,
       "components": [
         {
@@ -4605,7 +4702,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "a3d773a865da451c9955477a7bf40191",
+          "target": "61b251440f47484eb10ea93f890bf2cb",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4682,19 +4779,19 @@
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
           "vars": {
-            "frontLeftWheel": "5ba48d0c2c784c7d93a482971c210da4",
-            "frontRightWheel": "7a469b672ec345f1a763d2ff69134b66",
-            "rearLeftWheel": "1d75e5fe6da64bd8a2b7063f72a527fe",
-            "rearRightWheel": "db6cb4486ffa4e919d18b29591a7a8f5",
+            "frontLeftWheel": "d4ea303b97c7463a8a7e395ac8b91680",
+            "frontRightWheel": "ec6b6a54902549ccbf902153614d84d2",
+            "rearLeftWheel": "753d21e18b524683950b0155d68cd8d8",
+            "rearRightWheel": "217e6ae6039a490ab3f3616d4233b5de",
             "frontLeftInner": null,
             "frontRightInner": null,
             "rearLeftInner": null,
             "rearRightInner": null,
             "speed": 1000.0,
-            "force": 4000.0,
+            "force": 8000.0,
             "holdSeconds": 0.5,
             "turnRatio": 0.5,
-            "body": "649e42af43164820a34ddce1e14e0780",
+            "body": "c2faa517435a449089a8053438873fce",
             "swapMovement": false,
             "swapSteering": false
           }
@@ -4702,9 +4799,9 @@
       ]
     },
     {
-      "id": "4d26616a63bb46b0972555497458a0da",
+      "id": "217e6ae6039a490ab3f3616d4233b5de",
       "name": "RR.Wheel.005",
-      "parent": "481cbe1e0bff4617b3706a81578b26e0",
+      "parent": "ca865a963a5c44d7821ff36a6480feb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4720,7 +4817,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "481cbe1e0bff4617b3706a81578b26e0",
+          "target": "ca865a963a5c44d7821ff36a6480feb8",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4821,14 +4918,14 @@
       ]
     },
     {
-      "id": "481cbe1e0bff4617b3706a81578b26e0",
+      "id": "ca865a963a5c44d7821ff36a6480feb8",
       "name": "RR.Arm.005",
-      "parent": "649e42af43164820a34ddce1e14e0780",
+      "parent": "c2faa517435a449089a8053438873fce",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -4865,7 +4962,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "649e42af43164820a34ddce1e14e0780",
+          "target": "c2faa517435a449089a8053438873fce",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4940,9 +5037,9 @@
       ]
     },
     {
-      "id": "3a599439cbea400899c733f59ed155ed",
+      "id": "753d21e18b524683950b0155d68cd8d8",
       "name": "RL.Wheel.011",
-      "parent": "d74872bce36f44738b917ec13284af86",
+      "parent": "a488c6dd3a7049b1bd02780bde79b983",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4958,7 +5055,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "d74872bce36f44738b917ec13284af86",
+          "target": "a488c6dd3a7049b1bd02780bde79b983",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5059,14 +5156,14 @@
       ]
     },
     {
-      "id": "d74872bce36f44738b917ec13284af86",
+      "id": "a488c6dd3a7049b1bd02780bde79b983",
       "name": "RL.Arm.005",
-      "parent": "649e42af43164820a34ddce1e14e0780",
+      "parent": "c2faa517435a449089a8053438873fce",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -5103,7 +5200,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "649e42af43164820a34ddce1e14e0780",
+          "target": "c2faa517435a449089a8053438873fce",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5178,9 +5275,9 @@
       ]
     },
     {
-      "id": "ba762cd55f0a41f6a39c2de7566cb0b8",
+      "id": "ec6b6a54902549ccbf902153614d84d2",
       "name": "FR.Wheel.005",
-      "parent": "7720d72a9a184a3ea1538054ba00a9be",
+      "parent": "b73d48c039004834a64c1bbbba22df62",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5196,7 +5293,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "7720d72a9a184a3ea1538054ba00a9be",
+          "target": "b73d48c039004834a64c1bbbba22df62",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5297,14 +5394,14 @@
       ]
     },
     {
-      "id": "7720d72a9a184a3ea1538054ba00a9be",
+      "id": "b73d48c039004834a64c1bbbba22df62",
       "name": "FR.Arm.005",
-      "parent": "649e42af43164820a34ddce1e14e0780",
+      "parent": "c2faa517435a449089a8053438873fce",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -5341,7 +5438,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "649e42af43164820a34ddce1e14e0780",
+          "target": "c2faa517435a449089a8053438873fce",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5416,9 +5513,9 @@
       ]
     },
     {
-      "id": "37d2d8698d5e46649aad40056a24c178",
+      "id": "d4ea303b97c7463a8a7e395ac8b91680",
       "name": "FL.Wheel.011",
-      "parent": "1c01d5e0f8494988ad7f755551495a01",
+      "parent": "225a8a20e9174eb4a3a0b0ee19852c86",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5460,7 +5557,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "1c01d5e0f8494988ad7f755551495a01",
+          "target": "225a8a20e9174eb4a3a0b0ee19852c86",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5535,14 +5632,14 @@
       ]
     },
     {
-      "id": "1c01d5e0f8494988ad7f755551495a01",
+      "id": "225a8a20e9174eb4a3a0b0ee19852c86",
       "name": "Fl.Arm.005",
-      "parent": "649e42af43164820a34ddce1e14e0780",
+      "parent": "c2faa517435a449089a8053438873fce",
       "components": [
         {
           "type": "RIGIDBODY",
           "bodyType": "DYNAMIC",
-          "mass": 10.0,
+          "mass": 100.0,
           "friction": 0.5,
           "restitution": 0.0,
           "linearDamping": 0.0,
@@ -5579,7 +5676,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "649e42af43164820a34ddce1e14e0780",
+          "target": "c2faa517435a449089a8053438873fce",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5654,90 +5751,90 @@
       ]
     },
     {
-      "id": "fa87d176df044effbfa3d4798ec9ee35",
+      "id": "ff8447b833534bdc90442a41e4b645a9",
       "name": "Diaper.003",
-      "parent": "649e42af43164820a34ddce1e14e0780",
+      "parent": "c2faa517435a449089a8053438873fce",
       "components": []
     },
     {
-      "id": "e9ca94ba3f4745ab9fc5b84f529d0937",
-      "name": "Bubbles.018",
-      "parent": "649e42af43164820a34ddce1e14e0780",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "6cc598d0829741bd822aab9253e21b6c",
-      "name": "Bubbles.019",
-      "parent": "649e42af43164820a34ddce1e14e0780",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "6fac3c77d6c14489af64670b6c3426b8",
-      "name": "Bubbles.020",
-      "parent": "649e42af43164820a34ddce1e14e0780",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "4f8f1681e39f48da9484183439189932",
-      "name": "Bubbles.021",
-      "parent": "649e42af43164820a34ddce1e14e0780",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "6b6062c3fb6c482c8a09bf9c9597a415",
-      "name": "Bubbles.022",
-      "parent": "649e42af43164820a34ddce1e14e0780",
-      "components": [
-        {
-          "type": "PARTICLE",
-          "file": "particles/bubbleparticles.json",
-          "gpu": false,
-          "autoStart": true,
-          "attachToEntity": true,
-          "capacity": 0
-        }
-      ]
-    },
-    {
-      "id": "4b05c44099cc456cb03a69bf439513e4",
+      "id": "323d352825dc4cd6998ca8487a986d6a",
       "name": "Bubbles.023",
-      "parent": "649e42af43164820a34ddce1e14e0780",
+      "parent": "c2faa517435a449089a8053438873fce",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "9c63e3e5ec414cb9a55b9f2efc72ed64",
+      "name": "Bubbles.022",
+      "parent": "c2faa517435a449089a8053438873fce",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "48840d178a404b528790a7c38f515470",
+      "name": "Bubbles.021",
+      "parent": "c2faa517435a449089a8053438873fce",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "828bce0100f144f38f9b63171e4e832f",
+      "name": "Bubbles.020",
+      "parent": "c2faa517435a449089a8053438873fce",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "6cff205005194fa2bd3970b562da9bdd",
+      "name": "Bubbles.019",
+      "parent": "c2faa517435a449089a8053438873fce",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "ece7344a395d40d8829afce3e0ac6961",
+      "name": "Bubbles.018",
+      "parent": "c2faa517435a449089a8053438873fce",
       "components": [
         {
           "type": "PARTICLE",

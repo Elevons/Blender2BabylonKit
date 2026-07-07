@@ -18,6 +18,10 @@ from .defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME
 from .serialize import (
     COMPOSITE_PART_ORDER, apply_input_asset, serialize_input_asset,
 )
+from .properties import DefaultAxisHalfForPart
+from .gamepad_capture import (
+    BeginGamepadCapture, CaptureDeviceDescription, EndGamepadCapture, PollGamepadCapture,
+)
 
 _COMPOSITES = set(COMPOSITE_PART_ORDER)
 
@@ -124,6 +128,7 @@ class BJS_OT_input_binding_edit(Operator):
                 for part in COMPOSITE_PART_ORDER[self.kind]:
                     row = a.bindings.add()
                     row.part = part.upper()
+                    row.axis_half = DefaultAxisHalfForPart(part.upper())
             else:
                 a.bindings.add()
         elif self.action == "remove" and 0 <= self.index < len(a.bindings):
@@ -166,8 +171,7 @@ _BLENDER_KEY_TO_JS.update({f"F{n}": f"f{n}" for n in range(1, 13)})
 
 class BJS_OT_input_capture_key(Operator):
     """Modal key capture: click, press a key, and it becomes the binding's
-    key (Esc or right-click cancels). Keyboard only — browsers don't let
-    Blender see your gamepad, so pad controls stay typed by index."""
+    key (Esc or right-click cancels)."""
     bl_idname = "bjs.input_capture_key"
     bl_label = "Capture Key"
     bl_options = {'REGISTER', 'UNDO'}
@@ -205,6 +209,68 @@ class BJS_OT_input_capture_key(Operator):
 
         context.workspace.status_text_set(None)
         return {'FINISHED'}
+
+
+class BJS_OT_input_capture_gamepad(Operator):
+    """Modal gamepad capture: press a button or move a stick axis to bind the
+    W3C-standard control the runtime expects (Esc / right-click cancels).
+
+    Linux only for now (/dev/input/js*). Xbox-style layouts are remapped;
+    use the labeled dropdown for triggers or non-Xbox pads."""
+    bl_idname = "bjs.input_capture_gamepad"
+    bl_label = "Capture Gamepad"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    binding_index: IntProperty()
+    _timer = None
+
+    def invoke(self, context, event):
+        if not BeginGamepadCapture():
+            self.report({'WARNING'}, "No gamepad found — plug one in or pick from the list")
+            return {'CANCELLED'}
+
+        self._timer = context.window_manager.event_timer_add(0.05, window=context.window)
+        context.window_manager.modal_handler_add(self)
+        device = CaptureDeviceDescription() or "gamepad"
+        context.workspace.status_text_set(
+            f"Press a gamepad button or move a stick on {device}…  (Esc / right-click cancels)"
+        )
+        return {'RUNNING_MODAL'}
+
+    def modal(self, context, event):
+        if event.type in {'ESC', 'RIGHTMOUSE'}:
+            return self._finish(context, cancelled=True)
+
+        if event.type != 'TIMER':
+            return {'RUNNING_MODAL'}
+
+        captured = PollGamepadCapture()
+        if captured is None:
+            return {'RUNNING_MODAL'}
+
+        action = _active_input_action(context.scene)
+        if action is None or not (0 <= self.binding_index < len(action.bindings)):
+            return self._finish(context, cancelled=True)
+
+        row = action.bindings[self.binding_index]
+        row.device = 'GAMEPAD'
+        row.gp_control = captured.control
+        row.index = captured.index
+        from .properties import DefaultAxisHalfForPart, MigrateGamepadTriggerBinding, SyncGpEnumsFromIndex
+        if row.part != 'NONE' and captured.control == 'AXIS':
+            row.axis_half = DefaultAxisHalfForPart(row.part)
+        MigrateGamepadTriggerBinding(row)
+        SyncGpEnumsFromIndex(row)
+        self.report({'INFO'}, f"Bound {captured.label}")
+        return self._finish(context, cancelled=False)
+
+    def _finish(self, context, cancelled):
+        if self._timer is not None:
+            context.window_manager.event_timer_remove(self._timer)
+            self._timer = None
+        EndGamepadCapture()
+        context.workspace.status_text_set(None)
+        return {'CANCELLED' if cancelled else 'FINISHED'}
 
 
 class BJS_OT_input_save_map(Operator):
@@ -320,6 +386,7 @@ classes = (
     BJS_OT_input_action_edit,
     BJS_OT_input_binding_edit,
     BJS_OT_input_capture_key,
+    BJS_OT_input_capture_gamepad,
     BJS_OT_input_save_map,
     BJS_OT_input_load_map,
     BJS_OT_input_load_defaults,

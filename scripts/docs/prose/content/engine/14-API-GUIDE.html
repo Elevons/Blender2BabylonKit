@@ -163,9 +163,14 @@ export default class Patrol extends Behavior
 <p>Defaults in source must be <strong>single-line literals</strong> so Blender’s parser can read them. After changing fields, press <strong>Sync</strong> on the SCRIPT component.</p>
 
 <h2 id="input">Input (@inputMap + polling)</h2>
-<p>See <a href="12-INPUT.html">12 — Input</a> for authoring. In behaviors:</p>
+<p>See <a href="12-INPUT.html">12 — Input</a> for authoring (stick vs 1D/2D composites, control type, gamepad labels, LT/RT as axis 4/5, <code>axisHalf</code>, disambiguation). In behaviors:</p>
 <pre><code class="language-typescript">@inputMap("Player") player!: InputActionMap;  // named map
-@inputMap() ui!: InputActionMap;              // scene default map</code></pre>
+@inputMap("Vehicle") vehicle!: InputActionMap; // e.g. CarController
+
+// Vector 2 action — Type: Value, Control Type: Vector 2 in Blender
+const control = this.vehicle.FindAction("Main Control")?.ReadVector2() ?? { x: 0, y: 0 };
+const throttle = control.y;
+const steer = control.x;</code></pre>
 <h3>InputActionMap</h3>
 <table><thead><tr><th>Method / property</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>FindAction(name)</code></td><td>Get action by name (warns if missing)</td></tr>

@@ -19,6 +19,7 @@ KEY_ALIASES = {
 _ACTION_TYPES = {'BUTTON', 'VALUE', 'PASSTHROUGH'}
 _CONTROL_TYPES = {'BUTTON', 'AXIS', 'VECTOR2'}
 _GP_CONTROLS = {'BUTTON', 'AXIS', 'STICK'}
+_AXIS_HALVES = {'NONE', 'POSITIVE', 'NEGATIVE'}
 _COMPOSITES = {'1DAXIS', '2DVECTOR'}
 COMPOSITE_PART_ORDER = {
     '1DAXIS': ("negative", "positive"),
@@ -32,12 +33,16 @@ def _serialize_binding(row):
     """One direct binding row -> manifest data (keyboard key or gamepad control)."""
     if row.device == 'KEYBOARD':
         key = row.key.strip().lower()
+        if not key:
+            return None
         data = {"device": "KEYBOARD", "control": KEY_ALIASES.get(key, key)}
     else:
         data = {"device": "GAMEPAD", "control": row.gp_control.lower(),
                 "index": row.index}
     if row.scale != 1.0:
         data["scale"] = row.scale
+    if row.axis_half != 'NONE':
+        data["axisHalf"] = row.axis_half
     return data
 
 
@@ -53,10 +58,14 @@ def _serialize_bindings(action):
             bindings.append(open_composite)
         elif row.part != 'NONE':
             if open_composite is not None:
-                open_composite["parts"][row.part.lower()] = _serialize_binding(row)
+                part_data = _serialize_binding(row)
+                if part_data is not None:
+                    open_composite["parts"][row.part.lower()] = part_data
         else:
             open_composite = None
-            bindings.append(_serialize_binding(row))
+            part_data = _serialize_binding(row)
+            if part_data is not None:
+                bindings.append(part_data)
     return bindings
 
 
@@ -97,10 +106,21 @@ def _apply_binding_fields(row, data):
         control = str(data.get("control", "button")).upper()
         row.gp_control = control if control in _GP_CONTROLS else 'BUTTON'
         row.index = max(0, int(data.get("index", 0) or 0))
+        from .properties import MigrateGamepadTriggerBinding, SyncGpEnumsFromIndex
+        MigrateGamepadTriggerBinding(row)
+        SyncGpEnumsFromIndex(row)
     try:
         row.scale = float(data.get("scale", 1.0))
     except (TypeError, ValueError):
         row.scale = 1.0
+
+    axis_half = str(data.get("axisHalf", "none")).upper()
+    row.axis_half = axis_half if axis_half in _AXIS_HALVES else 'NONE'
+    if (row.axis_half == 'NONE' and row.part != 'NONE'
+            and row.device == 'GAMEPAD' and row.gp_control == 'AXIS'
+            and "axisHalf" not in data):
+        from .properties import DefaultAxisHalfForPart
+        row.axis_half = DefaultAxisHalfForPart(row.part)
 
 
 def apply_input_asset(scene, data):

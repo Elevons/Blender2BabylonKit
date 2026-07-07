@@ -41,30 +41,50 @@ def _override_source_component(obj, comp, comp_index):
     return matches[0] if matches else None
 
 
+def _merge_override_fields(source_comp, script_path):
+    """Field list for a library-override SCRIPT sync.
+
+    Names already on the prefab source keep their library values and types.
+    Names only in the script are appended so new @exposed vars show up on the
+    level before the prefab is re-synced. After the library reloads, the next
+    override sync clears the temporary local rows and reconciles the linked ones.
+    """
+    source_fields = build_fields_from_component(source_comp)
+    source_names = {field["name"] for field in source_fields}
+    script_fields = script_parse.parse_exposed(bpy.path.abspath(script_path))
+    script_only = [
+        field for field in script_fields
+        if field["name"] not in source_names
+    ]
+    return source_fields + script_only, len(script_only)
+
+
+def _clear_override_local_rows(comp):
+    """Drop locally-inserted exposed-var rows on an override.
+
+    Linked base rows survive; a later in-place reconcile never re-adds names that
+    already exist as linked rows (the old clear()+rebuild duplication trap)."""
+    try:
+        comp.exposed_vars.clear()
+    except TypeError:
+        pass
+
+
 def _sync_component_vars(obj, comp, comp_index):
     """Sync a SCRIPT component's exposed vars. On a library override we reconcile
     against the prefab source object (never modifying it — we only read its
-    structure); otherwise we parse the .ts. Returns (count, from_source)."""
+    structure), plus any @exposed names not yet on the source from the script
+    file. Otherwise we parse the .ts. Returns (count, from_source, script_only)."""
     source_comp = _override_source_component(obj, comp, comp_index)
     if source_comp is not None:
-        fields = build_fields_from_component(source_comp)
-        # An override forbids remove() on its exposed-var rows, so corruption
-        # strays a plain resync leaves behind can't be deleted one by one.
-        # clear() is allowed and drops only the locally-inserted rows while
-        # keeping the linked base rows (which mirror the source) — so clearing
-        # the strays, then reconciling the survivors in place, makes the instance
-        # match the prefab. No rows are re-added (the linked ones already match by
-        # name), so this avoids the duplication a clear()+rebuild would cause.
-        try:
-            comp.exposed_vars.clear()
-        except TypeError:
-            pass
+        fields, script_only = _merge_override_fields(source_comp, comp.script_path)
+        _clear_override_local_rows(comp)
         sync_exposed_vars(comp, fields)
-        return len(fields), True
+        return len(fields), True, script_only
 
     fields = script_parse.parse_exposed(bpy.path.abspath(comp.script_path))
     sync_exposed_vars(comp, fields)
-    return len(fields), False
+    return len(fields), False, 0
 
 
 class BJS_OT_pick_script(Operator):
@@ -109,7 +129,10 @@ class BJS_OT_pick_script(Operator):
 
 
 class BJS_OT_sync_vars(Operator):
-    """Re-read @exposed variables from the script file (after editing it)."""
+    """Re-read @exposed variables after editing the script.
+
+    On a library-override prefab instance, reconciles linked source rows and
+    adds any names that exist in the script but not yet on the prefab source."""
     bl_idname = "bjs.sync_vars"
     bl_label = "Sync Variables"
     bl_options = {'REGISTER', 'UNDO'}
@@ -124,9 +147,18 @@ class BJS_OT_sync_vars(Operator):
         if not comp.script_path:
             self.report({'WARNING'}, "Pick a script first")
             return {'CANCELLED'}
-        n, from_source = _sync_component_vars(obj, comp, self.comp_index)
-        origin = " from prefab source" if from_source else ""
-        self.report({'INFO'}, f"Synced {n} variable(s){origin}")
+        count, from_source, script_only = _sync_component_vars(
+            obj, comp, self.comp_index)
+        if from_source and script_only:
+            self.report(
+                {'INFO'},
+                f"Synced {count} variable(s) from prefab source "
+                f"(+{script_only} new from script)",
+            )
+        elif from_source:
+            self.report({'INFO'}, f"Synced {count} variable(s) from prefab source")
+        else:
+            self.report({'INFO'}, f"Synced {count} variable(s)")
         return {'FINISHED'}
 
 

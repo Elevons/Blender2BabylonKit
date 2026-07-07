@@ -484,6 +484,27 @@ def _check_lights(obj, warnings):
             f"Point/Sun/Spot")
 
 
+def _check_input_bindings(map_name, action, warnings):
+    """Warn on bindings that cannot fire (empty keyboard key, etc.)."""
+    for row in action.bindings:
+        if row.composite != 'NONE':
+            continue
+
+        label = f"{map_name}/{action.name}"
+        if row.part != 'NONE':
+            label += f" ({row.part.lower()} part)"
+
+        if row.device == 'KEYBOARD' and not row.key.strip():
+            warnings.append(f"Input Actions: {label} — keyboard selected but no key set")
+
+        if (row.device == 'GAMEPAD' and row.gp_control == 'AXIS'
+                and row.index in (0, 1, 2, 3) and row.axis_half == 'NONE'
+                and row.part != 'NONE'):
+            warnings.append(
+                f"Input Actions: {label} — stick axis without Axis Half; "
+                f"set + Half / − Half so up and down split correctly")
+
+
 def _check_input_map(scene, warnings):
     """Input Actions sanity: duplicate map names, duplicate action names
     within a map, actions with no bindings, and @inputMap("Name") references
@@ -505,6 +526,7 @@ def _check_input_map(scene, warnings):
             if len(action.bindings) == 0:
                 warnings.append(
                     f"Input Actions: action '{m.name}/{action.name}' has no bindings")
+            _check_input_bindings(m.name, action, warnings)
 
     from ..input_actions.defaults import DEFAULT_INPUT_ASSET, DEFAULT_INPUT_MAP_NAME
 

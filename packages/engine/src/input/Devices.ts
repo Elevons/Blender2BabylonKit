@@ -87,7 +87,21 @@ export class KeyboardState
   }
 }
 
-const GAMEPAD_DEADZONE = 0.15;
+export const GAMEPAD_DEADZONE = 0.15;
+
+/** Authoring axis indices for analog triggers (resolved from W3C buttons 6/7). */
+export const GAMEPAD_TRIGGER_AXIS_LEFT = 4;
+export const GAMEPAD_TRIGGER_AXIS_RIGHT = 5;
+
+/** W3C stick Y axes report −1 up; flip so +1 = up like Unity and stick bindings. */
+export function OrientGamepadAxis(index: number, raw: number): number
+{
+  if (index === 1 || index === 3)
+  {
+    return -raw;
+  }
+  return raw;
+}
 
 /**
  * Gamepad state: a per-frame snapshot of the first connected standard-mapping
@@ -120,14 +134,28 @@ export class GamepadState
     {
       return 0;
     }
-    return button.pressed ? 1 : button.value;
+    // Prefer analog value; pressed covers digital-only buttons.
+    return Math.max(button.value, button.pressed ? 1 : 0);
+  }
+
+  /** Analog trigger 0..1 (W3C standard buttons 6 = LT, 7 = RT). */
+  Trigger(index: 0 | 1): number
+  {
+    const buttonIndex = index === 0 ? 6 : 7;
+    return this.pad?.buttons[buttonIndex]?.value ?? 0;
   }
 
   /** The axis value in -1..1 with the deadzone applied (0 when no pad). */
   Axis(index: number): number
   {
-    const value = this.pad?.axes[index] ?? 0;
+    const value = OrientGamepadAxis(index, this.AxisRaw(index));
     return Math.abs(value) > GAMEPAD_DEADZONE ? value : 0;
+  }
+
+  /** Raw axis snapshot in -1..1 (no deadzone). */
+  AxisRaw(index: number): number
+  {
+    return this.pad?.axes[index] ?? 0;
   }
 }
 

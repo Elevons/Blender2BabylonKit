@@ -5,6 +5,7 @@
 
 export const Maps = {
   Player: "Player",
+  Vehicle: "Vehicle",
 } as const;
 
 export const PlayerActions = {
@@ -14,6 +15,11 @@ export const PlayerActions = {
   Interact: "Interact",
   Sprint: "Sprint",
   Crouch: "Crouch",
+} as const;
+
+export const VehicleActions = {
+  MainControl: "Main Control",
+  Reset: "Reset",
 } as const;
 
 export type MapName = (typeof Maps)[keyof typeof Maps];

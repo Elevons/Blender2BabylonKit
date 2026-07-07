@@ -126,8 +126,17 @@ class BJSInputMapDrawMixin:
                 cap.binding_index = i
             else:
                 row.prop(binding, "gp_control", text="")
-                row.prop(binding, "index", text="")
+                if binding.gp_control == 'BUTTON':
+                    row.prop(binding, "gp_button", text="")
+                elif binding.gp_control == 'AXIS':
+                    row.prop(binding, "gp_axis", text="")
+                    if binding.part != 'NONE':
+                        row.prop(binding, "axis_half", text="")
+                else:
+                    row.prop(binding, "gp_stick", text="")
                 row.prop(binding, "scale", text="")
+                cap = row.operator("bjs.input_capture_gamepad", text="", icon='REC')
+                cap.binding_index = i
             if binding.part == 'NONE':
                 rem = row.operator("bjs.input_binding_edit", text="", icon='X')
                 rem.action, rem.index = "remove", i

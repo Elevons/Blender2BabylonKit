@@ -1693,7 +1693,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Input Actions panel",
           "sub": "Blender Scene N-panel",
-          "desc": "Scene-level asset: Action Maps > Actions > Bindings + Scene Default map picker. Edited via input_actions/ (properties, serialize, operators) and ui/input_panel.py. First export seeds built-in Player when empty.",
+          "desc": "Scene-level asset: Action Maps > Actions > Bindings + Scene Default. Labeled W3C gamepad pickers, axis-half on composites, LT/RT as axis 4/5, capture operators. Package input_actions/ + ui/input_panel.py.",
           "meta": [
             ["Package", "input_actions/"],
             ["Panel", "Babylon Scene › Input Actions"]
