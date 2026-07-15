@@ -99,6 +99,18 @@ export const PITFALLS: PitfallEntry[] = [
     mcpTool: "get_scripting_context(section=\"entity\")",
   },
   {
+    mistake: "Calling level.componentHost or entity.AddComponent from a behavior",
+    symptom: "No Level on Behavior; no add API on Entity",
+    fix: "Mutate components from app code via level.componentHost after load",
+    mcpTool: "get_doc_chapter(chapter=\"14-API-GUIDE.html\")",
+  },
+  {
+    mistake: "Runtime-adding REFLECTION_PROBE or RENDERING_GROUP",
+    symptom: "ComponentHost logs policy warning; nothing applied",
+    fix: "Author those components in Blender at export time",
+    mcpTool: "get_engine_basics(topic=\"components-vs-behaviors\")",
+  },
+  {
     mistake: "Multi-line or computed @exposed default",
     symptom: "Blender ignores field; runtime keeps code default",
     fix: "Single-line literal only: = 5, = true, = \"x\", = [], = null",

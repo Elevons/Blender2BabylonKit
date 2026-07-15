@@ -88,3 +88,48 @@ export function InstantiateScripts(
 
   return pendingReferences;
 }
+
+/** Tear down one behavior instance before its SCRIPT attachment row is removed. */
+export function TeardownScript(behavior: Behavior): void
+{
+  try
+  {
+    behavior.OnDestroy();
+  }
+  catch
+  {
+    // Ignore errors thrown during teardown.
+  }
+}
+
+/** Resolve deferred entity references on a behavior after every entity exists. */
+export function ResolveScriptReferences(
+  behavior: Behavior,
+  pendingReferences: PendingRef[],
+  resolveEntity: (guid: string) => Entity | null
+): void
+{
+  const instance = behavior as unknown as Record<string, unknown>;
+
+  for (const reference of pendingReferences)
+  {
+    if (reference.instance !== behavior)
+    {
+      continue;
+    }
+
+    const target = resolveEntity(reference.guid);
+    if (reference.index === undefined)
+    {
+      instance[reference.field] = target;
+    }
+    else
+    {
+      const slot = instance[reference.field];
+      if (Array.isArray(slot))
+      {
+        slot[reference.index] = target;
+      }
+    }
+  }
+}

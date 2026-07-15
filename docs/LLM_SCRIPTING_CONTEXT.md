@@ -137,6 +137,11 @@ Behaviors do **not** receive a `Level` handle. Look up other objects via
 / `entity.GetBehavior` on the same entity, or `node.metadata.bjsEntity` from a
 Babylon node.
 
+**Runtime component add/remove** is app-code only: `level.componentHost.AddComponent`
+/ `RemoveComponent` after load (mutations are not written back to the manifest).
+Behaviors cannot call `componentHost` — orchestrate from your app layer or use
+messages.
+
 ## Entity API
 
 Types for attachments live in `core/attachments.ts` (`EntityAttachment`,

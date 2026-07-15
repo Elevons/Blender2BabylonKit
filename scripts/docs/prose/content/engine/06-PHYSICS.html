@@ -3,6 +3,7 @@
 <p>All in <code>subsystems/physics/</code>, <code>constraints.ts</code>, <code>collisions.ts</code>. Havok <strong>V2</strong>. <code>EnableHavokPhysics(scene)</code> must run before <code>Load</code>.</p>
 <h2>Bodies (<code>BuildPhysics</code>)</h2>
 <p>One or more COLLIDER components and/or one RIGIDBODY → one node-attached <code>PhysicsBody</code>: collider-only = static/trigger; rigidbody-only = dynamic + auto-fit box; both = shape from collider(s), dynamics from body.</p>
+<p><strong>Runtime:</strong> app code may add or remove COLLIDER / RIGIDBODY / CONSTRAINT via <code>level.componentHost</code> — collider changes rebuild the whole body (<code>RebuildEntityPhysics</code>). See <a href="14-API-GUIDE.html#component-host">14 — API Guide › ComponentHost</a>.</p>
 <h3>Multiple colliders (compound body)</h3>
 <p>An entity may carry <strong>more than one</strong> enabled COLLIDER component. Export writes each as its own manifest row; at load time the component registry's physics handler (<code>loader/componentRegistry.ts</code>) collects them all and <code>BuildPhysics</code> builds a <strong><code>PhysicsShapeContainer</code></strong> (Havok compound shape): each collider becomes a child shape with its own center/size/rotation, material, and trigger flag. One <code>PhysicsBody</code>, one <code>entity.body</code>; each collider still gets its own <code>RegisterAttachment</code> row (same <code>body</code> ref).</p>
 <p>Authoring tips (the N-panel shows a compound-body notice when count &gt; 1):</p>

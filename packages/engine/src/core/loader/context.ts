@@ -3,6 +3,7 @@ import { Level } from "../Level";
 import type { Entity } from "../Entity";
 import type { AnimationInfo } from "../types";
 import type { PendingRef } from "../../scripting/exposed";
+import type { BehaviorRegistry } from "../../scripting/BehaviorRegistry";
 import type { ShadowCaster } from "../../subsystems/shadows";
 import type { EventMessageRegistration } from "../../subsystems/collisions";
 import type { ConstraintRegistration } from "../../subsystems/constraints";
@@ -10,6 +11,7 @@ import type { ReflectionProbeRegistration } from "../../subsystems/reflectionPro
 import type { Gui3DRegistration } from "../../ui/gui3d/builder";
 import { CreateCameraTargetSets, type CameraTargetSets } from "../../subsystems/cameras";
 import { BuildIdIndex } from "./nodeResolution";
+import { ComponentHost } from "../ComponentHost";
 
 /**
  * The mutable state threaded through one load pass: the Level under
@@ -18,6 +20,7 @@ import { BuildIdIndex } from "./nodeResolution";
  */
 export interface LoadContext {
   level: Level;
+  componentHost: ComponentHost;
   baseUrl: string;
   idIndex: Map<string, TransformNode>;
   pendingReferences: PendingRef[];
@@ -42,11 +45,17 @@ export interface LoadContext {
 export function CreateLoadContext(
   scene: Scene,
   baseUrl: string,
+  registry: BehaviorRegistry,
   defaultInputMap = "Player"
 ): LoadContext
 {
+  const level = new Level(scene);
+  const componentHost = new ComponentHost(level, scene, registry, baseUrl, defaultInputMap);
+  level.componentHost = componentHost;
+
   return {
-    level: new Level(scene),
+    level,
+    componentHost,
     baseUrl,
     idIndex: BuildIdIndex(scene),
     pendingReferences: [],
@@ -57,11 +66,11 @@ export function CreateLoadContext(
     guiTasks: [],
     particleTasks: [],
     msdfTextTasks: [],
-    eventMessageRegistrations: [],
+    eventMessageRegistrations: componentHost.eventMessageRegistrations,
     constraintRegistrations: [],
     reflectionProbeRegistrations: [],
     gui3dRegistrations: [],
-    physicsShapesByEntity: new Map(),
+    physicsShapesByEntity: componentHost.physicsShapesByEntity,
     defaultInputMap,
   };
 }

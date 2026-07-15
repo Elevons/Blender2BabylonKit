@@ -159,7 +159,7 @@ export class LevelLoader
     ApplyNodeVisibility(this.scene);
     await ApplyNodeMaterials(this.scene, manifest.materials, baseUrl);
 
-    const context = CreateLoadContext(this.scene, baseUrl, defaultInputMap);
+    const context = CreateLoadContext(this.scene, baseUrl, this.registry, defaultInputMap);
 
     // "Debug Build" export flag: a missing field (older manifests) means enabled.
     context.level.debugEnabled = manifest.debug !== false;
@@ -274,7 +274,11 @@ export class LevelLoader
       BuildConstraints(this.scene, context.level, context.constraintRegistrations);
 
     context.level.gui3DManager = BuildGui3DControls(
-      this.scene, context.level, context.gui3dRegistrations, context.baseUrl
+      this.scene,
+      context.level,
+      context.gui3dRegistrations,
+      context.baseUrl,
+      context.componentHost.panelsByEntity
     );
 
     const builtProbes = BuildReflectionProbes(

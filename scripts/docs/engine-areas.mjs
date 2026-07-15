@@ -273,7 +273,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Level",
           "sub": "runtime container",
-          "desc": "entities, ById/ByTag, activeCamera, constraints, shadowGenerators, debugEnabled. Begin attaches InputManager + runs OnStart; RunFrame drives InputManager.Process, OnUpdate, updaters, InputManager.EndFrame.",
+          "desc": "entities, ById/ByTag, componentHost (runtime add/remove), activeCamera, constraints, shadowGenerators, debugEnabled. Begin attaches InputManager + runs OnStart; RunFrame drives InputManager.Process, OnUpdate, updaters, InputManager.EndFrame.",
           "meta": [
             [
               "File",

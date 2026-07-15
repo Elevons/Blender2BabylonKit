@@ -1,8 +1,8 @@
 import type { Scene } from "@babylonjs/core";
-import { GUI3DManager, type Container3D } from "@babylonjs/gui";
+import { GUI3DManager, type Container3D, type Control3D } from "@babylonjs/gui";
 import type { Entity } from "../../core/Entity";
 import type { Level } from "../../core/Level";
-import { RegisterAttachment } from "../../core/attachments";
+import { RegisterAttachment, UnregisterAttachment, type EntityAttachment } from "../../core/attachments";
 import type {
   Gui3DComponent,
   Gui3DControlComponent,
@@ -34,13 +34,14 @@ const PANEL_TYPES = new Set<string>([
   "GUI3D_STACK", "GUI3D_SPHERE", "GUI3D_CYLINDER", "GUI3D_PLANE", "GUI3D_SCATTER",
 ]);
 
-function IsPanelComponent(component: Gui3DComponent): component is Gui3DPanelComponent
+/** Whether a GUI3D component is a layout panel (vs a child control). */
+export function IsPanelComponent(component: Gui3DComponent): component is Gui3DPanelComponent
 {
   return PANEL_TYPES.has(component.type);
 }
 
 /** Entity key as used for panel lookup: GUID when present, else name. */
-function EntityKey(entity: Entity): string
+export function EntityKey(entity: Entity): string
 {
   return entity.id.length > 0 ? entity.id : entity.name;
 }
@@ -63,7 +64,6 @@ function BuildPanels(
     const panel = CreateGui3DPanel(registration.component);
     panel.name = registration.entity.name;
 
-    // Babylon ordering contract: addControl BEFORE linkToTransformNode.
     manager.addControl(panel);
     panel.linkToTransformNode(registration.entity.node);
 
@@ -100,22 +100,18 @@ function BuildControl(
 
   if (parentPanel !== undefined)
   {
-    // The panel owns the layout; the control's Blender transform only
-    // expresses membership, so it is NOT linked to its node.
     parentPanel.addControl(control);
   }
   else
   {
     manager.addControl(control);
 
-    // A standalone MeshButton3D keeps its mesh's own world placement.
     if (controlComponent.type !== "GUI3D_MESH")
     {
       control.linkToTransformNode(registration.entity.node);
     }
   }
 
-  // Content must be applied after addControl (see controls.ts).
   ApplyControlContent(control, controlComponent, baseUrl);
   WireClickEvents(control, controlComponent.events, registration.entity, level);
 
@@ -127,6 +123,53 @@ function BuildControl(
 }
 
 /**
+ * Apply one GUI3D panel or control at runtime (or during the load finalize pass).
+ */
+export function ApplyGui3DRegistration(
+  registration: Gui3DRegistration,
+  manager: GUI3DManager,
+  panelsByEntity: Map<string, Container3D>,
+  level: Level,
+  baseUrl: string
+): void
+{
+  if (IsPanelComponent(registration.component))
+  {
+    const panel = CreateGui3DPanel(registration.component);
+    panel.name = registration.entity.name;
+    manager.addControl(panel);
+    panel.linkToTransformNode(registration.entity.node);
+    RegisterAttachment(registration.entity, {
+      type: registration.component.type,
+      data: registration.component,
+      control: panel,
+    });
+    panelsByEntity.set(EntityKey(registration.entity), panel);
+    return;
+  }
+
+  BuildControl(registration, manager, panelsByEntity, level, baseUrl);
+}
+
+/** Dispose one GUI3D attachment and remove its row from the entity. */
+export function TeardownGui3DAttachment(
+  entity: Entity,
+  attachment: Extract<EntityAttachment, { control: Control3D }>,
+  manager: GUI3DManager,
+  panelsByEntity: Map<string, Container3D>
+): void
+{
+  if (IsPanelComponent(attachment.data))
+  {
+    panelsByEntity.delete(EntityKey(entity));
+  }
+
+  attachment.control.dispose();
+  manager.removeControl(attachment.control);
+  UnregisterAttachment(entity, attachment);
+}
+
+/**
  * Build every authored 3D GUI panel and control for a level. Returns the
  * shared GUI3DManager (disposed with the level), or undefined when the level
  * has no 3D GUI components.
@@ -135,7 +178,8 @@ export function BuildGui3DControls(
   scene: Scene,
   level: Level,
   registrations: Gui3DRegistration[],
-  baseUrl: string
+  baseUrl: string,
+  panelsByEntityOut?: Map<string, Container3D>
 ): GUI3DManager | undefined
 {
   if (registrations.length === 0)
@@ -146,7 +190,14 @@ export function BuildGui3DControls(
   const manager = new GUI3DManager(scene);
   const panelsByEntity = BuildPanels(registrations, manager);
 
-  // Suspend layout while batch-adding children; restoring triggers one arrange.
+  if (panelsByEntityOut !== undefined)
+  {
+    for (const [entityKey, panel] of panelsByEntity)
+    {
+      panelsByEntityOut.set(entityKey, panel);
+    }
+  }
+
   for (const panel of panelsByEntity.values())
   {
     panel.blockLayout = true;

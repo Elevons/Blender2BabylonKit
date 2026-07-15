@@ -72,7 +72,12 @@ TAG / COLLIDER / RIGIDBODY are **not** behaviors — the loader applies them dir
 Only SCRIPT rows become \`Behavior\` instances on \`entity.behaviors\`.
 
 Query what's on an entity: \`entity.GetAttachment("COLLIDER")\`, \`entity.attachments\`.
-There is no \`entity.manifest\` at runtime.`,
+There is no \`entity.manifest\` at runtime.
+
+**Runtime mutations (app code):** \`level.componentHost.AddComponent(entity, component)\` /
+\`RemoveComponent(entity, type, index?)\` — SCRIPT, TAG, AUDIO, GUI, PARTICLE,
+MSDF_TEXT, COLLIDER, RIGIDBODY, CONSTRAINT, GUI3D_* supported; CAMERA,
+REFLECTION_PROBE, render/collision layer kinds are load-only.`,
   },
   {
     slug: "load-order",

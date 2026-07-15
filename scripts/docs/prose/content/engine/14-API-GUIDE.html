@@ -115,6 +115,7 @@ export default class Patrol extends Behavior
 <tr><td><code>particleEmitterManager?</code></td><td>Empty-emitter tracking handle</td></tr>
 <tr><td><code>msdfTextManager?</code></td><td>MSDF text render-pass handle</td></tr>
 <tr><td><code>reflectionProbes</code></td><td>All built reflection probes (dispose with level)</td></tr>
+<tr><td><code>componentHost</code></td><td>Runtime component add/remove (<a href="#component-host">ComponentHost</a>)</td></tr>
 </tbody></table>
 <h3>Methods</h3>
 <table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody>
@@ -145,7 +146,27 @@ export default class Patrol extends Behavior
 <tr><td><code>CONSTRAINT</code></td><td>constraint manifest</td><td><code>constraint</code></td></tr>
 <tr><td><code>GUI3D_*</code></td><td>layout + events</td><td><code>control</code></td></tr>
 </tbody></table>
-<p>Convenience arrays on <code>Entity</code> (<code>sounds</code>, <code>behaviors</code>, …) mirror attachments for common access patterns.</p>
+<p>Convenience arrays on <code>Entity</code> (<code>sounds</code>, <code>behaviors</code>, …) mirror attachments for common access patterns. At load and at runtime, <code>RegisterAttachment</code> is the write path; runtime remove goes through <code>ComponentHost</code> (see below).</p>
+
+<h2 id="component-host">ComponentHost (runtime mutations)</h2>
+<p>App code mutates components after load via <code>level.componentHost</code>. File: <code>packages/engine/src/core/ComponentHost.ts</code>. <strong>Behaviors do not receive <code>Level</code></strong> — orchestrate add/remove from your app layer or pass results into behaviors via messages / <code>@exposed</code> entity refs.</p>
+<pre><code class="language-typescript">await level.componentHost.AddComponent(enemy, {
+  type: "SCRIPT",
+  script: "Patrol",
+  vars: { speed: 3 },
+});
+
+await level.componentHost.RemoveComponent(enemy, "SCRIPT", 0);</code></pre>
+<h3>Methods</h3>
+<table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>AddComponent(entity, component, options?)</code></td><td>Apply one manifest-shaped component. <code>options.parentEntityId</code> is required for GUI3D controls nested under a panel entity.</td></tr>
+<tr><td><code>RemoveComponent(entity, type, index?)</code></td><td>Remove one attachment row (<code>index</code> = which row of that type, default 0). Runs <code>OnDestroy</code> for SCRIPT rows.</td></tr>
+</tbody></table>
+<h3>Runtime support by type</h3>
+<table><thead><tr><th>Supported at runtime</th><th>Load-only (policy error)</th></tr></thead><tbody>
+<tr><td><code>TAG</code>, <code>SCRIPT</code>, <code>AUDIO</code>, <code>GUI</code>, <code>PARTICLE</code>, <code>MSDF_TEXT</code>, <code>COLLIDER</code>, <code>RIGIDBODY</code>, <code>CONSTRAINT</code>, <code>GUI3D_*</code></td><td><code>CAMERA</code>, <code>REFLECTION_PROBE</code>, <code>RENDERING_GROUP</code>, <code>LAYER_MASK</code>, <code>COLLISION_LAYER</code></td></tr>
+</tbody></table>
+<p>Mutations are <strong>ephemeral</strong> — they are not written back to <code>.scene.json</code>. SCRIPT added after <code>level.Begin()</code> runs <code>OnStart</code> immediately. COLLIDER / RIGIDBODY changes rebuild the entity's single Havok body from all remaining attachment data.</p>
 
 <h2 id="exposed">@exposed (Blender-editable fields)</h2>
 <p>Decorator: <code>exposed(options?)</code> from <code>@bjs/engine</code>. Must stay lowercase — Blender regex-parses the token literally.</p>

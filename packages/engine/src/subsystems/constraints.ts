@@ -380,6 +380,53 @@ function ApplyMotor(
 }
 
 /**
+ * Build one authored joint at runtime or during the load finalize pass.
+ * Returns the Havok constraint when both bodies exist; otherwise undefined.
+ */
+export function BuildSingleConstraint(
+  scene: Scene,
+  level: Level,
+  ownerEntity: Entity,
+  component: ConstraintComponent
+): PhysicsConstraint | undefined
+{
+  if (component.target === null)
+  {
+    console.warn(`[bjs] "${ownerEntity.name}": constraint has no target`);
+    return undefined;
+  }
+
+  const targetEntity = level.ById(component.target);
+  if (targetEntity === undefined)
+  {
+    console.warn(`[bjs] "${ownerEntity.name}": constraint target ${component.target} not found`);
+    return undefined;
+  }
+
+  if (ownerEntity.body === undefined || targetEntity.body === undefined)
+  {
+    console.warn(
+      `[bjs] constraint "${ownerEntity.name}" -> "${targetEntity.name}" skipped: ` +
+      `both objects need a Collider/Rigid Body`
+    );
+    return undefined;
+  }
+
+  const frame = ComputeConstraintFrame(ownerEntity.node, targetEntity.node, component);
+  const constraint = CreateConstraint(frame, component, ownerEntity.node, scene);
+  ownerEntity.body.addConstraint(targetEntity.body, constraint);
+  constraint.isCollisionsEnabled = AllowConstraintCollisions(component);
+
+  if (component.motor && constraint instanceof Physics6DoFConstraint)
+  {
+    ApplyMotor(constraint, component, ownerEntity.node);
+  }
+
+  RegisterAttachment(ownerEntity, { type: "CONSTRAINT", data: component, constraint });
+  return constraint;
+}
+
+/**
  * Build every registered joint, now that all entities (and their bodies) exist.
  * Returns the created constraints so the level can dispose them.
  */
@@ -393,44 +440,16 @@ export function BuildConstraints(
 
   for (const registration of registrations)
   {
-    const { ownerEntity, component } = registration;
-
-    if (component.target === null)
+    const constraint = BuildSingleConstraint(
+      scene,
+      level,
+      registration.ownerEntity,
+      registration.component
+    );
+    if (constraint !== undefined)
     {
-      console.warn(`[bjs] "${ownerEntity.name}": constraint has no target`);
-      continue;
+      constraints.push(constraint);
     }
-
-    const targetEntity = level.ById(component.target);
-    if (targetEntity === undefined)
-    {
-      console.warn(`[bjs] "${ownerEntity.name}": constraint target ${component.target} not found`);
-      continue;
-    }
-
-    if (ownerEntity.body === undefined || targetEntity.body === undefined)
-    {
-      console.warn(
-        `[bjs] constraint "${ownerEntity.name}" -> "${targetEntity.name}" skipped: ` +
-        `both objects need a Collider/Rigid Body`
-      );
-      continue;
-    }
-
-    const frame = ComputeConstraintFrame(ownerEntity.node, targetEntity.node, component);
-    const constraint = CreateConstraint(frame, component, ownerEntity.node, scene);
-    ownerEntity.body.addConstraint(targetEntity.body, constraint);
-    // Havok reads options.collision during addConstraint; re-apply so FIXED/BALL
-    // and any plugin init quirks can't leave the wrong pairwise-collision state.
-    constraint.isCollisionsEnabled = AllowConstraintCollisions(component);
-
-    if (component.motor && constraint instanceof Physics6DoFConstraint)
-    {
-      ApplyMotor(constraint, component, ownerEntity.node);
-    }
-
-    constraints.push(constraint);
-    RegisterAttachment(ownerEntity, { type: "CONSTRAINT", data: component, constraint });
   }
 
   return constraints;

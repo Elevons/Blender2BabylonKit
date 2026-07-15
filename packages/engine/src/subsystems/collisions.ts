@@ -113,6 +113,15 @@ function EntityOverridesTriggerHook(
 }
 
 /** Enable Havok collision callbacks on bodies that need collision hooks or messages. */
+export function RefreshCollisionCallbacks(
+  level: Level,
+  registrations: EventMessageRegistration[]
+): void
+{
+  EnableCollisionCallbacks(level, BuildRegistrationIndex(registrations));
+}
+
+/** Enable Havok collision callbacks on bodies that need collision hooks or messages. */
 function EnableCollisionCallbacks(
   level: Level,
   registrationsByBody: Map<unknown, EventMessageRegistration>

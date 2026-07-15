@@ -14,12 +14,14 @@ import type { ParticleEmitterManager } from "../subsystems/particles";
 import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import { Entity } from "./Entity";
 import { InputManager } from "../input";
+import { TeardownScript } from "./loader/scripts";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
 import type { AtmosphereHandle } from "../subsystems/atmosphere";
 import { DisposeReflectionProbes } from "../subsystems/reflectionProbes";
 import type { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
 import type { PunctualLightingMode } from "../subsystems/clusteredLights";
 import { DisposeDirectionalShadowMaintenance } from "../subsystems/shadows";
+import type { ComponentHost } from "./ComponentHost";
 
 /**
  * Runtime container for a loaded level: the entity map, the active camera,
@@ -55,6 +57,8 @@ export class Level
   particleEmitterManager?: ParticleEmitterManager;
   /** Reflection probes built from REFLECTION_PROBE components. */
   reflectionProbes: ReflectionProbe[] = [];
+  /** Runtime component add/remove; set by LevelLoader during load. */
+  componentHost!: ComponentHost;
 
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
@@ -156,6 +160,11 @@ export class Level
           console.error(`[bjs] OnStart "${entity.name}"`, error);
         }
       }
+    }
+
+    if (this.componentHost !== undefined)
+    {
+      this.componentHost.MarkBegun();
     }
 
     this.observer = this.scene.onBeforeRenderObservable.add(() =>
@@ -277,14 +286,7 @@ export class Level
     {
       for (const behavior of entity.behaviors)
       {
-        try
-        {
-          behavior.OnDestroy();
-        }
-        catch
-        {
-          // Ignore errors thrown during teardown.
-        }
+        TeardownScript(behavior);
       }
 
       for (const sound of entity.sounds)
@@ -310,6 +312,12 @@ export class Level
         renderer.dispose();
       }
       entity.textRenderers.length = 0;
+
+      if (entity.body !== undefined)
+      {
+        entity.body.dispose();
+        entity.body = undefined;
+      }
 
       entity.reflectionProbes.length = 0;
 

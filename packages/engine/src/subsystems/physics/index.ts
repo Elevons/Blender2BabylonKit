@@ -5,3 +5,4 @@
 export { EnableHavokPhysics } from "./bootstrap";
 export type { HavokPhysicsOptions } from "./bootstrap";
 export { BuildPhysics } from "./buildPhysics";
+export { RebuildEntityPhysics, CollectPhysicsComponentData } from "./rebuildPhysics";

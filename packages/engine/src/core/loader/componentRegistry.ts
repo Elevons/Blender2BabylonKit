@@ -404,3 +404,73 @@ export function ApplyEntityComponents(args: ComponentApplyArgs): PendingRef[]
 
   return pendingReferences;
 }
+
+/** Whether a component type may be added or removed after level load. */
+export interface ComponentRuntimePolicy
+{
+  allowRuntimeAdd: boolean;
+  allowRuntimeRemove: boolean;
+  allowMultiple: boolean;
+}
+
+const RUNTIME_ALLOWED: ComponentRuntimePolicy = {
+  allowRuntimeAdd: true,
+  allowRuntimeRemove: true,
+  allowMultiple: true,
+};
+
+const RUNTIME_TAG: ComponentRuntimePolicy = {
+  allowRuntimeAdd: true,
+  allowRuntimeRemove: true,
+  allowMultiple: false,
+};
+
+const RUNTIME_RIGIDBODY: ComponentRuntimePolicy = {
+  allowRuntimeAdd: true,
+  allowRuntimeRemove: true,
+  allowMultiple: false,
+};
+
+const RUNTIME_BLOCKED: ComponentRuntimePolicy = {
+  allowRuntimeAdd: false,
+  allowRuntimeRemove: false,
+  allowMultiple: false,
+};
+
+const RUNTIME_POLICIES = new Map<Component["type"], ComponentRuntimePolicy>([
+  ["TAG", RUNTIME_TAG],
+  ["SCRIPT", RUNTIME_ALLOWED],
+  ["AUDIO", RUNTIME_ALLOWED],
+  ["GUI", RUNTIME_ALLOWED],
+  ["PARTICLE", RUNTIME_ALLOWED],
+  ["MSDF_TEXT", RUNTIME_ALLOWED],
+  ["COLLIDER", RUNTIME_ALLOWED],
+  ["RIGIDBODY", RUNTIME_RIGIDBODY],
+  ["CONSTRAINT", RUNTIME_ALLOWED],
+  ["GUI3D_BUTTON", RUNTIME_ALLOWED],
+  ["GUI3D_HOLO", RUNTIME_ALLOWED],
+  ["GUI3D_TOUCH_HOLO", RUNTIME_ALLOWED],
+  ["GUI3D_MESH", RUNTIME_ALLOWED],
+  ["GUI3D_STACK", RUNTIME_ALLOWED],
+  ["GUI3D_SPHERE", RUNTIME_ALLOWED],
+  ["GUI3D_CYLINDER", RUNTIME_ALLOWED],
+  ["GUI3D_PLANE", RUNTIME_ALLOWED],
+  ["GUI3D_SCATTER", RUNTIME_ALLOWED],
+  ["RENDERING_GROUP", RUNTIME_BLOCKED],
+  ["LAYER_MASK", RUNTIME_BLOCKED],
+  ["COLLISION_LAYER", RUNTIME_BLOCKED],
+  ["REFLECTION_PROBE", RUNTIME_BLOCKED],
+  ["CAMERA", RUNTIME_BLOCKED],
+]);
+
+/** Return runtime mutation policy for a component discriminant. */
+export function GetRuntimePolicy(type: Component["type"]): ComponentRuntimePolicy
+{
+  return RUNTIME_POLICIES.get(type) ?? RUNTIME_BLOCKED;
+}
+
+/** True when the type is one of the GUI3D panel/control discriminants. */
+export function IsGui3DComponentType(type: Component["type"]): boolean
+{
+  return type.startsWith("GUI3D_");
+}

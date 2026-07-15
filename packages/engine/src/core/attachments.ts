@@ -51,6 +51,53 @@ export type ComponentType = EntityAttachment["type"];
 export type AttachmentOfType<T extends ComponentType> = Extract<EntityAttachment, { type: T }>;
 
 /**
+ * Rebuild convenience fields from the current attachment rows. Called after
+ * register and unregister so mirrored arrays never drift.
+ */
+export function SyncConvenienceFields(entity: Entity): void
+{
+  const tagRow = [...entity.attachments].reverse().find((row) => row.type === "TAG");
+  entity.tag = tagRow !== undefined && tagRow.type === "TAG" ? tagRow.data.tag : "Untagged";
+
+  const physicsRow = entity.attachments.find(
+    (row) => row.type === "COLLIDER" || row.type === "RIGIDBODY"
+  );
+  entity.body = physicsRow !== undefined && "body" in physicsRow ? physicsRow.body : undefined;
+
+  entity.behaviors = entity.attachments
+    .filter((row): row is Extract<EntityAttachment, { type: "SCRIPT" }> => row.type === "SCRIPT")
+    .map((row) => row.behavior);
+
+  entity.sounds = entity.attachments
+    .filter((row): row is Extract<EntityAttachment, { type: "AUDIO" }> => row.type === "AUDIO")
+    .map((row) => row.sound);
+
+  entity.guiTextures = entity.attachments
+    .filter((row): row is Extract<EntityAttachment, { type: "GUI" }> => row.type === "GUI")
+    .map((row) => row.texture);
+
+  entity.particleSystems = entity.attachments
+    .filter((row): row is Extract<EntityAttachment, { type: "PARTICLE" }> => row.type === "PARTICLE")
+    .map((row) => row.system);
+
+  entity.textRenderers = entity.attachments
+    .filter((row): row is Extract<EntityAttachment, { type: "MSDF_TEXT" }> => row.type === "MSDF_TEXT")
+    .map((row) => row.renderer);
+
+  entity.reflectionProbes = entity.attachments
+    .filter(
+      (row): row is Extract<EntityAttachment, { type: "REFLECTION_PROBE" }> =>
+        row.type === "REFLECTION_PROBE"
+    )
+    .map((row) => row.probe);
+
+  entity.controls3D = entity.attachments
+    .filter((row): row is Extract<EntityAttachment, { control: Control3D }> => "control" in row)
+    .filter((row) => row.type.startsWith("GUI3D_"))
+    .map((row) => row.control);
+}
+
+/**
  * Record one successfully applied component on an entity. This is the single
  * write path: the attachment row is appended and the matching convenience
  * field/array (`entity.tag`, `entity.body`, `entity.behaviors`, …) is mirrored
@@ -59,55 +106,86 @@ export type AttachmentOfType<T extends ComponentType> = Extract<EntityAttachment
 export function RegisterAttachment(entity: Entity, attachment: EntityAttachment): void
 {
   entity.attachments.push(attachment);
+  SyncConvenienceFields(entity);
+}
 
-  switch (attachment.type)
+/**
+ * Remove one attachment row and resync convenience fields. Does not dispose
+ * runtime objects — callers tear those down before unregistering.
+ */
+export function UnregisterAttachment(entity: Entity, attachment: EntityAttachment): void
+{
+  const index = entity.attachments.indexOf(attachment);
+  if (index === -1)
   {
-    case "TAG":
-      entity.tag = attachment.data.tag;
-      break;
-
-    case "COLLIDER":
-    case "RIGIDBODY":
-      entity.body = attachment.body;
-      break;
-
-    case "SCRIPT":
-      entity.behaviors.push(attachment.behavior);
-      break;
-
-    case "AUDIO":
-      entity.sounds.push(attachment.sound);
-      break;
-
-    case "GUI":
-      entity.guiTextures.push(attachment.texture);
-      break;
-
-    case "PARTICLE":
-      entity.particleSystems.push(attachment.system);
-      break;
-
-    case "MSDF_TEXT":
-      entity.textRenderers.push(attachment.renderer);
-      break;
-
-    case "REFLECTION_PROBE":
-      entity.reflectionProbes.push(attachment.probe);
-      break;
-
-    case "CONSTRAINT":
-      // Constraints live on Level.constraints; no per-entity convenience array.
-      break;
-
-    case "RENDERING_GROUP":
-    case "LAYER_MASK":
-    case "COLLISION_LAYER":
-      // Data-only attachments; mesh/layer values are applied in FinalizeLevel.
-      break;
-
-    default:
-      // Remaining rows are the GUI3D_* union — all carry a Control3D.
-      entity.controls3D.push(attachment.control);
-      break;
+    return;
   }
+
+  entity.attachments.splice(index, 1);
+  SyncConvenienceFields(entity);
+}
+
+/** Remove the attachment at a given index; returns the removed row if any. */
+export function RemoveAttachmentAt(entity: Entity, index: number): EntityAttachment | undefined
+{
+  if (index < 0 || index >= entity.attachments.length)
+  {
+    return undefined;
+  }
+
+  const removed = entity.attachments.splice(index, 1)[0];
+  SyncConvenienceFields(entity);
+  return removed;
+}
+
+/**
+ * Remove attachments of a type. When index is set, only that occurrence among
+ * rows of the type is removed (0 = first of type).
+ */
+export function RemoveAttachmentsOfType(
+  entity: Entity,
+  type: ComponentType,
+  index?: number
+): EntityAttachment[]
+{
+  const matches = entity.attachments
+    .map((row, rowIndex) => ({ row, rowIndex }))
+    .filter((entry) => entry.row.type === type);
+
+  if (matches.length === 0)
+  {
+    return [];
+  }
+
+  const toRemove = index === undefined
+    ? matches
+    : matches[index] !== undefined
+      ? [matches[index]]
+      : [];
+
+  const removed: EntityAttachment[] = [];
+  for (const entry of [...toRemove].sort((left, right) => right.rowIndex - left.rowIndex))
+  {
+    const row = RemoveAttachmentAt(entity, entry.rowIndex);
+    if (row !== undefined)
+    {
+      removed.push(row);
+    }
+  }
+
+  return removed;
+}
+
+/** Indices of every attachment row matching a component type. */
+export function FindAttachmentIndices(entity: Entity, type: ComponentType): number[]
+{
+  const indices: number[] = [];
+  for (let index = 0; index < entity.attachments.length; index++)
+  {
+    if (entity.attachments[index].type === type)
+    {
+      indices.push(index);
+    }
+  }
+  return indices;
 }
