@@ -133,7 +133,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "LevelLoader.Load",
           "sub": "core/LevelLoader.ts",
-          "desc": "Fetch+validate manifest, LoadAsset (inputActions + defaultInputMap), append glb RIGHT-HANDED, ApplyNodeVisibility, ApplyNodeMaterials (optional materials[]), GUID index, per-entity pass, second pass, FinalizeLevel.",
+          "desc": "Fetch+validate manifest, LoadAsset (inputActions + defaultInputMap), append glb RIGHT-HANDED, ApplyNodeVisibility, ApplyNodeMaterials (optional materials[]), ApplyDetailMaps (optional detailMaps[]), GUID index, per-entity pass, second pass, FinalizeLevel.",
           "meta": [
             [
               "Passes",
@@ -1092,7 +1092,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "appendSceneAsync",
           "sub": "step 3 — RIGHT-HANDED",
-          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras; SetupShadows (finalize) skips bjs_cast_shadows meshes as casters; ApplyNodeMaterials replaces glTF PBR when manifest.materials[] is set. Needs the ExtrasAsMetadata import for GUIDs.",
+          "desc": "useRightHandedSystem=true is set FIRST so the loader skips the __root__ handedness mirror that broke Havok collider placement. NeutralizeGltfRoot stays as a guard; ApplyNodeVisibility reads bjs_visible from extras; SetupShadows (finalize) skips bjs_cast_shadows meshes as casters; ApplyNodeMaterials replaces glTF PBR when manifest.materials[] is set; ApplyDetailMaps wires DetailMapConfiguration when manifest.detailMaps[] is set. Needs the ExtrasAsMetadata import for GUIDs.",
           "meta": [
             [
               "Why",
@@ -2051,7 +2051,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Lights",
           "sub": "subsystems/lights.ts",
-          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color and intensity 1:1 (manifest energy → light.intensity), spot cone. SUN bakes world aim (BakeSunLightWorldTransform) and detaches — empty position ignored for shadows. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between). Atmosphere may override sun intensity to π. Large rigs: see Punctual light budget.",
+          "desc": "Automatic (no component). glb creates+places; ApplyBlenderLight copies color and intensity 1:1 (manifest energy → light.intensity), spot cone. SUN bakes world aim (BakeSunLightWorldTransform) and detaches — empty position ignored for shadows. SUN exports sunAngle; shadow pass maps it to PCSS penumbra (0–45° → 0–1). FindLightForNode walks the parent chain (orientation-correction node in between) and searches ClusteredLightContainer children when clustering ran. Atmosphere may override sun intensity to π. Large rigs: see Punctual light budget.",
           "meta": [
             [
               "AREA",
@@ -2163,7 +2163,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Node materials",
           "sub": "subsystems/materials/",
-          "desc": "Optional manifest.materials[]: ApplyNodeMaterials parses NME JSON and binds manifest overrides (no build); BuildNodeMaterials in FinalizeLevel compiles once after environment IBL. Cache per file+name; embedded data: / base64String or urlRewriter paths; textures[] override embeds; inputs[] and gradients[] patch InputBlock values and GradientBlock colorSteps; editorData.map for blockId. NME IBL needs ReflectionBlock on PBR reflection input.",
+          "desc": "Optional manifest.materials[]: ApplyNodeMaterials parses NME JSON and binds manifest overrides (no build); BuildNodeMaterials in FinalizeLevel compiles once after environment IBL. Optional manifest.detailMaps[]: ApplyDetailMaps sets material.detailMap on glTF PBR (packed texture, coordinatesIndex, uvScale, blend levels). Cache per file+name; embedded data: / base64String or urlRewriter paths; textures[] override embeds; inputs[] and gradients[] patch InputBlock values and GradientBlock colorSteps; editorData.map for blockId. NME IBL needs ReflectionBlock on PBR reflection input.",
           "meta": [
             [
               "Editor",
@@ -2183,7 +2183,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Punctual budget",
           "sub": "subsystems/clusteredLights.ts",
-          "desc": "FinalizeLevel (before SetupShadows): when enabled lights exceed lightBudget (default 8), cluster point/spot into ClusteredLightContainer or disable light UBOs (forward-expanded). Suns stay forward for shadows. Sets level.punctualLightingMode and level.clusteredLights.",
+          "desc": "FinalizeLevel (before SetupShadows): when enabled lights exceed lightBudget (default 8), cluster eligible point/spot (entities[].light.cluster !== false) into ClusteredLightContainer or disable light UBOs (forward-expanded). Suns stay forward for shadows. Sets level.punctualLightingMode and level.clusteredLights. Blender: Scene › Export (budget + master toggle); Object › Light › Cluster When Over Budget.",
           "meta": [
             [
               "Modes",
@@ -2191,7 +2191,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Override",
-              "scene.clusterPunctualLights · lightBudget"
+              "scene.clusterPunctualLights · lightBudget · light.cluster"
             ]
           ]
         }

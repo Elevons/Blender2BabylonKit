@@ -19,6 +19,8 @@ def serialize_light(obj):
         info["spotBlend"] = lamp.spot_blend
     if lamp.type in {'POINT', 'SPOT'} and getattr(lamp, "use_custom_distance", False):
         info["range"] = lamp.cutoff_distance
+    if lamp.type in {'POINT', 'SPOT'} and not obj.bjs_light.use_clustered:
+        info["cluster"] = False
     if info["castShadows"]:
         sh = obj.bjs_shadow
         info["shadow"] = {

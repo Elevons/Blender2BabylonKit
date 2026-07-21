@@ -1,6 +1,6 @@
 import { Behavior, exposed } from "@bjs/engine";
-import type { AttachmentOfType, Entity } from "@bjs/engine";
-import { Color3, Scene } from "@babylonjs/core";
+import type { AttachmentOfType, ColliderComponent, Entity } from "@bjs/engine";
+import { Color3, Matrix, Quaternion, Scene, Vector3 } from "@babylonjs/core";
 import { InputBlock } from "@babylonjs/core/Materials/Node/Blocks/Input/inputBlock";
 import { NodeMaterial } from "@babylonjs/core/Materials/Node/nodeMaterial";
 
@@ -27,7 +27,10 @@ export default class FogChanger extends Behavior
 
   private colliderAttachment: AttachmentOfType<"COLLIDER"> | undefined;
 
-  /** Cache this zone's collider, validate the probe, and apply fog A. */
+  /** Whether the assigned moving object is currently inside this trigger volume. */
+  private movingObjectInside = false;
+
+  /** Cache this zone's collider, validate the probe, and apply the active fog preset. */
   OnStart(): void
   {
     this.colliderAttachment = this.entity.GetAttachment("COLLIDER");
@@ -71,7 +74,24 @@ export default class FogChanger extends Behavior
       }
     }
 
-    this.ApplyFogA();
+    this.movingObjectInside = this.IsMovingObjectInsideTrigger();
+    this.ApplyActiveFog();
+  }
+
+  /**
+   * Keep fog in sync with probe position. Trigger enter/exit can be missed when
+   * the probe collider is also a trigger, or when the probe starts overlapped.
+   */
+  OnUpdate(_deltaSeconds: number): void
+  {
+    const inside = this.IsMovingObjectInsideTrigger();
+    if (inside === this.movingObjectInside)
+    {
+      return;
+    }
+
+    this.movingObjectInside = inside;
+    this.ApplyActiveFog();
   }
 
   /** Switch to fog B when the moving object enters this trigger volume. */
@@ -82,7 +102,13 @@ export default class FogChanger extends Behavior
       return;
     }
 
-    this.ApplyFogB();
+    if (this.movingObjectInside)
+    {
+      return;
+    }
+
+    this.movingObjectInside = true;
+    this.ApplyActiveFog();
   }
 
   /** Restore fog A when the moving object leaves this trigger volume. */
@@ -93,7 +119,13 @@ export default class FogChanger extends Behavior
       return;
     }
 
-    this.ApplyFogA();
+    if (!this.movingObjectInside)
+    {
+      return;
+    }
+
+    this.movingObjectInside = false;
+    this.ApplyActiveFog();
   }
 
   /** Whether the overlapping entity is the assigned moving object. */
@@ -102,16 +134,17 @@ export default class FogChanger extends Behavior
     return this.movingObject !== null && other === this.movingObject;
   }
 
-  /** Apply the authored fog A preset. */
-  private ApplyFogA(): void
+  /** Apply fog A or B based on whether the probe is inside this trigger volume. */
+  private ApplyActiveFog(): void
   {
-    this.ApplyLinearFog(this.fogAColor, this.fogARange);
-  }
-
-  /** Apply the authored fog B preset. */
-  private ApplyFogB(): void
-  {
-    this.ApplyLinearFog(this.fogBColor, this.fogBRange);
+    if (this.movingObjectInside)
+    {
+      this.ApplyLinearFog(this.fogBColor, this.fogBRange);
+    }
+    else
+    {
+      this.ApplyLinearFog(this.fogAColor, this.fogARange);
+    }
   }
 
   /** Write linear fog color and start/end onto the scene. */
@@ -120,12 +153,88 @@ export default class FogChanger extends Behavior
     range: [number, number]
   ): void
   {
+    const sanitizedRange = this.SanitizeFogRange(range);
+
     this.scene.fogEnabled = true;
     this.scene.fogMode = Scene.FOGMODE_LINEAR;
     this.scene.fogColor = this.ResolveColor(color);
-    this.scene.fogStart = range[0];
-    this.scene.fogEnd = range[1];
-    this.SyncWaterFogOpacityRange(range);
+    this.scene.fogStart = sanitizedRange[0];
+    this.scene.fogEnd = sanitizedRange[1];
+    this.SyncWaterFogOpacityRange(sanitizedRange);
+  }
+
+  /**
+   * Linear fog and the water NME divide by (end - start). Equal or inverted
+   * authored ranges are treated as "no visible fog" with a valid far span.
+   */
+  private SanitizeFogRange(range: [number, number]): [number, number]
+  {
+    const start = range[0];
+    const end = range[1];
+    if (end > start)
+    {
+      return [start, end];
+    }
+
+    return [0, 1_000_000_000];
+  }
+
+  /** Whether the assigned moving object is inside this entity's trigger collider. */
+  private IsMovingObjectInsideTrigger(): boolean
+  {
+    if (this.movingObject === null || this.colliderAttachment === undefined)
+    {
+      return false;
+    }
+
+    const collider = this.colliderAttachment.data;
+    if (collider.shape !== "BOX")
+    {
+      return false;
+    }
+
+    const scaledCollider = this.ScaleColliderForObjectScale(collider);
+    const probeWorld = this.movingObject.node.getAbsolutePosition();
+    const inverseWorldMatrix = Matrix.Invert(this.entity.node.getWorldMatrix());
+    const localProbe = Vector3.TransformCoordinates(probeWorld, inverseWorldMatrix);
+    const offset = localProbe.subtract(Vector3.FromArray(scaledCollider.center));
+
+    if (collider.rotation !== undefined)
+    {
+      const inverseRotation = Quaternion.FromArray(collider.rotation).conjugate();
+      offset.applyRotationQuaternionInPlace(inverseRotation);
+    }
+
+    const halfExtents = Vector3.FromArray(scaledCollider.size).scaleInPlace(0.5);
+
+    return Math.abs(offset.x) <= halfExtents.x
+      && Math.abs(offset.y) <= halfExtents.y
+      && Math.abs(offset.z) <= halfExtents.z;
+  }
+
+  /** Match physics collider scaling when applyObjectScale is enabled on this volume. */
+  private ScaleColliderForObjectScale(collider: ColliderComponent): ColliderComponent
+  {
+    if (collider.applyObjectScale === false)
+    {
+      return collider;
+    }
+
+    const scaling = this.entity.node.scaling;
+
+    return {
+      ...collider,
+      size: [
+        collider.size[0] * scaling.x,
+        collider.size[1] * scaling.y,
+        collider.size[2] * scaling.z,
+      ],
+      center: [
+        collider.center[0] * scaling.x,
+        collider.center[1] * scaling.y,
+        collider.center[2] * scaling.z,
+      ],
+    };
   }
 
   /** Keep water NME fog-alpha inputs aligned with the active scene fog range. */

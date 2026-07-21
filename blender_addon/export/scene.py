@@ -108,4 +108,7 @@ def serialize_scene(context, output_dir):
         data["largeWorldRendering"] = True
         data["floatingOriginWorldRadius"] = s.floating_origin_world_radius
 
+    data["clusterPunctualLights"] = bool(s.cluster_punctual_lights)
+    data["lightBudget"] = s.light_budget
+
     return data

@@ -118,6 +118,7 @@ class BJS_PT_light_info(Panel):
             col.prop(lamp, "use_custom_distance", text="Custom Range")
             if lamp.use_custom_distance:
                 col.prop(lamp, "cutoff_distance", text="Range")
+            col.prop(obj.bjs_light, "use_clustered")
         col.prop(lamp, "use_shadow", text="Cast Shadows")
         if lamp.use_shadow:
             sh = obj.bjs_shadow

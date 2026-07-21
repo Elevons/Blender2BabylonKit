@@ -10,6 +10,15 @@ from ..core.props import (
 from .constants import SHADOW_FILTERS
 
 
+class BJSLightSettings(PropertyGroup):
+    """Per-light Babylon export settings beyond native Blender lamp fields."""
+    use_clustered: BoolProperty(
+        name="Cluster When Over Budget", default=True,
+        description="When the scene exceeds the light budget, include this "
+                    "point/spot light in Babylon's clustered lighting path. "
+                    "Disable for hero lights that must stay in the forward shader")
+
+
 class BJSLightShadow(PropertyGroup):
     """Babylon shadow controls for a light. These are Babylon concepts (they
     don't map onto Blender's renderer-specific shadow settings), so they live in

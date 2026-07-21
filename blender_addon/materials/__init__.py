@@ -1,16 +1,17 @@
 """Per-material Babylon node material (NME) data on bpy.types.Material."""
 
 import bpy
-from bpy.props import CollectionProperty, StringProperty
+from bpy.props import CollectionProperty, PointerProperty, StringProperty
 from bpy.types import Material
 
-from .properties import BJSNmeTexture, BJSNmeInput, BJSNmeGradientStep, BJSNmeGradient
+from .properties import BJSNmeTexture, BJSNmeInput, BJSNmeGradientStep, BJSNmeGradient, BJSDetailMapSettings
 
 classes = (
     BJSNmeTexture,
     BJSNmeGradientStep,
     BJSNmeGradient,
     BJSNmeInput,
+    BJSDetailMapSettings,
 )
 
 
@@ -28,9 +29,11 @@ def register():
     Material.bjs_nme_textures = CollectionProperty(type=BJSNmeTexture)
     Material.bjs_nme_inputs = CollectionProperty(type=BJSNmeInput)
     Material.bjs_nme_gradients = CollectionProperty(type=BJSNmeGradient)
+    Material.bjs_detail_map = PointerProperty(type=BJSDetailMapSettings)
 
 
 def unregister():
+    del Material.bjs_detail_map
     del Material.bjs_nme_gradients
     del Material.bjs_nme_inputs
     del Material.bjs_nme_textures

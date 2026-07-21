@@ -170,7 +170,18 @@ class BJS_PT_scene_export(Panel):
     bl_category = "Babylon Scene"
 
     def draw(self, context):
-        draw_export_controls(self.layout, context.scene)
+        layout = self.layout
+        s = context.scene.bjs_scene
+
+        lights_box = layout.box()
+        lights_box.label(text="Punctual Lights", icon='LIGHT')
+        lights_col = lights_box.column()
+        lights_col.use_property_split = True
+        lights_col.prop(s, "light_budget")
+        lights_col.prop(s, "cluster_punctual_lights")
+
+        layout.separator()
+        draw_export_controls(layout, context.scene)
 
 
 classes = (

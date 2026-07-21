@@ -416,12 +416,13 @@
 <h2>Material-level (NME)</h2>
 <table><thead><tr><th>Feature</th><th>Blender</th><th>Manifest</th><th>Trace</th></tr></thead><tbody>
 <tr><td><strong>Node materials</strong></td><td>Properties › Material › Babylon — link NME JSON, extract embedded textures, scan textures/inputs/gradients</td><td>Top-level <code>materials[]</code> (matched by material name on meshes; JSON may embed <code>data:</code> textures; optional <code>inputs[]</code> and <code>gradients[]</code>)</td><td><a href="10-FEATURE-TRACES.html#materials">feature trace</a> · <a href="trace-materials.html">trace-materials</a></td></tr>
+<tr><td><strong>Detail maps</strong></td><td>Properties › Material › Babylon › Detail Map — packed or separate albedo/normal/roughness (PNG/JPG/WEBP), UV set + scale, blend levels</td><td>Top-level <code>detailMaps[]</code> (matched by material name; <code>DetailMapConfiguration</code> on glTF PBR)</td><td><a href="07-RENDERING.html">07 — Rendering</a> · <a href="10-FEATURE-TRACES.html#materials">materials trace</a></td></tr>
 </tbody></table>
 
 <h2>Export artifacts</h2>
 <table><thead><tr><th>File / folder</th><th>Contains</th></tr></thead><tbody>
 <tr><td><code>level.glb</code></td><td>Meshes, hierarchy, standard materials, lights, cameras, animation clips, GUIDs in node extras</td></tr>
-<tr><td><code>level.scene.json</code></td><td>Components, scene block, per-entity light/camera/animation, <code>materials[]</code>, <code>debug</code> flag (schema v4)</td></tr>
+<tr><td><code>level.scene.json</code></td><td>Components, scene block, per-entity light/camera/animation, <code>materials[]</code>, <code>detailMaps[]</code>, <code>debug</code> flag (schema v5)</td></tr>
 <tr><td><code>audio/</code>, <code>gui/</code>, <code>env/</code>, <code>post/</code>, <code>particles/</code>, <code>materials/</code>, <code>fonts/</code></td><td>Sidecar media referenced from the manifest</td></tr>
 </tbody></table>
 

@@ -587,6 +587,17 @@ const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></
 <h2 id="messages">Messages</h2>
 <p>Authored Event Messages and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target gets <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
 
+<h2 id="lights">Runtime lights (<code>FindLightForNode</code>)</h2>
+<p>Exported from <code>@bjs/engine</code> (<code>subsystems/lights.ts</code>). Resolves the Babylon <code>Light</code> for a lamp entity's glTF node — parent-chain walk, then name match, then lights inside <code>ClusteredLightContainer</code>.</p>
+<pre><code class="language-typescript">import { FindLightForNode } from "@bjs/engine";
+
+const light = FindLightForNode(this.scene, lampEntity.node);
+if (light !== null)
+{
+  light.intensity = value;
+}</code></pre>
+<p>Do <strong>not</strong> iterate <code>scene.lights</code> alone on large scenes — clustered point/spot lamps are removed from that array but stay drivable through this helper. See <code>increaselights.ts</code> / <code>07-RENDERING.html</code> (punctual light budget). Author budget and per-lamp clustering in Blender (<strong>Scene › Export</strong>, <strong>Object › Light › Cluster When Over Budget</strong>).</p>
+
 <h2>Related exports</h2>
 <p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types.ts</code>), subsystem helpers (physics, lights, …), and UI loaders — mainly for app code and advanced scripts. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>
 </article>

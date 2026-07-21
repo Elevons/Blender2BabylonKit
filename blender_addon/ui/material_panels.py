@@ -82,6 +82,42 @@ def _draw_nme_gradient(layout, mat, row):
     schedule_ramp_to_steps_sync(mat, row)
 
 
+def _draw_detail_map(layout, mat):
+    """Draw Babylon DetailMapConfiguration overrides for glTF PBR materials."""
+    detail = mat.bjs_detail_map
+    box = layout.box()
+    box.label(text="Detail Map", icon='TEXTURE')
+
+    box.prop(detail, "is_enabled", text="Enable")
+    if not detail.is_enabled:
+        box.label(
+            text="Tiles secondary detail over the base glTF material when viewed up close",
+            icon='INFO',
+        )
+        return
+
+    channels = box.box()
+    channels.label(text="Texture", icon='IMAGE_DATA')
+    channels.prop(detail, "texture_file", text="Packed (optional)")
+    channels.label(text="— or separate channels (auto-packed on export) —", icon='NONE')
+    channels.prop(detail, "albedo_file", text="Albedo")
+    channels.prop(detail, "normal_file", text="Normal")
+    channels.prop(detail, "roughness_file", text="Roughness")
+    channels.label(
+        text="Layout: R=albedo, G=normal G, B=roughness, A=normal R (0.5 disables)",
+        icon='INFO',
+    )
+
+    settings = box.box()
+    settings.label(text="Settings", icon='MODIFIER')
+    settings.prop(detail, "uv_set", text="UV Set")
+    settings.prop(detail, "uv_scale", text="UV Scale")
+    settings.prop(detail, "diffuse_blend_level", text="Diffuse Blend")
+    settings.prop(detail, "roughness_blend_level", text="Roughness Blend")
+    settings.prop(detail, "bump_level", text="Bump Level")
+    settings.prop(detail, "normal_blend_method", text="Normal Blend")
+
+
 def draw_babylon_material(layout, mat):
     """Shared draw routine for the material's Babylon / NME settings."""
     users = _material_user_count(mat)
@@ -108,68 +144,68 @@ def draw_babylon_material(layout, mat):
 
     if not mat.bjs_nme_file:
         layout.label(text="Pick an NME JSON, then Scan NME", icon='INFO')
-        return
+    else:
+        if len(mat.bjs_nme_inputs) > 0:
+            params = layout.box()
+            params.label(text="Parameters", icon='PRESET')
+            current_group = None
+            for row in mat.bjs_nme_inputs:
+                group = row.group_in_inspector or ""
+                if group and group != current_group:
+                    current_group = group
+                    params.label(text=group, icon='NONE')
+                _draw_nme_input(params, row)
 
-    if len(mat.bjs_nme_inputs) > 0:
-        params = layout.box()
-        params.label(text="Parameters", icon='PRESET')
-        current_group = None
-        for row in mat.bjs_nme_inputs:
-            group = row.group_in_inspector or ""
-            if group and group != current_group:
-                current_group = group
-                params.label(text=group, icon='NONE')
-            _draw_nme_input(params, row)
+        if len(mat.bjs_nme_gradients) > 0:
+            gradients = layout.box()
+            gradients.label(text="Gradients", icon='COLOR')
+            current_group = None
+            for grad_i, row in enumerate(mat.bjs_nme_gradients):
+                group = row.group_in_inspector or ""
+                if group and group != current_group:
+                    current_group = group
+                    gradients.label(text=group, icon='NONE')
+                _draw_nme_gradient(gradients, mat, row)
 
-    if len(mat.bjs_nme_gradients) > 0:
-        gradients = layout.box()
-        gradients.label(text="Gradients", icon='COLOR')
-        current_group = None
-        for grad_i, row in enumerate(mat.bjs_nme_gradients):
-            group = row.group_in_inspector or ""
-            if group and group != current_group:
-                current_group = group
-                gradients.label(text=group, icon='NONE')
-            _draw_nme_gradient(gradients, mat, row)
+        box = layout.box()
+        header = box.row()
+        header.label(text="Textures", icon='TEXTURE')
+        add = header.operator("bjs.nme_texture_add", text="", icon='ADD')
+        add.material_name = mat.name
 
-    box = layout.box()
-    header = box.row()
-    header.label(text="Textures", icon='TEXTURE')
-    add = header.operator("bjs.nme_texture_add", text="", icon='ADD')
-    add.material_name = mat.name
+        if len(mat.bjs_nme_textures) == 0:
+            box.label(
+                text="Scan NME to list slots from the JSON",
+                icon='INFO',
+            )
+        else:
+            for tex_i, tex in enumerate(mat.bjs_nme_textures):
+                col = box.column(align=True)
+                needs = _slot_needs_file(tex, mat.bjs_nme_file)
+                label = tex.block_type or "Texture"
+                if tex.block_name:
+                    label = f"{label} · {tex.block_name}"
+                if tex.block_id:
+                    label = f"{label} (id {tex.block_id})"
+                row = col.row()
+                row.label(
+                    text=label,
+                    icon='ERROR' if needs and not tex.image_file else 'TEXTURE',
+                )
+                if tex.match_url:
+                    col.label(text=f"JSON URL: {tex.match_url}", icon='LINKED')
+                col.prop(tex, "image_file", text="Image")
+                col.prop(tex, "json_url", text="URL in JSON")
+                rem = col.row()
+                op = rem.operator("bjs.nme_texture_remove", text="Remove", icon='X')
+                op.material_name = mat.name
+                op.texture_index = tex_i
 
-    if len(mat.bjs_nme_textures) == 0:
-        box.label(
-            text="Scan NME to list slots from the JSON",
-            icon='INFO',
-        )
-        return
-
-    for tex_i, tex in enumerate(mat.bjs_nme_textures):
-        col = box.column(align=True)
-        needs = _slot_needs_file(tex, mat.bjs_nme_file)
-        label = tex.block_type or "Texture"
-        if tex.block_name:
-            label = f"{label} · {tex.block_name}"
-        if tex.block_id:
-            label = f"{label} (id {tex.block_id})"
-        row = col.row()
-        row.label(
-            text=label,
-            icon='ERROR' if needs and not tex.image_file else 'TEXTURE',
-        )
-        if tex.match_url:
-            col.label(text=f"JSON URL: {tex.match_url}", icon='LINKED')
-        col.prop(tex, "image_file", text="Image")
-        col.prop(tex, "json_url", text="URL in JSON")
-        rem = col.row()
-        op = rem.operator("bjs.nme_texture_remove", text="Remove", icon='X')
-        op.material_name = mat.name
-        op.texture_index = tex_i
+    _draw_detail_map(layout, mat)
 
 
 class BJS_PT_material(Panel):
-    """Node Material Editor JSON and texture overrides on this Material."""
+    """Node Material Editor and detail map overrides on this Material."""
     bl_label = "Babylon"
     bl_idname = "BJS_PT_material"
     bl_space_type = 'PROPERTIES'

@@ -40,7 +40,7 @@ class BJS_OT_export(Operator, ExportHelper):
             self.report({'INFO'}, "Seeded Input Actions with the default asset")
         warnings = bjs_validate.validate_scene(context)
         try:
-            glb_path, json_path, n_entities = bjs_level.export_level(context, self.filepath)
+            glb_path, json_path, n_entities, detail_warnings = bjs_level.export_level(context, self.filepath)
         except Exception as e:  # surface errors in the Blender UI
             self.report({'ERROR'}, f"Export failed: {e}")
             return {'CANCELLED'}
@@ -48,11 +48,12 @@ class BJS_OT_export(Operator, ExportHelper):
         # Remember the path so Live Link can re-export on save.
         context.scene.bjs_live_link_path = self.filepath
 
-        for w in warnings:
+        all_warnings = list(warnings) + list(detail_warnings)
+        for w in all_warnings:
             self.report({'WARNING'}, w)
         summary = f"Exported {n_entities} entities -> {json_path}"
-        if warnings:
-            summary += f" ({len(warnings)} warning{'s' if len(warnings) != 1 else ''} — see report)"
+        if all_warnings:
+            summary += f" ({len(all_warnings)} warning{'s' if len(all_warnings) != 1 else ''} — see report)"
         self.report({'INFO'}, summary)
         return {'FINISHED'}
 

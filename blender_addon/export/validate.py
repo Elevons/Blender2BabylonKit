@@ -646,6 +646,80 @@ def _check_materials(context, warnings):
                     f"(not embedded in the JSON)")
 
 
+def _check_detail_map_uv_set(context, mat, uv_set, warnings):
+    """Warn when a mesh using this material lacks the requested UV layer."""
+    if uv_set <= 0:
+        return
+
+    required_layers = uv_set + 1
+    for obj in context.scene.objects:
+        if obj.type != 'MESH' or not is_renderable(obj, context):
+            continue
+        if mat not in [slot.material for slot in obj.material_slots if slot.material is not None]:
+            continue
+        mesh = obj.data
+        if len(mesh.uv_layers) < required_layers:
+            warnings.append(
+                f"Material '{mat.name}': detail UV set {uv_set} but mesh "
+                f"'{obj.name}' only has {len(mesh.uv_layers)} UV layer(s)")
+
+
+def _check_detail_maps(context, warnings):
+    """Detail map texture overrides must exist on disk."""
+    from .materials import _materials_in_use
+    from ..materials.detail_pack import (
+        detail_has_separate_channels,
+        detail_map_has_sources,
+        is_supported_detail_image,
+    )
+
+    used = _materials_in_use(context)
+    for mat in bpy.data.materials:
+        detail = mat.bjs_detail_map
+        if not detail.is_enabled:
+            continue
+        if mat not in used:
+            warnings.append(
+                f"Material '{mat.name}': detail map enabled but not "
+                f"used by any exportable mesh")
+            continue
+        if not detail_map_has_sources(detail):
+            warnings.append(
+                f"Material '{mat.name}': detail map enabled but no texture assigned")
+            continue
+
+        _check_detail_map_uv_set(context, mat, detail.uv_set, warnings)
+
+        has_separate = detail_has_separate_channels(detail)
+        if has_separate:
+            for label, path in (
+                ("albedo", detail.albedo_file),
+                ("normal", detail.normal_file),
+                ("roughness", detail.roughness_file),
+            ):
+                if not path:
+                    continue
+                abs_path = bpy.path.abspath(path)
+                if not os.path.isfile(abs_path):
+                    warnings.append(
+                        f"Material '{mat.name}': detail {label} image not found: {path}")
+                elif not is_supported_detail_image(path):
+                    warnings.append(
+                        f"Material '{mat.name}': detail {label} uses unsupported format "
+                        f"(PNG/JPG/WEBP only): {path}")
+            continue
+
+        abs_path = bpy.path.abspath(detail.texture_file)
+        if not os.path.isfile(abs_path):
+            warnings.append(
+                f"Material '{mat.name}': detail map texture not found: "
+                f"{detail.texture_file}")
+        elif not is_supported_detail_image(detail.texture_file):
+            warnings.append(
+                f"Material '{mat.name}': packed detail map uses unsupported format "
+                f"(PNG/JPG/WEBP only): {detail.texture_file}")
+
+
 def _check_large_world_rendering(context, warnings):
     """Geospatial globes need floating origin to stay stable at large coordinates."""
     scene = context.scene
@@ -693,6 +767,7 @@ def validate_scene(context):
     _check_atmosphere(context, warnings)
     _check_large_world_rendering(context, warnings)
     _check_materials(context, warnings)
+    _check_detail_maps(context, warnings)
     _check_probe_overlaps(context, warnings)
 
     return warnings

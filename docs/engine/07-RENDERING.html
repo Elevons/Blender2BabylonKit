@@ -342,12 +342,13 @@
   <article><h1>07 — Rendering: lights, cameras, shadows, scene look, node materials</h1>
 <p class="doc-links">Subsystem diagram: <a href="rendering.html">rendering.html</a> · Code traces: <a href="trace-lights.html">Lights</a> · <a href="trace-cameras.html">Cameras</a> · <a href="trace-shadows.html">Shadows</a> · <a href="trace-post.html">Post-processing</a> · <a href="trace-atmosphere.html">Atmosphere</a> · <a href="trace-materials.html">Node materials</a> · Blender: <a href="../blender/trace-materials.html">NME authoring</a></p>
 <h2>Lights (<code>subsystems/lights.ts</code>)</h2>
-<p>Automatic — no component. The glb creates and places the light; <code>ApplyBlenderLight</code> copies the lamp's properties onto it. Blender inserts an orientation-correction node when exporting +Y-up, so the GUID node is an *ancestor* of the light — <code>FindLightForNode</code> walks the whole parent chain. POINT→Point, SUN→Directional, SPOT→Spot (AREA unsupported by glTF — validator warns). Color and intensity are copied 1:1 from the manifest (<code>energy</code> → <code>light.intensity</code>): point/spot power in watts, sun strength in W/m². When <strong>Atmosphere</strong> is on, <strong>PBR Sun Intensity</strong> (default) may override the sun to π — see Atmosphere below. SUN lamps export <code>sunAngle</code> (angular diameter, radians); when the lamp casts shadows, <code>SetupShadows</code> maps it to PCSS penumbra (Blender Angle 0°→0, 45°→1; clamped above 45°). Spot lamps export <code>spotSize</code> / <code>spotBlend</code>. No fallback light — a dark scene means add a lamp in Blender.</p>
+<p>Automatic — no component. The glb creates and places the light; <code>ApplyBlenderLight</code> copies the lamp's properties onto it. Blender inserts an orientation-correction node when exporting +Y-up, so the GUID node is an *ancestor* of the light — <code>FindLightForNode</code> walks the whole parent chain (and searches lights inside a <code>ClusteredLightContainer</code> when punctual clustering ran). POINT→Point, SUN→Directional, SPOT→Spot (AREA unsupported by glTF — validator warns). Color and intensity are copied 1:1 from the manifest (<code>energy</code> → <code>light.intensity</code>): point/spot power in watts, sun strength in W/m². When <strong>Atmosphere</strong> is on, <strong>PBR Sun Intensity</strong> (default) may override the sun to π — see Atmosphere below. SUN lamps export <code>sunAngle</code> (angular diameter, radians); when the lamp casts shadows, <code>SetupShadows</code> maps it to PCSS penumbra (Blender Angle 0°→0, 45°→1; clamped above 45°). Spot lamps export <code>spotSize</code> / <code>spotBlend</code>. No fallback light — a dark scene means add a lamp in Blender.</p>
+<p><strong>Runtime scripts:</strong> behaviors that drive lamp intensity (e.g. <code>increaselights</code>) must resolve lights with <code>FindLightForNode(scene, entity.node)</code> from <code>@bjs/engine</code> — not raw <code>scene.lights</code>. After clustering, punctual lamps are removed from <code>scene.lights</code> but remain the same <code>Light</code> instances; <code>light.intensity</code> still updates the cluster each frame.</p>
 <h2>Punctual light budget (<code>subsystems/clusteredLights.ts</code>)</h2>
 <p>Large light rigs can exceed WebGL's per-shader <strong>uniform buffer block</strong> limit (often 12–16 blocks; Babylon uses one block per forward light plus scene/material/mesh data). Symptom: <code>Unable to compile effect</code> / <code>_finalizePipelineContext</code> in the browser console with a high <code>LIGHTCOUNT</code> define — not a Blender export bug.</p>
 <p>The loader handles this <strong>automatically</strong> during <code>FinalizeLevel</code>, <em>before</em> <code>SetupShadows</code> and the first material compile. Authors do not toggle anything in Blender for normal use.</p>
 <h3>When it kicks in</h3>
-<p>After the entity pass, count <strong>enabled</strong> lights in <code>scene.lights</code>. When the count exceeds the budget (default <strong>8</strong>), the loader tries to move eligible <strong>point and spot</strong> lights into a Babylon <code>ClusteredLightContainer</code>. <strong>Directional (sun) lights stay forward</strong> so shadow maps and PCSS penumbra keep working.</p>
+<p>After the entity pass, count <strong>enabled</strong> lights in <code>scene.lights</code>. When the count exceeds the budget (default <strong>8</strong>), the loader tries to move eligible <strong>point and spot</strong> lights into a Babylon <code>ClusteredLightContainer</code>. Only lamps with <code>entities[].light.cluster !== false</code> are clustered (default: all point/spot). <strong>Directional (sun) lights stay forward</strong> so shadow maps and PCSS penumbra keep working.</p>
 <h3>Three outcomes (<code>level.punctualLightingMode</code>)</h3>
 <table><thead><tr><th>Mode</th><th>When</th><th>What happened</th></tr></thead><tbody>
 <tr><td><code>forward</code></td><td>Enabled lights ≤ budget</td><td>No change — standard forward PBR per light</td></tr>
@@ -361,11 +362,19 @@
 <ul>
 <li>glTF punctual lights export with <code>Light.FALLOFF_GLTF</code>; clustered lighting only accepts <code>FALLOFF_DEFAULT</code>, so the loader converts falloff before <code>addLight</code>. The cluster writes inverse-square attenuation into its light-data texture — close to glTF, not bit-identical to forward.</li>
 <li>Clustered lights <strong>cannot cast shadows</strong> in Babylon. Keep shadow-casting on suns (and any punctual lights that must shadow) as regular forward lights; expect those to count toward the budget.</li>
+<li>After clustering, punctual lights are <strong>not</strong> in <code>scene.lights</code> — use <code>FindLightForNode</code> (or <code>level.clusteredLights.lights</code> from app code) to resolve them for runtime intensity changes.</li>
 <li>IES profiles and projection textures on spots are not clusterable.</li>
 <li>Devices without WebGL2 float blending fall back to <code>forward-expanded</code>.</li>
 </ul>
+<h3>Authoring in Blender</h3>
+<p><strong>Babylon Scene › Export</strong> (before the Export Level button):</p>
+<ul>
+<li><strong>Light Budget</strong> — max forward scene lights before clustering / UBO fallback (default 8). Exported as <code>scene.lightBudget</code>.</li>
+<li><strong>Cluster Punctual Lights</strong> — when off, never cluster; use <code>forward-expanded</code> when over budget. Exported as <code>scene.clusterPunctualLights</code>.</li>
+</ul>
+<p><strong>Babylon Object › Light</strong> (point/spot only): <strong>Cluster When Over Budget</strong> — uncheck to keep a lamp in the forward shader when the scene exceeds the budget (<code>entities[].light.cluster: false</code>). Use for shadow-casting punctual lamps or hero lights that must not share the cluster path.</p>
 <h3>Overrides (optional)</h3>
-<p>Most scenes should leave these unset. Manifest <code>scene</code> block (no Blender panel yet):</p>
+<p>Most scenes should use the Blender panels above. You can also hand-edit the manifest <code>scene</code> block or pass <code>LevelLoader</code> options:</p>
 <pre><code class="language-json">&quot;scene&quot;: {
   &quot;clusterPunctualLights&quot;: true,
   &quot;lightBudget&quot;: 8
@@ -373,6 +382,7 @@
 <table><thead><tr><th>Field</th><th>Default</th><th>Effect</th></tr></thead><tbody>
 <tr><td><code>clusterPunctualLights</code></td><td><code>true</code> (auto)</td><td>When <code>false</code>, never cluster — use UBO fallback when over budget</td></tr>
 <tr><td><code>lightBudget</code></td><td><code>8</code></td><td>Max enabled forward scene lights before clustering / fallback</td></tr>
+<tr><td><code>entities[].light.cluster</code></td><td><code>true</code> (eligible)</td><td>When <code>false</code> on a point/spot lamp, that lamp stays forward even when clustering runs</td></tr>
 </tbody></table>
 <p><code>LevelLoader</code> options <code>clusterPunctualLights</code> and <code>lightBudget</code> override the manifest when set. Trace: entity pass applies lamps → <code>ClusterPunctualLightsIfNeeded</code> → <code>SetupShadows</code>.</p>
 <h2>Cameras (<code>subsystems/cameras/</code>)</h2>
@@ -576,6 +586,25 @@
 <p><strong>Runtime load (two stages).</strong> Early in <code>Load</code>, <code>ApplyNodeMaterials</code> parses each NME JSON (<code>parseSerializedObject</code> + <code>urlRewriter</code> for relative URLs beside the JSON), applies manifest <code>textures[]</code> via <code>BindManifestTextures</code> (authoring wins over embedded JSON), manifest <code>inputs[]</code> via <code>BindManifestInputs</code>, and manifest <code>gradients[]</code> via <code>BindManifestGradients</code>, then assigns the result to matching meshes. Block ids from the manifest are resolved through the material's <code>editorData.map</code> (NME JSON id → runtime <code>uniqueId</code>); <code>blockName</code> is a fallback. Parsed materials are cached per manifest entry (<code>file</code> + <code>name</code>). <strong>No <code>build()</code> yet</strong> — shader compile is deferred so <code>ReflectionBlock</code> can see <code>scene.environmentTexture</code> and gradient <code>colorSteps</code> are baked at compile time.</p>
 <p><strong>Single compile.</strong> In <code>FinalizeLevel</code>, after <code>await ApplySceneSettings</code> (environment IBL when declared) and atmosphere setup, <code>BuildNodeMaterials</code> walks every scene <code>NodeMaterial</code>, awaits <code>whenTexturesReadyAsync()</code>, then calls <code>build()</code> once per unique material. Levels without NME materials or without an <code>environment</code> block still take this path when node materials exist — compile simply runs without scene IBL when no env texture was loaded.</p>
 <p><strong>Workflow.</strong> Save from NME into the level's <code>materials/</code> folder (mark shader uniforms and gradient blocks <strong>Visible in Inspector</strong> when you want them in Blender; add a <strong>Reflection</strong> block for IBL) → Material Properties → <strong>Babylon</strong> panel → pick JSON → optional <strong>Extract Textures…</strong> when the JSON still embeds images → <strong>Scan NME</strong> → tune <strong>Parameters</strong>, <strong>Gradients</strong>, and assign any external texture images → export. Trace: <a href="trace-materials.html">trace-materials.html</a> · Blender: <a href="../blender/trace-materials.html">trace-materials</a>.</p>
+<h2>Detail maps (<code>subsystems/materials/detailMapApply.ts</code>)</h2>
+<p>Standard glTF PBR from Blender stays in the <code>.glb</code>. To tile a <strong>secondary detail texture</strong> over that material at runtime (Babylon <code>DetailMapConfiguration</code>), use the <strong>Detail Map</strong> box in the same <strong>Properties › Material › Babylon</strong> panel — independent of NME overrides.</p>
+<p>Assign a <strong>pre-packed</strong> detail map <em>or</em> separate <strong>Albedo</strong> / <strong>Normal</strong> / <strong>Roughness</strong> images — packed is optional when separate channels are set. Export packs separate channels into one PNG using Blender's image API (Babylon Unity channel layout: R = greyscale albedo, G = normal green, B = roughness, A = normal red; missing channels → 0.5 gray to disable that effect).</p>
+<p>Tune <strong>UV Set</strong> (0 = first UV / UVMap → glTF <code>TEXCOORD_0</code>, 1 = second UV → <code>TEXCOORD_1</code>, …; exported as <code>coordinatesIndex</code>), <strong>UV Scale</strong> (tile count on that layer), <strong>Diffuse Blend</strong>, <strong>Roughness Blend</strong> (PBR only), <strong>Bump Level</strong>, and <strong>Normal Blend</strong> (Whiteout / RNM).</p>
+<p><strong>Formats.</strong> PNG, JPG, or WEBP only — the runtime loads these in the browser. TIFF/EXR and other formats are rejected: <strong>Validate</strong> warns before export, and <strong>Export</strong> warns if an enabled detail map could not be written. Validate also warns when the chosen UV set exceeds a mesh's UV layer count.</p>
+<p><strong>Live Link</strong> re-exports packed detail PNGs and the manifest <code>detailMaps[]</code> block on every save.</p>
+<pre><code class="language-json">&quot;detailMaps&quot;: [
+  {
+    &quot;name&quot;: &quot;Marble&quot;,
+    &quot;file&quot;: &quot;materials/Marble_detail.png&quot;,
+    &quot;coordinatesIndex&quot;: 1,
+    &quot;uvScale&quot;: 10,
+    &quot;diffuseBlendLevel&quot;: 0.1,
+    &quot;roughnessBlendLevel&quot;: 0.25,
+    &quot;bumpLevel&quot;: 1,
+    &quot;normalBlendMethod&quot;: &quot;WHITEOUT&quot;
+  }
+]</code></pre>
+<p><strong>Matching.</strong> After the glb loads (and after any NME replacement), <code>ApplyDetailMaps</code> matches <code>scene.materials[].name</code> to manifest <code>name</code> and configures <code>material.detailMap</code> (texture, <code>coordinatesIndex</code>, blend levels, UV scale). Node Materials are skipped. If both NME and detail map are authored on one material, NME wins.</p>
 <h3>Post-processing (<code>subsystems/postprocess.ts</code>)</h3>
 <p>Handles land on <code>level.post</code> (<code>PostProcessingHandles</code>: <code>pipeline?</code>, <code>ssao?</code>). Use <code>RetargetPostProcessing(handles, camera)</code> if gameplay swaps the active camera later (default pipeline only today).</p>
 <p>When <code>scene.postProcessing.defaultPipeline</code> is true, the runtime builds Babylon's <code>DefaultRenderingPipeline</code> (HDR on). Supported effects:</p>

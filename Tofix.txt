@@ -11,3 +11,4 @@ large world rendering needs some work
 sun away from center leads to some weird shadows
 Test reflection probes - done?
 collision/render layers need testing
+adding/removing components at runtime

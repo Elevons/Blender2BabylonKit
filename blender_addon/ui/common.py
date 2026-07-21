@@ -14,8 +14,10 @@ def draw_export_controls(layout, scene):
                   icon='FILE_REFRESH')
     if scene.bjs_live_link:
         if scene.bjs_live_link_path:
-            layout.label(text=bpy.path.basename(scene.bjs_live_link_path),
-                         icon='FILE_TICK')
+            row = layout.row(align=True)
+            row.label(text=bpy.path.basename(scene.bjs_live_link_path),
+                      icon='FILE_TICK')
+            row.operator("bjs.live_export_now", text="", icon='PLAY')
         else:
             layout.label(text="Export once to set the path", icon='ERROR')
 

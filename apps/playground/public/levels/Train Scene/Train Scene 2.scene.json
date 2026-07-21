@@ -1,0 +1,6129 @@
+{
+  "version": 5,
+  "glb": "Train Scene 2.glb",
+  "scene": {
+    "clearColor": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "ambientColor": [
+      0.1701,
+      0.1701,
+      0.1701
+    ],
+    "environment": {
+      "file": "env/Day_Sun_Mid_Cloudslayer.png",
+      "intensity": 2.0,
+      "rotationY": 0.0,
+      "createSkybox": true,
+      "skyboxIgnoreFog": true,
+      "skyboxColor": [
+        0.1067,
+        0.3976,
+        0.7002
+      ]
+    },
+    "freezeShadows": false,
+    "fog": null,
+    "atmosphere": null,
+    "postProcessing": {
+      "defaultPipeline": true,
+      "fxaa": true,
+      "msaaSamples": 3,
+      "bloom": {
+        "enabled": false,
+        "threshold": 0.8999999761581421,
+        "intensity": 0.5,
+        "kernel": 64,
+        "scale": 0.5
+      },
+      "ssao": false,
+      "toneMapping": false,
+      "exposure": 1.0,
+      "contrast": 1.0
+    },
+    "inputActions": {
+      "maps": [
+        {
+          "name": "Player",
+          "actions": [
+            {
+              "name": "Move",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "w"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "s"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "a"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "d"
+                    }
+                  }
+                },
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "arrowup"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "arrowdown"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "arrowleft"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "arrowright"
+                    }
+                  }
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Look",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Jump",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": " "
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Interact",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "e"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "axis",
+                  "index": 2
+                }
+              ]
+            },
+            {
+              "name": "Sprint",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "shift"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 10
+                }
+              ]
+            },
+            {
+              "name": "Crouch",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "c"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Forward",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "w"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Backward",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "s"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Left",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "a"
+                }
+              ]
+            },
+            {
+              "name": "Right",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "d"
+                }
+              ]
+            },
+            {
+              "name": "Reset",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "r"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Vehicle",
+          "actions": [
+            {
+              "name": "Main Control",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "w",
+                      "axisHalf": "POSITIVE"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "s",
+                      "axisHalf": "NEGATIVE"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "a",
+                      "axisHalf": "NEGATIVE"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "d",
+                      "axisHalf": "POSITIVE"
+                    }
+                  }
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "defaultInputMap": "Player",
+    "collisionLayers": {
+      "layers": [
+        "Default"
+      ],
+      "matrix": [
+        [
+          true
+        ]
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "822d77a3cdc1455bbf92a6869804df71",
+      "name": "Camera",
+      "parent": "9b53c861762745b7827aa3d08e37e3f4",
+      "components": [
+        {
+          "type": "CAMERA",
+          "cameraType": "ARC",
+          "attachControl": true,
+          "keys": {
+            "scheme": "ARROWS",
+            "up": "W",
+            "down": "S",
+            "left": "A",
+            "right": "D"
+          },
+          "useBlenderTransform": true,
+          "followMode": "OFFSET",
+          "lockRoll": true,
+          "speed": 1.0,
+          "inertia": 0.8999999761581421,
+          "radius": 10.0,
+          "lowerRadius": 0.0,
+          "upperRadius": 0.0,
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "trackTarget": true,
+          "orbitSpeed": 1.0,
+          "zoomSpeed": 1.0,
+          "panSpeed": 1.0,
+          "distance": 10.0,
+          "height": 4.0,
+          "rotationOffset": 0.0
+        }
+      ],
+      "camera": {
+        "type": "PERSP",
+        "clipStart": 10.0,
+        "clipEnd": 100000.0,
+        "active": true,
+        "fov": 1.3494819402694702
+      }
+    },
+    {
+      "id": "7e048d6033fc450fae6d64324a5b1bea",
+      "name": "Water",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": true,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            20000.001953125,
+            2000.0,
+            20000.001953125
+          ],
+          "radius": 10000.0009765625,
+          "height": 0.0,
+          "center": [
+            0.0,
+            -980.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "FogChanger",
+          "path": "//../src/behaviors/FogChanger.ts",
+          "vars": {
+            "movingObject": "161b6bdb08f345e2b3e15276592a139e",
+            "fogAColor": [
+              0.75,
+              0.800000011920929,
+              0.8500000238418579
+            ],
+            "fogARange": [
+              10000.0,
+              10000.0
+            ],
+            "fogBColor": [
+              0.012286488898098469,
+              0.16826939582824707,
+              0.2704978883266449
+            ],
+            "fogBRange": [
+              0.0,
+              1000.0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "5abbfcb86c394b88a7b8ffa2a3654cd5",
+      "name": "Sun",
+      "parent": null,
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "reducelight",
+          "path": "//../src/behaviors/reducelight.ts",
+          "vars": {
+            "source": "822d77a3cdc1455bbf92a6869804df71",
+            "surfaceTarget": "7e048d6033fc450fae6d64324a5b1bea",
+            "nearDistance": 10.0,
+            "farDistance": 1000.0,
+            "intensityNear": 1.0,
+            "intensityFar": 0.0
+          }
+        }
+      ],
+      "light": {
+        "type": "SUN",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 0.0,
+        "castShadows": true,
+        "sunAngle": 0.01745329238474369,
+        "shadow": {
+          "mapSize": 8192,
+          "bias": 0.0010000000474974513,
+          "normalBias": 0.009999999776482582,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "NONE",
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "161b6bdb08f345e2b3e15276592a139e",
+      "name": "Empty",
+      "parent": "822d77a3cdc1455bbf92a6869804df71",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": true,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "ANIMATED",
+          "mass": 1.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
+        }
+      ]
+    },
+    {
+      "id": "9b53c861762745b7827aa3d08e37e3f4",
+      "name": "Parent",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "291f53857d2d48158e01db7a2c9d50f5",
+      "name": "LandHalf",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "STATIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
+        }
+      ]
+    },
+    {
+      "id": "f4af1a53adc841d399dfe48ba660f955",
+      "name": "RR.Wheel.002",
+      "parent": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            8.60696029663086,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "39d031ebb7734eb5808ab2c3f175bdee",
+      "name": "RR.ArmCenter.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
+      "name": "RR.Arm.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5289be0774ba4b21a0e1e8835de946fe",
+      "name": "RL.Wheel.008",
+      "parent": "39d031ebb7734eb5808ab2c3f175bdee",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "39d031ebb7734eb5808ab2c3f175bdee",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            8.60696029663086,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "49d565ba2c3b4efe911c2528098aba83",
+      "name": "RL.Wheel.007",
+      "parent": "ed4d3659c1e3460db74090ce02467f66",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "ed4d3659c1e3460db74090ce02467f66",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            -8.606958389282227,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "da55807f3f654ff08426862b1e8a5cd3",
+      "name": "RL.Wheel.006",
+      "parent": "06e674c66e85489ba3970b4ff2766f6d",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "06e674c66e85489ba3970b4ff2766f6d",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            -8.606958389282227,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ed4d3659c1e3460db74090ce02467f66",
+      "name": "RL.ArmCenter.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "06e674c66e85489ba3970b4ff2766f6d",
+      "name": "RL.Arm.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "861a855d6d164e1f968eeb03b58e337b",
+      "name": "FRArmCenter.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a4d8494367754a15b4fe2aaf4b7fdaa8",
+      "name": "FR.Wheel.002",
+      "parent": "d98484a8b72b42079248fdcd49588429",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "d98484a8b72b42079248fdcd49588429",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209983825684,
+          "center": [
+            8.60696029663086,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d98484a8b72b42079248fdcd49588429",
+      "name": "FR.Arm.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0806f0e60b8f4c26a3fd0902e6b7e203",
+      "name": "FL.Wheel.008",
+      "parent": "861a855d6d164e1f968eeb03b58e337b",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            8.60696029663086,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "861a855d6d164e1f968eeb03b58e337b",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "7dd53a6e90a641e3991c48255b3209ae",
+      "name": "FL.Wheel.007",
+      "parent": "52fc5ee512a04668bb44ac7535c7db23",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            -8.606958389282227,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "52fc5ee512a04668bb44ac7535c7db23",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "f77c4c18494849acb4f70461ec2fe694",
+      "name": "FL.Wheel.006",
+      "parent": "8459be8129c1471f8ec3e255791c8f19",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 5.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 10.917442321777344,
+          "height": 9.116209030151367,
+          "center": [
+            -8.606958389282227,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "HINGE",
+          "target": "8459be8129c1471f8ec3e255791c8f19",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0
+        }
+      ]
+    },
+    {
+      "id": "52fc5ee512a04668bb44ac7535c7db23",
+      "name": "Fl.ArmCenter.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8459be8129c1471f8ec3e255791c8f19",
+      "name": "Fl.Arm.002",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 200.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 200000.0,
+              "damping": 200000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bc2042e80fcf404e988e0c9160a85b94",
+      "name": "Engine Rover",
+      "parent": "9b53c861762745b7827aa3d08e37e3f4",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "f77c4c18494849acb4f70461ec2fe694",
+            "frontRightWheel": "a4d8494367754a15b4fe2aaf4b7fdaa8",
+            "rearLeftWheel": "da55807f3f654ff08426862b1e8a5cd3",
+            "rearRightWheel": "f4af1a53adc841d399dfe48ba660f955",
+            "speed": 1000.0,
+            "force": 80000.0,
+            "body": "bc2042e80fcf404e988e0c9160a85b94",
+            "holdSeconds": 0.5,
+            "frontLeftInner": "7dd53a6e90a641e3991c48255b3209ae",
+            "frontRightInner": "5289be0774ba4b21a0e1e8835de946fe",
+            "rearLeftInner": "49d565ba2c3b4efe911c2528098aba83",
+            "rearRightInner": "0806f0e60b8f4c26a3fd0902e6b7e203",
+            "swapMovement": false,
+            "swapSteering": false,
+            "turnRatio": 0.5,
+            "steerZoneWidth": 0.6000000238418579,
+            "steerZonePriority": 0.8999999761581421
+          }
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 1000.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.5,
+          "startAsleep": false,
+          "centerOfMassAutoFit": false,
+          "centerOfMass": [
+            0.0,
+            -6.0,
+            0.8205709457397461
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "increaselights",
+          "path": "//../src/behaviors/increaselights.ts",
+          "vars": {
+            "lights": [
+              "6f550b0cc048439dba20d86963a1e8ee",
+              "09cecd459b6f40649df0b8da4f5aefd2",
+              "d2661b17c08541b98e5885042bafaaa6",
+              "eb5fc5eecf9641ab83f86b0a3e3d92fc"
+            ],
+            "sceneIntensityA": 1.0,
+            "sceneIntensityB": 0.10000000149011612,
+            "brightnessX": 0.0,
+            "brightnessY": 30000.0
+          }
+        }
+      ]
+    },
+    {
+      "id": "be878f72778147ce8c5cd1db3cd25b63",
+      "name": "Bubbles.005",
+      "parent": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "79a416ea33bd45e489655a198e56b140",
+      "name": "Bubbles.004",
+      "parent": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "4ade37a3acd04fa6891348b5ccae8fba",
+      "name": "Bubbles.003",
+      "parent": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "84755ad84f924446b647a711a88ad08f",
+      "name": "Bubbles.002",
+      "parent": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "b402edd233a64f82bd170071a893b126",
+      "name": "Bubbles.001",
+      "parent": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "46c72c309adc4a9c9b24895fc1e5ef28",
+      "name": "Bubbles",
+      "parent": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
+      "name": "BubbleParent",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": []
+    },
+    {
+      "id": "6f550b0cc048439dba20d86963a1e8ee",
+      "name": "Spot.001",
+      "parent": "ced2b89a28b0407d972bd9615bc93ba2",
+      "components": [],
+      "light": {
+        "type": "SPOT",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 10.0,
+        "castShadows": true,
+        "spotSize": 2.4166860580444336,
+        "spotBlend": 0.15000000596046448,
+        "shadow": {
+          "mapSize": 0,
+          "bias": 4.999999873689376e-05,
+          "normalBias": 0.10000000149011612,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "POISSON",
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "09cecd459b6f40649df0b8da4f5aefd2",
+      "name": "Spot.002",
+      "parent": "ced2b89a28b0407d972bd9615bc93ba2",
+      "components": [],
+      "light": {
+        "type": "SPOT",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 10.0,
+        "castShadows": true,
+        "spotSize": 1.3226715326309204,
+        "spotBlend": 0.15000000596046448,
+        "shadow": {
+          "mapSize": 0,
+          "bias": 4.999999873689376e-05,
+          "normalBias": 0.019999999552965164,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "PCF",
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "3b94dce3c4a5418caf3eb40ae477dc19",
+      "name": "Spot.005",
+      "parent": "ced2b89a28b0407d972bd9615bc93ba2",
+      "components": [],
+      "light": {
+        "type": "SPOT",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 10.0,
+        "castShadows": true,
+        "spotSize": 1.3226715326309204,
+        "spotBlend": 0.15000000596046448,
+        "shadow": {
+          "mapSize": 0,
+          "bias": 4.999999873689376e-05,
+          "normalBias": 0.019999999552965164,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "PCF",
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "3fc177eaaf3745b18941a82bc0980e73",
+      "name": "Spot.006",
+      "parent": "ced2b89a28b0407d972bd9615bc93ba2",
+      "components": [],
+      "light": {
+        "type": "SPOT",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 10.0,
+        "castShadows": true,
+        "spotSize": 1.3226715326309204,
+        "spotBlend": 0.15000000596046448,
+        "shadow": {
+          "mapSize": 0,
+          "bias": 4.999999873689376e-05,
+          "normalBias": 0.019999999552965164,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "PCF",
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "98cdbaac898a4428951c085bdb580291",
+      "name": "Small Rover.003",
+      "parent": "9b53c861762745b7827aa3d08e37e3f4",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 500.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.10000000149011612,
+          "startAsleep": false,
+          "centerOfMassAutoFit": false,
+          "centerOfMass": [
+            0.0,
+            -6.0,
+            -0.5894279479980469
+          ]
+        },
+        {
+          "type": "AUDIO",
+          "file": null,
+          "volume": 1.0,
+          "loop": false,
+          "autoPlay": false,
+          "spatial": true,
+          "maxDistance": 50.0,
+          "playbackRate": 1.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "bc2042e80fcf404e988e0c9160a85b94",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 10000.0,
+              "damping": 1000.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "spring",
+              "min": -5.0,
+              "max": 5.0,
+              "stiffness": 10000.0,
+              "damping": 1000.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "limited",
+              "min": -15.0,
+              "max": 15.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "limited",
+              "min": -15.0,
+              "max": 15.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "limited",
+              "min": -5.0,
+              "max": 5.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "5ba48d0c2c784c7d93a482971c210da4",
+            "frontRightWheel": "7a469b672ec345f1a763d2ff69134b66",
+            "rearLeftWheel": "1d75e5fe6da64bd8a2b7063f72a527fe",
+            "rearRightWheel": "db6cb4486ffa4e919d18b29591a7a8f5",
+            "frontLeftInner": null,
+            "frontRightInner": null,
+            "rearLeftInner": null,
+            "rearRightInner": null,
+            "speed": 1000.0,
+            "force": 8000.0,
+            "holdSeconds": 0.5,
+            "turnRatio": 0.5,
+            "body": "98cdbaac898a4428951c085bdb580291",
+            "swapMovement": false,
+            "swapSteering": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "db6cb4486ffa4e919d18b29591a7a8f5",
+      "name": "RR.Wheel.003",
+      "parent": "0332176751b245cb96e3a62c435eb86a",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "0332176751b245cb96e3a62c435eb86a",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007441520690918,
+          "height": 5.246210098266602,
+          "center": [
+            6.986960411071777,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0332176751b245cb96e3a62c435eb86a",
+      "name": "RR.Arm.003",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "98cdbaac898a4428951c085bdb580291",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1d75e5fe6da64bd8a2b7063f72a527fe",
+      "name": "RL.Wheel.009",
+      "parent": "4a05031988a94a0db73214c59cfb3bde",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "4a05031988a94a0db73214c59cfb3bde",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007439613342285,
+          "height": 6.326210021972656,
+          "center": [
+            -6.836958408355713,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4a05031988a94a0db73214c59cfb3bde",
+      "name": "RL.Arm.003",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "98cdbaac898a4428951c085bdb580291",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7a469b672ec345f1a763d2ff69134b66",
+      "name": "FR.Wheel.003",
+      "parent": "1db93a1512b84263aa45fd2016367dc6",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "1db93a1512b84263aa45fd2016367dc6",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007441520690918,
+          "height": 5.246210098266602,
+          "center": [
+            6.986960411071777,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1db93a1512b84263aa45fd2016367dc6",
+      "name": "FR.Arm.003",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "98cdbaac898a4428951c085bdb580291",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5ba48d0c2c784c7d93a482971c210da4",
+      "name": "FL.Wheel.009",
+      "parent": "6d31008f7a0a408b8d306ce9e3f301a1",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.037443161010742,
+          "height": 5.276208877563477,
+          "center": [
+            -6.806958198547363,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "6d31008f7a0a408b8d306ce9e3f301a1",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6d31008f7a0a408b8d306ce9e3f301a1",
+      "name": "Fl.Arm.003",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "98cdbaac898a4428951c085bdb580291",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fefee1c4e0f1463cbac14f892675a1c4",
+      "name": "Diaper.001",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": []
+    },
+    {
+      "id": "b125f6eb881b492f94d1ba2ed6652439",
+      "name": "Bubbles.011",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "c0a8b45f0b3d46f5854baac692724c9a",
+      "name": "Bubbles.010",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "affeddb1f9634cf9ab3b383215efbbb1",
+      "name": "Bubbles.009",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "063f04a284d648ffb924474026ad4f45",
+      "name": "Bubbles.008",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "401eafd553404624a9930d745ce09ae3",
+      "name": "Bubbles.007",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "097c12c2a84b4e378f952fe227d9b1a4",
+      "name": "Bubbles.006",
+      "parent": "98cdbaac898a4428951c085bdb580291",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "name": "Small Rover.006",
+      "parent": "9b53c861762745b7827aa3d08e37e3f4",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 500.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.10000000149011612,
+          "startAsleep": false,
+          "centerOfMassAutoFit": false,
+          "centerOfMass": [
+            0.0,
+            -6.0,
+            -0.5894279479980469
+          ]
+        },
+        {
+          "type": "AUDIO",
+          "file": null,
+          "volume": 1.0,
+          "loop": false,
+          "autoPlay": false,
+          "spatial": true,
+          "maxDistance": 50.0,
+          "playbackRate": 1.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "98cdbaac898a4428951c085bdb580291",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 10000.0,
+              "damping": 1000.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "spring",
+              "min": -5.0,
+              "max": 5.0,
+              "stiffness": 10000.0,
+              "damping": 1000.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "limited",
+              "min": -15.0,
+              "max": 15.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "limited",
+              "min": -15.0,
+              "max": 15.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "limited",
+              "min": -5.0,
+              "max": 5.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "1b757bdf1347424eb23adfc3fc3c8126",
+            "frontRightWheel": "67c3b71e2f4e4b9b9a2f8efc28c99803",
+            "rearLeftWheel": "f665f081d4ee41e89fa59bdd4fb788d6",
+            "rearRightWheel": "8e2f37b4c3ab4b86b342bbb101180924",
+            "frontLeftInner": null,
+            "frontRightInner": null,
+            "rearLeftInner": null,
+            "rearRightInner": null,
+            "speed": 1000.0,
+            "force": 8000.0,
+            "holdSeconds": 0.5,
+            "turnRatio": 0.5,
+            "body": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+            "swapMovement": false,
+            "swapSteering": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "8e2f37b4c3ab4b86b342bbb101180924",
+      "name": "RR.Wheel.004",
+      "parent": "10b27a66737a428e8a1e51e0d2ead739",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "10b27a66737a428e8a1e51e0d2ead739",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007441520690918,
+          "height": 5.246210098266602,
+          "center": [
+            6.986960411071777,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10b27a66737a428e8a1e51e0d2ead739",
+      "name": "RR.Arm.004",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f665f081d4ee41e89fa59bdd4fb788d6",
+      "name": "RL.Wheel.010",
+      "parent": "d293b3b9e2d5418986f824e643b6b5c7",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "d293b3b9e2d5418986f824e643b6b5c7",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007439613342285,
+          "height": 6.326210021972656,
+          "center": [
+            -6.836958408355713,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "d293b3b9e2d5418986f824e643b6b5c7",
+      "name": "RL.Arm.004",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "67c3b71e2f4e4b9b9a2f8efc28c99803",
+      "name": "FR.Wheel.004",
+      "parent": "b052426a1fcb41c6ae756886b8348cba",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "b052426a1fcb41c6ae756886b8348cba",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007441520690918,
+          "height": 5.246210098266602,
+          "center": [
+            6.986960411071777,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b052426a1fcb41c6ae756886b8348cba",
+      "name": "FR.Arm.004",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1b757bdf1347424eb23adfc3fc3c8126",
+      "name": "FL.Wheel.010",
+      "parent": "deed69d5e653474cbd056c8d239cab98",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.037443161010742,
+          "height": 5.276208877563477,
+          "center": [
+            -6.806958198547363,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "deed69d5e653474cbd056c8d239cab98",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deed69d5e653474cbd056c8d239cab98",
+      "name": "Fl.Arm.004",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "30b3dd2ed6384ba18edc8705d39d4edb",
+      "name": "Diaper.002",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": []
+    },
+    {
+      "id": "5b0fd5b12cb344ef83fb4c968119375a",
+      "name": "Bubbles.017",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "c8ec06454214491daa96ce889919baf4",
+      "name": "Bubbles.016",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "d95369ad2dd040b0b25f634dde7cb369",
+      "name": "Bubbles.015",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "eed2dff9e73a444a904af343954046d0",
+      "name": "Bubbles.014",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "13c6a0e5cfcf4afbae2264e5c568ffd4",
+      "name": "Bubbles.013",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "1dcc50013f814b4ea3b2c1c13f4b9e1c",
+      "name": "Bubbles.012",
+      "parent": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "216994698c6a415498366d334761518c",
+      "name": "Small Rover.007",
+      "parent": "9b53c861762745b7827aa3d08e37e3f4",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            2.991502285003662,
+            4.957711696624756,
+            4.191771507263184
+          ],
+          "radius": 1.1658856868743896,
+          "height": 2.5577118396759033,
+          "center": [
+            5.960464477539063e-08,
+            0.5938838720321655,
+            1.1920928955078125e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 500.0,
+          "friction": 0.5,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.10000000149011612,
+          "angularDamping": 0.10000000149011612,
+          "startAsleep": false,
+          "centerOfMassAutoFit": false,
+          "centerOfMass": [
+            0.0,
+            -6.0,
+            -0.5894279479980469
+          ]
+        },
+        {
+          "type": "AUDIO",
+          "file": null,
+          "volume": 1.0,
+          "loop": false,
+          "autoPlay": false,
+          "spatial": true,
+          "maxDistance": 50.0,
+          "playbackRate": 1.0
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "7ac3aa731f7245b0ad9a1ad8d0e59032",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "spring",
+              "min": -3.0,
+              "max": 3.0,
+              "stiffness": 10000.0,
+              "damping": 1000.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "spring",
+              "min": -5.0,
+              "max": 5.0,
+              "stiffness": 10000.0,
+              "damping": 1000.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "limited",
+              "min": -15.0,
+              "max": 15.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "limited",
+              "min": -15.0,
+              "max": 15.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "limited",
+              "min": -5.0,
+              "max": 5.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "SCRIPT",
+          "script": "CarController",
+          "path": "//../src/behaviors/CarController.ts",
+          "vars": {
+            "frontLeftWheel": "3f957d3611094d55b6989cf37bc652d5",
+            "frontRightWheel": "6d23005bd22243c188163835332f9588",
+            "rearLeftWheel": "5c0268b317f04e09af4f508b554296bb",
+            "rearRightWheel": "d7944640ced543b3833b297053538251",
+            "frontLeftInner": null,
+            "frontRightInner": null,
+            "rearLeftInner": null,
+            "rearRightInner": null,
+            "speed": 1000.0,
+            "force": 8000.0,
+            "holdSeconds": 0.5,
+            "turnRatio": 0.5,
+            "body": "216994698c6a415498366d334761518c",
+            "swapMovement": false,
+            "swapSteering": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "d7944640ced543b3833b297053538251",
+      "name": "RR.Wheel.005",
+      "parent": "fdc62d2f95874206ad53f2eecc809496",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "fdc62d2f95874206ad53f2eecc809496",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007441520690918,
+          "height": 5.246210098266602,
+          "center": [
+            6.986960411071777,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fdc62d2f95874206ad53f2eecc809496",
+      "name": "RR.Arm.005",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "216994698c6a415498366d334761518c",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5c0268b317f04e09af4f508b554296bb",
+      "name": "RL.Wheel.011",
+      "parent": "701091f0adb54a0996f1f7b7bd83ba40",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "701091f0adb54a0996f1f7b7bd83ba40",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007439613342285,
+          "height": 6.326210021972656,
+          "center": [
+            -6.836958408355713,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "701091f0adb54a0996f1f7b7bd83ba40",
+      "name": "RL.Arm.005",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "216994698c6a415498366d334761518c",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6d23005bd22243c188163835332f9588",
+      "name": "FR.Wheel.005",
+      "parent": "2d7231b1a58a48faa4cadc77218387ec",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "2d7231b1a58a48faa4cadc77218387ec",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.007441520690918,
+          "height": 5.246210098266602,
+          "center": [
+            6.986960411071777,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2d7231b1a58a48faa4cadc77218387ec",
+      "name": "FR.Arm.005",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "216994698c6a415498366d334761518c",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3f957d3611094d55b6989cf37bc652d5",
+      "name": "FL.Wheel.011",
+      "parent": "1248096d3d7948dbbda0bbce6efed984",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 10.0,
+          "friction": 1.0,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CYLINDER",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            13.136098861694336,
+            21.83620834350586,
+            21.834884643554688
+          ],
+          "radius": 8.037443161010742,
+          "height": 5.276208877563477,
+          "center": [
+            -6.806958198547363,
+            -0.0016875267028808594,
+            9.5367431640625e-07
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.7071067690849304,
+            0.7071067690849304
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "1248096d3d7948dbbda0bbce6efed984",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": false,
+          "min": 0.0,
+          "max": 0.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 0.0,
+          "motorMaxForce": 0.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "free",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1248096d3d7948dbbda0bbce6efed984",
+      "name": "Fl.Arm.005",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "DYNAMIC",
+          "mass": 100.0,
+          "friction": 0.5,
+          "restitution": 0.0,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false,
+          "centerOfMassAutoFit": true
+        },
+        {
+          "type": "COLLIDER",
+          "shape": "CONVEX",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "CONSTRAINT",
+          "constraintType": "CUSTOM",
+          "target": "216994698c6a415498366d334761518c",
+          "applyObjectScale": true,
+          "pivot": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "collision": false,
+          "useLimits": true,
+          "min": 3.0,
+          "max": 3.0,
+          "stiffness": 100.0,
+          "damping": 10.0,
+          "motor": false,
+          "motorSpeed": 90.0,
+          "motorMaxForce": 100.0,
+          "axes": [
+            {
+              "axis": "LINEAR_X",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "LINEAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_X",
+              "mode": "spring",
+              "min": -1.5,
+              "max": 1.5,
+              "stiffness": 150000.0,
+              "damping": 20000.0
+            },
+            {
+              "axis": "ANGULAR_Y",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            },
+            {
+              "axis": "ANGULAR_Z",
+              "mode": "locked",
+              "min": 0.0,
+              "max": 0.0,
+              "stiffness": 100.0,
+              "damping": 10.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "16ddad6148c84b03ac6f0bf4f141eac3",
+      "name": "Diaper.003",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": []
+    },
+    {
+      "id": "b340b4068a1f41eb8a9fab7e08464030",
+      "name": "Bubbles.023",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "32b221380a52466bb7620fed5e31c5c0",
+      "name": "Bubbles.022",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "5470f823e3b04803b22195c443e55278",
+      "name": "Bubbles.021",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "b3a382b9833e4602b849b0f88d4102bf",
+      "name": "Bubbles.020",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "b91a9697d62e4cc384ea64c6728acc8d",
+      "name": "Bubbles.019",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    },
+    {
+      "id": "2af9c6193436402aac63e3cce89566bf",
+      "name": "Bubbles.018",
+      "parent": "216994698c6a415498366d334761518c",
+      "components": [
+        {
+          "type": "PARTICLE",
+          "file": "particles/bubbleparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "BJSCoolWater",
+      "file": "materials/water.json",
+      "inputs": [
+        {
+          "blockId": 179187,
+          "blockName": "Large Wave Speed",
+          "type": "VECTOR2",
+          "value": [
+            0.009999999776482582,
+            0.009999999776482582
+          ]
+        },
+        {
+          "blockId": 179189,
+          "blockName": "Wave Density",
+          "type": "FLOAT",
+          "value": 50.0
+        },
+        {
+          "blockId": 179200,
+          "blockName": "Directionality",
+          "type": "FLOAT",
+          "value": 0.25
+        },
+        {
+          "blockId": 179205,
+          "blockName": "WaveHeight",
+          "type": "FLOAT",
+          "value": 50.0
+        },
+        {
+          "blockId": 179228,
+          "blockName": "Bump Size",
+          "type": "FLOAT",
+          "value": 100.0
+        },
+        {
+          "blockId": 179230,
+          "blockName": "Bump Speed",
+          "type": "VECTOR2",
+          "value": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "blockId": 179233,
+          "blockName": "Bump Strength",
+          "type": "FLOAT",
+          "value": 2.0
+        },
+        {
+          "blockId": 179255,
+          "blockName": "Foam Scale",
+          "type": "FLOAT",
+          "value": 100.0
+        },
+        {
+          "blockId": 179259,
+          "blockName": "Foam Speed",
+          "type": "VECTOR2",
+          "value": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "blockId": 179281,
+          "blockName": "Roughness",
+          "type": "FLOAT",
+          "value": 0.009999999776482582
+        },
+        {
+          "blockId": 179303,
+          "blockName": "Shallow Opacity",
+          "type": "FLOAT",
+          "value": 0.10000000149011612
+        },
+        {
+          "blockId": 179312,
+          "blockName": "Depth Probe Drop",
+          "type": "FLOAT",
+          "value": 1.0
+        },
+        {
+          "blockId": 179299,
+          "blockName": "Depth Fade Distance",
+          "type": "FLOAT",
+          "value": 50.0
+        }
+      ],
+      "gradients": [
+        {
+          "blockId": 179237,
+          "blockName": "Primary Color",
+          "colorSteps": [
+            {
+              "step": 0.24466916918754578,
+              "color": {
+                "r": 0.012286488898098469,
+                "g": 0.16826939582824707,
+                "b": 0.2704978883266449
+              }
+            },
+            {
+              "step": 0.6710886359214783,
+              "color": {
+                "r": 0.026936782523989677,
+                "g": 0.21022945642471313,
+                "b": 0.2977040708065033
+              }
+            },
+            {
+              "step": 0.8685747385025024,
+              "color": {
+                "r": 0.010515084490180016,
+                "g": 0.3014688789844513,
+                "b": 0.32465943694114685
+              }
+            },
+            {
+              "step": 1.0,
+              "color": {
+                "r": 0.9254902005195618,
+                "g": 0.9803921580314636,
+                "b": 0.9921568632125854
+              }
+            }
+          ]
+        },
+        {
+          "blockId": 179244,
+          "blockName": "Foam Intensity",
+          "colorSteps": [
+            {
+              "step": 0.0,
+              "color": {
+                "r": 0.0,
+                "g": 0.0,
+                "b": 0.0
+              }
+            },
+            {
+              "step": 0.47999998927116394,
+              "color": {
+                "r": 1.0,
+                "g": 1.0,
+                "b": 1.0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "detailMaps": [
+    {
+      "name": "OceanHalf",
+      "file": "materials/OceanHalf_detail.png",
+      "uvScale": 10.0,
+      "diffuseBlendLevel": 0.0,
+      "roughnessBlendLevel": 1.0,
+      "bumpLevel": 1.0,
+      "normalBlendMethod": "WHITEOUT"
+    }
+  ],
+  "debug": true
+}

@@ -17,7 +17,7 @@ from .assets import begin_asset_export
 from .components import serialize_components, iter_referenced_objects
 from .datablocks import serialize_light, serialize_camera
 from .scene import serialize_scene
-from .materials import serialize_materials
+from .materials import serialize_materials, serialize_detail_maps
 from .visibility import (
     is_renderable,
     is_viewport_hidden,
@@ -138,7 +138,10 @@ def _build_manifest(context, glb_filename, output_dir):
     materials = serialize_materials(context, output_dir)
     if materials:
         manifest["materials"] = materials
-    return manifest
+    detail_maps, detail_warnings = serialize_detail_maps(context, output_dir)
+    if detail_maps:
+        manifest["detailMaps"] = detail_maps
+    return manifest, detail_warnings
 
 
 def _stamp_gltf_extras(context):
@@ -210,9 +213,9 @@ def export_level(context, filepath):
         relink_scene_objects(unlinked_lights)
     _clear_gltf_extras(extras_stamped)
 
-    manifest = _build_manifest(context, glb_filename, os.path.dirname(glb_path))
+    manifest, detail_warnings = _build_manifest(context, glb_filename, os.path.dirname(glb_path))
     manifest["debug"] = bool(getattr(context.scene, "bjs_debug_build", True))
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
-    return glb_path, json_path, len(manifest["entities"])
+    return glb_path, json_path, len(manifest["entities"]), detail_warnings

@@ -12,8 +12,16 @@
 <tr><td><strong>Input Actions</strong></td><td><code>scene.inputActions</code> + <code>defaultInputMap</code></td></tr>
 <tr><td><strong>Collision Layers</strong></td><td><code>scene.collisionLayers</code> — named layer list + N×N collision matrix</td></tr>
 <tr><td><strong>Large World Rendering</strong></td><td>Floating-origin engine + Havok region (see runtime basics)</td></tr>
-<tr><td><strong>Export</strong></td><td>Export Level, Validate, Live Link, Debug Build — <a href="04-WORKFLOW.html">04 — Workflow</a></td></tr>
+<tr><td><strong>Export</strong></td><td>Export Level, Validate, Live Link, Debug Build — punctual light budget + clustering toggles — <a href="04-WORKFLOW.html">04 — Workflow</a></td></tr>
 </tbody></table>
+
+<h2>Punctual light budget (Export panel)</h2>
+<p>At the top of <strong>Babylon Scene › Export</strong> (before Export Level):</p>
+<ul>
+<li><strong>Light Budget</strong> — max forward scene lights before the runtime clusters point/spot lamps or falls back to expanded forward shaders (default <strong>8</strong>). Serialized as <code>scene.lightBudget</code>.</li>
+<li><strong>Cluster Punctual Lights</strong> — when enabled (default), over-budget scenes use Babylon's <code>ClusteredLightContainer</code>; when disabled, the loader disables light uniform buffers instead. Serialized as <code>scene.clusterPunctualLights</code>.</li>
+</ul>
+<p>Per-lamp opt-out: select a point or spot lamp → <strong>Babylon Object › Light › Cluster When Over Budget</strong>. Uncheck to keep that lamp in the forward path (<code>entities[].light.cluster: false</code>). Sun lamps are never clustered. Runtime detail: <a href="../engine/07-RENDERING.html">07 — Rendering › Punctual light budget</a>.</p>
 
 <h2>Environment and skybox</h2>
 <ul>
@@ -39,4 +47,4 @@
 <p>Runtime detail: <a href="../engine/06-PHYSICS.html#collision-layers">06 — Physics › Collision layers</a> · Feature trace: <a href="../engine/10-FEATURE-TRACES.html#collision-layers">10 — Feature Traces</a>.</p>
 
 <h2>Material-level NME (related)</h2>
-<p>Per-<strong>material</strong> overrides are not in the scene block — open <strong>Properties › Material › Babylon</strong> for Node Material Editor JSON, <strong>Scan NME</strong> (textures, parameters, gradients), and <strong>Extract Textures…</strong>. Trace: <a href="trace-materials.html">trace-materials</a>.</p>
+<p>Per-<strong>material</strong> overrides are not in the scene block — open <strong>Properties › Material › Babylon</strong> for Node Material Editor JSON, <strong>Scan NME</strong> (textures, parameters, gradients), <strong>Extract Textures…</strong>, and the <strong>Detail Map</strong> box (packed or separate albedo/normal/roughness, UV set + scale → <code>detailMaps[]</code>). Trace: <a href="trace-materials.html">trace-materials</a>.</p>

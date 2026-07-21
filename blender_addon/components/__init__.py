@@ -21,7 +21,7 @@ from .component import (
     BJSComponent,
 )
 
-from .object_settings import BJSLightShadow, BJSAnimationSettings
+from .object_settings import BJSLightSettings, BJSLightShadow, BJSAnimationSettings
 
 classes = (
     BJSListItem,
@@ -31,6 +31,7 @@ classes = (
     BJSProbeObjectRef,
     BJSEventMessage,
     BJSComponent,
+    BJSLightSettings,
     BJSLightShadow,
     BJSAnimationSettings,
 )
@@ -45,6 +46,7 @@ def register():
     Object.bjs_components_index = IntProperty(default=0)
     # Per-light Babylon shadow settings (only used/drawn for LIGHT objects).
     Object.bjs_shadow = PointerProperty(type=BJSLightShadow)
+    Object.bjs_light = PointerProperty(type=BJSLightSettings)
     # Per-object NLA animation settings (drawn when the object has NLA strips).
     Object.bjs_animation = PointerProperty(type=BJSAnimationSettings)
     # Session clipboard for cut/copy/paste of components (holds 0 or 1).
@@ -58,6 +60,7 @@ def unregister():
     del WindowManager.bjs_pinned_object
     del WindowManager.bjs_clipboard
     del Object.bjs_animation
+    del Object.bjs_light
     del Object.bjs_shadow
     del Object.bjs_components_index
     del Object.bjs_components

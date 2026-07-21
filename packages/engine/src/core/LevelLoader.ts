@@ -15,6 +15,7 @@ import { InputManager, DEFAULT_INPUT_ASSET } from "../input";
 import { SetupShadows } from "../subsystems/shadows";
 import {
   AddContainerToSceneWithLightClustering,
+  BuildClusterableLightNames,
   ClusterPunctualLightsIfNeeded,
   ShouldClusterBeforeGlbLoad,
 } from "../subsystems/clusteredLights";
@@ -35,7 +36,7 @@ import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplySceneSettings, ApplyAutoPlayAnimations } from "./loader/sceneSettings";
 import { ApplyPostProcessing } from "../subsystems/postprocess";
 import { ApplyAtmosphere } from "../subsystems/atmosphere";
-import { ApplyNodeMaterials, BuildNodeMaterials } from "../subsystems/materials/index";
+import { ApplyNodeMaterials, ApplyDetailMaps, BuildNodeMaterials } from "../subsystems/materials/index";
 import {
   AssignProbeMaterials,
   BuildReflectionProbes,
@@ -134,6 +135,7 @@ export class LevelLoader
     const clusterOptions = {
       enabled: clusterPunctualLights,
       threshold: lightBudget,
+      clusterableLightNames: BuildClusterableLightNames(manifest),
     };
 
     let earlyPunctualLighting: ClusteredLightsResult | null = null;
@@ -158,6 +160,7 @@ export class LevelLoader
     NeutralizeGltfRoot(this.scene);
     ApplyNodeVisibility(this.scene);
     await ApplyNodeMaterials(this.scene, manifest.materials, baseUrl);
+    ApplyDetailMaps(this.scene, manifest.detailMaps, baseUrl);
 
     const context = CreateLoadContext(this.scene, baseUrl, this.registry, defaultInputMap);
 
@@ -199,6 +202,7 @@ export class LevelLoader
     const punctualLighting = earlyPunctualLighting ?? ClusterPunctualLightsIfNeeded(this.scene, {
       enabled: clusterPunctualLights,
       threshold: lightBudget,
+      clusterableLightNames: BuildClusterableLightNames(manifest),
     });
     context.level.punctualLightingMode = punctualLighting.mode;
     if (punctualLighting.container !== null)

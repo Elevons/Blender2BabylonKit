@@ -120,6 +120,38 @@ REFLECTION_PROBE, render/collision layer kinds are load-only.`,
 
 When unsure: \`list_scene_entities\` shows what's already authored in the level.`,
   },
+  {
+    slug: "lights",
+    title: "Runtime lights and clustering",
+    summary: "Use FindLightForNode — clustered lamps leave scene.lights but stay drivable.",
+    humanDoc: "docs/engine/07-RENDERING.html",
+    content: `# Runtime lights (behavior author view)
+
+Lamps are exported in the glb; the loader copies manifest \`energy\` → \`light.intensity\`.
+
+**To change intensity at runtime:**
+
+\`\`\`ts
+import { FindLightForNode } from "@bjs/engine";
+
+const light = FindLightForNode(this.scene, lampEntity.node);
+if (light !== null) { light.intensity = brightness; }
+\`\`\`
+
+**Clustering:** when enabled light count exceeds the budget (default 8, **Babylon Scene › Export › Light Budget**), the loader
+moves eligible point/spot lamps into \`ClusteredLightContainer\` and removes them from \`scene.lights\`.
+They are still the same \`Light\` instances — \`FindLightForNode\` searches the cluster.
+
+**Per-lamp opt-out:** **Babylon Object › Light › Cluster When Over Budget** (point/spot) — uncheck for hero lamps that must stay forward (\`entities[].light.cluster: false\`). Suns are never clustered.
+
+**Scene toggles (Export panel):** \`lightBudget\`, \`clusterPunctualLights\` in the manifest \`scene\` block. \`LevelLoader\` options override when set.
+
+**Do not** rely on \`scene.lights\` or \`getLightByName\` alone on large rigs
+(\`increaselights\` silently no-ops if resolution fails).
+
+**IBL pair:** \`reducelight\` may write \`scene.environmentTexture.level\`;
+\`increaselights\` maps that level to lamp brightness — align authored A/B ranges.`,
+  },
 ];
 
 export function GetEngineBasics(slug?: string): string

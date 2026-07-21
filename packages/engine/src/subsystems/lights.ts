@@ -1,6 +1,48 @@
 import { Scene, Light, SpotLight, DirectionalLight, Color3 } from "@babylonjs/core";
+import { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
 import type { Node } from "@babylonjs/core";
 import type { LightInfo } from "../core/types";
+
+/** Whether a Babylon light is parented under the given entity node. */
+function LightBelongsToNode(light: Light, entityNode: Node): boolean
+{
+  let parent: Node | null = light.parent;
+  while (parent !== null)
+  {
+    if (parent === entityNode)
+    {
+      return true;
+    }
+    parent = parent.parent;
+  }
+
+  return false;
+}
+
+/**
+ * Every punctual light the scene can drive — including lights moved into a
+ * {@link ClusteredLightContainer}, which removes them from `scene.lights`.
+ */
+function CollectSceneLights(scene: Scene): Light[]
+{
+  const lights: Light[] = [];
+
+  for (const sceneLight of scene.lights)
+  {
+    if (sceneLight instanceof ClusteredLightContainer)
+    {
+      for (const clusteredLight of sceneLight.lights)
+      {
+        lights.push(clusteredLight);
+      }
+      continue;
+    }
+
+    lights.push(sceneLight);
+  }
+
+  return lights;
+}
 
 /**
  * The glb already created a Babylon light with the correct, coordinate-converted
@@ -11,20 +53,23 @@ import type { LightInfo } from "../core/types";
  */
 export function FindLightForNode(scene: Scene, entityNode: Node): Light | null
 {
-  for (const light of scene.lights)
+  for (const light of CollectSceneLights(scene))
   {
-    let parent: Node | null = light.parent;
-    while (parent !== null)
+    if (LightBelongsToNode(light, entityNode))
     {
-      if (parent === entityNode)
-      {
-        return light;
-      }
-      parent = parent.parent;
+      return light;
     }
   }
 
-  return scene.getLightByName(entityNode.name) ?? null;
+  for (const light of CollectSceneLights(scene))
+  {
+    if (light.name === entityNode.name)
+    {
+      return light;
+    }
+  }
+
+  return null;
 }
 
 /**

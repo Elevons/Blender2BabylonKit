@@ -128,6 +128,24 @@ export const PITFALLS: PitfallEntry[] = [
     fix: "Velocities are per-second already; only scale position deltas by deltaSeconds",
     mcpTool: "get_scripting_context(section=\"lifecycle\")",
   },
+  {
+    mistake: "Resolving lamps via `scene.lights` or `getLightByName` on large rigs",
+    symptom: "increaselights / runtime dimming does nothing; no error after OnStart",
+    fix: "Use `FindLightForNode(scene, entity.node)` from `@bjs/engine` — clustered point/spot lights are removed from `scene.lights` but stay drivable through the helper",
+    mcpTool: "get_scripting_context(section=\"lights\")",
+  },
+  {
+    mistake: "Trigger probe collider on a zone behavior (FogChanger, etc.)",
+    symptom: "Enter/exit never fires or fires inverted; wrong fog/light preset sticks",
+    fix: "Solid collider on the moving probe; poll overlap in OnStart/OnUpdate as fallback",
+    mcpTool: "get_scripting_context(section=\"physics\")",
+  },
+  {
+    mistake: "Linear fog with equal or inverted start/end (e.g. `[10000, 10000]`)",
+    symptom: "Fog disappears or water NME fog math breaks (divide by zero)",
+    fix: "Use a valid span (start < end) or a far end for “no visible fog”; sanitize before SyncWaterFogOpacityRange",
+    mcpTool: "get_scripting_context(section=\"scene-look\")",
+  },
 ];
 
 export function FormatDoNotList(): string

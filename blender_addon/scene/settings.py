@@ -5,7 +5,7 @@ only the scene-global render block (environment, fog, post-processing)."""
 
 import bpy
 from bpy.props import (
-    BoolProperty, FloatProperty, EnumProperty, FloatVectorProperty, PointerProperty,
+    BoolProperty, FloatProperty, EnumProperty, FloatVectorProperty, IntProperty, PointerProperty,
 )
 from bpy.types import PropertyGroup, Scene
 
@@ -55,6 +55,19 @@ class BJSSceneSettings(PropertyGroup):
         description="Render each shadow map once and freeze it. Big performance "
                     "win for a fully static level, but moving objects won't update "
                     "their shadows (call level.RefreshShadows() after moving one)")
+
+    # Punctual light clustering (Babylon ClusteredLightContainer at runtime).
+    cluster_punctual_lights: BoolProperty(
+        name="Cluster Punctual Lights", default=True,
+        description="When the scene exceeds the light budget, move eligible "
+                    "point/spot lights into Babylon's clustered lighting path. "
+                    "Turn off to keep every light in the forward shader (slower "
+                    "when over budget)")
+    light_budget: IntProperty(
+        name="Light Budget", default=8, min=1, max=64,
+        description="Maximum forward scene lights before clustering (or the UBO "
+                    "fallback when clustering is off). Directional sun lights "
+                    "always stay forward for shadow maps")
 
     # Large world / floating origin (Babylon useLargeWorldRendering + Havok multi-region).
     use_large_world_rendering: BoolProperty(

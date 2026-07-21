@@ -3,6 +3,7 @@
 from bpy.props import (
     BoolProperty,
     CollectionProperty,
+    EnumProperty,
     FloatProperty,
     FloatVectorProperty,
     IntProperty,
@@ -147,3 +148,84 @@ class BJSNmeInput(PropertyGroup):
         default=(1.0, 1.0, 1.0),
     )
     c4_a: FloatProperty(name="Alpha", min=0.0, max=1.0, default=1.0)
+
+
+DETAIL_NORMAL_BLEND_METHODS = [
+    ('WHITEOUT', "Whiteout", "Standard whiteout normal blend (Babylon default)"),
+    ('RNM', "RNM", "Reoriented normal mapping blend"),
+]
+
+
+class BJSDetailMapSettings(PropertyGroup):
+    """Babylon DetailMapConfiguration overrides for glTF PBR materials."""
+
+    is_enabled: BoolProperty(
+        name="Enable Detail Map",
+        default=False,
+        description="Tile a secondary detail texture over the base glTF material at runtime",
+    )
+    texture_file: StringProperty(
+        name="Packed Detail Map",
+        subtype='FILE_PATH',
+        default="",
+        description="Pre-packed detail map (R=albedo, G=normal G, B=roughness, A=normal R). "
+                    "Optional when separate channel images are assigned — those are packed on export",
+    )
+    albedo_file: StringProperty(
+        name="Albedo",
+        subtype='FILE_PATH',
+        default="",
+        description="Greyscale albedo detail — packed into the red channel on export",
+    )
+    normal_file: StringProperty(
+        name="Normal",
+        subtype='FILE_PATH',
+        default="",
+        description="Tangent-space normal map — green → G channel, red → A channel on export",
+    )
+    roughness_file: StringProperty(
+        name="Roughness",
+        subtype='FILE_PATH',
+        default="",
+        description="Roughness detail — packed into the blue channel on export (PBR only)",
+    )
+    uv_scale: FloatProperty(
+        name="UV Scale",
+        min=0.01,
+        default=1.0,
+        description="Tile the detail map this many times over the chosen UV layer (uScale / vScale)",
+    )
+    uv_set: IntProperty(
+        name="UV Set",
+        min=0,
+        max=7,
+        default=0,
+        description="UV layer index for the detail map (0 = first UV / UVMap, 1 = second UV — "
+                    "matches glTF TEXCOORD_0, TEXCOORD_1, … and Babylon coordinatesIndex)",
+    )
+    diffuse_blend_level: FloatProperty(
+        name="Diffuse Blend",
+        min=0.0,
+        max=1.0,
+        default=1.0,
+        description="How strongly the detail albedo blends with the base albedo (0–1)",
+    )
+    roughness_blend_level: FloatProperty(
+        name="Roughness Blend",
+        min=0.0,
+        max=1.0,
+        default=1.0,
+        description="How strongly the detail roughness blends with the base roughness (0–1, PBR only)",
+    )
+    bump_level: FloatProperty(
+        name="Bump Level",
+        min=0.0,
+        default=1.0,
+        description="Strength of the detail normal bump effect (0–1)",
+    )
+    normal_blend_method: EnumProperty(
+        name="Normal Blend",
+        items=DETAIL_NORMAL_BLEND_METHODS,
+        default='WHITEOUT',
+        description="Method used to blend base and detail normals",
+    )

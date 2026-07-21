@@ -430,6 +430,11 @@ export interface LightInfo {
   spotBlend?: number;  // 0..1 edge softness (spot only)
   castShadows: boolean;
   shadow?: ShadowSettings; // present when castShadows; per-light Babylon controls
+  /**
+   * When false, keep this point/spot in the forward shader even when the scene
+   * exceeds {@link SceneInfo.lightBudget}. Omitted or true = eligible for clustering.
+   */
+  cluster?: boolean;
 }
 
 export interface CameraInfo {
@@ -745,6 +750,26 @@ export interface NodeMaterialOverrideInfo {
   gradients?: NodeMaterialGradientInfo[];
 }
 
+/** Blender material → Babylon DetailMapConfiguration override for glTF PBR materials. */
+export interface DetailMapOverrideInfo {
+  /** Blender / glTF material name used for matching at runtime. */
+  name: string;
+  /** Manifest-relative path to the packed detail texture image. */
+  file: string;
+  /** Tile the detail map over the chosen UV layer (uScale / vScale). Default 1. */
+  uvScale?: number;
+  /** UV layer index (0 = TEXCOORD_0 / first UVMap). Default 0. */
+  coordinatesIndex?: number;
+  /** How strongly the detail albedo blends with the base albedo (0–1). Default 1. */
+  diffuseBlendLevel?: number;
+  /** How strongly the detail roughness blends with the base roughness (0–1). Default 1. */
+  roughnessBlendLevel?: number;
+  /** Strength of the detail normal bump effect. Default 1. */
+  bumpLevel?: number;
+  /** Normal blend method. Default WHITEOUT. */
+  normalBlendMethod?: "WHITEOUT" | "RNM";
+}
+
 export interface LevelManifest {
   version: number;
   glb: string;
@@ -753,5 +778,7 @@ export interface LevelManifest {
   scene?: SceneInfo;   // optional scene-wide render settings
   /** Node Material Editor overrides keyed by Blender material name. */
   materials?: NodeMaterialOverrideInfo[];
+  /** Detail map overrides keyed by Blender material name. */
+  detailMaps?: DetailMapOverrideInfo[];
   entities: EntityData[];
 }

@@ -56,10 +56,12 @@ Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engi
 | `input` | Input Actions, `@inputMap` |
 | `physics` | Bodies, triggers, constraints, movement |
 | `cameras` | Camera component types, Geospatial |
-| `scene-look` | Atmosphere, post — **author in Blender** |
+| `scene-look` | Atmosphere, fog, post — **author in Blender** (runtime exceptions below) |
+| `lights` | `FindLightForNode`, clustered punctual lights, IBL compensation |
 | `visibility` | Eye icon, Make Invisible, shadow casters |
 | `animation` | Clips, armature rule |
 | `gui` | 2D GUI, particles, 3D GUI, MSDF text |
+| `detail-maps` | Detail texture overrides on glTF PBR — **author in Blender** |
 
 ## Author in Blender vs write in behavior
 
@@ -68,11 +70,13 @@ Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engi
 | Collider / rigid body / joint | COLLIDER, RIGIDBODY, CONSTRAINT components | Read `entity.body`, drive motors, override `OnCollision*` / `OnTrigger*` hooks |
 | Camera type (orbit, globe) | CAMERA component on camera object | Rare: `flyToPointAsync` on GeospatialCamera only |
 | Sky / atmosphere / bloom / SSAO | Babylon Scene panels | **Never** — loader owns these |
+| Detail map on glTF PBR | **Properties › Material › Babylon › Detail Map** | **Never** — loader applies `detailMaps[]` |
 | Input bindings | Input Actions panel | Poll `FindAction("Move")` by **name** |
 | Tunable fields per object | `@exposed` on SCRIPT + **Sync** | Declare fields; runtime values applied before `OnStart` |
 | Trigger → gameplay (data) | COLLIDER Event Messages → target entity | `OnMessage` on target behaviors |
 | 2D HUD / particles / 3D buttons | GUI / PARTICLE / GUI3D_* components | `GetGui` / `GetParticles` / `GetControl3D` |
 | MSDF labels | MSDF_TEXT component | `GetTextRenderer` — update paragraphs only |
+| Light budget / clustering | **Babylon Scene › Export** (budget + master toggle); per lamp **Cluster When Over Budget** | Drive intensity with `FindLightForNode` only |
 
 ## File contract (every behavior)
 
@@ -386,9 +390,30 @@ concern — it is authored under **Babylon Scene** and exported in
 | Environment / IBL | Environment (Default Environment, Intensity, Rotation Y, Show Skybox) | None — IBL only when Atmosphere replaces the skybox |
 | **Atmosphere** (physical sky) | Atmosphere (SUN lamp + scattering) | None — time of day follows the sun lamp direction |
 | **Sun shadow penumbra** | Sun lamp **Angle** (0–45° → PCSS softness; clamped above) | None — `level.shadowGenerators` is app-level, not available in behaviors |
-| Fog | Babylon Scene › Fog | None |
+| Fog | Babylon Scene › Fog | Rare — zone behaviors (e.g. `FogChanger`) swap presets at runtime |
 | Default pipeline (bloom, DOF, …) | Post-Processing › Default Pipeline | None |
 | SSAO | Post-Processing › SSAO | None |
+
+**Runtime fog (exception):** behaviors like `FogChanger` may drive `scene.fogEnabled`,
+`scene.fogMode`, `scene.fogColor`, and `scene.fogStart` / `scene.fogEnd` from trigger
+volumes. Patterns that work reliably:
+
+- Put a **solid** (non-trigger) collider on the **moving probe** entity; trigger-on-trigger
+  pairs often miss Havok enter/exit events.
+- On `OnStart`, detect whether the probe is already inside the volume — don't assume
+  fog A until the first trigger event.
+- Poll probe position in `OnUpdate` when zones must stay in sync (same pattern as
+  `FogChanger.ts`).
+- Linear fog divides by `(fogEnd - fogStart)` — equal or inverted ranges break scene
+  fog and water NME blocks that mirror the range; use a valid span or treat equal
+  start/end as "no visible fog" with a far end (e.g. `[0, 1e9]`).
+- NME water materials with **Fog Start** / **Fog End** input blocks need the same
+  range pushed when scene fog changes (`FogChanger.SyncWaterFogOpacityRange`).
+
+**Runtime IBL dimming (exception):** behaviors like `reducelight` may write
+`scene.environmentTexture.level` from height or distance. Pair with `increaselights`
+(or similar) to boost punctual lamp intensity when IBL drops — see **Runtime lights**
+below.
 
 **Atmosphere** (`@babylonjs/addons/atmosphere`) provides a physically based sky and
 aerial perspective. Author under **Babylon Scene › Atmosphere**:
@@ -427,6 +452,57 @@ exported as `-rotationY`. Skyboxes use `infiniteDistance` + `ignoreCameraMaxZ`;
 `EnvironmentHelper` meshes are unparented without re-applying rotation. On
 km-scale levels, camera **Clip End** in Blender often needs raising above the
 default `1000`.
+
+## Runtime lights and IBL
+
+Lamps are authored in Blender (no component) and copied at load via
+`ApplyBlenderLight`. To **drive lamp intensity at runtime**, resolve the Babylon
+light from the lamp entity's node — do not iterate `scene.lights` alone.
+
+```ts
+import { Behavior, exposed, FindLightForNode } from "@bjs/engine";
+import type { Entity } from "@bjs/engine";
+
+// FindLightForNode walks the light's parent chain (orientation-correction nodes)
+// and falls back to name match. It also searches lights inside
+// ClusteredLightContainer — required when the scene exceeds the punctual budget.
+const light = FindLightForNode(this.scene, lampEntity.node);
+if (light !== null)
+{
+  light.intensity = brightness;
+}
+```
+
+**Clustered punctual lights:** when enabled light count exceeds the budget
+(default **8**, set in **Babylon Scene › Export › Light Budget**), the loader
+moves eligible **point/spot** lamps into a `ClusteredLightContainer` and
+**removes them from `scene.lights`**. They remain the same `Light` instances —
+`light.intensity` still updates the cluster each frame via `getScaledIntensity()`.
+Use **`FindLightForNode`** (exported from `@bjs/engine`); raw `scene.lights` /
+`getLightByName` lookups silently fail on large rigs.
+
+**Authoring (Blender, not behavior code):**
+
+- **Babylon Scene › Export › Light Budget** — max forward scene lights before
+  clustering (default 8). Exported as `scene.lightBudget`.
+- **Cluster Punctual Lights** — master toggle (`scene.clusterPunctualLights`).
+  When off, the loader uses the UBO fallback instead of clustering.
+- **Babylon Object › Light › Cluster When Over Budget** (point/spot only) —
+  uncheck to keep a hero lamp in the forward shader even when over budget
+  (`entities[].light.cluster: false`). Sun/directional lamps are never clustered
+  (shadow maps stay forward).
+
+Check load console for `[bjs] punctual lighting: clustered …` or read
+`level.punctualLightingMode` from app code after load (behaviors don't get `Level`).
+
+**IBL compensation pattern** (`increaselights` + `reducelight`): one behavior dims
+`scene.environmentTexture.level` (e.g. with camera height above a water surface);
+another maps that level from authored `sceneIntensityA` → `sceneIntensityB` onto
+lamp brightness `brightnessX` → `brightnessY`. Align the A/B ranges with what the
+dimming behavior actually writes (manifest environment intensity may differ from
+runtime near/far values). Behaviors on different entities run in unspecified
+order — one frame of lag is normal; both should read/write the same texture each
+frame.
 
 ## Physics
 
@@ -549,6 +625,12 @@ triggers never fire** in Havok — use box/sphere/capsule/convex.
 `OnTriggerExit` (trigger volumes). Both bodies in a contact receive collision
 hooks. No manual subscription — override the hook and the engine wires Havok.
 No `OnTriggerStay` (Havok has no continued trigger event).
+
+**Zone behaviors (fog, lighting, messages):** the entity **entering** the trigger
+should use a **solid** collider on a child probe (camera rig, train body, etc.).
+A trigger probe overlapping a trigger volume often never fires enter/exit — add
+position-based overlap checks in `OnStart` / `OnUpdate` when gameplay must stay
+correct (see `FogChanger.ts`).
 
 ## Input
 
@@ -755,6 +837,67 @@ always wins over embedded JSON when present; block ids resolve through
 input for IBL (leave its texture empty to use scene IBL). No behavior API —
 meshes using that material pick up the node shader automatically.
 
+## Detail maps (glTF PBR)
+
+Tile a **secondary detail texture** over standard glTF PBR materials when viewed up
+close — Babylon's `DetailMapConfiguration` plugin (not a behavior API). Author on
+**Properties › Material › Babylon › Detail Map** (same panel as NME, independent of
+node materials).
+
+**Packed or separate channels.** Assign a pre-packed detail map **or** separate
+Albedo / Normal / Roughness images — a **packed map is optional** when separate
+channels are set. Export packs separate channels into Babylon's Unity-layout PNG
+using Blender's image API (no Pillow dependency). Missing channels → 0.5 gray,
+which disables that effect in the shader:
+
+| Channel | Content |
+|---|---|
+| **R** | Greyscale albedo detail |
+| **G** | Normal map green |
+| **B** | Roughness detail |
+| **A** | Normal map red |
+
+**Settings:** **UV Set** (`uv_set` → manifest `coordinatesIndex`: 0 = first UV /
+UVMap / glTF `TEXCOORD_0`, 1 = second UV / `TEXCOORD_1`, …), **UV Scale** (tiles
+over that layer via `uScale` / `vScale`), Diffuse Blend, Roughness Blend (PBR
+only), Bump Level, Normal Blend (Whiteout / RNM).
+
+**Formats.** Source images must be **PNG, JPG, or WEBP** (browser-safe). TIFF/EXR
+and other formats are rejected — **Validate** warns before export, and **Export**
+warns if an enabled detail map could not be written. Packed maps are copied
+as-is; separate channels become `{MaterialName}_detail.png` under `materials/`.
+Source paths can live anywhere on disk; only the copied files ship with the level.
+
+**Validate / export warnings** include: enabled but no texture assigned, enabled
+but material unused by any exportable mesh, missing or unsupported channel files,
+detail UV set higher than a mesh's UV layer count, and pack/copy failures.
+
+**Live Link** re-exports `detailMaps[]` and packed PNGs on every save (same path
+as manual Export Level).
+
+Export writes a top-level manifest block:
+
+```json
+"detailMaps": [
+  {
+    "name": "Marble",
+    "file": "materials/Marble_detail.png",
+    "coordinatesIndex": 1,
+    "uvScale": 10,
+    "diffuseBlendLevel": 0.1,
+    "roughnessBlendLevel": 0.25,
+    "bumpLevel": 1,
+    "normalBlendMethod": "WHITEOUT"
+  }
+]
+```
+
+At load, `ApplyDetailMaps` runs immediately after `ApplyNodeMaterials`: matches
+glTF material **name** on `scene.materials`, sets `material.detailMap.texture`,
+`coordinatesIndex`, blend levels, and UV scale, then marks the material dirty.
+Skips Node Materials. If a material has both NME and detail map authored, NME
+wins (whole material replaced).
+
 ## 3D GUI
 
 3D buttons and panels are authored as **GUI3D_*** components (one per Babylon
@@ -848,7 +991,9 @@ export default class HoverBob extends Behavior
 | Load order / when `OnStart` runs / visibility | `docs/engine/04-LOAD-PIPELINE.html` |
 | Cameras (component types, Geospatial) | `docs/engine/07-RENDERING.html` |
 | Scene look / atmosphere / post-processing | `docs/engine/07-RENDERING.html` · `get_scripting_context(section="scene-look")` |
-| Node materials (NME) | `docs/engine/trace-materials.html` |
+| Runtime lights / clustering / IBL compensation | `get_scripting_context(section="lights")` · `docs/engine/07-RENDERING.html` |
+| Node materials (NME) | `docs/engine/trace-materials.html` · `get_scripting_context(section="detail-maps")` |
+| Detail maps (glTF PBR) | `get_scripting_context(section="detail-maps")` · `docs/engine/07-RENDERING.html` |
 | Audio, animation, skinned-mesh rule | `docs/engine/08-AUDIO-ANIMATION.html` |
 | 2D GUI, particles, 3D GUI, MSDF | `docs/engine/11-UI.html` |
 | Example behaviors | `list_behaviors` · `get_behavior` · `find_similar_behavior` |

@@ -25,6 +25,11 @@ export interface ClusteredLightsOptions
   enabled?: boolean;
   /** Cluster punctual lights when enabled scene lights exceed this count. */
   threshold?: number;
+  /**
+   * Entity names of point/spot lights eligible for clustering. When omitted,
+   * every supported punctual light is clustered. An empty set clusters none.
+   */
+  clusterableLightNames?: ReadonlySet<string>;
 }
 
 export interface ClusteredLightsResult
@@ -49,6 +54,35 @@ export function CountManifestLights(manifest: LevelManifest): number
     }
   }
   return count;
+}
+
+/** Point/spot entity names that should enter the cluster when over budget. */
+export function BuildClusterableLightNames(manifest: LevelManifest): Set<string>
+{
+  const names = new Set<string>();
+
+  for (const entityData of manifest.entities)
+  {
+    const lightInfo = entityData.light;
+    if (lightInfo === undefined)
+    {
+      continue;
+    }
+
+    if (lightInfo.type !== "POINT" && lightInfo.type !== "SPOT")
+    {
+      continue;
+    }
+
+    if (lightInfo.cluster === false)
+    {
+      continue;
+    }
+
+    names.add(entityData.name);
+  }
+
+  return names;
 }
 
 /**
@@ -145,7 +179,10 @@ function PreparePunctualLightForClustering(light: PointLight | SpotLight): void
   }
 }
 
-function CollectClusterablePunctualLights(scene: Scene): Array<PointLight | SpotLight>
+function CollectClusterablePunctualLights(
+  scene: Scene,
+  clusterableLightNames?: ReadonlySet<string>
+): Array<PointLight | SpotLight>
 {
   const punctualLights: Array<PointLight | SpotLight> = [];
 
@@ -157,6 +194,11 @@ function CollectClusterablePunctualLights(scene: Scene): Array<PointLight | Spot
     }
 
     if (!(light instanceof PointLight || light instanceof SpotLight))
+    {
+      continue;
+    }
+
+    if (clusterableLightNames !== undefined && !clusterableLightNames.has(light.name))
     {
       continue;
     }
@@ -234,6 +276,7 @@ export function ClusterPunctualLightsIfNeeded(
 {
   const threshold = options.threshold ?? DEFAULT_REGULAR_LIGHT_BUDGET;
   const clusteringEnabled = options.enabled !== false;
+  const clusterableLightNames = options.clusterableLightNames;
   const enabledLightCount = CountEnabledLights(scene);
 
   if (enabledLightCount <= threshold)
@@ -259,7 +302,7 @@ export function ClusterPunctualLightsIfNeeded(
     return result;
   }
 
-  const punctualLights = CollectClusterablePunctualLights(scene);
+  const punctualLights = CollectClusterablePunctualLights(scene, clusterableLightNames);
   if (punctualLights.length === 0)
   {
     ApplyLightBudgetFallback(scene, threshold);

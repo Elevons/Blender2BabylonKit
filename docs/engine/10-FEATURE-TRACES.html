@@ -686,6 +686,7 @@
 <li><span class="step-stage">Load</span><p class="step-what">After the glb loads, matching mesh materials are replaced with parsed node materials (parse + manifest overrides; no shader compile yet).</p><p class="step-code"><code>packages/engine/src/subsystems/materials/apply.ts</code> · <code>ApplyNodeMaterials</code></p></li>
 <li><span class="step-stage">Finalize</span><p class="step-what">After scene environment IBL is ready, every node material compiles once (<code>whenTexturesReadyAsync</code> then <code>build()</code>) so <code>ReflectionBlock</code> picks up <code>scene.environmentTexture</code>.</p><p class="step-code"><code>packages/engine/src/subsystems/materials/apply.ts</code> · <code>BuildNodeMaterials</code></p></li>
 </ol>
+<p><strong>Detail maps</strong> (same trace): glTF PBR materials can also get a tiled secondary detail texture via <code>detailMaps[]</code> — packed or separate albedo/normal/roughness (auto-packed on export with Blender's image API), UV set (<code>coordinatesIndex</code>), and UV scale, authored in the <strong>Detail Map</strong> box. Applied by <code>ApplyDetailMaps</code> after NME replacement. Live Link re-exports detail maps on save. See <a href="07-RENDERING.html">07 — Rendering</a> · MCP <code>get_scripting_context(section="detail-maps")</code>.</p>
 </section>
 
 <section class="trace-feature">
