@@ -8,6 +8,7 @@ import type { ShadowCaster } from "../../subsystems/shadows";
 import type { EventMessageRegistration } from "../../subsystems/collisions";
 import type { ConstraintRegistration } from "../../subsystems/constraints";
 import type { ReflectionProbeRegistration } from "../../subsystems/reflectionProbes";
+import type { LodRegistration } from "../../subsystems/lod";
 import type { Gui3DRegistration } from "../../ui/gui3d/builder";
 import { CreateCameraTargetSets, type CameraTargetSets } from "../../subsystems/cameras";
 import { BuildIdIndex } from "./nodeResolution";
@@ -34,6 +35,7 @@ export interface LoadContext {
   eventMessageRegistrations: EventMessageRegistration[];
   constraintRegistrations: ConstraintRegistration[];
   reflectionProbeRegistrations: ReflectionProbeRegistration[];
+  lodRegistrations: LodRegistration[];
   gui3dRegistrations: Gui3DRegistration[];
   /** Physics shapes built per entity id (for collision layer filter masks). */
   physicsShapesByEntity: Map<string, PhysicsShape[]>;
@@ -69,6 +71,7 @@ export function CreateLoadContext(
     eventMessageRegistrations: componentHost.eventMessageRegistrations,
     constraintRegistrations: [],
     reflectionProbeRegistrations: [],
+    lodRegistrations: [],
     gui3dRegistrations: [],
     physicsShapesByEntity: componentHost.physicsShapesByEntity,
     defaultInputMap,

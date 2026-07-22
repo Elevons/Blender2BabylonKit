@@ -296,6 +296,24 @@ export interface ReflectionProbeComponent {
   realTimeFilteringQuality: "LOW" | "MEDIUM" | "HIGH";
 }
 
+/** One LOD level: a distance threshold and the target lower-detail entity GUID. */
+export interface LodLevel {
+  distance: number;
+  /** When true, Babylon auto-generates a simplified mesh at runtime. */
+  autoLod: boolean;
+  /** Auto LOD only: percentage of faces to keep (0.0–1.0). */
+  quality?: number;
+  /** Auto LOD only: optimize mesh indices before simplification. */
+  optimizeMesh?: boolean;
+  /** Manual LOD only: GUID of the lower-detail mesh entity (null = unset). */
+  target?: string | null;
+}
+
+export interface LodComponent {
+  type: "LOD";
+  levels: LodLevel[];
+}
+
 // ---- 3D GUI components (Babylon's @babylonjs/gui 3D controls + panels) ----
 
 /** One authored click reaction: on click, send `message` to `target`. */
@@ -406,6 +424,7 @@ export type Component =
   | ParticleComponent
   | MsdfTextComponent
   | ReflectionProbeComponent
+  | LodComponent
   | Gui3DComponent;
 
 export interface ShadowSettings {

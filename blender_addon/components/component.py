@@ -183,6 +183,32 @@ class BJSProbeObjectRef(PropertyGroup):
     )
 
 
+class BJSLodLevel(PropertyGroup):
+    """One LOD level: a distance threshold and the lower-detail mesh entity."""
+    distance: FloatProperty(
+        name="Distance", default=20.0, min=0.0,
+        description="Additional distance beyond the previous LOD level (or from 0 for the first level)",
+    )
+    auto_lod: BoolProperty(
+        name="Auto LOD",
+        default=False,
+        description="Automatically generate a lower-detail mesh at runtime using Babylon's simplification (no target entity needed)",
+    )
+    quality: FloatProperty(
+        name="Quality", default=0.5, min=0.0, max=1.0,
+        description="Auto LOD only: percentage of faces to keep (1.0 = no reduction, 0.0 = maximum simplification)",
+    )
+    optimize_mesh: BoolProperty(
+        name="Optimize Mesh",
+        default=False,
+        description="Auto LOD only: optimize mesh indices before simplification (better results but slower)",
+    )
+    target: PointerProperty(
+        name="Target", type=Object,
+        description="The lower-detail mesh entity to swap to at this distance (must be mesh-only, no components)",
+    )
+
+
 class BJSEventMessage(PropertyGroup):
     """One authored Event Message: on a physics phase (or 3D GUI click), send
     `message` to `target`'s behaviors (OnMessage). An optional tag filter
@@ -550,3 +576,6 @@ class BJSComponent(PropertyGroup):
         name="Show Influence Preview", default=True,
         description="Draw the influence volume in the viewport when selected",
     )
+
+    # --- LOD ---
+    lod_levels: CollectionProperty(type=BJSLodLevel)

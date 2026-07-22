@@ -24,6 +24,7 @@ import type {
   MsdfTextComponent,
   ReflectionProbeComponent,
   ConstraintComponent,
+  LodComponent,
   Gui3DComponent,
 } from "./types";
 
@@ -42,6 +43,7 @@ export type EntityAttachment =
   | { type: "MSDF_TEXT"; data: MsdfTextComponent; renderer: TextRenderer }
   | { type: "REFLECTION_PROBE"; data: ReflectionProbeComponent; probe: ReflectionProbe }
   | { type: "CONSTRAINT"; data: ConstraintComponent; constraint: PhysicsConstraint }
+  | { type: "LOD"; data: LodComponent }
   | { type: Gui3DComponent["type"]; data: Gui3DComponent; control: Control3D };
 
 /** Discriminant of {@link EntityAttachment}. */

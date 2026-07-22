@@ -292,6 +292,22 @@ const ReflectionProbeHandler: ComponentHandler = {
   },
 };
 
+/** LOD: needs every entity built first to resolve target GUIDs; built in FinalizeLevel. */
+const LodHandler: ComponentHandler = {
+  types: ["LOD"],
+  Apply(components, { entity, context }): PendingRef[]
+  {
+    for (const component of components)
+    {
+      if (component.type === "LOD")
+      {
+        context.lodRegistrations.push({ entity, component });
+      }
+    }
+    return [];
+  },
+};
+
 /**
  * GUI3D_*: panels must exist before their child controls and click targets
  * must resolve, so everything is queued and built in FinalizeLevel. The parent
@@ -350,6 +366,7 @@ const COMPONENT_HANDLERS: readonly ComponentHandler[] = [
   ParticleHandler,
   MsdfTextHandler,
   ReflectionProbeHandler,
+  LodHandler,
   Gui3DHandler,
   CameraNoopHandler,
 ];
@@ -460,6 +477,7 @@ const RUNTIME_POLICIES = new Map<Component["type"], ComponentRuntimePolicy>([
   ["LAYER_MASK", RUNTIME_BLOCKED],
   ["COLLISION_LAYER", RUNTIME_BLOCKED],
   ["REFLECTION_PROBE", RUNTIME_BLOCKED],
+  ["LOD", RUNTIME_BLOCKED],
   ["CAMERA", RUNTIME_BLOCKED],
 ]);
 

@@ -34,6 +34,7 @@ export * from "./subsystems/constraints";
 export * from "./subsystems/reflectionProbes";
 export * from "./subsystems/renderLayers";
 export * from "./subsystems/collisionLayers";
+export * from "./subsystems/lod";
 
 // UI: 2D GUI layouts (GUI Editor JSON) and the 3D GUI (buttons + panels).
 export * from "./ui/gui2d";

@@ -451,10 +451,10 @@ class BJS_OT_probe_exclude_add(Operator):
 class BJS_OT_probe_exclude_remove(Operator):
     """Remove an object from the reflection probe exclude list."""
     bl_idname = "bjs.probe_exclude_remove"
-    bl_label = "Remove Exclude Object"
+    bl_label = "Remove Probe Exclude"
     bl_options = {'REGISTER', 'UNDO'}
 
-    comp_index: IntProperty()
+    comp_index:  IntProperty()
     entry_index: IntProperty()
 
     def execute(self, context):
@@ -465,6 +465,44 @@ class BJS_OT_probe_exclude_remove(Operator):
         if 0 <= self.comp_index < len(comps):
             entries = comps[self.comp_index].probe_render_excludes
             remove_collection_item(entries, self.entry_index)
+        return {'FINISHED'}
+
+
+class BJS_OT_lod_level_add(Operator):
+    """Add a LOD level row."""
+    bl_idname = "bjs.lod_level_add"
+    bl_label = "Add LOD Level"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            comps[self.comp_index].lod_levels.add()
+        return {'FINISHED'}
+
+
+class BJS_OT_lod_level_remove(Operator):
+    """Remove a LOD level row."""
+    bl_idname = "bjs.lod_level_remove"
+    bl_label = "Remove LOD Level"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    comp_index:  IntProperty()
+    level_index: IntProperty()
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+        comps = obj.bjs_components
+        if 0 <= self.comp_index < len(comps):
+            levels = comps[self.comp_index].lod_levels
+            remove_collection_item(levels, self.level_index)
         return {'FINISHED'}
 
 
@@ -579,4 +617,6 @@ classes = (
     BJS_OT_probe_render_remove,
     BJS_OT_probe_exclude_add,
     BJS_OT_probe_exclude_remove,
+    BJS_OT_lod_level_add,
+    BJS_OT_lod_level_remove,
 )

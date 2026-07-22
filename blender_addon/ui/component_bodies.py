@@ -469,6 +469,45 @@ def _draw_script(body, obj, comp, index):
             _draw_var(vbox, index, vi, v)
 
 
+def _draw_lod(body, obj, comp, index):
+    """LOD levels: distance thresholds + lower-detail mesh targets."""
+    box = body.box()
+    header = box.row()
+    header.label(text="LOD Levels", icon='MOD_DECIM')
+    add = header.operator("bjs.lod_level_add", text="", icon='ADD')
+    add.comp_index = index
+    if len(comp.lod_levels) == 0:
+        box.label(text="Add a LOD level: pick a lower-detail mesh or enable Auto LOD", icon='INFO')
+        return
+    accumulated_distance = 0.0
+    for level_index, level in enumerate(comp.lod_levels):
+        accumulated_distance += level.distance
+        row = box.row(align=True)
+        row.prop(level, "distance", text=f"+{level.distance:.1f}m (total {accumulated_distance:.1f}m)")
+        row.prop(level, "auto_lod", text="", icon='MOD_DECIM')
+        if level.auto_lod:
+            auto_row = box.row(align=True)
+            auto_row.prop(level, "quality", text="Quality")
+            auto_row.prop(level, "optimize_mesh", text="Optimize")
+        else:
+            target_row = box.row(align=True)
+            target_row.prop(level, "target", text="Target")
+        rem = box.row()
+        rem_op = rem.operator("bjs.lod_level_remove", text="", icon='X')
+        rem_op.comp_index = index
+        rem_op.level_index = level_index
+        if not level.auto_lod and level.target is not None and len(level.target.bjs_components) > 0:
+            warn = box.row()
+            warn.alert = True
+            warn.label(
+                text=f"Target '{level.target.name}' has components — LOD targets must be mesh-only",
+                icon='ERROR',
+            )
+
+
+
+
+
 def _draw_camera(body, obj, comp, index):
     if obj.type != 'CAMERA':
         body.label(text="Only affects Camera objects", icon='INFO')
@@ -544,6 +583,7 @@ BODY_DRAWERS = {
     'PARTICLE': _draw_particle,
     'MSDF_TEXT': _draw_msdf_text,
     'REFLECTION_PROBE': _draw_reflection_probe,
+    'LOD': _draw_lod,
     **{comp_type: _draw_gui3d_control for comp_type in GUI3D_CONTROLS},
     **{comp_type: _draw_gui3d_panel for comp_type in GUI3D_PANELS},
 }

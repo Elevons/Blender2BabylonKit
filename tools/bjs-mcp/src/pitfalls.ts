@@ -146,6 +146,12 @@ export const PITFALLS: PitfallEntry[] = [
     fix: "Use a valid span (start < end) or a far end for “no visible fog”; sanitize before SyncWaterFogOpacityRange",
     mcpTool: "get_scripting_context(section=\"scene-look\")",
   },
+  {
+    mistake: "LOD target entity has components (collider, script, etc.)",
+    symptom: "Target's behaviors keep running and its physics body stays in the world — likely causes bugs",
+    fix: "LOD targets must be mesh-only empties with no components; Blender UI shows a red warning when a picked target has components. Or use Auto LOD to generate the simplified mesh at runtime instead",
+    mcpTool: "get_scripting_context(section=\"lod\")",
+  },
 ];
 
 export function FormatDoNotList(): string

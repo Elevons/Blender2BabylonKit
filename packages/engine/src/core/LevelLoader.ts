@@ -43,6 +43,7 @@ import {
 } from "../subsystems/reflectionProbes";
 import { ApplyRenderLayers } from "../subsystems/renderLayers";
 import { ApplyCollisionLayers } from "../subsystems/collisionLayers";
+import { BuildLodLevels } from "../subsystems/lod";
 
 /** Await a batch of asset-load promises, logging any that rejected. */
 async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
@@ -292,6 +293,8 @@ export class LevelLoader
     );
     AssignProbeMaterials(this.scene, builtProbes);
     context.level.reflectionProbes = builtProbes.map((built) => built.probe);
+
+    BuildLodLevels(context.lodRegistrations, (guid) => context.level.ById(guid));
 
     ApplyRenderLayers(manifest, context.level);
     ApplyCollisionLayers(manifest, context.level, context.physicsShapesByEntity);

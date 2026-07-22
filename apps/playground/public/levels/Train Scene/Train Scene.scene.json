@@ -397,92 +397,6 @@
       "components": []
     },
     {
-      "id": "b3115860b34441a7bedfce75ab4376a8",
-      "name": "Plane",
-      "parent": null,
-      "components": [
-        {
-          "type": "COLLIDER",
-          "shape": "MESH",
-          "isTrigger": false,
-          "makeInvisible": false,
-          "autoFit": true,
-          "applyObjectScale": true,
-          "size": [
-            1.0,
-            1.0,
-            1.0
-          ],
-          "radius": 0.5,
-          "height": 2.0,
-          "center": [
-            0.0,
-            0.0,
-            -0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            -0.0,
-            1.0
-          ]
-        },
-        {
-          "type": "RIGIDBODY",
-          "bodyType": "STATIC",
-          "mass": 1.0,
-          "friction": 1.0,
-          "restitution": 0.20000000298023224,
-          "linearDamping": 0.0,
-          "angularDamping": 0.0,
-          "startAsleep": false
-        }
-      ]
-    },
-    {
-      "id": "c9677c4b473542d3bdb8fd4693c11f30",
-      "name": "Landscape",
-      "parent": null,
-      "components": [
-        {
-          "type": "COLLIDER",
-          "shape": "MESH",
-          "isTrigger": false,
-          "makeInvisible": false,
-          "autoFit": true,
-          "applyObjectScale": true,
-          "size": [
-            1.0,
-            1.0,
-            1.0
-          ],
-          "radius": 0.5,
-          "height": 2.0,
-          "center": [
-            0.0,
-            0.0,
-            -0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            -0.0,
-            1.0
-          ]
-        },
-        {
-          "type": "RIGIDBODY",
-          "bodyType": "STATIC",
-          "mass": 1.0,
-          "friction": 1.0,
-          "restitution": 0.20000000298023224,
-          "linearDamping": 0.0,
-          "angularDamping": 0.0,
-          "startAsleep": false
-        }
-      ]
-    },
-    {
       "id": "7e048d6033fc450fae6d64324a5b1bea",
       "name": "Water.001",
       "parent": null,
@@ -551,6 +465,147 @@
             "intensityNear": 1.0,
             "intensityFar": 0.0
           }
+        }
+      ]
+    },
+    {
+      "id": "5ce91ecfd49b47a5a5370bd562690ebc",
+      "name": "Landscape",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "STATIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
+        }
+      ]
+    },
+    {
+      "id": "c0231a4bb62e4e9f8248edf51c95bb20",
+      "name": "Cube.001",
+      "parent": "5ce91ecfd49b47a5a5370bd562690ebc",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "STATIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
+        }
+      ]
+    },
+    {
+      "id": "a6dcb8e67d444fa8beeaefe917ec59cd",
+      "name": "Cube.002",
+      "parent": "5ce91ecfd49b47a5a5370bd562690ebc",
+      "components": []
+    },
+    {
+      "id": "436dd820b6fd4c9fbbd3d93eeec297e9",
+      "name": "NurbsPath",
+      "parent": "5ce91ecfd49b47a5a5370bd562690ebc",
+      "components": []
+    },
+    {
+      "id": "35a52ac4c5104d2a8b6a529dc9af60da",
+      "name": "Plane.001",
+      "parent": "5ce91ecfd49b47a5a5370bd562690ebc",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ]
+        },
+        {
+          "type": "RIGIDBODY",
+          "bodyType": "STATIC",
+          "mass": 1.0,
+          "friction": 1.0,
+          "restitution": 0.20000000298023224,
+          "linearDamping": 0.0,
+          "angularDamping": 0.0,
+          "startAsleep": false
         }
       ]
     },
@@ -2143,8 +2198,8 @@
             "lights": [
               "6f550b0cc048439dba20d86963a1e8ee",
               "09cecd459b6f40649df0b8da4f5aefd2",
-              "3092d2a43b65436883af64aa7fa1ad4c",
-              "db27417c691a40fea541f05ad642a06f"
+              "21a4e3a4fc554417bfe14e9b526b8fcf",
+              "c08dfe06980e400eb7f2b89a439188fa"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -2310,7 +2365,7 @@
       }
     },
     {
-      "id": "3092d2a43b65436883af64aa7fa1ad4c",
+      "id": "21a4e3a4fc554417bfe14e9b526b8fcf",
       "name": "Spot.005",
       "parent": "ced2b89a28b0407d972bd9615bc93ba2",
       "components": [],
@@ -2339,7 +2394,7 @@
       }
     },
     {
-      "id": "db27417c691a40fea541f05ad642a06f",
+      "id": "c08dfe06980e400eb7f2b89a439188fa",
       "name": "Spot.006",
       "parent": "ced2b89a28b0407d972bd9615bc93ba2",
       "components": [],
@@ -2527,8 +2582,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "9bc4f4387de1487e9249de0137ff866d",
-              "673a019f54cc422aad8108fe6465041d"
+              "91dd680e6f7f4572b624317ceb45449f",
+              "c73cd8e553dd4bc49cfa79315261e1a5"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -3587,7 +3642,7 @@
       ]
     },
     {
-      "id": "9bc4f4387de1487e9249de0137ff866d",
+      "id": "91dd680e6f7f4572b624317ceb45449f",
       "name": "Spot.007",
       "parent": null,
       "components": [],
@@ -3617,7 +3672,7 @@
       }
     },
     {
-      "id": "673a019f54cc422aad8108fe6465041d",
+      "id": "c73cd8e553dd4bc49cfa79315261e1a5",
       "name": "Spot",
       "parent": null,
       "components": [],
@@ -3646,7 +3701,7 @@
       }
     },
     {
-      "id": "c0398d816f534a7f86e1115475fb55f7",
+      "id": "10e235aa524e4463b4e4acd937463984",
       "name": "Small Rover.006",
       "parent": "9b53c861762745b7827aa3d08e37e3f4",
       "components": [
@@ -3782,10 +3837,10 @@
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
           "vars": {
-            "frontLeftWheel": "8c3b6617f04246afb766f0eeeca442fb",
-            "frontRightWheel": "a92c4e475164462f897b0e6ef9410f9e",
-            "rearLeftWheel": "66478516b491438ea549edd27566c00d",
-            "rearRightWheel": "81ccea29a97f432e97e443bea97ab881",
+            "frontLeftWheel": "6ec768f592994b34adac89ad926bb72c",
+            "frontRightWheel": "6e51ae227c6a41aeb13e49ee212e00ec",
+            "rearLeftWheel": "1342a34ca24c459987b19e65dd73c59c",
+            "rearRightWheel": "b69d43766ed44a1790ac3c5d0fcc6f53",
             "frontLeftInner": null,
             "frontRightInner": null,
             "rearLeftInner": null,
@@ -3794,7 +3849,7 @@
             "force": 8000.0,
             "holdSeconds": 0.5,
             "turnRatio": 0.5,
-            "body": "c0398d816f534a7f86e1115475fb55f7",
+            "body": "10e235aa524e4463b4e4acd937463984",
             "swapMovement": false,
             "swapSteering": false
           }
@@ -3805,8 +3860,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "5cd78370944b4ddf96f47807c2e83f9e",
-              "a68cc1f121c946afb2dd3a51de9b0a44"
+              "42622c87c7fd4a8a885b0e1a5a36dfb1",
+              "8b606a482456449488ab23913528f4be"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -3817,9 +3872,9 @@
       ]
     },
     {
-      "id": "81ccea29a97f432e97e443bea97ab881",
+      "id": "b69d43766ed44a1790ac3c5d0fcc6f53",
       "name": "RR.Wheel.004",
-      "parent": "2c6495a74589409fb04981f17c8950de",
+      "parent": "188db75465b9490094d266570d578e61",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -3835,7 +3890,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "2c6495a74589409fb04981f17c8950de",
+          "target": "188db75465b9490094d266570d578e61",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -3936,9 +3991,9 @@
       ]
     },
     {
-      "id": "2c6495a74589409fb04981f17c8950de",
+      "id": "188db75465b9490094d266570d578e61",
       "name": "RR.Arm.004",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -3980,7 +4035,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c0398d816f534a7f86e1115475fb55f7",
+          "target": "10e235aa524e4463b4e4acd937463984",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4055,9 +4110,9 @@
       ]
     },
     {
-      "id": "66478516b491438ea549edd27566c00d",
+      "id": "1342a34ca24c459987b19e65dd73c59c",
       "name": "RL.Wheel.010",
-      "parent": "6812e713bf3c41febe5873e45740d5bf",
+      "parent": "ba52a4e88e5a4a8b8a39bc36bab6152d",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4073,7 +4128,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "6812e713bf3c41febe5873e45740d5bf",
+          "target": "ba52a4e88e5a4a8b8a39bc36bab6152d",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4174,9 +4229,9 @@
       ]
     },
     {
-      "id": "6812e713bf3c41febe5873e45740d5bf",
+      "id": "ba52a4e88e5a4a8b8a39bc36bab6152d",
       "name": "RL.Arm.004",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4218,7 +4273,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c0398d816f534a7f86e1115475fb55f7",
+          "target": "10e235aa524e4463b4e4acd937463984",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4293,9 +4348,9 @@
       ]
     },
     {
-      "id": "a92c4e475164462f897b0e6ef9410f9e",
+      "id": "6e51ae227c6a41aeb13e49ee212e00ec",
       "name": "FR.Wheel.004",
-      "parent": "8e74daae703141b891acdb22f1ad2200",
+      "parent": "83253800b6dc424da1653081f5717607",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4311,7 +4366,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "8e74daae703141b891acdb22f1ad2200",
+          "target": "83253800b6dc424da1653081f5717607",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4412,9 +4467,9 @@
       ]
     },
     {
-      "id": "8e74daae703141b891acdb22f1ad2200",
+      "id": "83253800b6dc424da1653081f5717607",
       "name": "FR.Arm.004",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4456,7 +4511,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c0398d816f534a7f86e1115475fb55f7",
+          "target": "10e235aa524e4463b4e4acd937463984",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4531,9 +4586,9 @@
       ]
     },
     {
-      "id": "8c3b6617f04246afb766f0eeeca442fb",
+      "id": "6ec768f592994b34adac89ad926bb72c",
       "name": "FL.Wheel.010",
-      "parent": "5a2afa351d124df1b1871a37ada2f75c",
+      "parent": "689b2597dcad457e9b22c0a712cb3cd3",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4575,7 +4630,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "5a2afa351d124df1b1871a37ada2f75c",
+          "target": "689b2597dcad457e9b22c0a712cb3cd3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4650,9 +4705,9 @@
       ]
     },
     {
-      "id": "5a2afa351d124df1b1871a37ada2f75c",
+      "id": "689b2597dcad457e9b22c0a712cb3cd3",
       "name": "Fl.Arm.004",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -4694,7 +4749,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c0398d816f534a7f86e1115475fb55f7",
+          "target": "10e235aa524e4463b4e4acd937463984",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -4769,15 +4824,15 @@
       ]
     },
     {
-      "id": "65b4d8ed5dd742aaa5bbfb122f87f271",
+      "id": "c18e6363ccff473b9b8b763e115b3614",
       "name": "Diaper.002",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": []
     },
     {
-      "id": "bb57a1901da24675846d2434fac42c6e",
+      "id": "4effbb40f43644868c2defb1c6f02dd8",
       "name": "Bubbles.017",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "PARTICLE",
@@ -4790,9 +4845,9 @@
       ]
     },
     {
-      "id": "57fa29d08d23430d91e5a7713d56d21c",
+      "id": "09f4e040af2d4391b595a31722aedaec",
       "name": "Bubbles.016",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "PARTICLE",
@@ -4805,9 +4860,9 @@
       ]
     },
     {
-      "id": "c8463eca91fa42f8a81ba539e43febcd",
+      "id": "5035a36c5f73493d8356522acbb60509",
       "name": "Bubbles.015",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "PARTICLE",
@@ -4820,9 +4875,9 @@
       ]
     },
     {
-      "id": "ee388759d5d54996bb22e5a318740b07",
+      "id": "ef9cff690be2483d8e3d43e2ad35d34a",
       "name": "Bubbles.014",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "PARTICLE",
@@ -4835,9 +4890,9 @@
       ]
     },
     {
-      "id": "a1d0cb6a00124fa5b174faad3aacbb52",
+      "id": "07e549aea3434a718b4675658594c618",
       "name": "Bubbles.013",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "PARTICLE",
@@ -4850,9 +4905,9 @@
       ]
     },
     {
-      "id": "74ef2aa2c1bd42ebbe40568bea8cf80f",
+      "id": "0d12387da7f14cee8e639339b1788134",
       "name": "Bubbles.012",
-      "parent": "c0398d816f534a7f86e1115475fb55f7",
+      "parent": "10e235aa524e4463b4e4acd937463984",
       "components": [
         {
           "type": "PARTICLE",
@@ -4865,7 +4920,7 @@
       ]
     },
     {
-      "id": "5cd78370944b4ddf96f47807c2e83f9e",
+      "id": "42622c87c7fd4a8a885b0e1a5a36dfb1",
       "name": "Spot.015",
       "parent": null,
       "components": [],
@@ -4895,7 +4950,7 @@
       }
     },
     {
-      "id": "a68cc1f121c946afb2dd3a51de9b0a44",
+      "id": "8b606a482456449488ab23913528f4be",
       "name": "Spot.012",
       "parent": null,
       "components": [],
@@ -4924,7 +4979,7 @@
       }
     },
     {
-      "id": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "id": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "name": "Small Rover.007",
       "parent": "9b53c861762745b7827aa3d08e37e3f4",
       "components": [
@@ -4983,7 +5038,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c0398d816f534a7f86e1115475fb55f7",
+          "target": "10e235aa524e4463b4e4acd937463984",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5060,10 +5115,10 @@
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
           "vars": {
-            "frontLeftWheel": "29dc34aab97a4633960b6fb66fb1a3a9",
-            "frontRightWheel": "e57fffd17f4b4ff686058fcc0dd5151a",
-            "rearLeftWheel": "eb754c0015e4435abdb70582c91a566b",
-            "rearRightWheel": "a17a1147684040caa654877a76c65b0d",
+            "frontLeftWheel": "fa416ba2d24e426bae68546c588d952c",
+            "frontRightWheel": "ead0e2c32d6941f2bbec18575422458a",
+            "rearLeftWheel": "10debd9854c14b2880dc0ae1d0d5c25e",
+            "rearRightWheel": "7552d749e1eb49c6a39f795522f602a5",
             "frontLeftInner": null,
             "frontRightInner": null,
             "rearLeftInner": null,
@@ -5072,7 +5127,7 @@
             "force": 8000.0,
             "holdSeconds": 0.5,
             "turnRatio": 0.5,
-            "body": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+            "body": "f7a1b62b610c49ae8cb5e83ffb709a66",
             "swapMovement": false,
             "swapSteering": false
           }
@@ -5083,8 +5138,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "f9252ec064d142d18af5e698b76bf65f",
-              "f906c879772a4fd197bd28b0f60fa1a8"
+              "10bf2c4e2cb94b1abf5a35447d52ab5c",
+              "1c8c2b0bbc0d41a79d0b5ac7f97bd793"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -5095,9 +5150,9 @@
       ]
     },
     {
-      "id": "a17a1147684040caa654877a76c65b0d",
+      "id": "7552d749e1eb49c6a39f795522f602a5",
       "name": "RR.Wheel.005",
-      "parent": "f19eb798913a4b30a633f7ed2ce03d8e",
+      "parent": "719746086d0a4b378b8ac550180f5bd9",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5113,7 +5168,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "f19eb798913a4b30a633f7ed2ce03d8e",
+          "target": "719746086d0a4b378b8ac550180f5bd9",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5214,9 +5269,9 @@
       ]
     },
     {
-      "id": "f19eb798913a4b30a633f7ed2ce03d8e",
+      "id": "719746086d0a4b378b8ac550180f5bd9",
       "name": "RR.Arm.005",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5258,7 +5313,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+          "target": "f7a1b62b610c49ae8cb5e83ffb709a66",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5333,9 +5388,9 @@
       ]
     },
     {
-      "id": "eb754c0015e4435abdb70582c91a566b",
+      "id": "10debd9854c14b2880dc0ae1d0d5c25e",
       "name": "RL.Wheel.011",
-      "parent": "bb899dde2ab04885875dac9828e2a52c",
+      "parent": "a685ef32beb84ea3bc710429e869bf9f",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5351,7 +5406,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "bb899dde2ab04885875dac9828e2a52c",
+          "target": "a685ef32beb84ea3bc710429e869bf9f",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5452,9 +5507,9 @@
       ]
     },
     {
-      "id": "bb899dde2ab04885875dac9828e2a52c",
+      "id": "a685ef32beb84ea3bc710429e869bf9f",
       "name": "RL.Arm.005",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5496,7 +5551,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+          "target": "f7a1b62b610c49ae8cb5e83ffb709a66",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5571,9 +5626,9 @@
       ]
     },
     {
-      "id": "e57fffd17f4b4ff686058fcc0dd5151a",
+      "id": "ead0e2c32d6941f2bbec18575422458a",
       "name": "FR.Wheel.005",
-      "parent": "d6d196a82b3e41a6a92e27ba81ddd45c",
+      "parent": "748a9203eeb440848d1a3324c6a262cf",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5589,7 +5644,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "d6d196a82b3e41a6a92e27ba81ddd45c",
+          "target": "748a9203eeb440848d1a3324c6a262cf",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5690,9 +5745,9 @@
       ]
     },
     {
-      "id": "d6d196a82b3e41a6a92e27ba81ddd45c",
+      "id": "748a9203eeb440848d1a3324c6a262cf",
       "name": "FR.Arm.005",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5734,7 +5789,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+          "target": "f7a1b62b610c49ae8cb5e83ffb709a66",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5809,9 +5864,9 @@
       ]
     },
     {
-      "id": "29dc34aab97a4633960b6fb66fb1a3a9",
+      "id": "fa416ba2d24e426bae68546c588d952c",
       "name": "FL.Wheel.011",
-      "parent": "dbd31b800ac449fe8815cffb926afed2",
+      "parent": "836d0114f6e946bcb16d29c9e4e61310",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5853,7 +5908,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "dbd31b800ac449fe8815cffb926afed2",
+          "target": "836d0114f6e946bcb16d29c9e4e61310",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -5928,9 +5983,9 @@
       ]
     },
     {
-      "id": "dbd31b800ac449fe8815cffb926afed2",
+      "id": "836d0114f6e946bcb16d29c9e4e61310",
       "name": "Fl.Arm.005",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -5972,7 +6027,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+          "target": "f7a1b62b610c49ae8cb5e83ffb709a66",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -6047,15 +6102,15 @@
       ]
     },
     {
-      "id": "afcf9f8941e5479593593e5b0586c1b9",
+      "id": "0e57e96f4edb44a58571d870886ec6d4",
       "name": "Diaper.003",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": []
     },
     {
-      "id": "b9203e07c68648378743db17811a2c51",
+      "id": "f8d92d50436f4d42b805982c0ff9fce6",
       "name": "Bubbles.023",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "PARTICLE",
@@ -6068,9 +6123,9 @@
       ]
     },
     {
-      "id": "d3190e8019cb4ea484fbcd55e47545fd",
+      "id": "e499b1297274490f87157a88589150eb",
       "name": "Bubbles.022",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "PARTICLE",
@@ -6083,9 +6138,9 @@
       ]
     },
     {
-      "id": "57e6485192a54bb6a0ca45fcde032b94",
+      "id": "135cf13780d642a1a84770cb96cca57c",
       "name": "Bubbles.021",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "PARTICLE",
@@ -6098,9 +6153,9 @@
       ]
     },
     {
-      "id": "df13c9fbc34d464586cb6b1ca0d0e0b7",
+      "id": "2bec7d03b91f4ff4bb89b757e33ce12a",
       "name": "Bubbles.020",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "PARTICLE",
@@ -6113,9 +6168,9 @@
       ]
     },
     {
-      "id": "d8e6d793a7c541ea92c958fcda4832a8",
+      "id": "c21ed9cc81cf49a99e6265cd3150908f",
       "name": "Bubbles.019",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "PARTICLE",
@@ -6128,9 +6183,9 @@
       ]
     },
     {
-      "id": "8e41767453de4bfdbaf6a40f22a5e93d",
+      "id": "5f835f96e849435ca7901602ac1660bb",
       "name": "Bubbles.018",
-      "parent": "be2ec0176d4a4faea8f06d4f5bd9b58d",
+      "parent": "f7a1b62b610c49ae8cb5e83ffb709a66",
       "components": [
         {
           "type": "PARTICLE",
@@ -6143,7 +6198,7 @@
       ]
     },
     {
-      "id": "f9252ec064d142d18af5e698b76bf65f",
+      "id": "10bf2c4e2cb94b1abf5a35447d52ab5c",
       "name": "Spot.011",
       "parent": null,
       "components": [],
@@ -6173,7 +6228,7 @@
       }
     },
     {
-      "id": "f906c879772a4fd197bd28b0f60fa1a8",
+      "id": "1c8c2b0bbc0d41a79d0b5ac7f97bd793",
       "name": "Spot.008",
       "parent": null,
       "components": [],
@@ -6369,18 +6424,6 @@
           ]
         }
       ]
-    }
-  ],
-  "detailMaps": [
-    {
-      "name": "OceanHalf",
-      "file": "materials/OceanHalf_detail.png",
-      "coordinatesIndex": 1,
-      "uvScale": 100.0,
-      "diffuseBlendLevel": 0.10000000149011612,
-      "roughnessBlendLevel": 0.10000000149011612,
-      "bumpLevel": 0.5,
-      "normalBlendMethod": "WHITEOUT"
     }
   ],
   "debug": true

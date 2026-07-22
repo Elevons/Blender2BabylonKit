@@ -96,7 +96,7 @@ function ApplyDetailMapToMaterial(
     detailMap.normalBlendMethod = NORMAL_BLEND_METHODS[info.normalBlendMethod];
   }
 
-  material.markDirty(Material.TextureDirtyFlag);
+  material.markDirty(true);
 }
 
 /**

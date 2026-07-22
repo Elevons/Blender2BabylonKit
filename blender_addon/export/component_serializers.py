@@ -266,6 +266,25 @@ def _serialize_msdf_text(comp, out, output_dir):
     })
 
 
+def _serialize_lod(comp, out, output_dir):
+    # Accumulate relative distances into absolute values for the runtime.
+    absolute_distance = 0.0
+    levels = []
+    for level in comp.lod_levels:
+        absolute_distance += level.distance
+        level_data = {
+            "distance": absolute_distance,
+            "autoLod": bool(level.auto_lod),
+        }
+        if level.auto_lod:
+            level_data["quality"] = level.quality
+            level_data["optimizeMesh"] = bool(level.optimize_mesh)
+        else:
+            level_data["target"] = ensure_object_id(level.target) if level.target else None
+        levels.append(level_data)
+    out["levels"] = levels
+
+
 def _serialize_reflection_probe(comp, out, output_dir):
     ox, oy, oz = comp.probe_influence_offset
     sx, sy, sz = comp.probe_influence_size
@@ -340,6 +359,7 @@ SERIALIZERS = {
     'PARTICLE': _serialize_particle,
     'MSDF_TEXT': _serialize_msdf_text,
     'REFLECTION_PROBE': _serialize_reflection_probe,
+    'LOD': _serialize_lod,
     **{comp_type: _serialize_gui3d_control for comp_type in GUI3D_CONTROLS},
     **{comp_type: _serialize_gui3d_panel for comp_type in GUI3D_PANELS},
 }

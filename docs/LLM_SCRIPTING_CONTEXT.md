@@ -59,6 +59,7 @@ Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engi
 | `scene-look` | Atmosphere, fog, post — **author in Blender** (runtime exceptions below) |
 | `lights` | `FindLightForNode`, clustered punctual lights, IBL compensation |
 | `visibility` | Eye icon, Make Invisible, shadow casters |
+| `lod` | Level-of-detail mesh swapping (author in Blender) |
 | `animation` | Clips, armature rule |
 | `gui` | 2D GUI, particles, 3D GUI, MSDF text |
 | `detail-maps` | Detail texture overrides on glTF PBR — **author in Blender** |
@@ -317,6 +318,67 @@ If you only have a node:
 `node.metadata.bjsEntity` is the back-reference to its `Entity`. For tag-based
 grouping, author a TAG component and read `entity.tag` (or filter in your own
 `@exposed` entity list).
+
+## LOD (level of detail)
+
+Distance-based mesh swapping is **authored in Blender**, not in a behavior.
+Add a **LOD** component (Rendering section) on the high-detail entity, then add
+rows — each row picks a lower-detail mesh target and the **additional distance**
+beyond the previous level at which to swap.
+
+**LOD targets must be mesh-only empties** — no components, no behaviors, no
+physics. The Blender UI shows a red warning when a picked target has components;
+the runtime skips any level whose target has attachments.
+
+At runtime Babylon handles the distance-based mesh swap automatically. The
+source entity keeps all its components (physics, scripts, audio, etc.) active
+at every distance — only the visual mesh changes.
+
+```
+Source Entity (the real one)          LOD Target (mesh-only)
+┌──────────────────────────┐          ┌──────────────────┐
+│ TAG: "Enemy"             │          │ (no components)  │
+│ COLLIDER (capsule)       │          │                  │
+│ RIGIDBODY (dynamic)      │          │  lowpoly mesh    │
+│ SCRIPT: EnemyAI          │          │                  │
+│ LOD:                     │          │                  │
+│   [+20m → LOD Target]    │ ───────► │                  │
+└──────────────────────────┘          └──────────────────┘
+```
+
+Distances are **relative** in Blender (each row is the additional distance
+beyond the previous level). The serializer accumulates them into absolute
+distances for the runtime, so the first row at +20m swaps at 20m, the second
+at +30m swaps at 50m, and so on. This prevents duplicate distances by design.
+
+### Auto LOD
+
+Each LOD level can optionally enable **Auto LOD** instead of picking a target
+entity. When enabled, Babylon's built-in mesh simplification automatically
+generates a lower-detail version of the source mesh at runtime.
+
+Auto LOD settings:
+- **Quality** (0.0–1.0): percentage of faces to keep. 1.0 = no reduction, 0.0 = maximum simplification
+- **Optimize Mesh**: optimize mesh indices before simplification (better UV preservation but slower)
+
+You can mix manual and Auto LOD levels on the same entity. For example:
+- LOD1 at +20m → manual target (immediate)
+- LOD2 at +50m → Auto LOD (async, adds itself when simplification completes)
+
+Auto LOD runs asynchronously in the background. During the brief window before
+simplification completes, the mesh uses the previous LOD level or the original
+high-detail mesh depending on distance. Once ready, the auto-generated level
+kicks in automatically.
+
+Distances are **relative** in Blender (each row is the additional distance
+beyond the previous level). The serializer accumulates them into absolute
+distances for the runtime, so the first row at +20m swaps at 20m, the second
+at +30m swaps at 50m, and so on. This prevents duplicate distances by design.
+
+Distances are **relative** in Blender (each row is the additional distance
+beyond the previous level). The serializer accumulates them into absolute
+distances for the runtime, so the first row at +20m swaps at 20m, the second
+at +30m swaps at 50m, and so on. This prevents duplicate distances by design.
 
 ## Cameras
 

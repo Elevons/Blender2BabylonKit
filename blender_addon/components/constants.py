@@ -26,6 +26,7 @@ COMPONENT_TYPES = [
      "Babylon visibility bitmask for multi-camera / light filtering"),
     ('REFLECTION_PROBE', "Reflection Probe",
      "Realtime cubemap reflections for nearby PBR materials"),
+    ('LOD', "LOD", "Distance-based mesh level-of-detail swapping"),
 
     ("", "3D GUI — Controls", ""),
     ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),
@@ -73,6 +74,7 @@ ADD_COMPONENT_MENU = [
      "Babylon visibility bitmask for multi-camera / light filtering"),
     ('REFLECTION_PROBE', "Reflection Probe",
      "Realtime cubemap reflections for nearby PBR materials"),
+    ('LOD', "LOD", "Distance-based mesh level-of-detail swapping"),
 
     ("", "3D GUI — Controls", ""),
     ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),

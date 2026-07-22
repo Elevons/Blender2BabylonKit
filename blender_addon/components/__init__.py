@@ -18,6 +18,7 @@ from .component import (
     BJSParticleTexture,
     BJSProbeObjectRef,
     BJSEventMessage,
+    BJSLodLevel,
     BJSComponent,
 )
 
@@ -30,6 +31,7 @@ classes = (
     BJSParticleTexture,
     BJSProbeObjectRef,
     BJSEventMessage,
+    BJSLodLevel,
     BJSComponent,
     BJSLightSettings,
     BJSLightShadow,
