@@ -12,7 +12,12 @@ import type { MsdfTextManager } from "../ui/msdfText";
 import { ClearFontCacheForScene } from "../ui/msdfText";
 import type { ParticleEmitterManager } from "../subsystems/particles";
 import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
+import type { TransformNode } from "@babylonjs/core";
 import { Entity } from "./Entity";
+import type { CollisionLayersInfo, EntityData } from "./types";
+import type { SpawnHandle, SpawnOptions } from "./spawnTypes";
+import { SpawnFromTemplate } from "./loader/prefabSpawn";
+import { HideEntityNode } from "./loader/nodeResolution";
 import { InputManager } from "../input";
 import { TeardownScript } from "./loader/scripts";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
@@ -22,6 +27,34 @@ import type { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
 import type { PunctualLightingMode } from "../subsystems/clusteredLights";
 import { DisposeDirectionalShadowMaintenance } from "../subsystems/shadows";
 import type { ComponentHost } from "./ComponentHost";
+import type { ComponentType } from "./attachments";
+import { GetRuntimePolicy } from "./loader/componentRegistry";
+
+/**
+ * Removable attachments are torn down in this order when hiding a template:
+ * joints before bodies, then scripts/assets, then physics last.
+ * Types blocked from runtime remove (CAMERA, LOD, …) stay; visual hide covers those.
+ */
+const TEMPLATE_TEARDOWN_ORDER: readonly ComponentType[] = [
+  "CONSTRAINT",
+  "SCRIPT",
+  "AUDIO",
+  "GUI",
+  "PARTICLE",
+  "MSDF_TEXT",
+  "GUI3D_BUTTON",
+  "GUI3D_HOLO",
+  "GUI3D_TOUCH_HOLO",
+  "GUI3D_MESH",
+  "GUI3D_STACK",
+  "GUI3D_SPHERE",
+  "GUI3D_CYLINDER",
+  "GUI3D_PLANE",
+  "GUI3D_SCATTER",
+  "COLLIDER",
+  "RIGIDBODY",
+  "TAG",
+];
 
 /**
  * Runtime container for a loaded level: the entity map, the active camera,
@@ -31,6 +64,10 @@ import type { ComponentHost } from "./ComponentHost";
 export class Level
 {
   readonly entities = new Map<string, Entity>();
+  /** Manifest row per entity GUID, retained so Spawn can rebuild component stacks. */
+  readonly entityData = new Map<string, EntityData>();
+  /** Scene collision layer table, retained for spawned-instance filter masks. */
+  collisionLayers?: CollisionLayersInfo;
   /** The Blender scene's active camera, if one was exported. */
   activeCamera?: Camera;
   /** Shadow generators created for shadow-casting lights (one per light). */
@@ -136,6 +173,99 @@ export class Level
   ById(id: string): Entity | undefined
   {
     return this.entities.get(id);
+  }
+
+  /**
+   * Duplicate a loaded template subtree at runtime — full components, fresh
+   * GUIDs, physics, scripts, and constraints per instance. The template is any
+   * in-level entity (linked/appended collections flatten into the level at
+   * export, so they qualify too); pass the Entity or its GUID. Behaviors reach
+   * this through the injected `spawner` field (the PrefabSpawner interface).
+   */
+  async Spawn(template: Entity | string, options: SpawnOptions = {}): Promise<SpawnHandle>
+  {
+    const templateEntity = typeof template === "string" ? this.ById(template) : template;
+    if (templateEntity === undefined)
+    {
+      throw new Error(`[bjs] Spawn: template entity "${String(template)}" not found`);
+    }
+
+    return SpawnFromTemplate(this, this.scene, templateEntity, options);
+  }
+
+  /**
+   * Hide an in-scene template and tear down its live components so only
+   * spawned clones remain active. Hides the render subtree (meshes, child
+   * lights/cameras), then removes every runtime-removable attachment on the
+   * template root and its descendant entities — physics, scripts, audio,
+   * constraints, GUI, particles, etc. Spawn still works afterward: it rebuilds
+   * from retained EntityData, not from the template's live attachments. Call
+   * before or after Spawn (clones are unaffected — Spawn re-reveals them).
+   *
+   * Types blocked from runtime remove (CAMERA, LOD, REFLECTION_PROBE, layer
+   * masks) stay attached; the visual hide covers cameras, and LOD on a hidden
+   * mesh is inert.
+   */
+  async HideTemplate(template: Entity | string): Promise<void>
+  {
+    const templateEntity = typeof template === "string" ? this.ById(template) : template;
+    if (templateEntity === undefined)
+    {
+      throw new Error(`[bjs] HideTemplate: template entity "${String(template)}" not found`);
+    }
+
+    HideEntityNode(this.scene, templateEntity.node);
+    await this.DisableTemplateComponents(templateEntity);
+  }
+
+  /** Template root plus every descendant entity registered in this level. */
+  private CollectTemplateSubtree(template: Entity): Entity[]
+  {
+    const entities: Entity[] = [template];
+
+    for (const descendant of template.node.getDescendants(false))
+    {
+      const metadata = (descendant as TransformNode).metadata as
+        { bjsEntity?: Entity } | undefined;
+      const entity = metadata?.bjsEntity;
+      if (entity instanceof Entity && entity !== template && this.ById(entity.id) === entity)
+      {
+        entities.push(entity);
+      }
+    }
+
+    return entities;
+  }
+
+  /**
+   * Tear down live components on a template subtree via ComponentHost.
+   * EntityData rows are left intact so a later Spawn can rebuild instances.
+   */
+  private async DisableTemplateComponents(template: Entity): Promise<void>
+  {
+    const host = this.componentHost;
+    if (host === undefined)
+    {
+      return;
+    }
+
+    const entities = this.CollectTemplateSubtree(template);
+
+    for (const componentType of TEMPLATE_TEARDOWN_ORDER)
+    {
+      if (!GetRuntimePolicy(componentType).allowRuntimeRemove)
+      {
+        continue;
+      }
+
+      for (const entity of entities)
+      {
+        while (entity.HasAttachment(componentType))
+        {
+          await host.RemoveComponent(entity, componentType, 0);
+        }
+      }
+    }
   }
 
   /**

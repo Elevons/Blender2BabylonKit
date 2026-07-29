@@ -7,10 +7,20 @@ from .component_serializers import SERIALIZERS
 
 
 def iter_referenced_objects(comp):
-    """Yield Blender objects referenced by a component's exposed vars — both
-    scalar entity refs and entity-list items — plus a follow-camera target."""
+    """Yield Blender objects referenced by a component — exposed vars (scalar
+    and list), camera/constraint targets, trigger and GUI3D event targets,
+    reflection-probe lists, and LOD level targets.
+
+    This is the single registry of GUID-bearing references: the exporter uses
+    it to assign GUIDs BEFORE the glb is written and to force manifest rows
+    for referenced mesh-only objects. Missing a reference type here means the
+    runtime cannot resolve it (mirrored by the engine's guidFields.ts)."""
     if comp.comp_type == 'CAMERA' and comp.cam_target is not None:
         yield comp.cam_target
+    if comp.comp_type == 'LOD':
+        for level in comp.lod_levels:
+            if not level.auto_lod and level.target is not None:
+                yield level.target
     if comp.comp_type == 'COLLIDER':
         for ev in comp.event_messages:
             if ev.target is not None:

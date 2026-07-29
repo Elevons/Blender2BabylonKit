@@ -319,7 +319,8 @@ export class ComponentHost
       [component],
       this.scene,
       this.behaviorRegistry,
-      this.defaultInputMap
+      this.defaultInputMap,
+      this.level
     );
 
     const scriptAttachment = entity.attachments[entity.attachments.length - 1];

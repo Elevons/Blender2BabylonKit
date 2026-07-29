@@ -64,9 +64,20 @@ def _draw_var(layout, comp_index, var_index, v):
             rm.item_index = i
         return
 
+    # Entity refs get a link-from-file button next to the object picker so
+    # authors can pull a prefab collection from another .blend (link +
+    # library override + assign) without leaving the inspector.
+    if v.vtype == 'ENTITY':
+        row = layout.row(align=True)
+        row.prop(v, "obj_val", text=label)
+        link = row.operator("bjs.link_prefab", text="", icon='LINKED')
+        link.comp_index = comp_index
+        link.var_index = var_index
+        return
+
     slot = {
         'FLOAT': "f_val", 'BOOL': "b_val", 'STRING': "s_val",
-        'VECTOR2': "v2_val", 'VECTOR3': "v_val", 'COLOR': "c_val", 'ENTITY': "obj_val",
+        'VECTOR2': "v2_val", 'VECTOR3': "v_val", 'COLOR': "c_val",
     }.get(v.vtype, "f_val")
     layout.prop(v, slot, text=label)
 

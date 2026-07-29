@@ -2,11 +2,13 @@ import type { Scene } from "@babylonjs/core";
 import type { Entity } from "../Entity";
 import { RegisterAttachment } from "../attachments";
 import type { ScriptComponent } from "../types";
+import type { Level } from "../Level";
 import type { BehaviorRegistry } from "../../scripting/BehaviorRegistry";
 import { ApplyExposedVars, type PendingRef } from "../../scripting/exposed";
 import { InputManager, GetInputMapFields } from "../../input";
 import type { InputActionMap } from "../../input/InputActionMap";
 import type { Behavior } from "../../scripting/Behavior";
+import type { PrefabSpawner } from "../spawnTypes";
 
 /**
  * SCRIPT component instantiation: create the behavior, inject entity/scene,
@@ -60,13 +62,14 @@ function InjectInputMaps(behavior: object, scriptName: string, sceneDefaultMap: 
   }
 }
 
-/** Instantiate SCRIPT behaviors, inject entity/scene, apply @exposed values. */
+/** Instantiate SCRIPT behaviors, inject entity/scene/spawner/byTag, apply @exposed values. */
 export function InstantiateScripts(
   entity: Entity,
   scripts: ScriptComponent[],
   scene: Scene,
   registry: BehaviorRegistry,
-  sceneDefaultMap: string
+  sceneDefaultMap: string,
+  level: Level
 ): PendingRef[]
 {
   const pendingReferences: PendingRef[] = [];
@@ -81,6 +84,8 @@ export function InstantiateScripts(
 
     behavior.entity = entity;
     behavior.scene = scene;
+    behavior.spawner = level;
+    behavior.byTag = (tag: string) => level.ByTag(tag);
     pendingReferences.push(...ApplyExposedVars(behavior, scriptComponent.vars));
     InjectInputMaps(behavior, scriptComponent.script, sceneDefaultMap);
     RegisterAttachment(entity, { type: "SCRIPT", data: scriptComponent, behavior });

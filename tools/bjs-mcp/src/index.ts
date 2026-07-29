@@ -34,6 +34,7 @@ import { FormatDoNotList } from "./pitfalls.js";
 import { GetEngineBasics } from "./engine-basics.js";
 import { FormatChapter, FormatChapterList, SearchDocs } from "./human-docs.js";
 import { FormatAuthoringWorkflow } from "./workflow.js";
+import { SearchBjsDocs, FetchBjsDoc } from "./bjs-docs.js";
 import {
   FormatMovementMode,
   FormatMovementOverview,
@@ -461,13 +462,13 @@ server.tool(
 
 server.tool(
   "get_scripting_context",
-  "Return docs/LLM_SCRIPTING_CONTEXT.md — full contract or one section (exposed, input, physics, cameras, scene-look, visibility, lifecycle, etc.).",
+  "Return docs/LLM_SCRIPTING_CONTEXT.md — full contract or one section (exposed, input, physics, cameras, scene-look, prefab-spawn, visibility, lifecycle, etc.).",
   {
     section: z
       .string()
       .optional()
       .describe(
-        'Optional section slug, e.g. "exposed", "input", "physics", "cameras", "scene-look". Use section="list" to see all. Omit for the full doc.'
+        'Optional section slug, e.g. "exposed", "input", "physics", "cameras", "scene-look", "prefab-spawn". Use section="list" to see all. Omit for the full doc.'
       ),
   },
   async ({ section }) =>
@@ -756,6 +757,31 @@ server.tool(
 
     return { content: [{ type: "text", text: FormatMovementMode(found) }] };
   }
+);
+
+// --- BJS Docs ---------------------------------------------------------------
+
+server.tool(
+  "search_bjs_docs",
+  "Search the official Babylon.js documentation at https://doc.babylonjs.com/ for pages matching a query. Returns matching page paths ranked by relevance with fetch commands.",
+  {
+    query: z.string().describe('Search term, e.g. "physics havok", "PBR material", "arc rotate camera"'),
+    maxResults: z.number().optional().describe("Max results to return (default 10)"),
+  },
+  async ({ query, maxResults }) => ({
+    content: [{ type: "text", text: await SearchBjsDocs(query, maxResults ?? 10) }],
+  })
+);
+
+server.tool(
+  "fetch_bjs_doc",
+  "Fetch a page from the official Babylon.js documentation and return it as readable markdown. Use a path from search_bjs_docs results.",
+  {
+    path: z.string().describe('Doc page path, e.g. "/features/featuresDeepDive/physics/havokPlugin"'),
+  },
+  async ({ path }) => ({
+    content: [{ type: "text", text: await FetchBjsDoc(path) }],
+  })
 );
 
 // --- Start -----------------------------------------------------------------

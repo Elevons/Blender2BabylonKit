@@ -88,6 +88,7 @@ REFLECTION_PROBE, render/collision layer kinds are load-only.`,
 
 **Already done before \`OnStart\`:**
 - glb appended, entities built, components applied
+- glTF \`COLOR_1+\` preserved on meshes (\`bjs_extra_vertex_colors\` — stock Babylon only loads \`COLOR_0\`)
 - Physics bodies, colliders, trigger registrations queued
 - @exposed scalar values applied; entity refs resolved in second pass
 - @inputMap / \`this.input\` injected
@@ -109,7 +110,7 @@ REFLECTION_PROBE, render/collision layer kinds are load-only.`,
 | Need | Blender | Behavior |
 |------|---------|----------|
 | Collider / mass / joint | COLLIDER, RIGIDBODY, CONSTRAINT | Read \`entity.body\`, motors, OnMessage |
-| Camera type | CAMERA component on camera | Geospatial flyTo only |
+| Camera type | CAMERA component on camera | Geospatial flyTo; if you must \`new\` a camera, \`FindCameraForNode\` + \`CopyLens\` |
 | Sky / fog / bloom / SSAO | Babylon Scene panels | **Never** |
 | Input bindings | Input Actions panel | \`FindAction("Name")\` |
 | Tunable per-object fields | @exposed + Sync | Declare @exposed in .ts |

@@ -4,8 +4,14 @@ import type {
   CollisionLayerComponent,
   CollisionLayersInfo,
   EntityData,
-  LevelManifest,
 } from "../core/types";
+
+/** The manifest slice collision-layer application needs (LevelManifest fits). */
+export interface CollisionLayerManifestSlice
+{
+  scene?: { collisionLayers?: CollisionLayersInfo };
+  entities: EntityData[];
+}
 
 /** Resolved Havok filter masks for one named layer. */
 export interface CollisionLayerMasks
@@ -27,7 +33,7 @@ interface CollisionPropagationFields
  * filterCollideMask on each registered physics shape.
  */
 export function ApplyCollisionLayers(
-  manifest: LevelManifest,
+  manifest: CollisionLayerManifestSlice,
   level: Level,
   physicsShapesByEntity: ReadonlyMap<string, readonly PhysicsShape[]>
 ): void

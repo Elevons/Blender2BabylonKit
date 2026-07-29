@@ -130,12 +130,26 @@ function ApplyLodLevelToMesh(
     return;
   }
 
+  let appliedCount = 0;
   for (const targetMesh of targetMeshes)
   {
     if (targetMesh instanceof Mesh)
     {
       ownedMesh.addLODLevel(level.distance, targetMesh);
+      appliedCount++;
     }
+  }
+
+  // Babylon's addLODLevel only accepts Mesh — shared glTF mesh data (linked
+  // prefab duplicates) imports as InstancedMesh and cannot serve as a LOD
+  // target. Surface it instead of failing silently.
+  if (appliedCount === 0)
+  {
+    console.warn(
+      `[bjs] LOD on "${sourceName}": target "${targetEntity.name}" only owns ` +
+        `instanced meshes (shared mesh data) — Babylon LOD levels require ` +
+        `unique Mesh geometry; skipping level`
+    );
   }
 }
 

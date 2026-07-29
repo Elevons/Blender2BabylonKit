@@ -455,6 +455,7 @@
 <li><strong>AREA lights</strong> — not exported to glTF; use SUN/POINT/SPOT.</li>
 <li><strong>Hook names must be PascalCase</strong> — <code>OnStart</code>, not <code>onStart</code>, or they never run.</li>
 <li><strong>GUID matching needs ExtrasAsMetadata</strong> — the loader imports this glTF extension; without it, entities fail to match nodes.</li>
+<li><strong>Paint masks need COLOR_1+</strong> — stock Babylon drops glTF <code>COLOR_1+</code>; LevelLoader registers <code>bjs_extra_vertex_colors</code>. Blender may invent an all-white <code>COLOR_0</code> and put real paint in <code>COLOR_1</code> — see <code>populateprefabs.ts</code> / <a href="../blender/PREFABS.html">Prefabs</a>.</li>
 <li><strong>Right-handed glTF import</strong> — required for correct collider orientation (<a href="06-PHYSICS.html#right-handed">why</a>).</li>
 <li><strong>3D GUI button content</strong> — text/images must be applied <em>after</em> the control is added to a panel (<a href="11-UI.html">11 — UI</a>).</li>
 </ul>

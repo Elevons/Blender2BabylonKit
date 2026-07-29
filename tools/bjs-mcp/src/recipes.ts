@@ -131,11 +131,15 @@ export const RECIPES: Recipe[] = [
   },
   {
     name: "trigger-logger",
-    description: "Log physics trigger overlaps via manual body subscription (legacy).",
+    description: "Log physics trigger overlaps via OnTriggerEnter/OnTriggerExit hooks.",
     keywords: ["trigger", "overlap", "collision", "log", "debug"],
-    hooks: ["OnStart"],
+    hooks: ["OnTriggerEnter", "OnTriggerExit"],
     referenceBehavior: "TriggerLogger.ts",
-    pitfalls: ["Requires entity.body and setCollisionCallbackEnabled(true). Prefer collision-probe for lifecycle hooks."],
+    pitfalls: [
+      "Attach to the entity that owns the trigger collider.",
+      "Do not use body.getCollisionObservable() for triggers — it only receives solid collisions.",
+      "For solid + trigger logging, use collision-probe instead.",
+    ],
     exposedFields: ['@exposed({ label: "Message" }) message = ""'],
   },
   {
@@ -210,21 +214,29 @@ export const RECIPES: Recipe[] = [
   },
   {
     name: "camera-follow",
-    description: "Create a UniversalCamera that orbits a moving target entity.",
-    keywords: ["camera", "orbit", "follow", "track", "cinematic", "spectator"],
-    hooks: ["OnStart", "OnUpdate"],
+    description: "Manual ArcRotateCamera around a target; raycast pulls radius in so the view does not clip through solids.",
+    keywords: ["camera", "orbit", "follow", "track", "cinematic", "spectator", "clip", "collision", "manual", "raycast"],
+    hooks: ["OnStart", "OnDestroy"],
     referenceBehavior: "TrainCamera.ts",
     pitfalls: [
-      "Guard target !== null and camera !== null in OnUpdate.",
-      "Convert orbit speed from degrees to radians in OnStart.",
+      "Collision is line-of-sight raycast from target to camera — not a trigger probe.",
+      "attachControl enables drag orbit and wheel zoom; clamp radius after pointer input via onBeforeRender.",
       "Sets scene.activeCamera — only one active camera per scene.",
+      "Copy authored FOV/clip with FindCameraForNode + CopyLens before activating the new camera.",
+      "Optional Collider Probe only tracks the camera for other scripts (e.g. FogChanger).",
+      "Optional Ignore Colliders: @exposed list of entity refs — ray hits on those entities are skipped.",
+      "After adding @exposed fields, Sync the Script component in Blender.",
       "For globe/planet map cameras, author Blender Camera component GEOSPATIAL — do not use this recipe.",
     ],
     exposedFields: [
       '@exposed({ type: "entity", label: "Target" }) target: Entity | null = null',
-      '@exposed({ min: 0, max: 360, label: "Orbit Speed (deg/s)" }) orbitSpeed = 45',
-      '@exposed({ min: 0.1, max: 100, label: "Radius" }) radius = 10',
-      '@exposed({ min: -10, max: 10, label: "Height Offset" }) heightOffset = 2',
+      '@exposed({ type: "list", of: "entity", label: "Ignore Colliders" }) ignoreColliders: (Entity | null)[] = []',
+      '@exposed({ type: "entity", label: "Collider Probe" }) colliderProbe: Entity | null = null',
+      '@exposed({ min: 0.1, max: 10000, label: "Radius" }) radius = 10',
+      '@exposed({ min: -89, max: 89, label: "Pitch (deg)" }) pitch = 30',
+      '@exposed({ min: 0.1, max: 10000, label: "Min Radius" }) minRadius = 1',
+      '@exposed({ min: 0.1, max: 10000, label: "Max Radius" }) maxRadius = 10000',
+      '@exposed({ min: 0, max: 100, label: "Collision Offset" }) collisionOffset = 0.5',
     ],
   },
   {
@@ -356,6 +368,44 @@ export const RECIPES: Recipe[] = [
       '@exposed({ min: 0, max: 100, label: "Drive speed (deg/s)" }) driveSpeed = 30',
       '@exposed({ min: 0, max: 1000, label: "Motor force" }) motorForce = 200',
       '@inputMap("Player") player!: InputActionMap',
+    ],
+  },
+  {
+    name: "scatter-prefab-spawner",
+    description:
+      "Spawn full prefab instances of an @exposed template entity at authored positions, or paint-scatter on a mesh Color Attribute (see populateprefabs).",
+    keywords: [
+      "spawn",
+      "prefab",
+      "scatter",
+      "instance",
+      "duplicate",
+      "populate",
+      "spawner",
+      "template",
+      "clone",
+      "paint",
+      "vertex",
+      "color",
+    ],
+    hooks: ["OnStart"],
+    referenceBehavior: "populateprefabs.ts",
+    pitfalls: [
+      "Use await this.spawner.Spawn(template, { position }) — never node.clone() + copy attachments.",
+      "Template is any in-level entity (linked collection root or in-scene hierarchy).",
+      "Call await this.spawner.HideTemplate(template) for in-scene templates — hides visuals and tears down live components (physics/scripts/…); Spawn still rebuilds from EntityData. Or hide in Blender with the viewport eye icon.",
+      "REFLECTION_PROBE on templates is skipped at spawn with a console warning; LOD works when its target meshes live inside the template hierarchy, are real scene members in Blender (orphan override children never export — 'target not found'), and own unique mesh data (InstancedMesh targets are rejected by Babylon LOD).",
+      "Cameras spawn per instance with remapped targets but are never auto-activated — set scene.activeCamera = handle.cameras[0] explicitly.",
+      "Spawn is async — call from OnStart via void this.SpawnAll().catch(...) or an async helper.",
+      "Paint-scatter: leave color kind blank (auto). Blender may put real paint in COLOR_1 with a fake all-white COLOR_0 — do not require RGB >= 0.99; use luminance threshold (~0.5).",
+      "Blender Color Attribute names (Color.001) are not glTF kinds — getVerticesData(\"Color.001\") fails; use COLOR_0 / COLOR_1 or auto-pick.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "list", of: "entity", label: "Prefabs" }) prefabs: (Entity | null)[] = []',
+      '@exposed({ type: "entity", label: "Target mesh" }) target: Entity | null = null',
+      '@exposed({ type: "list", of: "vector3", label: "Spawn points" }) points: Vector3[] = []',
+      '@exposed({ min: 0, max: 1, step: 0.05, label: "Paint luminance threshold" }) paintThreshold = 0.5',
+      '@exposed({ label: "Vertex color kind (blank = auto)" }) colorMapName = ""',
     ],
   },
 ];
@@ -675,6 +725,7 @@ export default class ${className} extends Behavior
 `,
 
   "trigger-logger": (className) => `import { Behavior, exposed } from "@bjs/engine";
+import type { Entity } from "@bjs/engine";
 
 /** Logs when a trigger collider is overlapped (needs a trigger COLLIDER). */
 export default class ${className} extends Behavior
@@ -682,20 +733,19 @@ export default class ${className} extends Behavior
   @exposed({ label: "Message" })
   message = "";
 
-  /** Subscribe to the body's collision observable and log overlaps. */
-  OnStart(): void
+  private LogLabel(): string
   {
-    const body = this.entity.body;
-    if (body === undefined)
-    {
-      return;
-    }
+    return this.message.length > 0 ? this.message : this.entity.name;
+  }
 
-    body.setCollisionCallbackEnabled(true);
-    body.getCollisionObservable().add((collisionEvent) =>
-    {
-      console.log(\`[trigger] \${this.message.length > 0 ? this.message : this.entity.name}\`, collisionEvent.type);
-    });
+  OnTriggerEnter(other: Entity): void
+  {
+    console.log(\`[trigger] \${this.LogLabel()} enter "\${other.name}"\`);
+  }
+
+  OnTriggerExit(other: Entity): void
+  {
+    console.log(\`[trigger] \${this.LogLabel()} exit "\${other.name}"\`);
   }
 }
 `,
@@ -974,7 +1024,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "camera-follow": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "camera-follow": (className) => `import { Behavior, exposed, CopyLens, FindCameraForNode, type Entity } from "@bjs/engine";
 import { Vector3, UniversalCamera, Tools } from "@babylonjs/core";
 
 /** Orbits a UniversalCamera around a target entity. */
@@ -996,12 +1046,17 @@ export default class ${className} extends Behavior
   private angle = 0;
   private orbitSpeedRadians = 0;
 
-  /** Create the camera and make it active. */
+  /** Create the camera, copy Blender lens settings, and make it active. */
   OnStart(): void
   {
     this.orbitSpeedRadians = Tools.ToRadians(this.orbitSpeed);
     const position = this.node.getAbsolutePosition();
+    const authoredCamera = FindCameraForNode(this.scene, this.node);
     this.camera = new UniversalCamera(this.node.name, position, this.scene);
+    if (authoredCamera !== null)
+    {
+      CopyLens(authoredCamera, this.camera);
+    }
     this.scene.activeCamera = this.camera;
   }
 
@@ -1341,6 +1396,55 @@ export default class ${className} extends Behavior
     hinge.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
     hinge.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
     hinge.setAxisMotorMaxForce(motorAxis, this.motorForce);
+  }
+}
+`,
+
+  "scatter-prefab-spawner": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Vector3 } from "@babylonjs/core";
+
+/**
+ * Spawns full prefab instances of a template entity at authored points.
+ * Each instance goes through this.spawner.Spawn — colliders, scripts,
+ * constraints, and internal GUID refs all work per instance.
+ */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "entity", label: "Prefab" })
+  prefab: Entity | null = null;
+
+  @exposed({ type: "list", of: "vector3", label: "Spawn points" })
+  points: Vector3[] = [];
+
+  /** Kick off async spawn once the level has begun. */
+  OnStart(): void
+  {
+    if (this.prefab === null)
+    {
+      console.warn("[${className}] prefab not assigned");
+      return;
+    }
+
+    void this.SpawnAll().catch((error) =>
+    {
+      console.error("[${className}] spawn failed", error);
+    });
+  }
+
+  /** Duplicate the template at every authored spawn point. */
+  private async SpawnAll(): Promise<void>
+  {
+    if (this.prefab === null)
+    {
+      return;
+    }
+
+    for (const point of this.points)
+    {
+      await this.spawner.Spawn(this.prefab, {
+        position: point.clone(),
+      });
+    }
   }
 }
 `,

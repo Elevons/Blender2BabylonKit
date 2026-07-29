@@ -1,10 +1,14 @@
 import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
 import type { ConstraintAxisName, ConstraintComponent, InputActionMap } from "@bjs/engine";
 import {
+  Color3,
+  LinesMesh,
+  MeshBuilder,
   Physics6DoFConstraint,
   PhysicsConstraintAxis,
   PhysicsConstraintMotorType,
   PhysicsMotionType,
+  PhysicsRaycastResult,
   Quaternion,
   Vector3,
 } from "@babylonjs/core";
@@ -82,8 +86,57 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 1, label: "Steer Zone Priority" })
   steerZonePriority = 0.9;
 
+  /**
+   * When > 0, directly set the body's forward/backward linear velocity each
+   * frame proportional to throttle.  Bypasses the slow wheel-friction → ground
+   * reaction chain so the car accelerates instantly.  Leave at 0 for pure
+   * physics; crank to 30+ for arcadey response.
+   */
+  @exposed({ min: 0, max: 100, label: "Velocity Assist (units/s)" })
+  velocityAssist = 0;
+
+  /**
+   * Time (seconds) to ramp the velocity assist toward its target.  Smaller =
+   * snappier; larger = smoother but feels like gentle acceleration.  Zero
+   * snaps instantly (original behavior).
+   */
+  @exposed({ min: 0, max: 2, label: "Velocity Ramp (s)" })
+  velocityRampSeconds = 0.15;
+
+  /**
+   * When > 0, directly set the body's yaw angular velocity each frame
+   * proportional to steer input.  Makes the car point where the stick aims
+   * instead of waiting for wheels to push it around.
+   */
+  @exposed({ min: 0, max: 180, label: "Angular Assist (deg/s)" })
+  angularAssist = 0;
+
   @exposed({ label: "Body", type: "entity" })
   body: Entity | null = null;
+
+  /**
+   * Player entity to exclude from the ground raycast.  Prevents the car's
+   * grounded check from treating the player's own collider as ground.
+   */
+  @exposed({ label: "Player Entity", type: "entity" })
+  playerEntity: Entity | null = null;
+
+  /**
+   * Distance (meters) below the body to raycast each frame.  When the ray
+   * misses (car is in the air) the velocity assist and angular assist are
+   * skipped so the car arcs naturally instead of being snapped back to
+   * the ground.
+   */
+  @exposed({ min: 0.05, max: 5, label: "Ground Raycast Distance (m)" })
+  groundRaycastDistance = 0.5;
+
+  /**
+   * Draw the ground raycast as a colored line (green = grounded, red = airborne)
+   * and log the hit each frame.  Leave off in shipping builds — the per-frame
+   * console.log alone is enough to visibly cost framerate.
+   */
+  @exposed({ label: "Debug Ground Ray" })
+  debugGroundRay = false;
 
   @inputMap("Vehicle") vehicle!: InputActionMap;
 
@@ -96,12 +149,28 @@ export default class CarController extends Behavior
   /** One entry per wheel slot (see CollectWheelEntities); undefined when unassigned or undrivable. */
   private wheelDrives: (WheelDriveBinding | undefined)[] = [];
   private debounceTime = Date.now();
+  /** Current ramped forward speed used by the velocity assist so it doesn't snap. */
+  private rampedSpeed = 0;
+  /** Reusable raycast result — must be pooled between calls (BJS V2 physics). */
+  private raycastResult = new PhysicsRaycastResult();
+  /** Debug line showing the ground raycast each frame; null when debug is off. */
+  private debugLine: LinesMesh | null = null;
+  /** Scratch vectors so the per-frame raycast doesn't allocate. */
+  private rayStart = new Vector3();
+  private rayEnd = new Vector3();
+  /** Reused point array for the CreateLines instance update. */
+  private debugPoints: Vector3[] = [new Vector3(), new Vector3()];
 
   OnStart(): void
   {
     this.wheelDrives = this.CollectWheelEntities().map(
       (wheelEntity) => this.ResolveWheelDrive(wheelEntity)
     );
+
+    if (this.debugGroundRay)
+    {
+      this.CreateDebugLine();
+    }
   }
 
   OnUpdate(deltaSeconds: number): void
@@ -138,6 +207,13 @@ export default class CarController extends Behavior
       steer = -steer;
     }
 
+    // When reversing, steering is relative to the rear of the car — flip sign so
+    // the stick still steers toward the direction the front points.
+    if (throttle < 0)
+    {
+      steer = -steer;
+    }
+
     const remapped = this.ApplySteerZone(throttle, steer);
     throttle = remapped.throttle;
     steer = remapped.steer;
@@ -154,6 +230,24 @@ export default class CarController extends Behavior
         this.SetWheelMotor(drive, speeds[slotIndex]);
       }
     }
+
+    // Evaluate the ground check unconditionally so the debug line keeps updating
+    // during the recover maneuver instead of freezing at its last position.
+    const grounded = this.IsGrounded();
+
+    // Cheat: directly nudge the body so the car feels instant rather than
+    // waiting for wheel friction → ground reaction → body movement.
+    // Only apply assists when the car is grounded.
+    if (!this.isPlacing && grounded)
+    {
+      this.ApplyVelocityAssist(throttle, steer, deltaSeconds);
+    }
+  }
+
+  OnDestroy(): void
+  {
+    this.debugLine?.dispose();
+    this.debugLine = null;
   }
 
   /** Wheel entity slots in hinge order: four corners, outer then inner per corner. */
@@ -405,6 +499,192 @@ export default class CarController extends Behavior
 
     body.setLinearVelocity(Vector3.Zero());
     body.setAngularVelocity(Vector3.Zero());
+  }
+
+  /**
+   * Cheat layer: directly override the body's forward and yaw velocity so the
+   * car responds instantly to input instead of waiting for wheel friction to
+   * push it.  Only the forward/back component of linear velocity and the yaw
+   * (Y) component of angular velocity are overridden — other components
+   * (sideways drift, pitch/roll from terrain) are left alone.
+   */
+  private ApplyVelocityAssist(throttle: number, steer: number, deltaSeconds: number): void
+  {
+    if (!this.body || this.velocityAssist === 0 && this.angularAssist === 0)
+    {
+      return;
+    }
+
+    const physicsBody = this.body.body;
+    if (!physicsBody)
+    {
+      return;
+    }
+
+    const currentLinear = physicsBody.getLinearVelocity();
+    const currentAngular = physicsBody.getAngularVelocity();
+
+    // Forward direction in world space — this car model uses +Z as forward.
+    const forward = new Vector3(0, 0, 1);
+    Vector3.TransformNormalToRef(forward, this.body.node.getWorldMatrix(), forward);
+
+    // Throttle direction respects swapMovement (already flipped in caller).
+    const throttleDeadzone = CarController.throttleDeadzone;
+    let direction = 0;
+    if (throttle > throttleDeadzone) direction = 1;
+    else if (throttle < -throttleDeadzone) direction = -1;
+
+    if (this.velocityAssist > 0)
+    {
+      const magnitude = direction !== 0 ? Math.min(1, Math.abs(throttle)) : 0;
+      const targetSpeed = direction * this.velocityAssist * magnitude;
+
+      // Ramp the desired forward speed smoothly toward the target.
+      if (this.velocityRampSeconds > 0)
+      {
+        const blendFactor = 1 - Math.exp(-deltaSeconds / this.velocityRampSeconds);
+        this.rampedSpeed += (targetSpeed - this.rampedSpeed) * blendFactor;
+      }
+      else
+      {
+        this.rampedSpeed = targetSpeed;
+      }
+
+      // Strip the existing forward component, then add the ramped one.
+      const currentForward = Vector3.Dot(currentLinear, forward);
+      const assistDelta = this.rampedSpeed - currentForward;
+      currentLinear.x += assistDelta * forward.x;
+      currentLinear.y += assistDelta * forward.y;
+      currentLinear.z += assistDelta * forward.z;
+
+      physicsBody.setLinearVelocity(currentLinear);
+    }
+
+    if (this.angularAssist > 0)
+    {
+      const steerEpsilon = CarController.steerEpsilon;
+      if (Math.abs(steer) > steerEpsilon)
+      {
+        // Override yaw (Y) angular velocity; keep pitch/roll untouched.
+        const targetYawRad = steer * this.angularAssist * (Math.PI / 180);
+        currentAngular.y = targetYawRad;
+        physicsBody.setAngularVelocity(currentAngular);
+      }
+    }
+  }
+
+  /**
+   * Cast a downward ray from the body to determine if the car is on the ground.
+   * Returns true when the ray intersects any collider within groundRaycastDistance.
+   */
+   private IsGrounded(): boolean
+     {
+       if (!this.body)
+       {
+         return false;
+       }
+
+       const node = this.body.node;
+
+       // Property, not getAbsolutePosition() — the method calls computeWorldMatrix()
+       // and stamps the result with the current render id. Called from OnUpdate
+       // (pre-physics-step), that caches a stale transform for the rest of the frame
+       // and anything reading the cached matrix afterwards renders a frame behind.
+       this.rayStart.copyFrom(node.parent ? node.absolutePosition : node.position);
+       this.rayEnd.copyFrom(this.rayStart);
+       this.rayEnd.y -= this.groundRaycastDistance;
+
+       this.scene.getPhysicsEngine()?.raycastToRef(
+         this.rayStart,
+         this.rayEnd,
+         this.raycastResult
+       );
+
+    let grounded = this.raycastResult.hasHit;
+
+    // The player can't count as ground.  Note this is a post-hit rejection, not a
+    // true exclusion: raycastToRef's 4th argument is an IRaycastQuery of collision
+    // bitmasks, not a body list, so there's no way to skip a specific body without
+    // putting the player in its own filter group.  If the player is standing
+    // between the car and the ground this will read as airborne for a frame.
+    if (grounded && this.playerEntity?.body && this.raycastResult.body === this.playerEntity.body)
+    {
+      grounded = false;
+    }
+
+    if (this.debugGroundRay)
+    {
+      this.UpdateDebugLine(grounded);
+    }
+
+    return grounded;
+  }
+
+  /**
+   * Create the debug line once.  Two details matter here:
+   *  - `updatable: true` is required for the CreateLines instance update below.
+   *  - `alwaysSelectAsActiveMesh` skips frustum culling.  The mesh's bounding
+   *    info is computed at creation and never refreshed when we move the
+   *    vertices, so without this it gets culled the moment the car leaves the
+   *    area the bounding box was built around.
+   */
+  private CreateDebugLine(): void
+  {
+    if (this.debugLine)
+    {
+      return;
+    }
+
+    this.debugLine = MeshBuilder.CreateLines(
+      "groundRaycastDebug",
+      {
+        points: [Vector3.Zero(), Vector3.Zero()],
+        updatable: true,
+      },
+      this.scene
+    );
+
+    this.debugLine.alwaysSelectAsActiveMesh = true;
+    this.debugLine.isPickable = false;
+    // NOTE: isEnabled is a *method* on Node — `mesh.isEnabled = true` shadows it
+    // with a boolean and Babylon throws when it later calls mesh.isEnabled().
+    // Use setEnabled() if you ever need to toggle it.
+    this.debugLine.setEnabled(true);
+  }
+
+  /**
+   * Move the debug line onto the current ray and recolor it.  Uses the
+   * CreateLines `instance` overload rather than setVerticesData so Babylon
+   * updates the vertex buffer through its own path.  Color comes from
+   * LinesMesh.color, not a vertex-color buffer — LinesMesh bakes its
+   * useVertexColor define at construction, so a colors buffer added afterwards
+   * is ignored by the shader.
+   */
+  private UpdateDebugLine(grounded: boolean): void
+  {
+    if (!this.debugLine)
+    {
+      this.CreateDebugLine();
+    }
+    if (!this.debugLine)
+    {
+      return;
+    }
+
+    const endPoint = grounded ? this.raycastResult.hitPointWorld : this.rayEnd;
+    this.debugPoints[0].copyFrom(this.rayStart);
+    this.debugPoints[1].copyFrom(endPoint);
+
+    this.debugLine = MeshBuilder.CreateLines(
+      "groundRaycastDebug",
+      {
+        points: this.debugPoints,
+        instance: this.debugLine,
+      },
+      this.scene
+    );
+
+    this.debugLine.color = grounded ? Color3.Green() : Color3.Red();
   }
 
   /**

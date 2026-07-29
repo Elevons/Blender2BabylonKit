@@ -13,3 +13,4 @@ Test reflection probes - done?
 collision/render layers need testing
 adding/removing components at runtime
 autoLOD needs a saving and load generation system (to be implemented with build setup)
+Prefabs with cameras not tested, prefabs do not allow reflection prrobes

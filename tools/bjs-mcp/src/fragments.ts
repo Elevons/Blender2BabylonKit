@@ -41,18 +41,16 @@ if (move.x !== 0 || move.y !== 0)
   },
   {
     name: "enable-trigger-logging",
-    description: "Enable collision callbacks and log trigger overlaps.",
-    code: `const body = this.entity.body;
-if (body === undefined)
+    description: "Log trigger overlaps via OnTriggerEnter/OnTriggerExit (attach to the trigger entity).",
+    code: `OnTriggerEnter(other: Entity): void
 {
-  return;
+  console.log(\`[trigger] \${this.entity.name} enter "\${other.name}"\`);
 }
 
-body.setCollisionCallbackEnabled(true);
-body.getCollisionObservable().add((collisionEvent) =>
+OnTriggerExit(other: Entity): void
 {
-  console.log(\`[trigger] \${this.entity.name}\`, collisionEvent.type);
-});`,
+  console.log(\`[trigger] \${this.entity.name} exit "\${other.name}"\`);
+}`,
   },
   {
     name: "cleanup-keyboard-observer",
@@ -146,6 +144,20 @@ this.camera.position = new Vector3(
   targetPosition.z + offsetZ
 );
 this.camera.setTarget(targetPosition);`,
+  },
+  {
+    name: "copy-lens-from-authored-camera",
+    description:
+      "Copy Blender FOV / clip planes onto a script-created camera (same helper BuildTypedCamera uses).",
+    code: `import { CopyLens, FindCameraForNode } from "@bjs/engine";
+
+const authoredCamera = FindCameraForNode(this.scene, this.node);
+// … create ArcRotateCamera / UniversalCamera …
+if (authoredCamera !== null)
+{
+  CopyLens(authoredCamera, this.camera);
+}
+this.scene.activeCamera = this.camera;`,
   },
   {
     name: "geospatial-camera-flyto-point",
@@ -255,7 +267,58 @@ this.node.position.copyFrom(target);
 body.setLinearVelocity(Vector3.Zero());
 body.setAngularVelocity(Vector3.Zero());`,
   },
+  {
+    name: "spawn-prefab-instance",
+    description:
+      "Duplicate an in-level template entity (linked prefab or in-scene hierarchy) via this.spawner.Spawn — full components, fresh GUIDs.",
+    code: `if (this.prefab === null)
+{
+  return;
+}
+
+// Optional: hide + disable the in-scene template so only clones remain active.
+await this.spawner.HideTemplate(this.prefab);
+
+const handle = await this.spawner.Spawn(this.prefab, {
+  position: this.node.position.clone(),
+});
+// handle.rootEntity — the new instance root
+// handle.guidMap — templateGuid → runtimeGuid
+// handle.cameras — instance cameras (never auto-activated; assign scene.activeCamera yourself)`,
+  },
+  {
+    name: "paint-scatter-vertex-colors",
+    description:
+      "Read Blender paint masks from glTF COLOR_n (auto-pick skips fake all-white COLOR_0). LevelLoader loads COLOR_1+ via bjs_extra_vertex_colors.",
+    code: `// Prefer auto: try ColorKind then COLOR_1, COLOR_2, … and keep the most varied set.
+// Forced kinds: "COLOR_0" / "COLOR_1" (not Blender names like "Color.001").
+const colorData =
+  mesh.getVerticesData("COLOR_1")
+  ?? mesh.getVerticesData(VertexBuffer.ColorKind);
+if (colorData === null)
+{
+  return;
+}
+
+const stride = colorData.length % 4 === 0 ? 4 : 3;
+const paintThreshold = 0.5; // soft strokes are often 0.4–0.8, not pure 1.0
+
+for (let vertexIndex = 0; vertexIndex < colorData.length / stride; vertexIndex++)
+{
+  const offset = vertexIndex * stride;
+  const luminance =
+    0.2126 * colorData[offset]
+    + 0.7152 * colorData[offset + 1]
+    + 0.0722 * colorData[offset + 2];
+  if (luminance < paintThreshold)
+  {
+    continue;
+  }
+  // … spawn at this vertex (see populateprefabs.ts)
+}`,
+  },
 ];
+
 
 export function GetFragment(name: string): Fragment | undefined
 {

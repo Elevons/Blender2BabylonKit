@@ -1,24 +1,26 @@
 import { Behavior, exposed } from "@bjs/engine";
+import type { Entity } from "@bjs/engine";
 
-/** Logs when a trigger collider is overlapped. Prefer CollisionProbe for lifecycle hooks. */
+/** Logs when a trigger collider is overlapped. Attach to the entity that owns the trigger body. */
 export default class TriggerLogger extends Behavior
 {
   @exposed({ label: "Message" })
   message = "";
 
-  /** Subscribe to the body's collision observable and log overlaps. */
-  OnStart(): void
+  private LogLabel(): string
   {
-    const body = this.entity.body;
-    if (body === undefined)
-    {
-      return;
-    }
+    return this.message.length > 0 ? this.message : this.entity.name;
+  }
 
-    body.setCollisionCallbackEnabled(true);
-    body.getCollisionObservable().add((collisionEvent) =>
-    {
-      console.log(`[trigger] ${this.message.length > 0 ? this.message : this.entity.name}`, collisionEvent.type);
-    });
+  /** Log the first trigger overlap with another entity. */
+  OnTriggerEnter(other: Entity): void
+  {
+    console.log(`[trigger] ${this.LogLabel()} enter "${other.name}"`);
+  }
+
+  /** Log when a trigger overlap ends. */
+  OnTriggerExit(other: Entity): void
+  {
+    console.log(`[trigger] ${this.LogLabel()} exit "${other.name}"`);
   }
 }

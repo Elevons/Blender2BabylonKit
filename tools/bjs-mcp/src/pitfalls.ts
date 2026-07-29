@@ -57,6 +57,12 @@ export const PITFALLS: PitfallEntry[] = [
     mcpTool: "get_scripting_context(section=\"physics\")",
   },
   {
+    mistake: "`body.getCollisionObservable()` for trigger overlaps",
+    symptom: "Trigger log/orbit gate never fires; no error",
+    fix: "Override OnTriggerEnter/OnTriggerExit on the trigger entity, or subscribe to HavokPlugin.onTriggerCollisionObservable when listening from another entity",
+    mcpTool: "get_recipe_template(recipe=\"trigger-logger\", className=\"TriggerDebug\")",
+  },
+  {
     mistake: "Invented `FindAction(\"Jump\")` name not in Input Actions",
     symptom: "Always undefined; input does nothing",
     fix: "Call list_input_actions; use PlayerActions constants from InputActions.ts",
@@ -73,6 +79,12 @@ export const PITFALLS: PitfallEntry[] = [
     symptom: "Fights exported camera; wrong controls",
     fix: "Author Camera component in Blender (ARC / FOLLOW / GEOSPATIAL)",
     mcpTool: "get_scripting_context(section=\"cameras\")",
+  },
+  {
+    mistake: "`new ArcRotateCamera` / UniversalCamera without CopyLens",
+    symptom: "Authored FOV / clip planes ignored; Babylon defaults (~0.8 rad FOV)",
+    fix: "FindCameraForNode(scene, entity.node) then CopyLens(authored, newCamera) before setting scene.activeCamera",
+    mcpTool: "get_fragment(name=\"copy-lens-from-authored-camera\")",
   },
   {
     mistake: "Creating Atmosphere / DefaultRenderingPipeline in behavior",
@@ -95,8 +107,8 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "Expecting `level` or `Level` on Behavior",
     symptom: "Does not exist",
-    fix: "Use @exposed entity refs; app code uses level.ByTag — not in behaviors",
-    mcpTool: "get_scripting_context(section=\"entity\")",
+    fix: "Use @exposed entity refs; for tag queries use this.byTag(\"Enemy\"); for runtime prefab instances use this.spawner.Spawn — app code uses level.ByTag / level.Spawn, not in behaviors as a Level field",
+    mcpTool: "get_scripting_context(section=\"reaching-other-objects\")",
   },
   {
     mistake: "Calling level.componentHost or entity.AddComponent from a behavior",
@@ -104,6 +116,19 @@ export const PITFALLS: PitfallEntry[] = [
     fix: "Mutate components from app code via level.componentHost after load",
     mcpTool: "get_doc_chapter(chapter=\"14-API-GUIDE.html\")",
   },
+  {
+    mistake: "Cloning Babylon nodes and copying attachment rows to \"spawn\" a prefab",
+    symptom: "No physics bodies, scripts never OnStart, wheel constraints / entity refs point at the template",
+    fix: "await this.spawner.Spawn(templateEntity, { position }) — full load pipeline per instance",
+    mcpTool: "get_fragment(name=\"spawn-prefab-instance\")",
+  },
+  {
+    mistake: "Sampling only VertexBuffer.ColorKind / requiring RGB >= 0.99 for paint-scatter",
+    symptom: "Prefabs spawn everywhere (or nowhere) despite a painted Color Attribute in Blender",
+    fix: "Leave color kind blank (auto-pick) or use COLOR_1; threshold on luminance (~0.5). Stock Babylon drops COLOR_1+ — LevelLoader registers bjs_extra_vertex_colors so getVerticesData(\"COLOR_1\") works. Blender often invents all-white COLOR_0 when Export all vertex colors is on.",
+    mcpTool: "get_scripting_context(section=\"prefab-spawn\")",
+  },
+
   {
     mistake: "Runtime-adding REFLECTION_PROBE or RENDERING_GROUP",
     symptom: "ComponentHost logs policy warning; nothing applied",
@@ -150,6 +175,18 @@ export const PITFALLS: PitfallEntry[] = [
     mistake: "LOD target entity has components (collider, script, etc.)",
     symptom: "Target's behaviors keep running and its physics body stays in the world — likely causes bugs",
     fix: "LOD targets must be mesh-only empties with no components; Blender UI shows a red warning when a picked target has components. Or use Auto LOD to generate the simplified mesh at runtime instead",
+    mcpTool: "get_scripting_context(section=\"lod\")",
+  },
+  {
+    mistake: "LOD target object is render-disabled or in no collection (orphan override child)",
+    symptom: "Runtime logs `LOD on \"…\": target \"<guid>\" not found — skipping level`; the GUID changes every export",
+    fix: "The target must be a real scene member to export. In the prefab library, make LOD meshes members of the prefab's collection (Blender's library override leaves non-member children as orphan datablocks). Export validation warns about both cases",
+    mcpTool: "get_scripting_context(section=\"lod\")",
+  },
+  {
+    mistake: "LOD target mesh shares mesh data with other objects (linked prefab duplicates)",
+    symptom: "Runtime logs `target \"…\" only owns instanced meshes` — Babylon addLODLevel requires unique Mesh geometry",
+    fix: "Make the LOD meshes single-user in the prefab library so they export as unique meshes instead of glTF instances",
     mcpTool: "get_scripting_context(section=\"lod\")",
   },
 ];

@@ -45,6 +45,7 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["volumetric", "light shaft", "god ray", "sun ray", "scattering", "post-processing", "postprocess", "bloom", "ssao", "dof", "vignette"], section: "scene-look" },
   { keywords: ["lifecycle", "onstart", "onupdate", "ondestroy"], section: "lifecycle" },
   { keywords: ["visible", "visibility", "hidden", "hide", "isvisible", "eye icon", "viewport"], section: "visibility" },
+  { keywords: ["spawn", "prefab", "scatter", "instance", "populate", "spawner", "duplicate"], section: "prefab-spawn" },
 ];
 
 const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
@@ -60,6 +61,7 @@ const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
   { keywords: ["hinge", "motor", "wheel"], fragment: "set-hinge-motor-velocity" },
   { keywords: ["path", "waypoint", "train", "tangent"], fragment: "path3d-from-entities" },
   { keywords: ["camera", "orbit", "follow"], fragment: "orbit-camera-around-target" },
+  { keywords: ["fov", "lens", "clip", "script camera", "copy lens"], fragment: "copy-lens-from-authored-camera" },
   { keywords: ["geospatial", "globe", "planet", "map", "earth", "flyto", "fly to"], fragment: "geospatial-camera-flyto-point" },
   { keywords: ["teleport", "lift", "snap", "checkpoint", "respawn", "reset"], fragment: "move-animated-body" },
   { keywords: ["reveal", "show", "hidden", "invisible"], fragment: "reveal-entity" },
@@ -67,13 +69,16 @@ const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
   { keywords: ["throttle", "train", "accelerat"], fragment: "throttle-from-actions" },
   { keywords: ["msdf", "label", "score", "text"], fragment: "update-msdf-text" },
   { keywords: ["hover", "bob", "sine"], fragment: "ease-smoothstep" },
+  { keywords: ["spawn", "prefab", "scatter", "instance", "populate", "spawner"], fragment: "spawn-prefab-instance" },
+  { keywords: ["paint", "vertex", "color", "colormap", "populate", "scatter"], fragment: "paint-scatter-vertex-colors" },
+
 ];
 
 const RECIPE_ROLES: Record<string, string> = {
   "minimal-behavior": "base shell — always start here for novel logic",
   "constraint-hinge-motor": "drive Blender-authored hinge constraints (wheels, doors)",
   "path-follow-advanced": "Path3D motion with acceleration and tangent facing",
-  "camera-follow": "runtime UniversalCamera orbiting a target entity",
+  "camera-follow": "manual ArcRotateCamera on a target with optional probe collision clamp",
   "geospatial-camera-flyto": "fly authored GeospatialCamera to a point (Blender CAMERA component GEOSPATIAL)",
   "on-message-handler": "react to triggers / SendMessage / GUI clicks",
   "message-state-handler": "OnMessage-driven state machine with enum state",
@@ -89,7 +94,8 @@ const RECIPE_ROLES: Record<string, string> = {
   "animation-cycle": "cycle animation clips on an interval",
   "look-at-target": "face another entity each frame",
   "constant-rotate": "spin on a fixed axis",
-  "trigger-logger": "debug physics trigger overlaps",
+  "trigger-logger": "debug physics trigger overlaps via OnTriggerEnter/OnTriggerExit",
+  "scatter-prefab-spawner": "spawn template instances at points or paint-scatter on vertex colors",
 };
 
 function Tokenize(text: string): string[]

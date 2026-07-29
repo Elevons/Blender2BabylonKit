@@ -104,10 +104,20 @@ def _check_scripts(obj, warnings):
 
 
 def _append_entity_ref_warnings(owner_obj, label, target, context, warnings):
-    """Shared checks for stale prefab pointers and render-disabled targets."""
+    """Shared checks for stale prefab pointers, orphan datablocks, and
+    render-disabled targets."""
     stale = _stale_prefab_pointer_warning(owner_obj, target, label)
     if stale is not None:
         warnings.append(stale)
+    if len(target.users_collection) == 0:
+        # Library-override children that weren't members of the source
+        # collection end up in no collection at all — invisible and skipped
+        # by export (a common leftover of override_hierarchy_create).
+        warnings.append(
+            f"{owner_obj.name}: '{label}' references '{target.name}', which is "
+            f"not linked to any collection — it won't be exported; link it "
+            f"into the prefab's collection")
+        return
     if not is_renderable(target, context):
         warnings.append(
             f"{owner_obj.name}: '{label}' references '{target.name}', which is "
@@ -123,6 +133,11 @@ def _check_entity_refs(obj, context, warnings):
         if comp.comp_type == 'CONSTRAINT' and comp.con_target is not None:
             _append_entity_ref_warnings(
                 obj, "Constraint target", comp.con_target, context, warnings)
+        if comp.comp_type == 'LOD':
+            for level in comp.lod_levels:
+                if not level.auto_lod and level.target is not None:
+                    _append_entity_ref_warnings(
+                        obj, "LOD target", level.target, context, warnings)
         for v in comp.exposed_vars:
             if v.vtype == 'ENTITY' and v.obj_val is not None:
                 _append_entity_ref_warnings(

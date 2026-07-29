@@ -452,6 +452,44 @@ function ExtendDepthFromReceiverVertices(
   }
 }
 
+/**
+ * Register late-created meshes (runtime prefab spawns) on existing generators —
+ * the spawn-time mirror of the load pass in SetupShadows: every mesh becomes a
+ * receiver, and meshes whose Blender ray-visibility Shadow is on become casters.
+ * Frozen shadow maps need a Level.RefreshShadows() afterwards to pick them up.
+ * Returns how many casters were added.
+ */
+export function RegisterSpawnedShadowMeshes(
+  generators: ShadowGenerator[],
+  meshes: AbstractMesh[]
+): number
+{
+  let addedCasterCount = 0;
+
+  for (const mesh of meshes)
+  {
+    if (mesh.getTotalVertices() === 0)
+    {
+      continue;
+    }
+
+    mesh.receiveShadows = true;
+
+    if (!MeshCastsShadows(mesh))
+    {
+      continue;
+    }
+
+    for (const generator of generators)
+    {
+      generator.addShadowCaster(mesh, false);
+    }
+    addedCasterCount++;
+  }
+
+  return addedCasterCount;
+}
+
 /** Clamp to a supported shadow-map resolution (power of two, max 8192). */
 function ClampShadowMapSize(mapSize: number): number
 {

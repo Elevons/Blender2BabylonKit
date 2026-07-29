@@ -40,6 +40,7 @@ Use MCP tool **`route_task(intent, className)`** first — it picks a playbook a
 | Orbit camera (script) | `orbit-camera` | `camera-follow` |
 | Fly globe camera | `geospatial-flyto` | `geospatial-camera-flyto` |
 | Debug trigger overlaps | `debug-triggers` | `trigger-logger` |
+| Spawn prefab instances | `spawn-prefab-instances` | `scatter-prefab-spawner` |
 
 Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")` for one recipe.
 
@@ -53,6 +54,8 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 | Position logs but mesh stuck | ANIMATED without `disablePreStep=false` | `get_physics_movement(mode="animated-teleport")` |
 | Body drifts forever | `setTargetTransform` once | `get_physics_movement(mode="animated-continuous")` |
 | Trigger never fires | MESH trigger shape | `get_scripting_context(section="physics")` |
+| Trigger log silent | `getCollisionObservable()` used for triggers | `get_do_not_list` · recipe `trigger-logger` |
+| Script camera wrong FOV | Forgot `CopyLens` after `new` camera | `get_fragment(name="copy-lens-from-authored-camera")` |
 | Animation ignored | Script on mesh not armature | `get_playbook(name="animation-cycle")` |
 | @exposed field missing in Blender | Forgot Sync | Re-export + Sync in Blender |
 
@@ -330,20 +333,24 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 
 ### Blender setup
 - Usually an empty with SCRIPT; @exposed target entity.
+- Author FOV / clip on the Blender camera — the script copies them with `CopyLens`.
 
 ### Behavior file
 - Recipe: `camera-follow`
 - Reference: `TrainCamera.ts`
 - Sets `scene.activeCamera` — only one active camera.
+- Must call `FindCameraForNode` + `CopyLens` before activating a script-built camera.
 
 ### MCP steps
 1. `list_scene_entities` for target
 2. `get_recipe_template(recipe="camera-follow", className="OrbitCam")`
-3. `get_scripting_context(section="cameras")`
-4. `validate_behavior(source, "OrbitCam.ts")`
+3. `get_fragment(name="copy-lens-from-authored-camera")`
+4. `get_scripting_context(section="cameras")`
+5. `validate_behavior(source, "OrbitCam.ts")`
 
 ### Do not
 - Use for globe/planet — use Blender **GEOSPATIAL** camera instead.
+- `new` a camera without `CopyLens` — authored FOV will be ignored.
 
 ---
 
@@ -369,15 +376,64 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 ## Playbook: debug-triggers
 
 ### Blender setup
-- COLLIDER Is Trigger on debug volume.
+- COLLIDER **Is Trigger** on the debug volume.
+- Attach the script to **that same entity** (the one that owns the trigger body).
 
 ### Behavior file
 - Recipe: `trigger-logger`
 - Reference: `TriggerLogger.ts`
+- Uses `OnTriggerEnter` / `OnTriggerExit` — **not** `body.getCollisionObservable()`.
 
 ### MCP steps
 1. `get_recipe_template(recipe="trigger-logger", className="TriggerDebug")`
 2. `validate_behavior(source, "TriggerDebug.ts")`
+
+### Do not
+- Subscribe with `body.getCollisionObservable()` — that stream is solid collisions only.
+- For solid + trigger logging, use recipe `collision-probe` instead.
+
+---
+
+## Playbook: spawn-prefab-instances
+
+### Blender setup
+1. Place a **template** in the level — either link a collection from another
+   `.blend` (ENTITY picker → link button / `bjs.link_prefab`, or File → Link +
+   library override) or use any in-scene hierarchy with components.
+2. Hide the template in the viewport (eye icon) — or
+   `await this.spawner.HideTemplate(template)` at runtime for in-scene
+   templates (also tears down the template's live physics/scripts/…).
+3. SCRIPT on a spawner object; `@exposed({ type: "entity" })` prefab → pick the
+   template root.
+4. Placement options:
+   - **Point list:** `@exposed` vector3 list of spawn points; or
+   - **Paint-scatter (`populateprefabs`):** pick a target mesh, vertex-paint
+     bright values where instances should appear. Leave color kind blank
+     (auto). Soft paint → luminance threshold ~`0.5` (not pure white). Blender
+     may export paint as `COLOR_1` with a fake all-white `COLOR_0` — the engine
+     loads `COLOR_1+`; do not hard-code Blender names like `Color.001`.
+
+### Behavior file
+- Recipe: `scatter-prefab-spawner`
+- Reference: `populateprefabs.ts`
+- Core call: `await this.spawner.Spawn(this.prefab, { position })`
+
+### MCP steps
+1. `route_task(intent="spawn prefab instances", className="ScatterSpawner")`
+2. `get_recipe_template(recipe="scatter-prefab-spawner", className="ScatterSpawner")`
+3. `get_fragment(name="spawn-prefab-instance")`
+4. `get_fragment(name="paint-scatter-vertex-colors")` — when placing from a Color Attribute
+5. `get_scripting_context(section="prefab-spawn")`
+6. `list_scene_entities` — real template entity names
+7. `validate_behavior(source, "ScatterSpawner.ts")`
+
+### Do not
+- `node.clone()` + copy attachments / metadata — no physics, no OnStart, stale GUID refs.
+- Expect a `Level` field on Behavior — spawn goes through `this.spawner` only.
+- Put REFLECTION_PROBE on templates (skipped at spawn in v1).
+- Point template LOD levels at meshes outside the template hierarchy — keep LOD targets inside the subtree so each instance clones its own.
+- Expect a spawned camera to activate itself — cameras spawn per instance (targets remapped) but are never made active; set `scene.activeCamera = handle.cameras[0]` yourself.
+- Sample only `VertexBuffer.ColorKind` with `RGB >= 0.99` for paint masks — that hits Blender's fake white `COLOR_0` and scatters everywhere (or misses soft strokes).
 
 ---
 

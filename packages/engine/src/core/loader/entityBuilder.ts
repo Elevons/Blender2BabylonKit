@@ -95,6 +95,8 @@ export function ProcessEntity(
   const entityKey = entityData.id.length > 0 ? entityData.id : entityData.name;
   const entity = new Entity(entityData.id, entityData.name, resolvedNode);
   context.level.entities.set(entityKey, entity);
+  // Retained so Level.Spawn can rebuild this entity's component stack later.
+  context.level.entityData.set(entityKey, entityData);
   resolvedNode.metadata = { ...(resolvedNode.metadata ?? {}), bjsEntity: entity };
 
   if (entityData.visible === false)

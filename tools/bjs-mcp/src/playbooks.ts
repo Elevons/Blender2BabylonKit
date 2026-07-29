@@ -174,9 +174,33 @@ export const PLAYBOOK_ROUTES: PlaybookRoute[] = [
     referenceBehavior: "TriggerLogger",
     needsInput: false,
     needsSceneEntities: false,
+    needsPhysics: true,
+  },
+  {
+    id: "spawn-prefab-instances",
+    title: "Spawn prefab instances at runtime",
+    keywords: [
+      "spawn",
+      "prefab",
+      "scatter",
+      "instance",
+      "duplicate",
+      "populate",
+      "spawner",
+      "template",
+      "clone",
+      "paint",
+      "vertex",
+      "color",
+    ],
+    recipe: "scatter-prefab-spawner",
+    referenceBehavior: "populateprefabs",
+    needsInput: false,
+    needsSceneEntities: true,
     needsPhysics: false,
   },
 ];
+
 
 function Tokenize(text: string): string[]
 {

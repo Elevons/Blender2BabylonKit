@@ -7,7 +7,7 @@
  */
 export { ApplyCameraKeys } from "./keys";
 export { FindCameraForNode, ApplyBlenderCamera } from "./apply";
-export { BuildTypedCamera } from "./typed";
+export { BuildTypedCamera, CopyLens } from "./typed";
 export type { TypedCameraResult, CameraTargetBinding } from "./typed";
 export {
   CreateCameraTargetSets,

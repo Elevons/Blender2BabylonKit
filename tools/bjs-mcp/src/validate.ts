@@ -124,6 +124,7 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   CheckKeyboardObserverCleanup(source, issues);
   CheckScenePostProcessInBehavior(source, issues);
     CheckTargetTransformLoop(source, issues);
+  CheckManualPrefabClone(source, issues);
 
   return {
     valid: issues.filter((issue) => issue.severity === "error").length === 0,
@@ -404,6 +405,48 @@ function CheckScenePostProcessInBehavior(source: string, issues: ValidationIssue
   });
 }
 
+/**
+ * node.clone() alone skips physics, scripts, and GUID remapping. Prefer
+ * this.spawner.Spawn for prefab instances — that is the legal spawn surface
+ * (behaviors never get a Level handle, but spawner is injected).
+ */
+function CheckManualPrefabClone(source: string, issues: ValidationIssue[]): void
+{
+  const clonesNode =
+    /\.clone\s*\(/.test(source) &&
+    (source.includes("node.clone") ||
+      source.includes(".node.clone") ||
+      /prefab|template|instance|spawn/i.test(source));
+
+  if (!clonesNode)
+  {
+    return;
+  }
+
+  // Legitimate uses of clone (Vector3/Quaternion/matrices) still match `.clone(` —
+  // only warn when the source also looks like it is duplicating entities.
+  const looksLikeEntityDuplication =
+    /attachments|bjsEntity|RegisterAttachment|CopyAttachment|CloneEntity/i.test(source) ||
+    /prefab|template/i.test(source);
+
+  if (!looksLikeEntityDuplication)
+  {
+    return;
+  }
+
+  if (source.includes("this.spawner.Spawn") || source.includes("spawner.Spawn"))
+  {
+    return;
+  }
+
+  issues.push({
+    code: "manual-prefab-clone",
+    message:
+      "Cloning nodes (and copying attachments) does not rebuild physics, scripts, or remapped GUID refs. Use await this.spawner.Spawn(template, { position }) instead.",
+    severity: "warning",
+  });
+}
+
 const FIX_HINTS: Record<string, string> = {
   "missing-engine-import": 'Add: import { Behavior, … } from "@bjs/engine";',
   "missing-export-default": "Add: export default class YourName extends Behavior { }",
@@ -427,6 +470,10 @@ const FIX_HINTS: Record<string, string> = {
   "missing-observer-cleanup": "Store observer in OnStart; remove in OnDestroy.",
   "scene-post-in-behavior":
     'Author in Blender Scene panels — get_scripting_context(section="scene-look").',
+  "manual-prefab-clone":
+    'Use await this.spawner.Spawn(template, { position }) — get_fragment(name="spawn-prefab-instance").',
+  "paint-color-kind":
+    'Leave color kind blank or use COLOR_1; luminance ~0.5 — get_fragment(name="paint-scatter-vertex-colors").',
 };
 
 export function FormatValidationResult(result: ValidationResult): string

@@ -1,6 +1,7 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
 import { Entity } from "../core/Entity";
 import type { CollisionContact } from "../core/types";
+import type { PrefabSpawner } from "../core/spawnTypes";
 import type { InputActionMap } from "../input/InputActionMap";
 
 /**
@@ -13,6 +14,20 @@ export abstract class Behavior
   // Injected by the loader before OnStart() runs.
   entity!: Entity;
   scene!: Scene;
+
+  /**
+   * Runtime prefab spawning: duplicate any in-level entity subtree with full
+   * components and fresh GUIDs (`await this.spawner.Spawn(templateEntity,
+   * { position })`). The narrow PrefabSpawner surface — behaviors never
+   * receive the full Level.
+   */
+  spawner!: PrefabSpawner;
+
+  /**
+   * Find every entity in the level that carries the given tag
+   * (`this.byTag("Enemy")`). Tags are authored as TAG components in Blender.
+   */
+  byTag!: (tag: string) => Entity[];
 
   /**
    * The scene's default Action Map, injected when the script has no @inputMap

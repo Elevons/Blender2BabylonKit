@@ -257,5 +257,19 @@ if (light !== null)
 }</code></pre>
 <p>Do <strong>not</strong> iterate <code>scene.lights</code> alone on large scenes — clustered point/spot lamps are removed from that array but stay drivable through this helper. See <code>increaselights.ts</code> / <code>07-RENDERING.html</code> (punctual light budget). Author budget and per-lamp clustering in Blender (<strong>Scene › Export</strong>, <strong>Object › Light › Cluster When Over Budget</strong>).</p>
 
+<h2 id="cameras">Runtime cameras (<code>FindCameraForNode</code> / <code>CopyLens</code>)</h2>
+<p>Exported from <code>@bjs/engine</code> (<code>subsystems/cameras/</code>). <code>FindCameraForNode</code> resolves the Babylon <code>Camera</code> for a camera entity's glTF node (parent-chain walk, then name match) — the same helper the loader uses. <code>CopyLens</code> copies FOV, <code>fovMode</code>, clip planes, and projection mode; <code>BuildTypedCamera</code> calls it when Blender Camera-component overrides swap the FreeCamera for Arc/Follow/etc.</p>
+<pre><code class="language-typescript">import { CopyLens, FindCameraForNode } from "@bjs/engine";
+import { ArcRotateCamera } from "@babylonjs/core";
+
+const authored = FindCameraForNode(this.scene, this.node);
+const camera = new ArcRotateCamera(/* … */);
+if (authored !== null)
+{
+  CopyLens(authored, camera);
+}
+this.scene.activeCamera = camera;</code></pre>
+<p>Prefer authoring camera <strong>type</strong> in Blender. Use these helpers when a behavior must create its own camera (see <code>TrainCamera.ts</code>). Without <code>CopyLens</code>, a script-built camera keeps Babylon defaults and silently ignores the authored FOV.</p>
+
 <h2>Related exports</h2>
-<p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types.ts</code>), subsystem helpers (physics, lights, …), and UI loaders — mainly for app code and advanced scripts. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>
+<p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types.ts</code>), subsystem helpers (physics, lights, cameras, …), and UI loaders — mainly for app code and advanced scripts. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>

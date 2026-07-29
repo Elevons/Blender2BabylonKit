@@ -364,8 +364,22 @@
 <h2>Authoring workflow</h2>
 <ol>
   <li><p><strong>Build the prefab</strong> in its own .blend — components on objects, behaviors wired, colliders previewed, GUIDs assigned where references need them.</p></li>
-  <li><p><strong>Link into the level</strong> — <em>File → Link…</em>, pick the prefab .blend, choose the collection (or objects) to bring in. The linked hierarchy appears in the level outliner.</p></li>
-  <li><p><strong>Make a library override</strong> — select the linked collection or object, then <em>Object → Relations → Make Library Override</em> (or the outliner override entry). You can override at collection scope so the whole prefab instance is editable as one unit.</p></li>
+  <li><p><strong>Link into the level</strong> — <em>File → Link…</em>, or use the
+    <strong>link</strong> button next to any ENTITY exposed-var picker (runs
+    <code>bjs.link_prefab</code>: pick a <code>.blend</code>, choose a collection, auto
+    library-override, assign the root to the field). The linked hierarchy
+    appears in the level outliner. Children that are parented under the root
+    but <strong>not members of the source collection</strong> would be left by
+    Blender's override as orphan datablocks (invisible, skipped by export) —
+    the operator links those into the scene automatically; export validation
+    also warns when a referenced object is in no collection. Best practice:
+    make every child (LOD meshes included) a member of the prefab's collection
+    in the library file.</p></li>
+  <li><p><strong>Make a library override</strong> — required when linking via
+    <em>File → Link…</em> yourself (select the linked collection or object,
+    then <em>Object → Relations → Make Library Override</em>). The link-prefab
+    button does this automatically. You can override at collection scope so
+    the whole prefab instance is editable as one unit.</p></li>
   <li><p><strong>Customize the instance</strong> — transform, visibility, mesh slots, and <strong>Babylon components</strong> on the overridden copy. Unchanged fields keep tracking the library; overridden fields are stored on the level .blend.</p></li>
   <li><p><strong>Export the level</strong> as usual — linked + overridden objects in the active scene are flattened into the level <code>.glb</code> and <code>.scene.json</code> like any other renderable object.</p></li>
 </ol>
@@ -424,7 +438,25 @@
 <p>Iterating on a prefab: save the library → switch to the level → save (or export once) to push changes through.</p>
 
 <h2>Runtime</h2>
-<p>The engine has no prefab loader — export produces a flat level. Each manifest entity is a glTF node plus components; parenting from Blender is preserved. Multiple instances of the same linked prefab appear as separate entities (with distinct GUIDs after dedupe). When instances share mesh data in the glb, later copies may load as Babylon <code>InstancedMesh</code>; colliders and reflection probes still resolve their geometry via the shared ownership rule in <code>core/meshOwnership.ts</code>.</p>
+<p>Export still produces a <strong>flat</strong> level (<code>level.glb</code> + <code>scene.json</code>) — there is no separate prefab asset format in v1. Linked instances become ordinary entities (distinct GUIDs after export dedupe). When instances share mesh data in the glb, later copies may load as Babylon <code>InstancedMesh</code>; colliders and reflection probes still resolve geometry via <code>core/meshOwnership.ts</code>.</p>
+
+<h3>Runtime spawn (<code>Level.Spawn</code> / <code>this.spawner.Spawn</code>)</h3>
+<p>The engine can <strong>duplicate any loaded entity subtree</strong> at runtime with fresh GUIDs and the full component pipeline (physics, scripts, constraints, remapped internal refs). The template is whichever entity is already in the level — a linked/appended collection root <em>or</em> an in-scene hierarchy. Behaviors use the injected <code>this.spawner.Spawn(template, options)</code> surface (they never receive a <code>Level</code> handle); app code can call <code>level.Spawn</code> directly.</p>
+<ul>
+  <li>Hide templates in the viewport (eye icon), or at runtime via <code>await spawner.HideTemplate(template)</code> / <code>level.HideTemplate</code> for in-scene templates — hides the template's meshes and child lights/cameras <strong>and</strong> tears down its live components (physics, scripts, audio, constraints, …). Spawned clones are unaffected and always re-enabled; Spawn rebuilds from retained <code>EntityData</code>.</li>
+  <li>Prefer STATIC rigidbodies on templates — a hidden DYNAMIC body still simulates.</li>
+  <li>Do <strong>not</strong> <code>node.clone()</code> and copy attachments; that skips physics rebuild and GUID remapping.</li>
+  <li>REFLECTION_PROBE on templates is skipped at spawn (console warning).</li>
+  <li>LOD components spawn correctly when their target meshes live <strong>inside</strong> the template hierarchy — each instance then clones its own LOD meshes. A target outside the subtree is shared with the template and Babylon rejects reusing it as an LOD level.</li>
+  <li>LOD targets are force-exported as entities (GUIDs assigned pre-glb), but only if they are real scene members: render-disabled objects and orphan override children (in no collection) never export — runtime logs <code>target … not found</code>. LOD target meshes also need <strong>unique mesh data</strong>: shared glTF meshes import as <code>InstancedMesh</code>, which Babylon LOD rejects (runtime logs <code>only owns instanced meshes</code>).</li>
+  <li>Cameras spawn per instance — typed CAMERA components (ARC / FOLLOW / OFFSET / UNIVERSAL / GEOSPATIAL) are rebuilt with target refs remapped onto the new instance. Spawned cameras are <strong>never made active</strong>; activate one via <code>scene.activeCamera = handle.cameras[0]</code>.</li>
+  <li>Shadows carry over — spawned meshes register on the existing shadow generators as casters and receivers, honoring Blender ray-visibility Shadow (<code>bjs_cast_shadows</code> survives the clone). Frozen shadow maps re-render once per spawn batch.</li>
+</ul>
+<p><strong>Paint-scatter</strong> (playground <code>populateprefabs.ts</code>): vertex-paint bright values on a target mesh, leave the color-kind field blank for auto-pick, and use a luminance threshold (~0.5) rather than pure white. When Blender exports “all vertex colors” without wiring the attribute into the material, it invents an all-white <code>COLOR_0</code> and puts the real paint in <code>COLOR_1</code>. Stock Babylon only loads <code>COLOR_0</code>; the kit’s <code>bjs_extra_vertex_colors</code> extension (registered from <code>LevelLoader</code>) keeps <code>COLOR_1+</code> on the mesh as <code>getVerticesData("COLOR_1")</code>. Blender attribute names like <code>Color.001</code> are <em>not</em> glTF kind names.</p>
+<p>Authoring API: <code>docs/LLM_SCRIPTING_CONTEXT.md</code> (Prefab spawn) · playground example <code>populateprefabs.ts</code>.</p>
+
+<h3>Deferred: split-GLB prefab assets</h3>
+<p>Not built yet — waiting on the publishing pipeline. Planned later: <code>prefabs/&lt;assetId&gt;/</code> with a geometry <code>.glb</code> + <code>.prefab.json</code>, schema catalog/placements, and a <code>PrefabLibrary</code> that feeds the <em>same</em> Spawn pipeline (only the template source changes). The v1 <code>guidFields</code> remap and Spawn finalize pass are reused as-is.</p>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/blender/PREFABS.html</code>, then <code>npm run docs:build</code>.

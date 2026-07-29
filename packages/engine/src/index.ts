@@ -1,5 +1,7 @@
 // Core: manifest schema, runtime container, and the load pipeline.
 export * from "./core/types";
+export * from "./core/spawnTypes";
+export * from "./core/guidFields";
 export * from "./core/attachments";
 export * from "./core/ComponentHost";
 export * from "./core/Entity";

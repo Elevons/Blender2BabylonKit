@@ -55,7 +55,7 @@ Engine concepts: `get_engine_basics(topic=…)` → human chapters in `docs/engi
 | `exposed` | `@exposed` types and Blender parse rules |
 | `input` | Input Actions, `@inputMap` |
 | `physics` | Bodies, triggers, constraints, movement |
-| `cameras` | Camera component types, Geospatial |
+| `cameras` | Camera component types, Geospatial, `FindCameraForNode` / `CopyLens` |
 | `scene-look` | Atmosphere, fog, post — **author in Blender** (runtime exceptions below) |
 | `lights` | `FindLightForNode`, clustered punctual lights, IBL compensation |
 | `visibility` | Eye icon, Make Invisible, shadow casters |
@@ -135,12 +135,17 @@ this.entity : Entity          // the entity this behavior is attached to
 this.scene  : Scene           // the Babylon scene
 this.node   : TransformNode   // shortcut === this.entity.node
 this.input? : InputActionMap  // scene default map — injected when you have no @inputMap fields
+this.spawner: PrefabSpawner   // runtime prefab spawn — await this.spawner.Spawn(template, options)
+this.byTag  : (tag: string) => Entity[]  // find every entity carrying the given tag
 ```
 
 Behaviors do **not** receive a `Level` handle. Look up other objects via
-`@exposed({ type: "entity" })` fields (preferred), `entity.GetAttachment("SCRIPT")`
-/ `entity.GetBehavior` on the same entity, or `node.metadata.bjsEntity` from a
-Babylon node.
+`@exposed({ type: "entity" })` fields (preferred), `this.byTag("Enemy")` for
+tag-based grouping, `entity.GetAttachment("SCRIPT")` / `entity.GetBehavior` on
+the same entity, or `node.metadata.bjsEntity` from a Babylon node. For
+**duplicating** a loaded entity subtree at runtime, use `this.spawner.Spawn`
+(see [Prefab spawn](#prefab-spawn)) — never `node.clone()` plus manual
+attachment copying.
 
 **Runtime component add/remove** is app-code only: `level.componentHost.AddComponent`
 / `RemoveComponent` after load (mutations are not written back to the manifest).
@@ -312,12 +317,12 @@ OnMessage(message: string, _source: Entity): void
 ## Reaching other objects
 
 Prefer an `@exposed({ type: "entity" })` field (the author picks the target in
-Blender; it resolves to an `Entity` before `OnStart`). On the same entity, use
+Blender; it resolves to an `Entity` before `OnStart`). For tag-based grouping,
+author a TAG component in Blender and call `this.byTag("Enemy")` — it returns
+every entity carrying that tag. On the same entity, use
 `entity.GetBehavior(OtherBehavior)` or `entity.GetAttachment("SCRIPT")?.behavior`.
 If you only have a node:
-`node.metadata.bjsEntity` is the back-reference to its `Entity`. For tag-based
-grouping, author a TAG component and read `entity.tag` (or filter in your own
-`@exposed` entity list).
+`node.metadata.bjsEntity` is the back-reference to its `Entity`.
 
 ## LOD (level of detail)
 
@@ -329,6 +334,20 @@ beyond the previous level at which to swap.
 **LOD targets must be mesh-only empties** — no components, no behaviors, no
 physics. The Blender UI shows a red warning when a picked target has components;
 the runtime skips any level whose target has attachments.
+
+LOD targets are **referenced objects** at export: they get GUIDs assigned before
+the glb is written and are force-exported as entities even when mesh-only. Two
+things still make a target unexportable (runtime logs `target … not found`):
+it is render-disabled, or it belongs to **no collection in the scene** — a
+common leftover when a prefab's LOD meshes weren't members of the collection in
+the library file, so the library override leaves them as orphan datablocks.
+Export validation warns about both; fix orphans in the prefab library by making
+the LOD meshes members of the prefab's collection.
+
+**LOD target meshes need unique mesh data.** Babylon's `addLODLevel` only
+accepts `Mesh` — shared glTF mesh data (linked prefab duplicates) imports as
+`InstancedMesh` and cannot serve as a LOD level. The runtime warns
+(`only owns instanced meshes`); make the LOD meshes single-user in the library.
 
 At runtime Babylon handles the distance-based mesh swap automatically. The
 source entity keeps all its components (physics, scripts, audio, etc.) active
@@ -430,9 +449,28 @@ properties; any argument can be `undefined` to keep the current value.
 tuning beyond the exported speed multipliers (`movement.panInertia`, etc.) is on
 the runtime camera object via the Babylon API after load.
 
-For a **script-built** orbit around a moving entity (not a globe), see the
-`camera-follow` recipe — it creates a `UniversalCamera` and sets
-`scene.activeCamera`. Only one active camera per scene.
+For a **script-built** camera that replaces the exported one (e.g. `camera-follow`
+/ `TrainCamera`), copy the Blender lens onto the new camera so FOV and clip planes
+match the authored camera:
+
+```ts
+import { CopyLens, FindCameraForNode } from "@bjs/engine";
+import { ArcRotateCamera } from "@babylonjs/core";
+
+const authored = FindCameraForNode(this.scene, this.node);
+const camera = new ArcRotateCamera(/* … */);
+if (authored !== null)
+{
+  CopyLens(authored, camera); // fov, fovMode, minZ, maxZ, mode
+}
+this.scene.activeCamera = camera;
+```
+
+`FindCameraForNode` walks the parent chain (same pattern as `FindLightForNode`).
+`CopyLens` is the same helper `BuildTypedCamera` uses for Blender Camera-component
+overrides. Prefer authoring camera **type** in Blender when possible; use these
+helpers only when a behavior must create its own Babylon camera. Only one active
+camera per scene.
 
 Post-processing (bloom, SSAO, etc.) attaches to
 `scene.activeCamera` **after** all `OnStart` hooks run. If your behavior creates
@@ -687,6 +725,14 @@ triggers never fire** in Havok — use box/sphere/capsule/convex.
 `OnTriggerExit` (trigger volumes). Both bodies in a contact receive collision
 hooks. No manual subscription — override the hook and the engine wires Havok.
 No `OnTriggerStay` (Havok has no continued trigger event).
+
+**Do not use `body.getCollisionObservable()` for triggers.** That per-body
+observable only receives solid contacts (`COLLISION_STARTED` / `CONTINUED`).
+Trigger overlaps (`TRIGGER_ENTERED` / `EXITED`) are dispatched on
+`HavokPlugin.onTriggerCollisionObservable`. Override `OnTriggerEnter` /
+`OnTriggerExit` on the entity that owns the trigger body, or subscribe to the
+plugin observable when listening from another entity (e.g. a camera pivot
+driving a child probe — see `TrainCamera.ts`).
 
 **Zone behaviors (fog, lighting, messages):** the entity **entering** the trigger
 should use a **solid** collider on a child probe (camera rig, train body, etc.).
@@ -990,6 +1036,98 @@ Authored On Click events arrive as `OnMessage(message, buttonEntity)` on the
 target entity's behaviors — handle clicks the same way as trigger messages.
 `Control3D` / button classes import from `@babylonjs/gui`.
 
+## Prefab spawn
+
+Duplicate any **loaded** entity subtree at runtime with full components, fresh
+GUIDs, physics, scripts, and constraints. The template is whatever is already
+in the level — a linked/appended collection flattened at export, or an in-scene
+hierarchy. No separate prefab asset format in v1.
+
+**From a behavior** (injected `PrefabSpawner` — not a `Level` handle):
+
+```ts
+@exposed({ type: "entity", label: "Prefab" })
+prefab: Entity | null = null;
+
+// …
+if (this.prefab !== null)
+{
+  const handle = await this.spawner.Spawn(this.prefab, {
+    position: new Vector3(x, y, z),
+    // rotationQuaternion?, scaling?, parent?: Entity
+  });
+  // handle.rootEntity — new instance root
+  // handle.entities — every entity in the spawned subtree
+  // handle.guidMap — templateGuid → runtimeGuid
+  // handle.cameras — cameras built for the instance (never auto-activated)
+}
+```
+
+**From app code:** `await level.Spawn(templateEntityOrGuid, options)` — same
+pipeline. `Spawn` is async (asset-backed AUDIO/GUI/PARTICLE settle before
+`OnStart` runs on the new behaviors).
+
+**Do not** `node.clone()` and copy attachment rows — that skips physics rebuild,
+script injection, and GUID remapping (wheel constraints and `@exposed` entity
+refs would still point at the template).
+
+**Template hygiene:** hide templates in Blender (viewport eye icon →
+`visible: false`), or at runtime with `await this.spawner.HideTemplate(template)` —
+hides the template's meshes and child lights/cameras **and** tears down its
+live components (physics, scripts, audio, constraints, …) so only spawned
+clones remain active. Spawn still works afterward (it rebuilds from retained
+`EntityData`). Call before or after Spawn; clones are unaffected. Types that
+cannot be runtime-removed (CAMERA, LOD, REFLECTION_PROBE) stay attached — the
+visual hide covers cameras. REFLECTION_PROBE on a template is also skipped at
+spawn with a console warning. LOD components spawn correctly —
+keep LOD target meshes **inside** the template hierarchy so each instance gets
+its own cloned LOD meshes (a target outside the subtree is shared with the
+template and Babylon rejects reusing it as an LOD level).
+
+**Shadows carry over:** spawned meshes are registered on the level's existing
+shadow generators as casters and receivers, honoring Blender ray-visibility
+Shadow (`bjs_cast_shadows` survives the clone — a receive-only template spawns
+receive-only instances). Frozen shadow maps re-render once per spawn batch so
+new casters appear.
+
+**Cameras spawn too:** a camera entity in the template (with or without a
+typed CAMERA component — ARC / FOLLOW / OFFSET / UNIVERSAL / GEOSPATIAL) is
+rebuilt per instance, with target refs remapped so each instance's camera
+follows **its own** entities. Spawned cameras are **never made active** — a
+scatter spawn must not steal the view. Activate one explicitly:
+
+```ts
+const handle = await this.spawner.Spawn(this.playerPrefab, { position });
+if (handle.cameras.length > 0)
+{
+  this.scene.activeCamera = handle.cameras[0];
+}
+```
+
+**Blender:** every ENTITY exposed-var picker has a link button that runs
+`bjs.link_prefab` — pick a `.blend` collection, auto library-override, assign
+the root to the field. See `docs/blender/PREFABS.html`.
+
+**Paint-scatter (`populateprefabs.ts`):** spawn on a mesh Color Attribute
+instead of a point list.
+
+1. Fill **Prefabs** with one or more templates — each spawn picks one at random.
+2. Vertex-paint bright values where instances should appear (dark = empty).
+3. Leave **Vertex color kind** blank so the behavior **auto-picks** the most
+   varied `COLOR_n` set. Blender often invents an all-white `COLOR_0` (so
+   materials stay untinted) and puts real paint in `COLOR_1` when “Export all
+   vertex colors” is on — stock Babylon only loads `COLOR_0`; LevelLoader
+   registers `bjs_extra_vertex_colors` so `getVerticesData("COLOR_1")` works.
+4. Use **Paint luminance threshold** (~`0.5`) — soft strokes are rarely pure
+   white (`RGB >= 0.99` will miss them or, on fake `COLOR_0`, select everything).
+5. Do **not** pass Blender attribute names like `"Color.001"` as the kind —
+   those are not glTF buffer names.
+
+MCP: `get_fragment(name="spawn-prefab-instance")` ·
+`get_fragment(name="paint-scatter-vertex-colors")` ·
+`get_recipe_template(recipe="scatter-prefab-spawner")` ·
+`get_playbook(name="spawn-prefab-instances")`.
+
 ## Style (generated code must match)
 
 PascalCase methods/functions; camelCase, fully-descriptive fields & locals (no
@@ -1060,4 +1198,4 @@ export default class HoverBob extends Behavior
 | 2D GUI, particles, 3D GUI, MSDF | `docs/engine/11-UI.html` |
 | Example behaviors | `list_behaviors` · `get_behavior` · `find_similar_behavior` |
 | Code style | `docs/STYLE_GUIDE.md` · `get_style_guide` |
-| Prefabs + `level.Spawn()` (planned) | not documented in-repo |
+| Prefabs + `this.spawner.Spawn` / `level.Spawn` | `get_scripting_context(section="prefab-spawn")` · `docs/blender/PREFABS.html` |

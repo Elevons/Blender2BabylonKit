@@ -44,6 +44,10 @@ import {
 import { ApplyRenderLayers } from "../subsystems/renderLayers";
 import { ApplyCollisionLayers } from "../subsystems/collisionLayers";
 import { BuildLodLevels } from "../subsystems/lod";
+import { RegisterExtraVertexColorsExtension } from "./loader/gltfExtraVertexColors";
+
+// Preserve glTF COLOR_1+ (Blender paint maps) — stock Babylon only loads COLOR_0.
+RegisterExtraVertexColorsExtension();
 
 /** Await a batch of asset-load promises, logging any that rejected. */
 async function SettleTasks(tasks: Promise<unknown>[], label: string): Promise<void>
@@ -167,6 +171,9 @@ export class LevelLoader
 
     // "Debug Build" export flag: a missing field (older manifests) means enabled.
     context.level.debugEnabled = manifest.debug !== false;
+
+    // Retained so spawned instances can resolve collision layer filter masks.
+    context.level.collisionLayers = manifest.scene?.collisionLayers;
 
     // First pass: build every entity and apply its components, lights, cameras.
     for (const entityData of manifest.entities)

@@ -1815,7 +1815,7 @@
       "convertToGammaSpace": false,
       "convertToLinearSpace": false,
       "valueType": "number",
-      "value": 350.0
+      "value": 650.0
     },
     {
       "customType": "BABYLON.CloudBlock",

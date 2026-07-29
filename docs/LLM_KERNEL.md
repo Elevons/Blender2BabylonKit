@@ -47,11 +47,16 @@ this.entity : Entity    // entity this behavior is on
 this.scene  : Scene
 this.node   : TransformNode   // === this.entity.node
 this.input? : InputActionMap  // scene default when no @inputMap fields
+this.spawner: PrefabSpawner   // await this.spawner.Spawn(template, options)
 ```
 
 Behaviors do **not** receive a `Level` handle. Prefer `@exposed({ type: "entity" })`
 for cross-entity refs; same-entity: `entity.GetBehavior(OtherClass)` or
-`entity.GetAttachment("SCRIPT")?.behavior`.
+`entity.GetAttachment("SCRIPT")?.behavior`. To **duplicate** a loaded subtree
+(linked prefab or in-scene hierarchy) use `this.spawner.Spawn` — never
+`node.clone()` + copy attachments. Paint-scatter masks: see
+`get_scripting_context(section="prefab-spawn")` / `populateprefabs.ts`
+(auto `COLOR_n`, luminance threshold — not Blender attribute names).
 
 ## Decorators (literal tokens — never rename)
 

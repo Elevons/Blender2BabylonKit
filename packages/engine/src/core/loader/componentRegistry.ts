@@ -192,7 +192,14 @@ const ScriptHandler: ComponentHandler = {
     const scripts = components.filter(
       (component): component is ScriptComponent => component.type === "SCRIPT"
     );
-    return InstantiateScripts(entity, scripts, scene, behaviorRegistry, context.defaultInputMap);
+    return InstantiateScripts(
+      entity,
+      scripts,
+      scene,
+      behaviorRegistry,
+      context.defaultInputMap,
+      context.level
+    );
   },
 };
 
