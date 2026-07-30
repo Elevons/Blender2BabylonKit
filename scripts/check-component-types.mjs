@@ -7,7 +7,7 @@
  *   2. blender_addon/export/component_serializers.py  SERIALIZERS (export)
  *   3. blender_addon/ui/component_bodies.py    BODY_DRAWERS (inspector UI)
  *   4. packages/engine/src/core/loader/componentRegistry.ts  COMPONENT_HANDLERS
- *      (runtime), whose discriminants come from the Component union in types.ts
+ *      (runtime), whose discriminants come from the Component union in types/components.ts
  *
  * Also verifies the manifest schema version: SCHEMA_VERSION in
  * blender_addon/export/level.py must equal SUPPORTED_SCHEMA_VERSION in
@@ -88,7 +88,7 @@ function ParseTsComponentUnion(typesSource)
   const unionMatch = typesSource.match(/export type Component =([^;]*);/s);
   if (unionMatch === null)
   {
-    throw new Error("could not find `export type Component =` in types.ts");
+    throw new Error("could not find `export type Component =` in types/components.ts");
   }
 
   const discriminants = new Set();
@@ -177,7 +177,7 @@ function CompareSets(referenceName, reference, otherName, other, problems)
 const constantsSource = Read("blender_addon/components/constants.py");
 const serializersSource = Read("blender_addon/export/component_serializers.py");
 const bodiesSource = Read("blender_addon/ui/component_bodies.py");
-const typesSource = Read("packages/engine/src/core/types.ts");
+const typesSource = Read("packages/engine/src/core/types/components.ts");
 const registrySource = Read("packages/engine/src/core/loader/componentRegistry.ts");
 const levelPySource = Read("blender_addon/export/level.py");
 const manifestTsSource = Read("packages/engine/src/core/loader/manifest.ts");
@@ -196,7 +196,7 @@ const tsHandlerTypes = ParseTsHandlerTypes(registrySource);
 const problems = [];
 CompareSets("COMPONENT_TYPES (constants.py)", enumTypes, "SERIALIZERS (component_serializers.py)", serializerTypes, problems);
 CompareSets("COMPONENT_TYPES (constants.py)", enumTypes, "BODY_DRAWERS (component_bodies.py)", drawerTypes, problems);
-CompareSets("COMPONENT_TYPES (constants.py)", enumTypes, "Component union (types.ts)", tsUnionTypes, problems);
+CompareSets("COMPONENT_TYPES (constants.py)", enumTypes, "Component union (types/components.ts)", tsUnionTypes, problems);
 CompareSets("COMPONENT_TYPES (constants.py)", enumTypes, "COMPONENT_HANDLERS (componentRegistry.ts)", tsHandlerTypes, problems);
 
 const exporterVersion = ParseIntConstant(levelPySource, "SCHEMA_VERSION");
@@ -222,6 +222,6 @@ if (problems.length > 0)
 
 console.log(
   `[check-component-types] OK — ${enumTypes.size} component types in sync across ` +
-    `constants.py, SERIALIZERS, BODY_DRAWERS, types.ts, componentRegistry.ts; ` +
+    `constants.py, SERIALIZERS, BODY_DRAWERS, types/components.ts, componentRegistry.ts; ` +
     `schema version ${exporterVersion}.`
 );

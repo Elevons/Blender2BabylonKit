@@ -32,6 +32,50 @@ export function CollectPhysicsComponentData(
   };
 }
 
+export function ResumeEntityPhysics(
+  entity: Entity,
+  scene: Scene,
+  shapesRegistry: Map<string, PhysicsShape[]>
+): void
+{
+  if (entity.suspendedPhysics === undefined)
+  {
+    return;
+  }
+
+  const { colliders, rigidBody } = entity.suspendedPhysics;
+  entity.suspendedPhysics = undefined;
+
+  RebuildEntityPhysics(entity, scene, shapesRegistry, colliders, rigidBody);
+}
+
+/**
+ * Remove the Havok body while retaining authored collider/rigidbody data so
+ * {@link ResumeEntityPhysics} can rebuild later.
+ */
+export function SuspendEntityPhysics(entity: Entity): void
+{
+  if (entity.suspendedPhysics !== undefined)
+  {
+    return;
+  }
+
+  const { colliders, rigidBody } = CollectPhysicsComponentData(entity);
+  if (colliders.length === 0 && rigidBody === undefined)
+  {
+    return;
+  }
+
+  if (entity.body !== undefined && !entity.body.isDisposed)
+  {
+    entity.body.dispose();
+  }
+
+  entity.suspendedPhysics = { colliders, rigidBody };
+  RemoveAttachmentsOfType(entity, "COLLIDER");
+  RemoveAttachmentsOfType(entity, "RIGIDBODY");
+}
+
 /**
  * Tear down the entity's Havok body and rebuild it from all COLLIDER / RIGIDBODY
  * attachment data plus any pending components being added in this pass.

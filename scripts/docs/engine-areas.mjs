@@ -197,7 +197,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "File",
-              "subsystems/collisions.ts"
+              "subsystems/collisions/"
             ],
             [
               "Gotcha",
@@ -221,7 +221,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Shadows",
-              "shadows.ts per light"
+              "shadows/ per light"
             ]
           ]
         },
@@ -273,7 +273,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Level",
           "sub": "runtime container",
-          "desc": "entities, ById/ByTag, componentHost (runtime add/remove), activeCamera, constraints, shadowGenerators, debugEnabled. Begin attaches InputManager + runs OnStart; RunFrame drives InputManager.Process, OnUpdate, updaters, InputManager.EndFrame.",
+          "desc": "entities, ById/ByTag, componentHost (runtime add/remove), activeCamera, constraints, shadowGenerators, debugEnabled, post, postReady. Begin attaches InputManager + runs OnStart; NotifyPostReady runs OnPostReady after late rendering; RunFrame drives InputManager.Process, OnUpdate, updaters, InputManager.EndFrame.",
           "meta": [
             [
               "File",
@@ -293,7 +293,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Behaviors",
           "sub": "your scripts",
-          "desc": "InstantiateScripts + ApplyExposedVars during the entity pass; OnStart / OnUpdate / OnDestroy / OnMessage after Level.Begin. One default-export class per file (filename = registry key). @exposed fields edited per-object in Blender.",
+          "desc": "InstantiateScripts + ApplyExposedVars during the entity pass; OnStart / OnPostReady / OnUpdate / OnDestroy / OnMessage after Level.Begin (+ NotifyPostReady). One default-export class per file (filename = registry key). @exposed fields edited per-object in Blender.",
           "meta": [
             [
               "Base",
@@ -353,7 +353,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene look",
           "sub": "env · fog · post",
-          "desc": "FinalizeLevel: SetupShadows, ApplySceneSettings (clear/ambient, HDR env, fog), ApplyAtmosphere when enabled, then ApplyPostProcessing on the active camera after Level.Begin.",
+          "desc": "FinalizeLevel: SetupShadows, ApplySceneSettings (clear/ambient, HDR env, fog), ApplyAtmosphere when enabled, then ApplyLateRendering (NME + ApplyPostProcessing on active camera after Begin), then NotifyPostReady.",
           "meta": [
             [
               "Files",
@@ -361,7 +361,7 @@ export const ENGINE_AREA_PAGES = {
             ],
             [
               "Post",
-              "subsystems/postprocess.ts"
+              "subsystems/postprocess/"
             ]
           ]
         }
@@ -1148,7 +1148,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ApplyEntityComponents",
           "sub": "per entity",
-          "desc": "The component registry (loader/componentRegistry.ts): one handler per component type, run in table order. Physics handler collects all COLLIDER rows → HideEntityNode when any collider has makeInvisible → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → script handler (loader/scripts.ts) runs InstantiateScripts (inject entity/scene, ApplyExposedVars) + InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs).",
+          "desc": "The component registry (loader/componentRegistry.ts): one handler per component type, run in table order. Physics handler collects all COLLIDER rows → HideEntityNode (ApplyNodeSubtreeVisibility false) when any collider has makeInvisible → BuildPhysics (compound PhysicsShapeContainer when multiple) → RegisterAttachment per TAG/COLLIDER/RIGIDBODY/SCRIPT → queue trigger registrations (merged per entity) → queue async audio/GUI/particle/MSDF text tasks → queue GUI3D registrations (parent GUID for panel nesting) → script handler (loader/scripts.ts) runs InstantiateScripts (inject entity/scene, ApplyExposedVars) + InjectInputMaps (@inputMap fields + behavior.input fallback; entity refs become PendingRefs). Runtime SetActive: SetEntityActive(entity, active) in core/entityActive/.",
           "meta": [
             [
               "Registry",
@@ -1196,7 +1196,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → BuildNodeMaterials (single NME compile after IBL) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireCollisionEvents → BuildConstraints → BuildGui3DControls → BuildReflectionProbes + AssignProbeMaterials → ApplyRenderLayers (RENDERING_GROUP / LAYER_MASK on owned meshes) → Level.Begin (OnStart, runtime cameras) → ApplyPostProcessing (DefaultRenderingPipeline + SSAO2 on active camera) → debugColliders (gated by Debug Build).",
+          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → BuildNodeMaterials (single NME compile after IBL) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireCollisionEvents → BuildConstraints → BuildGui3DControls → BuildReflectionProbes + AssignProbeMaterials → ApplyRenderLayers (RENDERING_GROUP / LAYER_MASK on owned meshes) → Level.Begin (OnStart, runtime cameras) → ApplyLateRendering (NME + ApplyPostProcessing on active camera) → NotifyPostReady (OnPostReady) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1499,7 +1499,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Behavior",
           "sub": "scripting/Behavior.ts",
-          "desc": "Lifecycle: OnStart (after refs resolve) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase — a lowercase onStart silently never runs.",
+          "desc": "Lifecycle: OnStart (after refs resolve) / OnPostReady (after post attach) / OnUpdate(deltaSeconds) / OnDestroy / OnMessage(message, source). Injected: entity, scene; node getter. PascalCase — a lowercase onStart silently never runs.",
           "meta": [
             [
               "Order",
@@ -1519,7 +1519,7 @@ export const ENGINE_AREA_PAGES = {
           "meta": [
             [
               "Types",
-              "float int bool string vector3 color entity enum list"
+              "float int bool string file vector3 color entity enum list"
             ]
           ]
         },
@@ -1579,7 +1579,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Level",
           "sub": "runs them",
-          "desc": "Begin → OnStart for all; RunFrame → InputManager.Process, OnUpdate for all, then updaters, then InputManager.EndFrame; Dispose → OnDestroy + teardown.",
+          "desc": "Begin → OnStart for all; ApplyLateRendering + NotifyPostReady → OnPostReady for all; RunFrame → InputManager.Process, OnUpdate for all, then updaters, then InputManager.EndFrame; Dispose → OnDestroy + teardown.",
           "meta": [
             [
               "File",
@@ -1944,7 +1944,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Triggers",
-          "sub": "subsystems/collisions.ts",
+          "sub": "subsystems/collisions/",
           "desc": "Authored On-Enter events: one onTriggerCollisionObservable; TRIGGER_ENTERED → trigger body→registration, entering body→metadata.bjsEntity, tag gate → target.SendMessage.",
           "meta": [
             [
@@ -2106,7 +2106,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "Shadows",
-          "sub": "subsystems/shadows.ts",
+          "sub": "subsystems/shadows/",
           "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all meshes receive; casters respect bjs_cast_shadows (ray-visibility Shadow off → receive-only) and outlier-size heuristics. Directional suns: AnchorDirectionalShadowOrigin on caster bounds + autoCalcShadowZBounds when clip planes are auto. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1). Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
           "meta": [
             [
@@ -2127,7 +2127,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Scene look",
           "sub": "environment / fog / atmosphere / postprocess",
-          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; file-based .env/.hdr/equirect → createDefaultSkybox with same texture as IBL; ResolveEnvironmentRotation +π/2 for panorama sources; ApplyEnvironmentRotation on texture not mesh; Mapping Z exported as -rotationY; waits for texture before skybox; ComputeSkyboxSize max(1000, diagonal×3); infiniteDistance + ignoreCameraMaxZ; EnvironmentHelper skybox unparented without double rotation; createSkybox off when atmosphere on; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
+          "desc": "await ApplySceneSettings in FinalizeLevel: clear/ambient, async ApplyEnvironment (useDefault → Babylon CDN studio .env; file-based .env/.hdr/equirect → createDefaultSkybox with same texture as IBL; ResolveEnvironmentRotation +π/2 for panorama sources; ApplyEnvironmentRotation on texture not mesh; Mapping Z exported as -rotationY; waits for texture before skybox; ComputeSkyboxSize max(1000, diagonal×3); infiniteDistance + ignoreCameraMaxZ; EnvironmentHelper skybox unparented without double rotation; createSkybox off when atmosphere on; skyboxIgnoreFog → mesh.applyFog = false; .exr impossible), fog LINEAR/EXP/EXP2. ApplyAtmosphere after scene settings when manifest has scene.atmosphere (@babylonjs/addons/atmosphere; SUN lamp; PBR π intensity; LUTs or ray marching; isLinearSpaceComposition from HDR post flag) → level.atmosphere. ApplyPostProcessing after Begin: DefaultRenderingPipeline (MSAA, FXAA, bloom, sharpen, DOF, chromatic aberration, grain, glow, image processing with tone mapping type / exposure / contrast / vignette / color grading (.3dl + .cube via postprocess/cubeLutTexture.ts + PNG strip) / color curves) + SSAO2 → level.post. RetargetPostProcessing if the active camera changes at runtime.",
           "meta": [
             [
               "Attach",

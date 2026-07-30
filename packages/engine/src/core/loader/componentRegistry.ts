@@ -7,6 +7,7 @@ import type {
   ColliderComponent,
   RigidBodyComponent,
   ScriptComponent,
+  AnimatorComponent,
   Gui3DComponent,
   RenderingGroupComponent,
   LayerMaskComponent,
@@ -21,8 +22,10 @@ import { ApplyParticles } from "../../subsystems/particles";
 import { ApplyMsdfText } from "../../ui/msdfText";
 import { HideEntityNode } from "./nodeResolution";
 import { InstantiateScripts } from "./scripts";
+import { AnimatorController } from "../../subsystems/animatorController";
 import { GroupEventMessagesByPhase } from "../../subsystems/collisions";
 import type { LoadContext } from "./context";
+import { InputManager } from "../../input";
 
 /**
  * The runtime component registry: one handler per component kind, applied in
@@ -203,6 +206,38 @@ const ScriptHandler: ComponentHandler = {
   },
 };
 
+/** ANIMATOR: built-in FSM controller driving NLA AnimationGroups. */
+const AnimatorHandler: ComponentHandler = {
+  types: ["ANIMATOR"],
+  Apply(components, { entity, scene, context }): PendingRef[]
+  {
+    const inputMap = InputManager.GetMap(context.defaultInputMap)
+      ?? InputManager.GetDefaultMap();
+
+    for (const component of components)
+    {
+      if (component.type !== "ANIMATOR")
+      {
+        continue;
+      }
+
+      const animatorComponent = component as AnimatorComponent;
+      const controller = new AnimatorController(animatorComponent, inputMap);
+      controller.entity = entity;
+      controller.scene = scene;
+      controller.spawner = context.level;
+      controller.byTag = (tag: string) => context.level.ByTag(tag);
+      RegisterAttachment(entity, {
+        type: "ANIMATOR",
+        data: animatorComponent,
+        behavior: controller,
+      });
+    }
+
+    return [];
+  },
+};
+
 /** AUDIO: sound creation is async (fetch + decode); settled after the entity loop. */
 const AudioHandler: ComponentHandler = {
   types: ["AUDIO"],
@@ -367,6 +402,7 @@ const COMPONENT_HANDLERS: readonly ComponentHandler[] = [
   CollisionLayerHandler,
   PhysicsHandler,
   ScriptHandler,
+  AnimatorHandler,
   AudioHandler,
   ConstraintHandler,
   GuiHandler,
@@ -455,6 +491,12 @@ const RUNTIME_RIGIDBODY: ComponentRuntimePolicy = {
   allowMultiple: false,
 };
 
+const RUNTIME_ANIMATOR: ComponentRuntimePolicy = {
+  allowRuntimeAdd: false,
+  allowRuntimeRemove: true,
+  allowMultiple: false,
+};
+
 const RUNTIME_BLOCKED: ComponentRuntimePolicy = {
   allowRuntimeAdd: false,
   allowRuntimeRemove: false,
@@ -464,6 +506,7 @@ const RUNTIME_BLOCKED: ComponentRuntimePolicy = {
 const RUNTIME_POLICIES = new Map<Component["type"], ComponentRuntimePolicy>([
   ["TAG", RUNTIME_TAG],
   ["SCRIPT", RUNTIME_ALLOWED],
+  ["ANIMATOR", RUNTIME_ANIMATOR],
   ["AUDIO", RUNTIME_ALLOWED],
   ["GUI", RUNTIME_ALLOWED],
   ["PARTICLE", RUNTIME_ALLOWED],

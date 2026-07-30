@@ -65,6 +65,7 @@ export function FormatPreflight(intent: string, className: string): string
     `## Blender (human / already exported)`,
     `- [ ] SCRIPT component on the correct object (armature for skinned characters)`,
     `- [ ] Press **Sync** on Script component if @exposed fields changed in code`,
+    `- [ ] For locomotion FSMs: ANIMATOR on the armature, Actions stashed (Action names = clips), Sync Parameters after graph edits, autoplay off`,
     `- [ ] Level exported — entities exist in scene.json`,
     ``,
     `## Finish`,

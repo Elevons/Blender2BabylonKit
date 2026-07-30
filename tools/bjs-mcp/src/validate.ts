@@ -13,7 +13,7 @@ export interface ValidationResult
   issues: ValidationIssue[];
 }
 
-const LIFECYCLE_HOOKS = ["OnStart", "OnUpdate", "OnDestroy", "OnMessage"] as const;
+const LIFECYCLE_HOOKS = ["OnStart", "OnPostReady", "OnUpdate", "OnDestroy", "OnMessage"] as const;
 
 const LOWERCASE_HOOK_PATTERN = /\b(onStart|onUpdate|onDestroy|onMessage)\s*\(/g;
 const WRONG_EXPOSED_PATTERN = /@Exposed\b/g;
@@ -90,7 +90,7 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   {
     issues.push({
       code: "lowercase-lifecycle",
-      message: "Lifecycle hooks must be PascalCase: OnStart, OnUpdate, OnDestroy, OnMessage.",
+      message: "Lifecycle hooks must be PascalCase: OnStart, OnPostReady, OnUpdate, OnDestroy, OnMessage.",
       severity: "error",
     });
   }
@@ -451,7 +451,7 @@ const FIX_HINTS: Record<string, string> = {
   "missing-engine-import": 'Add: import { Behavior, … } from "@bjs/engine";',
   "missing-export-default": "Add: export default class YourName extends Behavior { }",
   "class-filename-mismatch": "Rename class or file so stems match (Patrol.ts → class Patrol).",
-  "lowercase-lifecycle": "Rename to PascalCase: OnStart, OnUpdate, OnDestroy, OnMessage.",
+  "lowercase-lifecycle": "Rename to PascalCase: OnStart, OnPostReady, OnUpdate, OnDestroy, OnMessage.",
   "wrong-exposed-decorator": "Use lowercase @exposed (not @Exposed).",
   "wrong-inputmap-decorator": "Use lowercase @inputMap (not @InputMap).",
   "target-transform-once":

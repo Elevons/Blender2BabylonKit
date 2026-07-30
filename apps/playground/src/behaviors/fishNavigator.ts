@@ -1,19 +1,19 @@
-import { Behavior, exposed } from "@bjs/engine";
-import { Vector3, Ray, Matrix } from "@babylonjs/core";
+import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Vector3, Matrix, PhysicsRaycastResult } from "@babylonjs/core";
+
+interface PhysicsRaycastEngine
+{
+  raycastToRef(from: Vector3, to: Vector3, result: PhysicsRaycastResult): void;
+}
 
 /**
  * Drives a fish-like entity: random swimming with obstacle avoidance via a cone
- * of forward raycasts, followed by a shrink-and-destroy after a random lifetime.
+ * of forward physics raycasts.
  *
  * Obstacle avoidance:
- * - Fires a fan of raycasts spread across a cone in front of the node.
- * - If any ray hits, the behavior steers toward the nearest clear (unblocked) ray direction.
- * - If all rays are blocked, it picks a random fallback direction.
- *
- * Lifecycle:
- * - Swims for a random number of seconds (within Lifetime range).
- * - Shrinks uniformly to zero scale over 3 seconds.
- * - Destroys itself by disposing the node.
+ * - Fires a fan of Havok raycasts spread across a cone along the travel direction.
+ * - When the center ray is blocked, steers toward the nearest clear side ray.
+ * - If every ray is blocked, picks a random fallback direction.
  */
 export default class FishNavigator extends Behavior
 {
@@ -23,14 +23,8 @@ export default class FishNavigator extends Behavior
   @exposed({ min: 0.1, max: 20, label: "Max Speed (u/s)" })
   speedMax = 4;
 
-  @exposed({ min: 0.1, max: 10, label: "Min Lifetime (s)" })
-  lifetimeMin = 5;
-
-  @exposed({ min: 0.1, max: 30, label: "Max Lifetime (s)" })
-  lifetimeMax = 15;
-
   @exposed({ min: 1, max: 50, label: "Raycast Count" })
-  raycastCount = 7;
+  raycastCount = 3;
 
   @exposed({ min: 0.1, max: 100, label: "Raycast Length (u)" })
   raycastLength = 5;
@@ -44,182 +38,223 @@ export default class FishNavigator extends Behavior
   @exposed({ type: "entity", label: "Ignore Collider" })
   ignoreCollider: Entity | null = null;
 
-  // --- runtime state ---
-  private currentDirection = new Vector3(1, 0, 0);
-  private targetDirection = new Vector3(1, 0, 0);
-  private currentSpeed = 0;
-  private lifetimeRemaining = 0;
-  private directionTimer = 0;
-
   @exposed({ min: 0.1, max: 5, label: "Turn Smoothness" })
   turnSmoothness = 1.5;
 
-  // Shrink phase
-  private isShrinking = false;
-  private shrinkElapsed = 0;
-  private shrinkDuration = 3;
-  private startScale = new Vector3(1, 1, 1);
+  private currentDirection = new Vector3(1, 0, 0);
+  private targetDirection = new Vector3(1, 0, 0);
+  private currentSpeed = 0;
+  private directionTimer = 0;
+
+  private readonly raycastResult = new PhysicsRaycastResult();
+  private readonly rayStart = new Vector3();
+  private readonly rayEnd = new Vector3();
+  private readonly rayOffset = new Vector3();
+  private readonly travelForward = new Vector3();
+  private readonly rayDirection = new Vector3();
+  private readonly bestClearDirection = new Vector3();
+  private readonly movementDelta = new Vector3();
 
   OnStart(): void
   {
-    this.startScale.set(this.node.scaling.x, this.node.scaling.y, this.node.scaling.z);
-    this.currentSpeed = this.randomInRange(this.speedMin, this.speedMax);
-    this.lifetimeRemaining = this.randomInRange(this.lifetimeMin, this.lifetimeMax);
-    this.setRandomTargetDirection();
-    this.directionTimer = this.directionChangeInterval; // change immediately on first frame
+    this.currentSpeed = this.RandomInRange(this.speedMin, this.speedMax);
+    this.InitializeTravelDirection();
+    this.directionTimer = this.directionChangeInterval;
   }
 
   OnUpdate(deltaSeconds: number): void
   {
-    if (this.isShrinking)
-    {
-      this.handleShrinkPhase(deltaSeconds);
-      return;
-    }
-
-    // Count down lifetime
-    this.lifetimeRemaining -= deltaSeconds;
-    if (this.lifetimeRemaining <= 0)
-    {
-      this.beginShrink();
-      return;
-    }
-
-    // Periodically pick a new random target direction
     this.directionTimer -= deltaSeconds;
     if (this.directionTimer <= 0)
     {
-      this.setRandomTargetDirection();
-      this.currentSpeed = this.randomInRange(this.speedMin, this.speedMax);
-      this.directionTimer = this.randomInRange(
+      this.SetRandomTargetDirection();
+      this.currentSpeed = this.RandomInRange(this.speedMin, this.speedMax);
+      this.directionTimer = this.RandomInRange(
         this.directionChangeInterval * 0.5,
         this.directionChangeInterval * 1.5
       );
     }
 
-    // Smoothly lerp toward the target direction (both random changes and avoidance)
-    this.currentDirection = Vector3.Lerp(this.currentDirection, this.targetDirection, this.turnSmoothness * deltaSeconds);
+    this.SteerAroundObstacles();
+
+    this.currentDirection = Vector3.Lerp(
+      this.currentDirection,
+      this.targetDirection,
+      this.turnSmoothness * deltaSeconds
+    );
     this.currentDirection.normalize();
 
-    // Obstacle avoidance via cone raycasts (may update targetDirection)
-    this.steerAroundObstacles();
+    this.currentDirection.scaleToRef(this.currentSpeed * deltaSeconds, this.movementDelta);
+    this.node.position.addInPlace(this.movementDelta);
 
-    // Move forward along current direction
-    this.node.position.addInPlace(this.currentDirection.scale(this.currentSpeed * deltaSeconds));
-
-    // Face movement direction (horizontal only — keep pitch at 0)
     const targetPosition = this.node.position.add(this.currentDirection);
     this.node.lookAt(targetPosition);
-    // Lock pitch so the fish stays horizontal
     const euler = this.node.rotation.clone();
     euler.x = 0;
     euler.z = 0;
     this.node.rotation = euler;
   }
 
-  OnDestroy(): void
-  {
-    // Ensure node is fully cleaned up if shrink didn't finish
-    // (e.g. level unload during shrink phase)
-  }
-
-  // --- private helpers ---
-
-  /** Start the shrink-and-destroy sequence. */
-  private beginShrink(): void
-  {
-    this.isShrinking = true;
-    this.shrinkElapsed = 0;
-  }
-
-  /** Shrink uniformly to zero over shrinkDuration seconds, then dispose. */
-  private handleShrinkPhase(deltaSeconds: number): void
-  {
-    this.shrinkElapsed += deltaSeconds;
-    const progress = Math.min(this.shrinkElapsed / this.shrinkDuration, 1.0);
-    const scale = this.startScale.scale(1.0 - progress);
-    this.node.scaling = scale;
-
-    if (progress >= 1.0)
-    {
-      this.node.dispose();
-    }
-  }
-
   /**
-   * Fires a cone of raycasts forward. If any are blocked, steers toward the
-   * nearest clear ray direction. Falls back to a random direction if all blocked.
+   * Fires a cone of physics raycasts along the travel direction. When the center
+   * ray hits a solid collider, steers toward the nearest clear side direction.
    */
-  private steerAroundObstacles(): void
+  private SteerAroundObstacles(): void
   {
-    const forward = Vector3.TransformNormal(Vector3.Forward(true), this.node.getWorldMatrix());
-    const up = Vector3.Up(true);
+    const physicsEngine = this.scene.getPhysicsEngine() as PhysicsRaycastEngine | null;
+    if (physicsEngine === null || physicsEngine === undefined)
+    {
+      return;
+    }
+
+    this.GetTravelForward(this.travelForward);
+
+    this.rayStart.copyFrom(this.node.position);
 
     const halfAngleRad = (this.coneAngle * 0.5) * Math.PI / 180;
-    const origin = this.node.position.clone();
+    const centerRayIndex = Math.floor((this.raycastCount - 1) * 0.5);
 
-    let bestClearDirection: Vector3 | null = null;
+    let travelDirectionBlocked = false;
     let bestClearAngle = Number.MAX_VALUE;
+    let hasClearDirection = false;
 
     for (let index = 0; index < this.raycastCount; index++)
     {
-      const t = this.raycastCount > 1 ? index / (this.raycastCount - 1) : 0.5;
-      const spread = (t - 0.5) * 2; // -1 to 1
+      const parameter = this.raycastCount > 1 ? index / (this.raycastCount - 1) : 0.5;
+      const spread = (parameter - 0.5) * 2;
       const angle = spread * halfAngleRad;
 
-      // Rotate forward around up axis to get ray direction
-      const rotationMatrix = Matrix.RotationAxis(up, angle);
-      const rayDirection = Vector3.TransformCoordinates(forward, rotationMatrix);
-      rayDirection.normalize();
+      const rotationMatrix = Matrix.RotationAxis(Vector3.Up(), angle);
+      Vector3.TransformNormalToRef(this.travelForward, rotationMatrix, this.rayDirection);
+      this.rayDirection.normalize();
 
-      // Cast ray into the scene
-      const hit = this.scene.pickWithRay(new Ray(origin, rayDirection, this.raycastLength), (mesh) => {
-        // Ignore the mesh belonging to the picked-out collider
-        if (this.ignoreCollider?.node === mesh || this.ignoreCollider?.node?.containsDescendant(mesh)) {
-          return false;
-        }
-        return true;
-      });
+      this.rayDirection.scaleToRef(this.raycastLength, this.rayOffset);
+      this.rayEnd.copyFrom(this.rayStart);
+      this.rayEnd.addInPlace(this.rayOffset);
 
-      if (!hit.hit)
+      physicsEngine.raycastToRef(this.rayStart, this.rayEnd, this.raycastResult);
+
+      const blocked = this.raycastResult.hasHit && this.IsBlockingRayHit();
+      if (blocked)
       {
-        // This ray is clear — how close is it to our current direction?
-        const dot = Vector3.Dot(this.currentDirection, rayDirection);
-        const angle = Math.acos(Math.min(Math.max(dot, -1.0), 1.0));
-        if (angle < bestClearAngle)
+        if (index === centerRayIndex)
         {
-          bestClearAngle = angle;
-          bestClearDirection = rayDirection;
+          travelDirectionBlocked = true;
         }
+        continue;
+      }
+
+      const dot = Vector3.Dot(this.travelForward, this.rayDirection);
+      const clearAngle = Math.acos(Math.min(Math.max(dot, -1.0), 1.0));
+      if (clearAngle < bestClearAngle)
+      {
+        bestClearAngle = clearAngle;
+        this.bestClearDirection.copyFrom(this.rayDirection);
+        hasClearDirection = true;
       }
     }
 
-    // If we found a clear ray, steer toward it by updating the target
-    if (bestClearDirection !== null)
+    if (!travelDirectionBlocked)
     {
-      // Only update target if the clear direction is significantly different from current heading
-      const dot = Vector3.Dot(this.currentDirection, bestClearDirection);
-      if (dot < 0.95) // roughly 18° threshold
-      {
-        this.targetDirection = bestClearDirection;
-      }
+      return;
     }
-    else
+
+    if (hasClearDirection)
     {
-      // All rays blocked — set a random fallback target
-      this.setRandomTargetDirection();
+      this.targetDirection.copyFrom(this.bestClearDirection);
+      this.targetDirection.y = 0;
+      this.targetDirection.normalize();
+      return;
     }
+
+    this.SetRandomTargetDirection();
   }
 
-  /** Set a new random target direction (on the XZ plane). The fish will lerp toward it. */
-  private setRandomTargetDirection(): void
+  /** Seed travel direction from the node's yaw so raycasts match initial motion. */
+  private InitializeTravelDirection(): void
+  {
+    this.GetTravelForward(this.currentDirection);
+    if (this.currentDirection.lengthSquared() > 1e-8)
+    {
+      this.targetDirection.copyFrom(this.currentDirection);
+      return;
+    }
+
+    this.SetRandomTargetDirection();
+  }
+
+  /** Flatten the current travel direction onto the XZ plane, falling back to node forward. */
+  private GetTravelForward(outDirection: Vector3): void
+  {
+    outDirection.copyFrom(this.currentDirection);
+    outDirection.y = 0;
+
+    if (outDirection.lengthSquared() > 1e-8)
+    {
+      outDirection.normalize();
+      return;
+    }
+
+    const nodeForward = Vector3.TransformNormal(Vector3.Forward(true), this.node.getWorldMatrix());
+    nodeForward.y = 0;
+
+    if (nodeForward.lengthSquared() > 1e-8)
+    {
+      outDirection.copyFrom(nodeForward);
+      outDirection.normalize();
+      return;
+    }
+
+    outDirection.set(1, 0, 0);
+  }
+
+  /**
+   * Return true when the latest raycast hit should count as an obstacle
+   * (solid colliders only; skips self, triggers, and the ignored entity).
+   */
+  private IsBlockingRayHit(): boolean
+  {
+    const hitBody = this.raycastResult.body;
+    if (hitBody === null || hitBody === undefined)
+    {
+      return true;
+    }
+
+    if (this.entity.body !== undefined && hitBody === this.entity.body)
+    {
+      return false;
+    }
+
+    const metadata = hitBody.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
+    const hitEntity = metadata?.bjsEntity;
+    if (hitEntity === null || hitEntity === undefined)
+    {
+      return true;
+    }
+
+    if (this.ignoreCollider !== null && hitEntity.id === this.ignoreCollider.id)
+    {
+      return false;
+    }
+
+    const collider = hitEntity.GetAttachment("COLLIDER");
+    if (collider !== undefined && collider.data.isTrigger)
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  /** Set a new random target direction on the XZ plane. */
+  private SetRandomTargetDirection(): void
   {
     const angle = Math.random() * Math.PI * 2;
-    this.targetDirection = new Vector3(Math.cos(angle), 0, Math.sin(angle));
+    this.targetDirection.set(Math.cos(angle), 0, Math.sin(angle));
   }
 
   /** Return a random float within [min, max]. */
-  private randomInRange(min: number, max: number): number
+  private RandomInRange(min: number, max: number): number
   {
     return min + Math.random() * (max - min);
   }

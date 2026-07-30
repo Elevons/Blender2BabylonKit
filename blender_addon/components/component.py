@@ -34,6 +34,7 @@ from .constants import (
     LAYER_MASK_PRESETS, EVENT_MESSAGE_WHEN,
 )
 from .exposed_vars import BJSExposedVar
+from ..animator.params import BJSAnimatorParam
 
 
 def _script_name_from_path(path):
@@ -225,10 +226,19 @@ class BJSEventMessage(PropertyGroup):
                                description="Only entities with this tag set the event off (empty = any)")
 
 
+def _poll_animator_tree(self, tree):
+    return getattr(tree, "bl_idname", "") == "BJSAnimationStateTree"
+
+
 class BJSComponent(PropertyGroup):
     comp_type: EnumProperty(name="Type", items=COMPONENT_TYPES, default='TAG')
     enabled:   BoolProperty(name="Enabled", default=True)
     show_expanded: BoolProperty(name="Expanded", default=True)
+    display_name: StringProperty(
+        name="Name",
+        description="Instance label for this component (exported as name in the manifest)",
+        default="",
+    )
 
     # --- TAG ---
     tag: StringProperty(name="Tag", default="Untagged")
@@ -579,3 +589,12 @@ class BJSComponent(PropertyGroup):
 
     # --- LOD ---
     lod_levels: CollectionProperty(type=BJSLodLevel)
+
+    # --- ANIMATOR ---
+    animator_tree: PointerProperty(
+        name="Animator Graph",
+        type=bpy.types.NodeTree,
+        poll=_poll_animator_tree,
+        description="BJSAnimationStateTree datablock for this state machine",
+    )
+    animator_vars: CollectionProperty(type=BJSAnimatorParam)

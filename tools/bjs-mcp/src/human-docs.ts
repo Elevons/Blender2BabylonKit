@@ -1,5 +1,13 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  LoadDocIndex,
+  RankDocIndexEntries,
+  type DocIndexEntry,
+  type RankedDocHit,
+} from "./doc-index.js";
+import { EmbedText } from "./embed.js";
+import { ListBehaviorFiles, ReadBehaviorFile } from "./io.js";
 import { DOCS, PROSE_CONTENT } from "./paths.js";
 import { ParseDocSections, FindDocSection, FormatSectionList } from "./docs.js";
 import type { DocSection } from "./docs.js";
@@ -8,7 +16,7 @@ import type { DocSection } from "./docs.js";
  * Human documentation bridge: exposes the prose chapters under
  * scripts/docs/prose/content/ (the source of the built docs/*.html pages) as
  * markdown for LLM consumption, with chapter listing, per-section retrieval,
- * and full-text search across chapters + the markdown contract docs.
+ * and semantic search across chapters + the markdown contract docs.
  */
 
 export interface DocChapter
@@ -283,6 +291,56 @@ export function FormatChapter(chapterQuery: string, section?: string): string
   return FindDocSection(sections, section) + footer;
 }
 
+// --- Doc chunks (for embedding index build) ----------------------------------
+
+/** Text fed to the embedder for one doc section. */
+export function BuildChunkText(chapterTitle: string, sectionTitle: string, content: string): string
+{
+  const body = content.length > 4000 ? `${content.slice(0, 4000)}…` : content;
+  return `${chapterTitle}\n${sectionTitle}\n${body}`;
+}
+
+/** Collect every doc section as an indexable chunk (without embeddings). */
+export function CollectDocChunks(): Omit<DocIndexEntry, "embedding">[]
+{
+  const chunks: Omit<DocIndexEntry, "embedding">[] = [];
+
+  for (const chapter of LoadAllChapters())
+  {
+    for (const section of ParseDocSections(chapter.markdown))
+    {
+      const snippet = section.content.slice(0, 160).replace(/\s+/g, " ").trim();
+
+      chunks.push({
+        id: `${chapter.slug}/${section.slug}`,
+        chapterSlug: chapter.slug,
+        sectionSlug: section.slug,
+        chapterTitle: chapter.title,
+        sectionTitle: section.title,
+        snippet,
+      });
+    }
+  }
+
+  return chunks;
+}
+
+/** Build a lookup of section content keyed by index entry id. */
+export function BuildSectionContentMap(): Map<string, string>
+{
+  const contentById = new Map<string, string>();
+
+  for (const chapter of LoadAllChapters())
+  {
+    for (const section of ParseDocSections(chapter.markdown))
+    {
+      contentById.set(`${chapter.slug}/${section.slug}`, section.content);
+    }
+  }
+
+  return contentById;
+}
+
 // --- Search ------------------------------------------------------------------
 
 interface SearchHit
@@ -327,61 +385,186 @@ function CountOccurrences(haystack: string, needle: string): number
   return count;
 }
 
-/** Full-text search across every chapter and contract doc, section-granular. */
-export function SearchDocs(query: string, maxResults = 8): string
+/** Split a search query into terms (min length 2). */
+function SplitSearchTerms(query: string): string[]
 {
-  const term = query.toLowerCase().trim();
-  if (term.length < 2)
+  return query
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter((term) => term.length >= 2);
+}
+
+/** Score text against one or more search terms. */
+function ScoreTextAgainstTerms(text: string, terms: string[]): number
+{
+  const lower = text.toLowerCase();
+  let score = 0;
+
+  for (const term of terms)
   {
-    return `Query "${query}" is too short — use at least 2 characters.`;
+    score += CountOccurrences(lower, term);
   }
 
+  return score;
+}
+
+interface BehaviorSearchHit
+{
+  name: string;
+  score: number;
+  snippet: string;
+}
+
+/** Search playground behavior sources by filename and file contents. */
+function SearchBehaviorSources(terms: string[]): BehaviorSearchHit[]
+{
+  const hits: BehaviorSearchHit[] = [];
+
+  for (const file of ListBehaviorFiles())
+  {
+    const name = file.replace(/\.ts$/, "");
+    const source = ReadBehaviorFile(name) ?? "";
+    const nameScore = ScoreTextAgainstTerms(name, terms) * 3;
+    const bodyScore = ScoreTextAgainstTerms(source, terms);
+    const score = nameScore + bodyScore;
+
+    if (score > 0)
+    {
+      hits.push({
+        name,
+        score,
+        snippet: BuildSnippet(source, terms[0] ?? ""),
+      });
+    }
+  }
+
+  hits.sort((left, right) => right.score - left.score);
+  return hits;
+}
+
+/** Keyword-only doc search — fallback when the vector index is missing or embedding fails. */
+function SearchDocsByKeyword(query: string, terms: string[], maxResults: number): SearchHit[]
+{
   const hits: SearchHit[] = [];
 
   for (const chapter of LoadAllChapters())
   {
     for (const section of ParseDocSections(chapter.markdown))
     {
-      const score = CountOccurrences(section.content.toLowerCase(), term);
+      const score = ScoreTextAgainstTerms(section.content, terms);
       if (score > 0)
       {
         hits.push({
           chapter,
           section,
           score,
-          snippet: BuildSnippet(section.content, term),
+          snippet: BuildSnippet(section.content, terms[0]),
         });
       }
     }
   }
 
-  if (hits.length === 0)
+  hits.sort((left, right) => right.score - left.score);
+  return hits.slice(0, maxResults);
+}
+
+function FormatDocHitLines(hits: SearchHit[] | RankedDocHit[]): string[]
+{
+  const lines: string[] = [];
+
+  for (const hit of hits)
   {
-    return `No documentation matches for "${query}". Try list_doc_chapters or a shorter term.`;
-  }
+    if ("chapter" in hit)
+    {
+      lines.push(
+        `## ${hit.chapter.slug} › ${hit.section.title} (${hit.score} hit${hit.score === 1 ? "" : "s"})`,
+        ``,
+        `> ${hit.snippet}`,
+        ``,
+        `Fetch: \`get_doc_chapter(chapter="${hit.chapter.slug}", section="${hit.section.slug}")\``,
+        ``
+      );
+      continue;
+    }
 
-  hits.sort((a, b) => b.score - a.score);
-
-  const lines: string[] = [
-    `# Search: "${query}" — ${hits.length} matching section(s)`,
-    ``,
-  ];
-
-  for (const hit of hits.slice(0, maxResults))
-  {
     lines.push(
-      `## ${hit.chapter.slug} › ${hit.section.title} (${hit.score} hit${hit.score === 1 ? "" : "s"})`,
+      `## ${hit.entry.chapterSlug} › ${hit.entry.sectionTitle} (score ${hit.score.toFixed(3)})`,
       ``,
       `> ${hit.snippet}`,
       ``,
-      `Fetch: \`get_doc_chapter(chapter="${hit.chapter.slug}", section="${hit.section.slug}")\``,
+      `Fetch: \`get_doc_chapter(chapter="${hit.entry.chapterSlug}", section="${hit.entry.sectionSlug}")\``,
       ``
     );
   }
 
-  if (hits.length > maxResults)
+  return lines;
+}
+
+function FormatBehaviorHitLines(behaviorHits: BehaviorSearchHit[]): string[]
+{
+  const lines: string[] = [`## Behavior reference sources`, ``];
+
+  for (const hit of behaviorHits.slice(0, 5))
   {
-    lines.push(`…and ${hits.length - maxResults} more section(s). Narrow the query to see them.`);
+    lines.push(
+      `- **${hit.name}.ts** (${hit.score} hit${hit.score === 1 ? "" : "s"})`,
+      `  > ${hit.snippet}`,
+      `  Fetch: \`get_behavior("${hit.name}")\` · \`find_similar_behavior(query="${hit.name}", includeSource=true)\``,
+      ``
+    );
+  }
+
+  return lines;
+}
+
+/** Semantic + keyword search across docs, contract files, and playground behavior sources. */
+export async function SearchDocs(query: string, maxResults = 8): Promise<string>
+{
+  const terms = SplitSearchTerms(query);
+  if (terms.length === 0)
+  {
+    return `Query "${query}" is too short — use at least 2 characters.`;
+  }
+
+  const behaviorHits = SearchBehaviorSources(terms);
+  const index = LoadDocIndex();
+  let docHits: SearchHit[] | RankedDocHit[] = [];
+  let searchMode = "keyword";
+
+  if (index !== null)
+  {
+    try
+    {
+      const queryEmbedding = await EmbedText(query);
+      const sectionContentById = BuildSectionContentMap();
+      docHits = RankDocIndexEntries(index, queryEmbedding, terms, sectionContentById, maxResults);
+      searchMode = "semantic";
+    }
+    catch
+    {
+      docHits = SearchDocsByKeyword(query, terms, maxResults);
+    }
+  }
+  else
+  {
+    docHits = SearchDocsByKeyword(query, terms, maxResults);
+  }
+
+  if (docHits.length === 0 && behaviorHits.length === 0)
+  {
+    return `No documentation matches for "${query}". Try list_doc_chapters or a shorter term.`;
+  }
+
+  const lines: string[] = [
+    `# Search (${searchMode}): "${query}" — ${docHits.length} doc section(s)${behaviorHits.length > 0 ? `, ${behaviorHits.length} behavior source(s)` : ""}`,
+    ``,
+    ...FormatDocHitLines(docHits),
+  ];
+
+  if (behaviorHits.length > 0)
+  {
+    lines.push(...FormatBehaviorHitLines(behaviorHits));
   }
 
   return lines.join("\n").trim();

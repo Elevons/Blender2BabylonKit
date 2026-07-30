@@ -18,7 +18,11 @@ export abstract class Behavior
   /**
    * Runtime prefab spawning: duplicate any in-level entity subtree with full
    * components and fresh GUIDs (`await this.spawner.Spawn(templateEntity,
-   * { position })`). The narrow PrefabSpawner surface — behaviors never
+   * { position, keepTemplate?, deferShadowRefresh? })`;
+   * `FlushSpawnShadowRefresh()` after batched loops). Spawn hides the template
+   * when the call starts unless `keepTemplate: true`; mark `@exposed`
+   * entity fields with `spawnTemplate: true` to hide at level load (deferred
+   * spawners). The narrow PrefabSpawner surface —
    * receive the full Level.
    */
   spawner!: PrefabSpawner;
@@ -43,6 +47,21 @@ export abstract class Behavior
 
   /** Run once, after the whole level has loaded and every entity exists. */
   OnStart(): void {}
+
+  /**
+   * Run once after NME materials compile and post-processing attach (when authored).
+   * Fires after {@link OnStart} and the loader's late rendering pass —
+   * use for `level.post` / DefaultRenderingPipeline work (zone LUT swaps, etc.).
+   * Spawned or runtime-added scripts receive this immediately after {@link OnStart}
+   * when the level is already post-ready.
+   */
+  OnPostReady(): void {}
+
+  /** Run when the entity becomes effectively active in the hierarchy. */
+  OnEnable(): void {}
+
+  /** Run when the entity becomes effectively inactive in the hierarchy. */
+  OnDisable(): void {}
 
   /** Run every frame; deltaSeconds is the time since the previous frame. */
   OnUpdate(deltaSeconds: number): void {}

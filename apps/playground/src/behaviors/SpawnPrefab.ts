@@ -15,7 +15,7 @@ import {
  */
 export default class SpawnPrefab extends Behavior
 {
-  @exposed({ type: "entity", label: "Prefab" })
+  @exposed({ type: "entity", label: "Prefab", spawnTemplate: true })
   prefab: Entity | null = null;
 
   @exposed({ type: "entity", label: "Target mesh" })

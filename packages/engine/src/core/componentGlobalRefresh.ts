@@ -4,7 +4,7 @@ import {
   CollectEmptyParticleEmitters,
   WireParticleEmitterTracking,
 } from "../subsystems/particles";
-import { CollectTextRenderers, WireMsdfTextRendering } from "../ui/msdfText";
+import { WireMsdfTextRendering } from "../ui/msdfText";
 import type { EventMessageRegistration } from "../subsystems/collisions";
 import { RefreshCollisionCallbacks } from "../subsystems/collisions";
 
@@ -50,7 +50,7 @@ export function FlushGlobalRefresh(
 
     level.msdfTextManager = WireMsdfTextRendering(
       scene,
-      CollectTextRenderers(level.entities.values())
+      level
     );
   }
 }

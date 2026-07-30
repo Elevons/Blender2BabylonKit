@@ -3,7 +3,7 @@ Input Actions operators register from the input_actions package."""
 
 import bpy
 
-from . import components, scripts, export_ops, launcher_ops, material_ops, prefab_ops
+from . import components, scripts, export_ops, launcher_ops, material_ops, prefab_ops, animator_ops
 
 _all_classes = (
     components.classes
@@ -12,6 +12,7 @@ _all_classes = (
     + launcher_ops.classes
     + material_ops.classes
     + prefab_ops.classes
+    + animator_ops.classes
 )
 
 

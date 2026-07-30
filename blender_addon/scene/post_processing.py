@@ -54,7 +54,7 @@ class BJSPostProcessingSettings(PropertyGroup):
     use_color_grading: BoolProperty(name="Color Grading", default=False)
     color_grading_file: StringProperty(
         name="LUT File", subtype='FILE_PATH', default="",
-        description="3D LUT (.3dl) or color grade PNG")
+        description="3D LUT (.3dl, .cube) or color grade PNG")
     use_color_curves: BoolProperty(name="Color Curves", default=False)
     curve_global_hue: FloatProperty(name="Global Hue", default=30.0, min=0.0, max=360.0)
     curve_global_density: FloatProperty(name="Global Density", default=0.0, min=-100.0, max=100.0)

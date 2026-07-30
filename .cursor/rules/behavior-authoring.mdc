@@ -34,6 +34,7 @@ When creating or editing files under `src/behaviors/`, use the **bjs-level-kit**
 
 ## API detail (on demand)
 
+- `search_docs(query)` — semantic search across all docs when chapter is unknown
 - `get_playbook(name)` — full task recipe from `docs/LLM_PLAYBOOK.md`
 - `get_scripting_context(section=…)` — API sections only as needed
 - `get_physics_movement` — before any movement on a physics body

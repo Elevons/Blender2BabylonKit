@@ -13,6 +13,8 @@ export interface SceneEntitySummary
   bodyType?: string;
   constraintTypes?: string[];
   lightType?: string;
+  /** Number of states when an ANIMATOR component is present. */
+  animatorStates?: number;
 }
 
 export interface SceneSummary
@@ -37,6 +39,7 @@ interface SceneEntityJson
     tag?: string;
     bodyType?: string;
     constraintType?: string;
+    states?: Array<{ id?: string }>;
   }>;
 }
 
@@ -69,7 +72,7 @@ interface PostProcessingJson
   grain?: { enabled?: boolean };
   glow?: { enabled?: boolean };
   vignette?: { enabled?: boolean };
-  colorGrading?: { enabled?: boolean };
+  colorGrading?: { enabled?: boolean; file?: string };
   colorCurves?: { enabled?: boolean };
 }
 
@@ -118,6 +121,7 @@ function ParseEntity(entity: SceneEntityJson): SceneEntitySummary
   let tag = "Untagged";
   let script: string | undefined;
   let bodyType: string | undefined;
+  let animatorStates: number | undefined;
   const constraintTypes: string[] = [];
 
   for (const component of components)
@@ -141,6 +145,11 @@ function ParseEntity(entity: SceneEntityJson): SceneEntitySummary
     {
       constraintTypes.push(component.constraintType);
     }
+
+    if (component.type === "ANIMATOR" && Array.isArray(component.states))
+    {
+      animatorStates = component.states.length;
+    }
   }
 
   return {
@@ -153,6 +162,7 @@ function ParseEntity(entity: SceneEntityJson): SceneEntitySummary
     bodyType,
     constraintTypes: constraintTypes.length > 0 ? constraintTypes : undefined,
     lightType: entity.light?.type,
+    animatorStates,
   };
 }
 
@@ -255,7 +265,8 @@ function SummarizePostProcessing(
   }
   if (post.colorGrading?.enabled === true)
   {
-    enabled.push("colorGrading");
+    const lutFile = post.colorGrading.file?.trim();
+    enabled.push(lutFile !== undefined && lutFile.length > 0 ? `colorGrading(${lutFile})` : "colorGrading");
   }
   if (post.colorCurves?.enabled === true)
   {
@@ -337,6 +348,11 @@ export function FormatSceneSummary(summary: SceneSummary, maxEntities = 80): str
     if (entity.script !== undefined)
     {
       parts.push(`script=${entity.script}`);
+    }
+
+    if (entity.animatorStates !== undefined)
+    {
+      parts.push(`animatorStates=${entity.animatorStates}`);
     }
 
     if (entity.bodyType !== undefined)

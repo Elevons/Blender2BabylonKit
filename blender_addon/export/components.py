@@ -62,5 +62,8 @@ def serialize_components(obj, output_dir):
 
         d = {"type": c.comp_type}
         serializer(c, d, output_dir)
+        display_name = c.display_name.strip()
+        if display_name:
+            d["name"] = display_name
         comps.append(d)
     return comps

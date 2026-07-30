@@ -16,9 +16,6 @@ import bpy
 from bpy.app.handlers import persistent
 from bpy.types import Operator
 
-from . import level as bjs_level
-from . import validate
-
 
 def _do_live_export(scene):
     """Re-run the last export for this scene; report to the console/status bar.
@@ -26,6 +23,10 @@ def _do_live_export(scene):
     path = scene.bjs_live_link_path
     if not path:
         return
+
+    # Lazy: level/validate import components; keep package import cycle-free.
+    from . import level as bjs_level
+    from . import validate
 
     try:
         warnings = validate.validate_scene(bpy.context)
@@ -59,6 +60,9 @@ class BJS_OT_live_export_now(Operator):
         if not path:
             self.report({'WARNING'}, "No export path set — run Export Level first")
             return {'CANCELLED'}
+
+        from . import level as bjs_level
+        from . import validate
 
         try:
             warnings = validate.validate_scene(context)

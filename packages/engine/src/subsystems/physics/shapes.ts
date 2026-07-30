@@ -14,6 +14,8 @@ import {
   type PhysicsShape,
   type Scene,
 } from "@babylonjs/core";
+import type { AttachmentOfType } from "../../core/attachments";
+import type { Entity } from "../../core/Entity";
 import type { ColliderComponent } from "../../core/types";
 import { ApplyObjectScaleEnabled, LocalScaleAxes } from "../../core/nodeScale";
 import {
@@ -254,4 +256,69 @@ export function BuildColliderShape(
   }
 
   return BuildManualShape(ApplyObjectScaleToCollider(collider, node), input.scene);
+}
+
+/**
+ * Whether a world-space point lies inside an entity's authored trigger collider
+ * (BOX or SPHERE). Uses manifest collider data — not Havok overlap events.
+ */
+export function IsPointInsideColliderVolume(
+  worldPoint: Vector3,
+  volumeEntity: Entity,
+  colliderAttachment?: AttachmentOfType<"COLLIDER">
+): boolean
+{
+  const attachment = colliderAttachment ?? volumeEntity.GetAttachment("COLLIDER");
+  if (attachment === undefined)
+  {
+    return false;
+  }
+
+  const collider = attachment.data;
+  if (!collider.isTrigger)
+  {
+    return false;
+  }
+
+  const scaledCollider = ApplyObjectScaleToCollider(collider, volumeEntity.node);
+  volumeEntity.node.computeWorldMatrix(true);
+  const inverseWorldMatrix = Matrix.Invert(volumeEntity.node.getWorldMatrix());
+  const localPoint = Vector3.TransformCoordinates(worldPoint, inverseWorldMatrix);
+  const offset = localPoint.subtract(Vector3.FromArray(scaledCollider.center));
+
+  if (scaledCollider.rotation !== undefined)
+  {
+    const inverseRotation = Quaternion.FromArray(scaledCollider.rotation).conjugate();
+    offset.applyRotationQuaternionInPlace(inverseRotation);
+  }
+
+  switch (scaledCollider.shape)
+  {
+    case "BOX":
+    {
+      const halfExtents = Vector3.FromArray(scaledCollider.size).scaleInPlace(0.5);
+      return Math.abs(offset.x) <= halfExtents.x
+        && Math.abs(offset.y) <= halfExtents.y
+        && Math.abs(offset.z) <= halfExtents.z;
+    }
+    case "SPHERE":
+      return offset.length() <= scaledCollider.radius;
+    default:
+      return false;
+  }
+}
+
+/** Whether a probe entity's world position is inside a trigger volume entity. */
+export function IsEntityInsideColliderVolume(
+  probeEntity: Entity,
+  volumeEntity: Entity,
+  colliderAttachment?: AttachmentOfType<"COLLIDER">
+): boolean
+{
+  probeEntity.node.computeWorldMatrix(true);
+  return IsPointInsideColliderVolume(
+    probeEntity.node.getAbsolutePosition(),
+    volumeEntity,
+    colliderAttachment
+  );
 }

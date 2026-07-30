@@ -24,6 +24,7 @@
     "docs:serve": "npx --yes serve docs -p 4173",
     "input:gen": "node scripts/generate-input-constants.mjs",
     "mcp:build": "npm run build --workspace @bjs/mcp",
+    "mcp:index": "npm run index --workspace @bjs/mcp",
     "mcp:start": "npm run start --workspace @bjs/mcp",
     "launcher:dev": "npm run dev --workspace @bjs/babylon-launcher",
     "launcher:build": "npm run build --workspace @bjs/babylon-launcher",

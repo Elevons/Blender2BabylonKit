@@ -1,6 +1,8 @@
 import { Color4, type Scene } from "@babylonjs/core";
 import { FontAsset, TextRenderer } from "@babylonjs/addons/msdfText";
 import type { Entity } from "../core/Entity";
+import type { Level } from "../core/Level";
+import { IsEntityActive } from "../core/entityActive";
 import type { MsdfTextComponent } from "../core/types";
 import { RegisterAttachment } from "../core/attachments";
 import { ResolveManifestAssetUrl } from "../core/loader/manifest";
@@ -182,17 +184,12 @@ export interface MsdfTextManager
   dispose(): void;
 }
 
-/** Draw all MSDF text renderers once per frame using the active camera. */
+/** Draw MSDF text for effectively active entities once per frame. */
 export function WireMsdfTextRendering(
   scene: Scene,
-  renderers: readonly TextRenderer[]
+  level: Level
 ): MsdfTextManager | undefined
 {
-  if (renderers.length === 0)
-  {
-    return undefined;
-  }
-
   const observer = scene.onAfterRenderObservable.add(() =>
   {
     const camera = scene.activeCamera;
@@ -205,11 +202,19 @@ export function WireMsdfTextRendering(
     const view = camera.getViewMatrix();
     const projection = camera.getProjectionMatrix();
 
-    for (const renderer of renderers)
+    for (const entity of level.entities.values())
     {
-      if (renderer.characterCount > 0)
+      if (!IsEntityActive(entity))
       {
-        renderer.render(view, projection);
+        continue;
+      }
+
+      for (const renderer of entity.textRenderers)
+      {
+        if (renderer.characterCount > 0)
+        {
+          renderer.render(view, projection);
+        }
       }
     }
   });
@@ -222,13 +227,19 @@ export function WireMsdfTextRendering(
   };
 }
 
-/** Gather every TextRenderer created during level load. */
+/** Gather every TextRenderer on effectively active entities (utility for counts). */
 export function CollectTextRenderers(entities: Iterable<Entity>): TextRenderer[]
 {
   const renderers: TextRenderer[] = [];
   for (const entity of entities)
   {
+    if (!IsEntityActive(entity))
+    {
+      continue;
+    }
+
     renderers.push(...entity.textRenderers);
   }
+
   return renderers;
 }

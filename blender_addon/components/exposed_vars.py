@@ -88,6 +88,7 @@ class BJSExposedVar(PropertyGroup):
     f_val: FloatProperty(name="Value")
     b_val: BoolProperty(name="Value")
     s_val: StringProperty(name="Value")
+    file_val: StringProperty(name="File", subtype='FILE_PATH', default="")
     v2_val: FloatVectorProperty(name="Value", size=2, subtype='XYZ')
     v_val: FloatVectorProperty(name="Value", size=3, subtype='XYZ')
     c_val: FloatVectorProperty(name="Value", size=3, subtype='COLOR',
@@ -143,6 +144,8 @@ def _init_var_value(v, f):
         v.b_val = bool(default)
     elif t in ('STRING', 'ENUM'):
         v.s_val = str(default) if default is not None else ""
+    elif t == 'FILE':
+        v.file_val = str(default) if default is not None else ""
     elif t == 'VECTOR2':
         vals = list(default)[:2]
         vals += [0.0] * (2 - len(vals))
@@ -224,6 +227,8 @@ def _source_var_default(v):
         return v.b_val
     if t in ('STRING', 'ENUM'):
         return v.s_val
+    if t == 'FILE':
+        return v.file_val
     if t == 'VECTOR2':
         return list(v.v2_val)
     if t == 'VECTOR3':

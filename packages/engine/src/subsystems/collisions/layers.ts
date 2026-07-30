@@ -1,10 +1,10 @@
 import type { PhysicsShape } from "@babylonjs/core";
-import type { Level } from "../core/Level";
+import type { Level } from "../../core/Level";
 import type {
   CollisionLayerComponent,
   CollisionLayersInfo,
   EntityData,
-} from "../core/types";
+} from "../../core/types";
 
 /** The manifest slice collision-layer application needs (LevelManifest fits). */
 export interface CollisionLayerManifestSlice

@@ -1,25 +1,16 @@
-import {
-  Scene,
-  HavokPlugin,
-  type IPhysicsCollisionEvent,
-  type IBasePhysicsCollisionEvent,
-  type Observer,
-  type PhysicsBody,
+import type {
+  IPhysicsCollisionEvent,
+  PhysicsBody,
 } from "@babylonjs/core";
-import type { Entity } from "../core/Entity";
+import type { Entity } from "../../core/Entity";
+import { IsEntityActive } from "../../core/entityActive";
+import type { Level } from "../../core/Level";
 import type {
   CollisionContact,
   EventMessageData,
   EventMessagePhase,
-} from "../core/types";
-import type { Level } from "../core/Level";
-import { Behavior } from "../scripting/Behavior";
-
-/**
- * Physics lifecycle hooks and authored Event Messages share one Havok dispatch
- * layer. Behavior hooks fire on both bodies in a contact (Unity semantics);
- * Event Messages fire from the collider entity that owns the authored rows.
- */
+} from "../../core/types";
+import { Behavior } from "../../scripting/Behavior";
 
 /** One collider entity's authored Event Messages, registered during the load pass. */
 export interface EventMessageRegistration {
@@ -27,31 +18,25 @@ export interface EventMessageRegistration {
   messagesByPhase: Map<EventMessagePhase, EventMessageData[]>;
 }
 
-/** Plugin observers wired during FinalizeLevel; removed on level dispose. */
-export interface CollisionEventHandles {
-  collisionObserver: Observer<IPhysicsCollisionEvent> | null;
-  collisionEndedObserver: Observer<IBasePhysicsCollisionEvent> | null;
-  triggerObserver: Observer<IBasePhysicsCollisionEvent> | null;
-}
-
-const TRIGGER_PHASES: ReadonlySet<EventMessagePhase> = new Set([
+export const TRIGGER_PHASES: ReadonlySet<EventMessagePhase> = new Set([
   "TRIGGER_ENTER",
   "TRIGGER_EXIT",
 ]);
-const COLLISION_PHASES: ReadonlySet<EventMessagePhase> = new Set([
+
+export const COLLISION_PHASES: ReadonlySet<EventMessagePhase> = new Set([
   "COLLISION_ENTER",
   "COLLISION_EXIT",
 ]);
 
 /** Resolve a physics body back to its Entity via the node's metadata back-reference. */
-function EntityFromBody(body: PhysicsBody): Entity | null
+export function EntityFromBody(body: PhysicsBody): Entity | null
 {
   const metadata = body.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
   return metadata?.bjsEntity ?? null;
 }
 
 /** Map a Havok collision event into the engine's contact payload. */
-function ContactFromEvent(collisionEvent: IPhysicsCollisionEvent): CollisionContact
+export function ContactFromEvent(collisionEvent: IPhysicsCollisionEvent): CollisionContact
 {
   const point = collisionEvent.point;
   const normal = collisionEvent.normal;
@@ -69,7 +54,7 @@ function ContactFromEvent(collisionEvent: IPhysicsCollisionEvent): CollisionCont
 }
 
 /** Whether any behavior on the entity overrides a collision lifecycle hook. */
-function EntityOverridesCollisionHook(
+export function EntityOverridesCollisionHook(
   entity: Entity,
   hook: "enter" | "stay" | "exit"
 ): boolean
@@ -93,7 +78,7 @@ function EntityOverridesCollisionHook(
 }
 
 /** Whether any behavior on the entity overrides a trigger lifecycle hook. */
-function EntityOverridesTriggerHook(
+export function EntityOverridesTriggerHook(
   entity: Entity,
   hook: "enter" | "exit"
 ): boolean
@@ -122,7 +107,7 @@ export function RefreshCollisionCallbacks(
 }
 
 /** Enable Havok collision callbacks on bodies that need collision hooks or messages. */
-function EnableCollisionCallbacks(
+export function EnableCollisionCallbacks(
   level: Level,
   registrationsByBody: Map<unknown, EventMessageRegistration>
 ): void
@@ -162,13 +147,18 @@ function EnableCollisionCallbacks(
 }
 
 /** Fan a collision hook to every behavior on one entity, error-isolated. */
-function DispatchCollisionHook(
+export function DispatchCollisionHook(
   entity: Entity,
   hook: "enter" | "stay" | "exit",
   other: Entity,
   contact?: CollisionContact
 ): void
 {
+  if (!IsEntityActive(entity))
+  {
+    return;
+  }
+
   for (const behavior of entity.behaviors)
   {
     try
@@ -194,12 +184,17 @@ function DispatchCollisionHook(
 }
 
 /** Fan a trigger hook to every behavior on one entity, error-isolated. */
-function DispatchTriggerHook(
+export function DispatchTriggerHook(
   entity: Entity,
   hook: "enter" | "exit",
   other: Entity
 ): void
 {
+  if (!IsEntityActive(entity))
+  {
+    return;
+  }
+
   for (const behavior of entity.behaviors)
   {
     try
@@ -221,7 +216,7 @@ function DispatchTriggerHook(
 }
 
 /** Deliver authored Event Messages for one phase from a source body. */
-function DeliverEventMessages(
+export function DeliverEventMessages(
   level: Level,
   registration: EventMessageRegistration,
   phase: EventMessagePhase,
@@ -258,7 +253,7 @@ function DeliverEventMessages(
 }
 
 /** Dispatch collision hooks and messages for both bodies in a contact pair. */
-function HandleCollisionPair(
+export function HandleCollisionPair(
   level: Level,
   registrationsByBody: Map<unknown, EventMessageRegistration>,
   bodyA: PhysicsBody,
@@ -313,7 +308,7 @@ function HandleCollisionPair(
 }
 
 /** Dispatch trigger hooks and messages for a trigger contact (both bodies). */
-function HandleTriggerPair(
+export function HandleTriggerPair(
   level: Level,
   registrationsByBody: Map<unknown, EventMessageRegistration>,
   bodyA: PhysicsBody,
@@ -347,7 +342,7 @@ function HandleTriggerPair(
 }
 
 /** Build the body → registration index used at dispatch time. */
-function BuildRegistrationIndex(
+export function BuildRegistrationIndex(
   registrations: EventMessageRegistration[]
 ): Map<unknown, EventMessageRegistration>
 {
@@ -381,148 +376,4 @@ export function GroupEventMessagesByPhase(
     }
   }
   return messagesByPhase;
-}
-
-/**
- * Subscribe plugin-level observers that relay Havok collision/trigger events to
- * behavior hooks and authored Event Messages. Returns handles for dispose, or
- * null when physics isn't enabled and nothing needs wiring.
- */
-export function WireCollisionEvents(
-  scene: Scene,
-  level: Level,
-  registrations: EventMessageRegistration[]
-): CollisionEventHandles | null
-{
-  const physicsEngine = scene.getPhysicsEngine();
-  const plugin = physicsEngine?.getPhysicsPlugin();
-  if (!plugin || !(plugin instanceof HavokPlugin))
-  {
-    const needsHooks = [...level.entities.values()].some((entity) =>
-      EntityOverridesCollisionHook(entity, "enter")
-      || EntityOverridesCollisionHook(entity, "stay")
-      || EntityOverridesCollisionHook(entity, "exit")
-      || EntityOverridesTriggerHook(entity, "enter")
-      || EntityOverridesTriggerHook(entity, "exit")
-    );
-
-    if (needsHooks || registrations.length > 0)
-    {
-      console.warn("[bjs] collision/trigger events need Havok physics enabled");
-    }
-    return null;
-  }
-
-  const registrationsByBody = BuildRegistrationIndex(registrations);
-  EnableCollisionCallbacks(level, registrationsByBody);
-
-  const entities = [...level.entities.values()];
-  const RegistrationsHavePhase = (phases: ReadonlySet<EventMessagePhase>): boolean =>
-    registrations.some((registration) =>
-      [...phases].some((phase) => (registration.messagesByPhase.get(phase)?.length ?? 0) > 0)
-    );
-
-  const hasCollisionInterest = entities.some((entity) =>
-    EntityOverridesCollisionHook(entity, "enter")
-    || EntityOverridesCollisionHook(entity, "stay")
-    || EntityOverridesCollisionHook(entity, "exit")
-  ) || RegistrationsHavePhase(COLLISION_PHASES);
-
-  const hasTriggerInterest = entities.some((entity) =>
-    EntityOverridesTriggerHook(entity, "enter")
-    || EntityOverridesTriggerHook(entity, "exit")
-  ) || RegistrationsHavePhase(TRIGGER_PHASES);
-
-  // Note: the Havok plugin routes COLLISION_FINISHED exclusively to
-  // onCollisionEndedObservable — the main observable only carries STARTED and
-  // CONTINUED, so exit dispatch lives solely on the ended observer below.
-  const collisionObserver = hasCollisionInterest
-    ? plugin.onCollisionObservable.add((collisionEvent) =>
-    {
-      const bodyA = collisionEvent.collider;
-      const bodyB = collisionEvent.collidedAgainst;
-
-      if (collisionEvent.type === "COLLISION_STARTED")
-      {
-        HandleCollisionPair(
-          level,
-          registrationsByBody,
-          bodyA,
-          bodyB,
-          "enter",
-          ContactFromEvent(collisionEvent)
-        );
-      }
-      else if (collisionEvent.type === "COLLISION_CONTINUED")
-      {
-        HandleCollisionPair(
-          level,
-          registrationsByBody,
-          bodyA,
-          bodyB,
-          "stay",
-          ContactFromEvent(collisionEvent)
-        );
-      }
-    })
-    : null;
-
-  const collisionEndedObserver = hasCollisionInterest
-    ? plugin.onCollisionEndedObservable.add((collisionEvent) =>
-    {
-      HandleCollisionPair(
-        level,
-        registrationsByBody,
-        collisionEvent.collider,
-        collisionEvent.collidedAgainst,
-        "exit"
-      );
-    })
-    : null;
-
-  const triggerObserver = hasTriggerInterest
-    ? plugin.onTriggerCollisionObservable.add((collisionEvent) =>
-    {
-      if (collisionEvent.type === "TRIGGER_ENTERED")
-      {
-        HandleTriggerPair(
-          level,
-          registrationsByBody,
-          collisionEvent.collider,
-          collisionEvent.collidedAgainst,
-          "enter"
-        );
-      }
-      else if (collisionEvent.type === "TRIGGER_EXITED")
-      {
-        HandleTriggerPair(
-          level,
-          registrationsByBody,
-          collisionEvent.collider,
-          collisionEvent.collidedAgainst,
-          "exit"
-        );
-      }
-    })
-    : null;
-
-  if (collisionObserver === null && collisionEndedObserver === null && triggerObserver === null)
-  {
-    return null;
-  }
-
-  return { collisionObserver, collisionEndedObserver, triggerObserver };
-}
-
-/** Remove all collision/trigger observers wired by WireCollisionEvents. */
-export function DisposeCollisionEvents(handles: CollisionEventHandles | null): void
-{
-  if (handles === null)
-  {
-    return;
-  }
-
-  handles.collisionObserver?.remove();
-  handles.collisionEndedObserver?.remove();
-  handles.triggerObserver?.remove();
 }

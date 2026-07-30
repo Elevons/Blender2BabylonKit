@@ -32,7 +32,7 @@ The kit splits Blender export into **two files**:
   {
     slug: "frame-loop",
     title: "Frame loop and lifecycle",
-    summary: "OnStart once after load; OnUpdate every frame before physics step.",
+    summary: "OnStart once after load; OnPostReady once after post attach; OnUpdate every frame before physics step.",
     humanDoc: "docs/engine/02-RUNTIME-BASICS.html",
     content: `# Frame loop (behavior author view)
 
@@ -49,6 +49,7 @@ Each frame (inside \`RunFrame\`):
 | Hook | When |
 |------|------|
 | \`OnStart\` | **Once**, end of \`LevelLoader.Load\`, after all @exposed entity refs resolve |
+| \`OnPostReady\` | **Once**, after NME compile + \`ApplyPostProcessing\` (\`level.postReady\`) |
 | \`OnUpdate\` | Every \`scene.render()\` |
 | \`OnDestroy\` | \`Level.Dispose\` |
 | \`OnMessage\` | Trigger enter, GUI click, \`SendMessage\` — not tied to frame order |
@@ -65,26 +66,29 @@ Each frame (inside \`RunFrame\`):
 
 | Word | Meaning |
 |------|---------|
-| **Component** | Data on an entity in Blender (TAG, COLLIDER, SCRIPT, …) → manifest JSON |
-| **Behavior** | Runtime class \`extends Behavior\` from a **SCRIPT** component |
+| **Component** | Data on an entity in Blender (TAG, COLLIDER, SCRIPT, ANIMATOR, …) → manifest JSON |
+| **Behavior** | Runtime class \`extends Behavior\` from a **SCRIPT** component (ANIMATOR also mounts a built-in \`AnimatorController\`) |
 
 TAG / COLLIDER / RIGIDBODY are **not** behaviors — the loader applies them directly.
-Only SCRIPT rows become \`Behavior\` instances on \`entity.behaviors\`.
+SCRIPT rows become \`Behavior\` instances; ANIMATOR rows become \`AnimatorController\`
+instances — both appear on \`entity.behaviors\`. Animator State clips use **Action**
+names (glTF ACTIONS export), not NLA strip labels.
 
-Query what's on an entity: \`entity.GetAttachment("COLLIDER")\`, \`entity.attachments\`.
+Query what's on an entity: \`entity.GetAttachment("COLLIDER")\`, \`entity.GetAttachment("ANIMATOR")\`, \`entity.attachments\`.
+Multiple rows of the same type: Blender header **Name** → manifest \`name\` → \`GetNamedAttachment(type, name)\` or \`GetScript(name)\` for SCRIPT rows (\`GetBehavior(Ctor)\` returns only the first instance).
 There is no \`entity.manifest\` at runtime.
 
 **Runtime mutations (app code):** \`level.componentHost.AddComponent(entity, component)\` /
 \`RemoveComponent(entity, type, index?)\` — SCRIPT, TAG, AUDIO, GUI, PARTICLE,
 MSDF_TEXT, COLLIDER, RIGIDBODY, CONSTRAINT, GUI3D_* supported; CAMERA,
-REFLECTION_PROBE, render/collision layer kinds are load-only.`,
+ANIMATOR, REFLECTION_PROBE, render/collision layer kinds are load-only.`,
   },
   {
     slug: "load-order",
     title: "What exists when OnStart runs",
-    summary: "Physics, triggers, constraints exist before OnStart; post runs after.",
+    summary: "Physics, triggers, constraints exist before OnStart; post and OnPostReady run after.",
     humanDoc: "docs/engine/04-LOAD-PIPELINE.html",
-    content: `# Load order (what you can assume in OnStart)
+    content: `# Load order (what you can assume in OnStart vs OnPostReady)
 
 **Already done before \`OnStart\`:**
 - glb appended, entities built, components applied
@@ -94,9 +98,17 @@ REFLECTION_PROBE, render/collision layer kinds are load-only.`,
 - @inputMap / \`this.input\` injected
 - Constraints and 3D GUI built in \`FinalizeLevel\`
 
-**Not available in behaviors:**
-- \`Level\` handle (\`level.post\`, \`level.atmosphere\`, etc.)
-- Post-processing targets your behavior's camera swap timing — prefer authoring in Blender
+**Not available in \`OnStart\`:**
+- \`level.post\` / Default Rendering Pipeline (\`level.postReady\` is false)
+- Zone LUT swaps — use \`OnPostReady\` instead
+
+**After \`Begin()\` → your \`OnStart\` (runtime cameras, probes, etc.):**
+- \`ApplyLateRendering\`: \`BuildNodeMaterials\` + \`ApplyPostProcessing\` on \`scene.activeCamera\`
+- \`NotifyPostReady()\`: every behavior's \`OnPostReady\` once (\`level.postReady = true\`)
+- Color grading LUTs (\`.3dl\`, Adobe \`.cube\`, strip \`.png\`) run in the pipeline image-processing pass; \`.cube\` loads via \`CubeColorGradingTexture\` (\`subsystems/postprocess/cubeLutTexture.ts\`). Zone behaviors call exported \`ApplyColorGradingLut\` on \`level.post.pipeline.imageProcessing\` in **\`OnPostReady\`** — cast \`this.spawner as Level\` for \`componentHost.baseUrl\` (see \`FogChanger.ts\`, fragment \`zone-lut-swap\`).
+- Zone overlap (fog, underwater toggles): poll \`IsEntityInsideColliderVolume(probe, volume)\` in \`OnStart\`/\`OnUpdate\` — fragment \`poll-trigger-volume\`; assign explicit probe entity when script host ≠ sample point (\`FogChanger.ts\`, \`ToggleInWater.ts\`). Underwater FX targets: \`SetEntityActive(target, inside)\` — fragment \`set-entity-active\`.
+
+**Spawn / runtime SCRIPT add:** when \`level.postReady\` is already true, \`OnPostReady\` runs immediately after \`OnStart\`.
 
 **OnStart order across entities** is unspecified — guard null entity refs.`,
   },
@@ -112,6 +124,8 @@ REFLECTION_PROBE, render/collision layer kinds are load-only.`,
 | Collider / mass / joint | COLLIDER, RIGIDBODY, CONSTRAINT | Read \`entity.body\`, motors, OnMessage |
 | Camera type | CAMERA component on camera | Geospatial flyTo; if you must \`new\` a camera, \`FindCameraForNode\` + \`CopyLens\` |
 | Sky / fog / bloom / SSAO | Babylon Scene panels | **Never** |
+| Color grading LUT (scene-wide) | Post-Processing › Color Grading | **Rare** — zone swap via \`ApplyColorGradingLut\` |
+| Zone LUT file on behavior | \`@exposed({ type: "file" })\` + Sync | Pick in Blender; export → \`post/\`; runtime path in \`vars\` |
 | Input bindings | Input Actions panel | \`FindAction("Name")\` |
 | Tunable per-object fields | @exposed + Sync | Declare @exposed in .ts |
 | Trigger → gameplay (data) | COLLIDER › Event Messages | OnMessage on target entity |

@@ -70,7 +70,7 @@ export const TOPICS = [
   {
     id: "scripting",
     label: "Scripting & behaviors",
-    blurb: "Behavior lifecycle (OnStart/OnUpdate/OnDestroy/OnMessage), components vs behaviors, @exposed fields, and entity refs.",
+    blurb: "Behavior lifecycle (OnStart/OnPostReady/OnUpdate/OnDestroy/OnMessage), components vs behaviors, @exposed fields, and entity refs.",
     startHere: [
       "engine/14-API-GUIDE.html",
       "engine/scripting.html",

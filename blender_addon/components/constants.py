@@ -44,6 +44,8 @@ COMPONENT_TYPES = [
     # APPEND ONLY — comp_type is EnumProperty; Blender persists indices in .blend files.
     ('COLLISION_LAYER', "Collision Layer",
      "Named Havok collision layer from the scene matrix"),
+    ('ANIMATOR', "Animator",
+     "NLA clip state machine (node graph) — attach to the armature"),
 ]
 
 # Add Component menu — section order for artists. May differ from COMPONENT_TYPES
@@ -88,6 +90,10 @@ ADD_COMPONENT_MENU = [
     ('GUI3D_CYLINDER', "3D Cylinder Panel", "Arrange child 3D buttons on a cylinder surface"),
     ('GUI3D_PLANE',    "3D Plane Panel",    "Arrange child 3D buttons on a plane"),
     ('GUI3D_SCATTER',  "3D Scatter Panel",  "Scatter child 3D buttons with randomized placement"),
+
+    ("", "Animation", ""),
+    ('ANIMATOR', "Animator",
+     "NLA clip state machine (node graph) — attach to the armature"),
 ]
 
 # Membership sets for the 3D GUI family: interactive controls carry On Click
@@ -210,6 +216,7 @@ VAR_TYPES = [
     ('FLOAT',   "Float",   ""),
     ('BOOL',    "Bool",    ""),
     ('STRING',  "String",  ""),
+    ('FILE',    "File",    "Asset path copied into the level on export"),
     ('VECTOR2', "Vector2", ""),
     ('VECTOR3', "Vector3", ""),
     ('COLOR',   "Color",   ""),
@@ -277,3 +284,13 @@ REFLECTION_PROBE_FILTER_QUALITY = [
     ('MEDIUM', "Medium", "Balanced quality and performance"),
     ('HIGH', "High", "Best glossiness / roughness filtering (slowest)"),
 ]
+
+_COMPONENT_TYPE_LABELS = {
+    item[0]: item[1] for item in COMPONENT_TYPES if item[0]
+}
+
+
+def component_type_label(comp_type):
+    """Human menu label for a comp_type id (e.g. SCRIPT -> 'Script')."""
+    return _COMPONENT_TYPE_LABELS.get(
+        comp_type, comp_type.replace('_', ' ').title())

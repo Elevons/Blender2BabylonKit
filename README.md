@@ -164,7 +164,7 @@ component type:
    registered in `BODY_DRAWERS`
 3. **`blender_addon/export/component_serializers.py`** — manifest serializer,
    registered in `SERIALIZERS`
-4. **`packages/engine/src/core/types.ts`** — `Component` union
+4. **`packages/engine/src/core/types/components.ts`** — `Component` union (re-exported via `core/types.ts`)
 5. **`packages/engine/src/core/loader/componentRegistry.ts`** — runtime handler,
    registered in `COMPONENT_HANDLERS` (components that need every entity built
    first — constraints, GUI3D, reflection probes — queue a registration in

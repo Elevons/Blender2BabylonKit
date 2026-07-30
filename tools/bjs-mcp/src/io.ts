@@ -152,6 +152,10 @@ export function ListBehaviorCatalog(): BehaviorCatalogEntry[]
     {
       hooks.push("OnStart");
     }
+    if (/\bOnPostReady\s*\(/.test(source))
+    {
+      hooks.push("OnPostReady");
+    }
     if (/\bOnUpdate\s*\(/.test(source))
     {
       hooks.push("OnUpdate");

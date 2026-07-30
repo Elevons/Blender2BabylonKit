@@ -8,12 +8,12 @@ drifting copies.
 
 import os
 
-from ..components.constants import GUI3D_TEXTURED
+from ..components.constants import GUI3D_TEXTURED, component_type_label
 from .component_bodies import BODY_DRAWERS, count_enabled_colliders
 
 
-def _component_label(comp, obj=None, index=None):
-    """The collapsed-header label: type name, enriched with the key detail."""
+def _component_subtitle(comp, obj=None, index=None):
+    """Second header line: component type enriched with its key detail."""
     label = comp.comp_type.replace('_', ' ').title()
     if comp.comp_type == 'TAG' and comp.tag:
         label = f"Tag: {comp.tag}"
@@ -58,23 +58,30 @@ def _component_label(comp, obj=None, index=None):
 
 
 def draw_component(layout, obj, index, comp):
-    """One component: collapsible header (enable toggle, label, reorder, menu)
-    plus the per-type body from the BODY_DRAWERS registry."""
+    """One component: collapsible header (enable toggle, name, subtitle, reorder,
+    menu) plus the per-type body from the BODY_DRAWERS registry."""
     hdr, panel = layout.panel_prop(comp, "show_expanded")
-    hdr.prop(comp, "enabled", text="")
-    hdr.label(text=_component_label(comp, obj, index))
+    row = hdr.row(align=True)
+    row.prop(comp, "enabled", text="")
+    title_col = row.column()
+    title_col.prop(
+        comp, "display_name", text="",
+        placeholder=component_type_label(comp.comp_type),
+    )
+    title_col.label(text=_component_subtitle(comp, obj, index))
     n = len(obj.bjs_components)
-    up = hdr.row(align=True)
+    controls = row.row(align=True)
+    up = controls.row(align=True)
     up.enabled = index > 0
     op = up.operator("bjs.move_component", text="", icon='TRIA_UP', emboss=False)
     op.index = index
     op.direction = 'UP'
-    down = hdr.row(align=True)
+    down = controls.row(align=True)
     down.enabled = index < n - 1
     op = down.operator("bjs.move_component", text="", icon='TRIA_DOWN', emboss=False)
     op.index = index
     op.direction = 'DOWN'
-    menu = hdr.operator("bjs.component_menu", text="", icon='DOWNARROW_HLT', emboss=False)
+    menu = controls.operator("bjs.component_menu", text="", icon='DOWNARROW_HLT', emboss=False)
     menu.index = index
 
     if panel is None:

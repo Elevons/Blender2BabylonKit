@@ -17,8 +17,9 @@ import {
  *
  * Attach this behavior to any node in the scene. In Blender, fill the Prefabs
  * list (linked collection roots or in-scene hierarchies) and pick the target
- * mesh to paint instances on. Enable "Hide original prefabs" to hide each used
- * template and tear down its live components after spawning.
+ * mesh to paint instances on. Omit `spawnTemplate: true` on the Prefabs field
+ * when templates must stay visible (pass `keepTemplate: true` on spawn via the
+ * "Keep original prefabs" exposed field).
  *
  * Blender/glTF note: when "Export all vertex colors" is on and the paint
  * attribute is not wired into the material, Blender invents an all-white
@@ -61,11 +62,11 @@ export default class PopulatePrefabs extends Behavior
   parentToTarget = true;
 
   /**
-   * When true, hide each used prefab template and tear down its live components
-   * after spawning so only the clones remain active in the scene.
+   * When true, leave prefab templates visible (passes `keepTemplate` to Spawn).
+   * Default: Spawn hides each template when the call starts.
    */
-  @exposed({ label: "Hide original prefabs" })
-  hideOriginalPrefabs = false;
+  @exposed({ label: "Keep original prefabs" })
+  keepOriginalPrefabs = false;
 
   /** Area-weighted sampler for random points inside painted mesh triangles. */
   private paintedSurfaceSampler: PaintedSurfaceSampler | null = null;
@@ -139,7 +140,6 @@ export default class PopulatePrefabs extends Behavior
     }
 
     const targetEntity = this.target;
-    const usedTemplates = new Set<Entity>();
 
     for (let instanceIndex = 0; instanceIndex < this.instanceCount; instanceIndex++)
     {
@@ -147,7 +147,6 @@ export default class PopulatePrefabs extends Behavior
       const worldPosition = sample.position;
       const normal = sample.normal;
       const prefabEntity = livePrefabs[Math.floor(Math.random() * livePrefabs.length)];
-      usedTemplates.add(prefabEntity);
 
       // Spawn positions are parent-space; convert when parenting to the target.
       const position = this.parentToTarget
@@ -168,16 +167,12 @@ export default class PopulatePrefabs extends Behavior
         rotationQuaternion,
         scaling,
         parent: this.parentToTarget ? targetEntity : undefined,
+        deferShadowRefresh: true,
+        keepTemplate: this.keepOriginalPrefabs,
       });
     }
 
-    if (this.hideOriginalPrefabs)
-    {
-      for (const template of usedTemplates)
-      {
-        await this.spawner.HideTemplate(template);
-      }
-    }
+    this.spawner.FlushSpawnShadowRefresh();
   }
 
   /** Align local up (Y) with the surface normal, plus optional random yaw. */

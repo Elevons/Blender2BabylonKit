@@ -13,6 +13,7 @@ import type { Gui3DRegistration } from "../../ui/gui3d/builder";
 import { CreateCameraTargetSets, type CameraTargetSets } from "../../subsystems/cameras";
 import { BuildIdIndex } from "./nodeResolution";
 import { ComponentHost } from "../ComponentHost";
+import { BindLevelToScene } from "../entityActive";
 
 /**
  * The mutable state threaded through one load pass: the Level under
@@ -54,6 +55,7 @@ export function CreateLoadContext(
   const level = new Level(scene);
   const componentHost = new ComponentHost(level, scene, registry, baseUrl, defaultInputMap);
   level.componentHost = componentHost;
+  BindLevelToScene(scene, level);
 
   return {
     level,

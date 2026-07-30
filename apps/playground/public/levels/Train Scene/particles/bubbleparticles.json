@@ -82,7 +82,7 @@
         {
           "name": "emitRate",
           "valueType": "number",
-          "value": 2
+          "value": 2.5
         },
         {
           "name": "texture",
@@ -273,7 +273,7 @@
         {
           "name": "size",
           "valueType": "number",
-          "value": 1
+          "value": 2
         }
       ],
       "outputs": [

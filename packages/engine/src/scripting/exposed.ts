@@ -44,11 +44,19 @@ export interface ExposeOptions {
     | "int"
     | "bool"
     | "string"
+    | "file"
     | "entity"
     | "enum"
     | "list";
   options?: string[]; // enum: the allowed choices
   of?: ListElement;   // list: the element type (for runtime coercion)
+  /**
+   * When true on an entity or entity-list field, the referenced template(s) are
+   * hidden as soon as the level finishes loading — before any behavior OnStart.
+   * Omit when the template must stay visible until spawn (pass keepTemplate on
+   * Spawn instead, e.g. populateprefabs "Keep original prefabs").
+   */
+  spawnTemplate?: boolean;
 }
 
 export interface ExposedField extends ExposeOptions {

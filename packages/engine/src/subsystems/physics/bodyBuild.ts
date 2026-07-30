@@ -10,7 +10,7 @@ import {
   type Scene,
 } from "@babylonjs/core";
 import type { ColliderComponent, RigidBodyComponent } from "../../core/types";
-import { RegisterPhysicsShapeForEntity } from "../collisionLayers";
+import { RegisterPhysicsShapeForEntity } from "../collisions";
 import { ApplyObjectScaleEnabled } from "../../core/nodeScale";
 import { ComputeLocalBounds, OwnedColliderMeshes } from "./geometry";
 import {

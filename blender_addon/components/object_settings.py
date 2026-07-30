@@ -60,6 +60,7 @@ class BJSAnimationSettings(PropertyGroup):
     auto_play: BoolProperty(name="Auto Play", default=False)
     default_clip: StringProperty(
         name="Clip", default="",
-        description="NLA strip to auto-play (blank = first one found)")
+        description="glTF / Action name to auto-play (blank = first). "
+                    "Rename the NLA track to override the Action name.")
     loop: BoolProperty(name="Loop", default=True)
     speed: FloatProperty(name="Speed", default=1.0, min=0.0, soft_max=10.0)

@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
 import { DOCS } from "./paths.js";
+import { ScoreKeywordMatches, Tokenize } from "./keywords.js";
 import { FindRecipesByIntent, GetRecipeByName } from "./recipes.js";
 
 export interface PlaybookRoute
@@ -109,10 +110,20 @@ export const PLAYBOOK_ROUTES: PlaybookRoute[] = [
   {
     id: "animation-cycle",
     title: "Cycle animation clips on an armature",
-    keywords: ["animation", "clip", "walk", "idle", "armature", "nla"],
+    keywords: ["animation", "clip", "cycle", "switcher", "nla"],
     recipe: "animation-cycle",
     referenceBehavior: "ClipSwitcher",
     needsInput: false,
+    needsSceneEntities: false,
+    needsPhysics: false,
+  },
+  {
+    id: "animator-fsm",
+    title: "Locomotion state machine via ANIMATOR component",
+    keywords: ["animator", "fsm", "state machine", "locomotion", "walk", "idle", "armature", "driveanimator"],
+    recipe: "animator-driver",
+    referenceBehavior: "DriveAnimator",
+    needsInput: true,
     needsSceneEntities: false,
     needsPhysics: false,
   },
@@ -199,13 +210,30 @@ export const PLAYBOOK_ROUTES: PlaybookRoute[] = [
     needsSceneEntities: true,
     needsPhysics: false,
   },
+  {
+    id: "pool-spawner",
+    title: "Interval pool spawner with grow/shrink lifecycle",
+    keywords: [
+      "pool",
+      "interval",
+      "grow",
+      "shrink",
+      "lifetime",
+      "recycle",
+      "steady",
+      "fish",
+      "animal",
+      "dispose",
+      "count",
+      "animalspawner",
+    ],
+    recipe: "pool-prefab-spawner",
+    referenceBehavior: "animalSpawner",
+    needsInput: false,
+    needsSceneEntities: true,
+    needsPhysics: true,
+  },
 ];
-
-
-function Tokenize(text: string): string[]
-{
-  return text.toLowerCase().split(/\W+/).filter((token) => token.length > 1);
-}
 
 /** Pick the best playbook for a plain-English intent. */
 export function MatchPlaybook(intent: string): PlaybookRoute
@@ -225,21 +253,7 @@ export function MatchPlaybook(intent: string): PlaybookRoute
       score += 15;
     }
 
-    for (const keyword of route.keywords)
-    {
-      if (normalized.includes(keyword))
-      {
-        score += 6;
-      }
-
-      for (const token of tokens)
-      {
-        if (keyword.includes(token) || token.includes(keyword))
-        {
-          score += 2;
-        }
-      }
-    }
+    score += ScoreKeywordMatches(normalized, tokens, route.keywords);
 
     if (score > bestScore)
     {
@@ -316,8 +330,24 @@ function BuildMandatorySteps(route: PlaybookRoute, className: string, intent: st
     `get_do_not_list() — skim silent failures`,
     `get_engine_basics(topic="components-vs-behaviors") — if first behavior this session`,
     `plan_behavior(intent="${intent.replace(/"/g, '\\"')}", className="${className}")`,
-    `get_recipe_template(recipe="${route.recipe}", className="${className}")`,
   ];
+
+  if (route.recipe.length > 0)
+  {
+    steps.push(`get_recipe_template(recipe="${route.recipe}", className="${className}")`);
+  }
+
+  if (route.id === "animator-fsm")
+  {
+    steps.push(`get_scripting_context(section="animation") — ANIMATOR graph + SetFloat API`);
+    steps.push(`get_fragment(name="set-animator-float")`);
+  }
+
+  if (route.id === "pool-spawner")
+  {
+    steps.push(`get_scripting_context(section="prefab-spawn") — parent: null, scaling, no deferShadowRefresh`);
+    steps.push(`get_fragment(name="spawn-prefab-instance")`);
+  }
 
   if (route.needsInput)
   {
@@ -351,7 +381,19 @@ function BuildMandatorySteps(route: PlaybookRoute, className: string, intent: st
     steps.push(`find_similar_behavior(query="${route.referenceBehavior}", includeSource=true)`);
   }
 
-  steps.push(`Edit the template — do NOT blank-page rewrite`);
+  if (route.recipe.length > 0)
+  {
+    steps.push(`Edit the template — do NOT blank-page rewrite`);
+  }
+  else if (route.id === "animator-fsm")
+  {
+    steps.push(`Edit animator-driver template — FSM lives in Blender ANIMATOR, not TypeScript`);
+  }
+  else if (route.id === "pool-spawner")
+  {
+    steps.push(`Edit pool-prefab-spawner template — reference animalSpawner.ts for full lifecycle`);
+  }
+
   steps.push(`get_scripting_context(section="…") — only sections plan_behavior lists`);
   steps.push(`validate_behavior(source, "${className}.ts") — fix ALL errors; repeat until valid`);
 

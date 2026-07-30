@@ -10,12 +10,13 @@ import { BuildConstraints } from "../../subsystems/constraints";
 import { BuildLodLevels } from "../../subsystems/lod";
 import { RegisterSpawnedShadowMeshes } from "../../subsystems/shadows";
 import { ApplyRenderLayers } from "../../subsystems/renderLayers";
-import { ApplyCollisionLayers } from "../../subsystems/collisionLayers";
+import { ApplyCollisionLayers } from "../../subsystems/collisions";
 import { ApplyGui3DRegistration } from "../../ui/gui3d/builder";
 import {
   FlushGlobalRefresh,
   type GlobalRefreshFlag,
 } from "../componentGlobalRefresh";
+import { ApplySpawnAnimations } from "../../subsystems/animation";
 
 /**
  * Everything after a spawn batch's entity/component pass — the spawn-scoped
@@ -87,13 +88,21 @@ function CollectSpawnedMeshes(rootEntity: Entity): AbstractMesh[]
   return meshes;
 }
 
+/** Options that tune finalize behavior for one spawn call. */
+export interface SpawnFinalizeOptions
+{
+  /** When true, register casters but leave `FlushSpawnShadowRefresh` to the caller. */
+  deferShadowRefresh?: boolean;
+}
+
 /** Finalize one spawn batch. See the module doc for the pass order. */
 export async function FinalizeSpawn(
   scene: Scene,
   level: Level,
   spawnContext: LoadContext,
   spawnedEntities: Entity[],
-  spawnedRows: EntityData[]
+  spawnedRows: EntityData[],
+  finalizeOptions: SpawnFinalizeOptions = {}
 ): Promise<void>
 {
   // Asset-backed components load in parallel during the entity loop; settle
@@ -144,16 +153,25 @@ export async function FinalizeSpawn(
   // Shadows: SetupShadows registered casters/receivers once at load, so cloned
   // meshes must be added to the existing generators here. Ray-visibility Shadow
   // (bjs_cast_shadows extras) survives the clone and is respected; frozen maps
-  // re-render once so the new casters appear.
+  // re-render once so the new casters appear (immediately or via batch flush).
   if (level.shadowGenerators.length > 0)
   {
-    const addedCasters = RegisterSpawnedShadowMeshes(
-      level.shadowGenerators,
-      CollectSpawnedMeshes(spawnedEntities[0])
-    );
-    if (addedCasters > 0)
+    const spawnedMeshes = CollectSpawnedMeshes(spawnedEntities[0]);
+
+    if (finalizeOptions.deferShadowRefresh === true)
     {
-      level.RefreshShadows();
+      level.QueueSpawnShadowMeshes(spawnedMeshes);
+    }
+    else
+    {
+      const addedCasters = RegisterSpawnedShadowMeshes(
+        level.shadowGenerators,
+        spawnedMeshes
+      );
+      if (addedCasters > 0)
+      {
+        level.RefreshShadows();
+      }
     }
   }
 
@@ -184,6 +202,8 @@ export async function FinalizeSpawn(
     );
   }
 
+  ApplySpawnAnimations(scene, spawnedEntities, spawnedRows);
+
   // The level has begun by now — Spawn always resolves after Level.Begin —
   // so new behaviors get their OnStart here.
   for (const entity of spawnedEntities)
@@ -198,6 +218,14 @@ export async function FinalizeSpawn(
       {
         console.error(`[bjs] OnStart "${entity.name}"`, error);
       }
+    }
+  }
+
+  if (level.postReady)
+  {
+    for (const entity of spawnedEntities)
+    {
+      level.RunPostReadyForEntity(entity);
     }
   }
 }

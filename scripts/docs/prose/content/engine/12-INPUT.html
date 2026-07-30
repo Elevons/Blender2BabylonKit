@@ -2,20 +2,23 @@
 <p class="doc-links">Subsystem diagram: <a href="input.html">input.html</a> · Code traces: <a href="trace-input.html">trace-input</a> (runtime) · <a href="../blender/trace-input.html">Blender trace-input</a> · Feature chain: <a href="10-FEATURE-TRACES.html#input">10 — Feature Traces</a></p>
 
 <h2>Overview (<code>src/input/</code>) <a name="input"></a></h2>
-<p>A Unity Input System clone: <code>InputManager</code> owns the device state (keyboard + first gamepad, deadzoned) and the project-wide <code>InputActionAsset</code> of <strong>Action Maps</strong> &gt; <strong>Actions</strong> &gt; <strong>Bindings</strong> (direct key/button/axis/stick reads, plus <code>1DAXIS</code>/<code>2DVECTOR</code> composites). Actions have a type (<code>BUTTON</code>/<code>VALUE</code>/<code>PASSTHROUGH</code>) and fire Unity-style <code>started</code>/<code>performed</code>/<code>canceled</code> callbacks; polling: <code>ReadValue()</code>, <code>ReadVector2()</code>, <code>IsPressed()</code>, <code>WasPressedThisFrame()</code>, <code>WasReleasedThisFrame()</code>, <code>WasPerformedThisFrame()</code>.</p>
+<p>The input system follows the Unity Input System model. <code>InputManager</code> owns device state (keyboard plus first gamepad, deadzoned). It also owns the project-wide <code>InputActionAsset</code> of <strong>Action Maps</strong> &gt; <strong>Actions</strong> &gt; <strong>Bindings</strong>.</p>
+<p>Bindings read keys, buttons, axes, and sticks directly. They also support <code>1DAXIS</code> and <code>2DVECTOR</code> composites. Actions have a type (<code>BUTTON</code>/<code>VALUE</code>/<code>PASSTHROUGH</code>). They fire Unity-style <code>started</code>/<code>performed</code>/<code>canceled</code> callbacks.</p>
+<p>Polling API: <code>ReadValue()</code>, <code>ReadVector2()</code>, <code>IsPressed()</code>, <code>WasPressedThisFrame()</code>, <code>WasReleasedThisFrame()</code>, <code>WasPerformedThisFrame()</code>.</p>
 
 <h2>Blender authoring</h2>
-<p>The asset and <strong>Scene Default</strong> map are authored in Blender's <strong>Input Actions</strong> panel (the <code>input_actions/</code> package: <code>properties.py</code> / <code>serialize.py</code> / <code>operators.py</code>, drawn by <code>ui/input_panel.py</code>) and exported as <code>scene.inputActions</code> + <code>scene.defaultInputMap</code>. If the panel is empty at export, the built-in &quot;Player&quot; map is serialized anyway.</p>
+<p>Author the asset and <strong>Scene Default</strong> map in Blender&apos;s <strong>Input Actions</strong> panel. The <code>input_actions/</code> package provides <code>properties.py</code>, <code>serialize.py</code>, and <code>operators.py</code>. <code>ui/input_panel.py</code> draws the panel. Export writes <code>scene.inputActions</code> and <code>scene.defaultInputMap</code>.</p>
+<p>If the panel is empty at export, the built-in &quot;Player&quot; map is serialized anyway.</p>
 <p>Panel tools:</p>
 <ul>
 <li><strong>Load Default Asset</strong> — seeds the built-in Player map (Move/Look/Jump/…)</li>
-<li><strong>Save / Load Asset (.json)</strong> — share <code>.inputactions.json</code> across scenes; feed <code>npm run input:gen</code> for TypeScript constants</li>
+<li><strong>Save / Load Asset (.json)</strong> — share <code>.inputactions.json</code> across scenes. Feed <code>npm run input:gen</code> for TypeScript constants</li>
 <li><strong>Create Maps Used by Scripts</strong> — scans <code>@inputMap("Name")</code> in behavior sources and creates missing maps</li>
-<li><strong>Capture</strong> (<img alt="rec" src="data:," style="display:none"> record icon) — keyboard capture on any key row; gamepad capture on gamepad rows (Linux <code>/dev/input/js*</code>, Xbox-style remapping)</li>
+<li><strong>Capture</strong> (<img alt="rec" src="data:," style="display:none"> record icon) — keyboard capture on any key row. Gamepad capture on gamepad rows (Linux <code>/dev/input/js*</code>, Xbox-style remapping)</li>
 </ul>
 
 <h3 id="gamepad-bindings">Gamepad bindings (W3C standard mapping)</h3>
-<p>Gamepad controls use <strong>labeled pickers</strong> that match the browser Gamepad API standard mapping — not raw index integers.</p>
+<p>Gamepad controls use <strong>labeled pickers</strong>. They match the browser Gamepad API standard mapping. They do not use raw index integers.</p>
 <table><thead><tr><th>Control kind</th><th>Picker examples</th><th>Manifest</th></tr></thead><tbody>
 <tr><td><strong>Button</strong></td><td>A / Cross, LB / L1, D-pad Up, L3, …</td><td><code>{ "device": "GAMEPAD", "control": "button", "index": N }</code></td></tr>
 <tr><td><strong>Axis</strong></td><td>Left Stick X/Y, Right Stick X/Y, <strong>LT / L2</strong>, <strong>RT / R2</strong></td><td><code>{ "device": "GAMEPAD", "control": "axis", "index": N }</code></td></tr>
@@ -26,56 +29,56 @@
 <li><strong>LT / L2</strong> → axis index <code>4</code> (runtime reads W3C gamepad button 6 as analog 0..1)</li>
 <li><strong>RT / R2</strong> → axis index <code>5</code> (W3C button 7)</li>
 </ul>
-<p>Stick axes use indices <code>0</code>–<code>3</code> (LX, LY, RX, RY). Use <strong>Value</strong> action type for analog throttle/brake; <strong>Button</strong> if you only need a digital threshold (~half pull).</p>
-<p><strong>Stick Y orientation:</strong> the browser Gamepad API reports stick <em>up</em> as <code>−1</code> on Y axes (indices <code>1</code> and <code>3</code>). The runtime flips those in <code>OrientGamepadAxis()</code> (<code>Devices.ts</code>) so authored labels match Unity: <strong>Left Stick Y + Half</strong> = push stick up, <strong>− Half</strong> = push stick down. Stick bindings (<code>control: "stick"</code>) use the same orientation.</p>
+<p>Stick axes use indices <code>0</code>–<code>3</code> (LX, LY, RX, RY). Use <strong>Value</strong> action type for analog throttle/brake. Use <strong>Button</strong> if you only need a digital threshold (~half pull).</p>
+<p><strong>Stick Y orientation:</strong> the browser Gamepad API reports stick <em>up</em> as <code>−1</code> on Y axes (indices <code>1</code> and <code>3</code>). The runtime flips those in <code>OrientGamepadAxis()</code> (<code>Devices.ts</code>). Authored labels then match Unity. <strong>Left Stick Y + Half</strong> means push stick up. <strong>− Half</strong> means push stick down. Stick bindings (<code>control: "stick"</code>) use the same orientation.</p>
 
 <h3 id="composites">Composite bindings</h3>
 <p>Add composites from the binding toolbar on a selected action:</p>
 <table><thead><tr><th>Kind</th><th>Parts</th><th>Result</th><th>Typical use</th></tr></thead><tbody>
 <tr><td><strong>+ Binding</strong></td><td>—</td><td>One control</td><td>Jump on Space, Move on left stick</td></tr>
 <tr><td><strong>+ 1D Axis</strong></td><td>Negative, Positive</td><td><code>positive − negative</code> scalar −1..1</td><td>W/S throttle, opposing keys</td></tr>
-<tr><td><strong>+ 2D Vector</strong></td><td>Up, Down, Left, Right</td><td>Normalized <code>{ x, y }</code></td><td>WASD move (keys); combine with a stick binding on the same action</td></tr>
+<tr><td><strong>+ 2D Vector</strong></td><td>Up, Down, Left, Right</td><td>Normalized <code>{ x, y }</code></td><td>WASD move (keys). Combine with a stick binding on the same action</td></tr>
 </tbody></table>
-<p>Default <strong>Move</strong> uses a 2D Vector (WASD + arrows) plus a direct <strong>Left Stick</strong> binding. The runtime picks the <strong>most-actuated</strong> binding when several compete on one action.</p>
+<p>Default <strong>Move</strong> uses a 2D Vector (WASD plus arrows) plus a direct <strong>Left Stick</strong> binding. The runtime picks the <strong>most-actuated</strong> binding when several compete on one action.</p>
 
 <h3 id="axis-half">Axis half (split one stick axis by direction)</h3>
-<p>Binding the <em>same</em> stick axis to both composite parts without filtering cancels out (both parts read the full signed −1..1 value). Unity avoids this with separate stick-up / stick-down controls; here use <strong>Axis Half</strong> on composite part rows when the control is a <strong>gamepad axis</strong>:</p>
+<p>Binding the <em>same</em> stick axis to both composite parts without filtering cancels out. Both parts read the full signed −1..1 value. Unity avoids this with separate stick-up and stick-down controls. Here, use <strong>Axis Half</strong> on composite part rows when the control is a <strong>gamepad axis</strong>:</p>
 <table><thead><tr><th>Axis Half</th><th>Effect</th></tr></thead><tbody>
 <tr><td><strong>Full</strong></td><td>Entire axis −1..1 (default for direct bindings)</td></tr>
 <tr><td><strong>+ Half</strong></td><td>Only positive direction (stick up / right)</td></tr>
 <tr><td><strong>− Half</strong></td><td>Only negative direction (stick down / left), as a positive magnitude for the composite formula</td></tr>
 </tbody></table>
-<p>New <strong>1D Axis</strong> composite parts default to the matching half (Positive/Up/Right → <code>+ Half</code>; Negative/Down/Left → <code>− Half</code>). Manifest field: <code>axisHalf</code>: <code>"POSITIVE"</code> | <code>"NEGATIVE"</code> (omitted = full axis). Export writes uppercase; the runtime accepts any case.</p>
+<p>New <strong>1D Axis</strong> composite parts default to the matching half (Positive/Up/Right → <code>+ Half</code>. Negative/Down/Left → <code>− Half</code>). Manifest field: <code>axisHalf</code>: <code>"POSITIVE"</code> | <code>"NEGATIVE"</code> (omitted = full axis). Export writes uppercase. The runtime accepts any case.</p>
 <p><strong>Example — one stick Y, forward and back on one action:</strong></p>
 <pre><code>Action: Throttle (Value, Axis)
   1D Axis
     Positive → Gamepad / Axis / Left Stick Y / + Half
     Negative → Gamepad / Axis / Left Stick Y / − Half</code></pre>
-<p>Stick up → <code>+0.8</code>; stick down → <code>−0.8</code>; center → <code>0</code>.</p>
-<p><strong>Example — separate Forward / Backward actions</strong> (legacy pattern — separate <code>IsPressed()</code> per direction): use <strong>direct</strong> bindings, not a composite — one action per direction:</p>
+<p>Stick up → <code>+0.8</code>. Stick down → <code>−0.8</code>. Center → <code>0</code>.</p>
+<p><strong>Example — separate Forward / Backward actions</strong> (legacy pattern — separate <code>IsPressed()</code> per direction): use <strong>direct</strong> bindings, not a composite. Use one action per direction:</p>
 <pre><code>Forward  (Button):  W  +  Gamepad / Axis / Left Stick Y / + Half
 Backward (Button):  S  +  Gamepad / Axis / Left Stick Y / − Half</code></pre>
-<p>Do not put the same stick axis on both composite parts without axis half — values cancel. Do not bind <strong>Left Stick X</strong> when you mean forward/back on Y.</p>
-<p>Keyboard keys in composites ignore axis half (keys are already one-sided). Triggers (LT/RT) are 0..1 only — axis half does not apply.</p>
+<p>Do not put the same stick axis on both composite parts without axis half. Values cancel. Do not bind <strong>Left Stick X</strong> when you mean forward/back on Y.</p>
+<p>Keyboard keys in composites ignore axis half. Keys are already one-sided. Triggers (LT/RT) are 0..1 only. Axis half does not apply.</p>
 
 <h3 id="action-control-type">Action type vs control type</h3>
-<p>Two dropdowns above the bindings list — both matter:</p>
+<p>Two dropdowns above the bindings list matter:</p>
 <table><thead><tr><th>Field</th><th>Values</th><th>Meaning</th></tr></thead><tbody>
 <tr><td><strong>Type</strong></td><td>Button / Value / Pass-Through</td><td>Callback semantics (<code>started</code>/<code>performed</code>/<code>canceled</code>)</td></tr>
 <tr><td><strong>Control Type</strong></td><td>Button / Axis / Vector 2</td><td>Shape of the stored value</td></tr>
 </tbody></table>
-<p><strong>Critical:</strong> a 2D binding (WASD composite or stick) on an action whose <strong>Control Type</strong> is still <strong>Button</strong> is flattened to a <strong>scalar magnitude</strong> at runtime. <code>ReadVector2()</code> then puts that number on <code>x</code> only (<code>y</code> is always <code>0</code>) — forward/back and steer break.</p>
+<p><strong>Critical:</strong> a 2D binding (WASD composite or stick) on an action whose <strong>Control Type</strong> is <strong>Button</strong> is flattened to a <strong>scalar magnitude</strong> at runtime. <code>ReadVector2()</code> then puts that number on <code>x</code> only (<code>y</code> is always <code>0</code>). Forward/back and steer break.</p>
 <p>For <code>ReadVector2()</code> (move, look, vehicle control): set <strong>Type = Value</strong> and <strong>Control Type = Vector 2</strong>. Use <strong>Axis</strong> only for true 1D scalars (<code>ReadValue()</code>).</p>
 
 <h3 id="choosing-bindings">Choosing a binding: Stick vs 1D Axis vs 2D Vector</h3>
-<p>Pick the <strong>control type</strong> first, then the binding shape:</p>
+<p>Pick the <strong>control type</strong> first. Then pick the binding shape:</p>
 <table><thead><tr><th>You need</th><th>Control Type</th><th>Gamepad</th><th>Keyboard</th></tr></thead><tbody>
 <tr><td>Throttle <em>or</em> brake only (one analog axis)</td><td><strong>Axis</strong></td><td><strong>+ 1D Axis</strong> on stick Y with <code>+ Half</code> / <code>− Half</code></td><td>Opposing keys in a 1D composite, or direct keys</td></tr>
 <tr><td>Move / drive <strong>and</strong> steer (2D)</td><td><strong>Vector 2</strong></td><td><strong>+ Binding</strong> → <strong>Stick</strong> → Left Stick</td><td><strong>+ 2D Vector</strong> → WASD (or arrows)</td></tr>
 <tr><td>One digital direction per action</td><td><strong>Button</strong></td><td>Direct <strong>Axis</strong> row with <code>+ Half</code> or <code>− Half</code></td><td>Direct key</td></tr>
 </tbody></table>
-<p><strong>Prefer <code>Stick</code></strong> for 2D gamepad control. Do <em>not</em> rebuild a stick with a <strong>2D Vector</strong> of four axis-half rows (Left Stick X/Y ± Half) — it is redundant, easy to misconfigure, and harder to maintain than one <strong>Left Stick</strong> binding.</p>
-<p>Do <em>not</em> use two <strong>1D Axis</strong> composites on one <strong>Vector 2</strong> action — 1D is for scalars. For two analog dimensions together, use <strong>Vector 2</strong> + <strong>Stick</strong> (or keyboard <strong>2D Vector</strong>).</p>
+<p><strong>Prefer <code>Stick</code></strong> for 2D gamepad control. Do <em>not</em> rebuild a stick with a <strong>2D Vector</strong> of four axis-half rows (Left Stick X/Y ± Half). That pattern is redundant. It is easy to misconfigure. One <strong>Left Stick</strong> binding is easier to maintain.</p>
+<p>Do <em>not</em> use two <strong>1D Axis</strong> composites on one <strong>Vector 2</strong> action. 1D is for scalars. For two analog dimensions together, use <strong>Vector 2</strong> plus <strong>Stick</strong> (or keyboard <strong>2D Vector</strong>).</p>
 
 <h3 id="vehicle-example">Example — vehicle <code>Main Control</code> (<code>CarController</code>)</h3>
 <p><code>CarController</code> uses <code>@inputMap("Vehicle")</code> and polls one <strong>Vector 2</strong> action:</p>
@@ -106,28 +109,29 @@ const steer = control.x;     // left / right</code></pre>
 <p>Add a <strong>Reset</strong> button action on the same map if the script needs it. Regenerate constants: <code>npm run input:gen -- --app playground</code>.</p>
 
 <h3 id="disambiguation">Multiple bindings on one action</h3>
-<p>When an action has several bindings (e.g. WASD + left stick on <strong>Move</strong>), the runtime picks the <strong>most-actuated</strong> binding — the whole vector or scalar with the largest magnitude. It does <em>not</em> merge axes across bindings.</p>
+<p>When an action has several bindings (e.g. WASD plus left stick on <strong>Move</strong>), the runtime picks the <strong>most-actuated</strong> binding. It uses the whole vector or scalar with the largest magnitude. It does <em>not</em> merge axes across bindings.</p>
 <ul>
-<li>Use <strong>one device at a time</strong> for a given action: stick for both throttle and steer, <em>or</em> WASD for both — not keyboard W plus horizontal stick steer on the same action.</li>
+<li>Use <strong>one device at a time</strong> for a given action: stick for both throttle and steer, <em>or</em> WASD for both. Do not mix keyboard W plus horizontal stick steer on the same action.</li>
 <li>Ties go to whichever binding appears <strong>first</strong> in the list.</li>
 </ul>
-<p>Default <strong>Move</strong> order: keyboard composites first, then stick — keyboard wins on ties when both are idle or equally actuated.</p>
+<p>Default <strong>Move</strong> order: keyboard composites first, then stick. Keyboard wins on ties when both are idle or equally actuated.</p>
 
 <h3 id="axis-half-examples">Axis half examples (1D / per-direction)</h3>
-<p>See examples under <a href="#axis-half">Axis half</a> above (throttle 1D composite, separate Forward/Backward buttons). Axis half applies to <strong>gamepad axis</strong> rows in composites — not to <strong>Stick</strong> bindings.</p>
+<p>See examples under <a href="#axis-half">Axis half</a> above (throttle 1D composite, separate Forward/Backward buttons). Axis half applies to <strong>gamepad axis</strong> rows in composites. It does not apply to <strong>Stick</strong> bindings.</p>
 
 <h2>Load-time injection</h2>
 <p><code>LevelLoader</code> calls <code>InputManager.LoadAsset</code> before behaviors are built. Map injection (<code>core/loader/scripts.ts</code> → <code>InjectInputMaps</code>):</p>
 <ul>
-<li><code>@inputMap("Name")</code> on a field → that map;</li>
-<li><code>@inputMap()</code> or <code>@inputMap("")</code> → scene default;</li>
-<li>no <code>@inputMap</code> fields → <code>behavior.input</code> receives the scene default.</li>
+<li><code>@inputMap("Name")</code> on a field → that map</li>
+<li><code>@inputMap()</code> or <code>@inputMap("")</code> → scene default</li>
+<li>no <code>@inputMap</code> fields → <code>behavior.input</code> receives the scene default</li>
 </ul>
-<p><code>@inputMap</code> stays lowercase like <code>@exposed</code> (Blender scans the literal token). See also <a href="05-SCRIPTING.html">05 — Scripting</a> for behavior lifecycle and decorator contracts.</p>
+<p><code>@inputMap</code> stays lowercase like <code>@exposed</code>. Blender scans the literal token. See also <a href="05-SCRIPTING.html">05 — Scripting</a> for behavior lifecycle and decorator contracts.</p>
 
 <h2>Frame lifecycle</h2>
-<p>Automatic: <code>Level.Begin</code> attaches and enables every map; each <code>scene.render()</code> drives <code>RunFrame</code> on <code>onBeforeRenderObservable</code>. Inside <code>RunFrame</code>: <code>InputManager.Process</code> runs <em>before</em> all behavior <code>OnUpdate</code> calls; <code>InputManager.EndFrame</code> runs <em>after</em> them so <code>WasPressedThisFrame</code> / <code>WasReleasedThisFrame</code> edges last exactly one frame. <code>Dispose</code> detaches input and removes observers.</p>
-<p>The keyboard observable (<code>scene.onKeyboardObservable</code>) is separate — it fires on key events and is used by Babylon's native camera key schemes, not by the Input Actions pipeline. Full app → BJS timeline: <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="trace-runtime-loop.html">trace-runtime-loop</a>. Babylon camera key schemes intentionally stay native (cameras consume keycode arrays).</p>
+<p><code>Level.Begin</code> attaches and enables every map automatically. Each <code>scene.render()</code> drives <code>RunFrame</code> on <code>onBeforeRenderObservable</code>.</p>
+<p>Inside <code>RunFrame</code>, <code>InputManager.Process</code> runs <em>before</em> all behavior <code>OnUpdate</code> calls. <code>InputManager.EndFrame</code> runs <em>after</em> them. This makes <code>WasPressedThisFrame</code> and <code>WasReleasedThisFrame</code> edges last exactly one frame. <code>Dispose</code> detaches input and removes observers.</p>
+<p>The keyboard observable (<code>scene.onKeyboardObservable</code>) is separate. It fires on key events. Babylon&apos;s native camera key schemes use it, not the Input Actions pipeline. Full app → BJS timeline: <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="trace-runtime-loop.html">trace-runtime-loop</a>. Babylon camera key schemes intentionally stay native. Cameras consume keycode arrays.</p>
 
 <h2 id="manifest-shape">Manifest binding shape (reference)</h2>
 <pre><code class="language-json">{

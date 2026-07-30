@@ -40,6 +40,53 @@ if (move.x !== 0 || move.y !== 0)
 }`,
   },
   {
+    name: "poll-trigger-volume",
+    description: "Poll whether a probe entity is inside an authored trigger volume (BOX/SPHERE) each frame.",
+    code: `import { Behavior, exposed, IsEntityInsideColliderVolume } from "@bjs/engine";
+import type { AttachmentOfType, Entity } from "@bjs/engine";
+
+// fields:
+private volumeAttachment: AttachmentOfType<"COLLIDER"> | undefined;
+private probeInside = false;
+
+@exposed({ type: "entity", label: "Probe" })
+probe: Entity | null = null;
+
+OnStart(): void
+{
+  this.volumeAttachment = this.entity.GetAttachment("COLLIDER");
+  this.probeInside = this.IsProbeInsideVolume();
+  this.ApplyZoneState();
+}
+
+OnUpdate(_deltaSeconds: number): void
+{
+  const inside = this.IsProbeInsideVolume();
+  if (inside === this.probeInside)
+  {
+    return;
+  }
+
+  this.probeInside = inside;
+  this.ApplyZoneState();
+}
+
+private IsProbeInsideVolume(): boolean
+{
+  if (this.probe === null)
+  {
+    return false;
+  }
+
+  return IsEntityInsideColliderVolume(this.probe, this.entity, this.volumeAttachment);
+}
+
+private ApplyZoneState(): void
+{
+  // {{CUSTOM_LOGIC}}
+}`,
+  },
+  {
     name: "enable-trigger-logging",
     description: "Log trigger overlaps via OnTriggerEnter/OnTriggerExit (attach to the trigger entity).",
     code: `OnTriggerEnter(other: Entity): void
@@ -72,8 +119,27 @@ if (this.keyboardObserver !== undefined)
   },
   {
     name: "play-animation",
-    description: "Start a named animation clip (attach behavior to armature).",
+    description:
+      "Start a named animation clip manually (attach behavior to armature). Prefer ANIMATOR for multi-state FSMs. Clip names are Action names.",
     code: `this.entity.GetAnimation("Walk")?.start(true);`,
+  },
+  {
+    name: "set-animator-float",
+    description: "Drive an ANIMATOR parameter from a behavior on the same armature.",
+    code: `const attachment = this.entity.GetAttachment("ANIMATOR");
+if (attachment !== undefined && attachment.type === "ANIMATOR")
+{
+  attachment.behavior.SetFloat("Speed", moveMagnitude);
+}`,
+  },
+  {
+    name: "set-animator-trigger",
+    description: "Pulse an ANIMATOR trigger parameter (e.g. Jump).",
+    code: `const attachment = this.entity.GetAttachment("ANIMATOR");
+if (attachment !== undefined && attachment.type === "ANIMATOR")
+{
+  attachment.behavior.SetTrigger("Jump");
+}`,
   },
   {
     name: "send-message",
@@ -220,14 +286,40 @@ await activeCamera.flyToAsync(
   },
   {
     name: "reveal-entity",
-    description: "Show a viewport-hidden or Make Invisible entity at runtime.",
-    code: `this.node.isVisible = true;
+    description:
+      "Reveal an entity at runtime. Load hide keeps entity.active === true, so SetEntityActive(entity, true) alone is a no-op — disable in OnStart, enable on demand.",
+    code: `import { SetEntityActive } from "@bjs/engine";
 
-const light = this.scene.getLightByName(this.entity.name);
-if (light !== null)
+OnStart(): void
 {
-  light.setEnabled(true);
-}`,
+  SetEntityActive(this.entity, false); // real transition — load hide alone leaves active === true
+}
+
+// later (message / trigger / timer):
+SetEntityActive(this.entity, true); // re-shows the subtree even when the mesh loaded hidden`,
+  },
+  {
+    name: "set-entity-active",
+    description:
+      "Full Unity-style SetActive — hide/show subtree, suspend/rebuild Havok, pause behaviors (ToggleInWater pattern).",
+    code: `import { SetEntityActive, IsEntityInsideColliderVolume } from "@bjs/engine";
+import type { Entity } from "@bjs/engine";
+
+@exposed({ type: "list", of: "entity", label: "Targets" })
+targets: (Entity | null)[] = [];
+
+private ApplyTargets(active: boolean): void
+{
+  for (const target of this.targets)
+  {
+    if (target !== null)
+    {
+      SetEntityActive(target, active);
+    }
+  }
+}
+
+// Zone toggle example: edge-detect inside in OnUpdate, then ApplyTargets(inside)`,
   },
   {
     name: "play-sound",
@@ -268,6 +360,38 @@ body.setLinearVelocity(Vector3.Zero());
 body.setAngularVelocity(Vector3.Zero());`,
   },
   {
+    name: "zone-lut-swap",
+    description:
+      "Swap color grading on the existing Default Rendering Pipeline (FogChanger pattern). Use OnPostReady — cast spawner as Level for baseUrl + post handles.",
+    code: `import { ApplyColorGradingLut, Behavior, type Level } from "@bjs/engine";
+
+OnPostReady(): void
+{
+  this.ApplyZoneLut(this.zoneLut.trim());
+}
+
+private ApplyZoneLut(manifestPath: string): void
+{
+  if (manifestPath.length === 0)
+  {
+    return;
+  }
+
+  const level = this.spawner as Level;
+  const imageProcessing = level.post?.pipeline?.imageProcessing;
+  if (imageProcessing === undefined)
+  {
+    return;
+  }
+
+  imageProcessing.toneMappingEnabled = false;
+  ApplyColorGradingLut(this.scene, level.componentHost.baseUrl, imageProcessing, {
+    file: manifestPath,
+  });
+  imageProcessing._updateParameters();
+}`,
+  },
+  {
     name: "spawn-prefab-instance",
     description:
       "Duplicate an in-level template entity (linked prefab or in-scene hierarchy) via this.spawner.Spawn — full components, fresh GUIDs.",
@@ -276,15 +400,23 @@ body.setAngularVelocity(Vector3.Zero());`,
   return;
 }
 
-// Optional: hide + disable the in-scene template so only clones remain active.
-await this.spawner.HideTemplate(this.prefab);
-
 const handle = await this.spawner.Spawn(this.prefab, {
   position: this.node.position.clone(),
+  // rotationQuaternion?, scaling? — applied before the clone is revealed
+  // scaling: Vector3.Zero() — grow-in spawns; lerp to template.node.scaling after spawn
+  // parent: null — scene root, world-space position (clones do not follow template parent)
+  // parent: someEntity — parent-local position under that entity
+  // omit parent — same parent as the template root (default)
+  // keepTemplate: true — leave the source visible (Spawn hides at call start by default)
+  // @exposed({ spawnTemplate: true }) — hide template at level load (deferred spawners)
+  // deferShadowRefresh: true — use in multi-spawn loops; flush once after (below)
 });
 // handle.rootEntity — the new instance root
 // handle.guidMap — templateGuid → runtimeGuid
-// handle.cameras — instance cameras (never auto-activated; assign scene.activeCamera yourself)`,
+// handle.cameras — instance cameras (never auto-activated; assign scene.activeCamera yourself)
+
+// After a loop with deferShadowRefresh on each Spawn:
+// this.spawner.FlushSpawnShadowRefresh();`,
   },
   {
     name: "paint-scatter-vertex-colors",
@@ -330,6 +462,7 @@ export const EXPOSED_SNIPPETS: Record<string, string> = {
   int: '@exposed({ min: 0, max: 100, step: 1, label: "{{LABEL}}" })\n{{NAME}} = {{DEFAULT}}',
   bool: '@exposed({ label: "{{LABEL}}" })\n{{NAME}} = {{DEFAULT}}',
   string: '@exposed({ label: "{{LABEL}}" })\n{{NAME}} = "{{DEFAULT}}"',
+  file: '@exposed({ type: "file", label: "{{LABEL}}" })\n{{NAME}} = ""',
   vector3: '@exposed({ label: "{{LABEL}}" })\n{{NAME}}: [number, number, number] = [{{X}}, {{Y}}, {{Z}}]',
   color: '@exposed({ type: "color", label: "{{LABEL}}" })\n{{NAME}} = new Color3({{X}}, {{Y}}, {{Z}})',
   entity: '@exposed({ type: "entity", label: "{{LABEL}}" })\n{{NAME}}: Entity | null = null',

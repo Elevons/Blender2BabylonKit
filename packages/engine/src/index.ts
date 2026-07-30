@@ -5,6 +5,7 @@ export * from "./core/guidFields";
 export * from "./core/attachments";
 export * from "./core/ComponentHost";
 export * from "./core/Entity";
+export { SetEntityActive, IsEntityActive } from "./core/entityActive";
 export * from "./core/Level";
 export * from "./core/LevelLoader";
 export * from "./core/bootstrap";
@@ -28,6 +29,7 @@ export * from "./subsystems/fog";
 export * from "./subsystems/atmosphere";
 export * from "./subsystems/postprocess";
 export * from "./subsystems/animation";
+export * from "./subsystems/animatorController";
 export * from "./subsystems/audio";
 export * from "./subsystems/particles";
 export * from "./subsystems/materials/index";
@@ -35,7 +37,6 @@ export * from "./subsystems/collisions";
 export * from "./subsystems/constraints";
 export * from "./subsystems/reflectionProbes";
 export * from "./subsystems/renderLayers";
-export * from "./subsystems/collisionLayers";
 export * from "./subsystems/lod";
 
 // UI: 2D GUI layouts (GUI Editor JSON) and the 3D GUI (buttons + panels).

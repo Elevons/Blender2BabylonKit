@@ -13,19 +13,22 @@ import { ClearFontCacheForScene } from "../ui/msdfText";
 import type { ParticleEmitterManager } from "../subsystems/particles";
 import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import type { TransformNode } from "@babylonjs/core";
+import type { AbstractMesh } from "@babylonjs/core";
 import { Entity } from "./Entity";
 import type { CollisionLayersInfo, EntityData } from "./types";
 import type { SpawnHandle, SpawnOptions } from "./spawnTypes";
 import { SpawnFromTemplate } from "./loader/prefabSpawn";
 import { HideEntityNode } from "./loader/nodeResolution";
+import { IsEntityActive } from "./entityActive";
 import { InputManager } from "../input";
+import type { Behavior } from "../scripting/Behavior";
 import { TeardownScript } from "./loader/scripts";
 import type { PostProcessingHandles } from "../subsystems/postprocess";
 import type { AtmosphereHandle } from "../subsystems/atmosphere";
 import { DisposeReflectionProbes } from "../subsystems/reflectionProbes";
 import type { ClusteredLightContainer } from "@babylonjs/core/Lights/Clustered";
 import type { PunctualLightingMode } from "../subsystems/clusteredLights";
-import { DisposeDirectionalShadowMaintenance } from "../subsystems/shadows";
+import { DisposeDirectionalShadowMaintenance, RegisterSpawnedShadowMeshes } from "../subsystems/shadows";
 import type { ComponentHost } from "./ComponentHost";
 import type { ComponentType } from "./attachments";
 import { GetRuntimePolicy } from "./loader/componentRegistry";
@@ -38,6 +41,7 @@ import { GetRuntimePolicy } from "./loader/componentRegistry";
 const TEMPLATE_TEARDOWN_ORDER: readonly ComponentType[] = [
   "CONSTRAINT",
   "SCRIPT",
+  "ANIMATOR",
   "AUDIO",
   "GUI",
   "PARTICLE",
@@ -78,6 +82,8 @@ export class Level
   punctualLightingMode: PunctualLightingMode = "forward";
   /** Post-processing pipelines, if the manifest enabled them. */
   post?: PostProcessingHandles;
+  /** True after {@link NotifyPostReady} has run (late rendering + post attach). */
+  postReady = false;
   /** Physically based atmosphere, if the manifest enabled it. */
   atmosphere?: AtmosphereHandle;
   /** From the manifest's "Debug Build" export flag; gates debug keys/tools. */
@@ -101,6 +107,10 @@ export class Level
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
   private updaters: ((deltaSeconds: number) => void)[] = [];
   private physicsViewer?: PhysicsViewer;
+  /** Meshes queued by spawns that passed `deferShadowRefresh`. */
+  private pendingSpawnShadowMeshes: AbstractMesh[] = [];
+  /** Templates already hidden — HideTemplate and post-spawn hide are idempotent. */
+  private hiddenTemplateIds = new Set<string>();
 
   constructor(private scene: Scene) {}
 
@@ -163,6 +173,46 @@ export class Level
     }
   }
 
+  /**
+   * Queue spawned meshes for batched registration on shadow generators. Used
+   * when `Spawn` is called with `deferShadowRefresh: true`.
+   */
+  QueueSpawnShadowMeshes(meshes: readonly AbstractMesh[]): void
+  {
+    if (meshes.length === 0)
+    {
+      return;
+    }
+
+    this.pendingSpawnShadowMeshes.push(...meshes);
+  }
+
+  /**
+   * Register every queued spawn mesh on the shadow generators, then re-render
+   * frozen maps once. Safe to call when the queue is empty.
+   */
+  FlushSpawnShadowRefresh(): void
+  {
+    if (this.pendingSpawnShadowMeshes.length === 0)
+    {
+      return;
+    }
+
+    const meshes = this.pendingSpawnShadowMeshes;
+    this.pendingSpawnShadowMeshes = [];
+
+    if (this.shadowGenerators.length === 0)
+    {
+      return;
+    }
+
+    const addedCasters = RegisterSpawnedShadowMeshes(this.shadowGenerators, meshes);
+    if (addedCasters > 0)
+    {
+      this.RefreshShadows();
+    }
+  }
+
   /** Return every entity carrying the given tag. */
   ByTag(tag: string): Entity[]
   {
@@ -177,10 +227,8 @@ export class Level
 
   /**
    * Duplicate a loaded template subtree at runtime — full components, fresh
-   * GUIDs, physics, scripts, and constraints per instance. The template is any
-   * in-level entity (linked/appended collections flatten into the level at
-   * export, so they qualify too); pass the Entity or its GUID. Behaviors reach
-   * this through the injected `spawner` field (the PrefabSpawner interface).
+   * GUIDs, physics, scripts, and constraints per instance. Hides the template
+   * when the call starts unless `options.keepTemplate === true`.
    */
   async Spawn(template: Entity | string, options: SpawnOptions = {}): Promise<SpawnHandle>
   {
@@ -214,8 +262,14 @@ export class Level
       throw new Error(`[bjs] HideTemplate: template entity "${String(template)}" not found`);
     }
 
+    if (this.hiddenTemplateIds.has(templateEntity.id))
+    {
+      return;
+    }
+
     HideEntityNode(this.scene, templateEntity.node);
     await this.DisableTemplateComponents(templateEntity);
+    this.hiddenTemplateIds.add(templateEntity.id);
   }
 
   /** Template root plus every descendant entity registered in this level. */
@@ -303,6 +357,58 @@ export class Level
     });
   }
 
+  /**
+   * Run every behavior's OnPostReady once after NME compile and post-processing
+   * attach. Called by the loader after Begin(); spawned or runtime-added scripts
+   * receive OnPostReady via {@link RunPostReadyForEntity} when this flag is set.
+   */
+  NotifyPostReady(): void
+  {
+    if (this.postReady)
+    {
+      return;
+    }
+
+    this.postReady = true;
+
+    for (const entity of this.entities.values())
+    {
+      this.RunPostReadyForEntity(entity);
+    }
+  }
+
+  /** Run OnPostReady on one entity's behaviors when post-ready has already fired. */
+  RunPostReadyForEntity(entity: Entity): void
+  {
+    if (!this.postReady)
+    {
+      return;
+    }
+
+    for (const behavior of entity.behaviors)
+    {
+      this.RunPostReady(behavior, entity.name);
+    }
+  }
+
+  /** Invoke OnPostReady on a single behavior instance. */
+  RunPostReady(behavior: Behavior, entityName: string): void
+  {
+    if (!this.postReady)
+    {
+      return;
+    }
+
+    try
+    {
+      behavior.OnPostReady();
+    }
+    catch (error)
+    {
+      console.error(`[bjs] OnPostReady "${entityName}"`, error);
+    }
+  }
+
   /** One frame: every behavior's OnUpdate, then the registered updaters. */
   private RunFrame(deltaSeconds: number): void
   {
@@ -312,6 +418,11 @@ export class Level
 
     for (const entity of this.entities.values())
     {
+      if (!IsEntityActive(entity))
+      {
+        continue;
+      }
+
       for (const behavior of entity.behaviors)
       {
         try
@@ -350,6 +461,14 @@ export class Level
     }
     this.disposed = true;
 
+    this.DisposeInputAndObservers();
+    this.DisposeLevelSubsystems();
+    this.DisposeEntities();
+  }
+
+  /** Detach input, physics debug view, and the frame observer. */
+  private DisposeInputAndObservers(): void
+  {
     InputManager.Detach(this.scene);
 
     if (this.physicsViewer !== undefined)
@@ -362,7 +481,11 @@ export class Level
     {
       this.scene.onBeforeRenderObservable.remove(this.observer);
     }
+  }
 
+  /** Tear down level-owned subsystems (constraints, GUI, atmosphere, shadows, …). */
+  private DisposeLevelSubsystems(): void
+  {
     if (this.collisionEventHandles !== null)
     {
       DisposeCollisionEvents(this.collisionEventHandles);
@@ -375,7 +498,6 @@ export class Level
     }
     this.constraints.length = 0;
 
-    // Disposing the manager disposes every 3D control it owns.
     if (this.gui3DManager !== undefined)
     {
       this.gui3DManager.dispose();
@@ -411,7 +533,11 @@ export class Level
     }
 
     DisposeDirectionalShadowMaintenance(this.scene);
+  }
 
+  /** Dispose every entity's behaviors, assets, physics body, and attachment rows. */
+  private DisposeEntities(): void
+  {
     for (const entity of this.entities.values())
     {
       for (const behavior of entity.behaviors)
@@ -450,8 +576,6 @@ export class Level
       }
 
       entity.reflectionProbes.length = 0;
-
-      // The controls themselves were disposed with the manager above.
       entity.controls3D.length = 0;
       entity.attachments.length = 0;
     }

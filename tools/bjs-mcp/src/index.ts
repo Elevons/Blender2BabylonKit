@@ -29,6 +29,7 @@ import {
   FormatPlaybook,
   FormatRouteTask,
   ListPlaybooksMarkdown,
+  MatchPlaybook,
 } from "./playbooks.js";
 import { FormatDoNotList } from "./pitfalls.js";
 import { GetEngineBasics } from "./engine-basics.js";
@@ -241,13 +242,13 @@ server.tool(
 
 server.tool(
   "search_docs",
-  "Full-text search across ALL documentation (engine + Blender prose chapters, quickstart, LLM contract docs). Returns matching sections ranked by hit count with fetch commands. Use when you don't know which chapter covers a topic.",
+  "Semantic search across ALL documentation (engine + Blender prose chapters, quickstart, LLM contract docs). Uses local embeddings with keyword boosting — no external server. Returns matching sections with fetch commands. Use when you don't know which chapter covers a topic.",
   {
     query: z.string().describe('Search term, e.g. "reflection probe", "disablePreStep", "freeze shadows"'),
     maxResults: z.number().optional().describe("Max sections to return (default 8)"),
   },
   async ({ query, maxResults }) => ({
-    content: [{ type: "text", text: SearchDocs(query, maxResults ?? 8) }],
+    content: [{ type: "text", text: await SearchDocs(query, maxResults ?? 8) }],
   })
 );
 
@@ -521,9 +522,10 @@ server.tool(
   { intent: z.string().describe("What the behavior should do") },
   async ({ intent }) =>
   {
+    const playbook = MatchPlaybook(intent);
     const matches = FindRecipesByIntent(intent);
 
-    if (matches.length === 0)
+    if (matches.length === 0 && playbook.recipe.length === 0)
     {
       return {
         content: [
@@ -535,19 +537,35 @@ server.tool(
       };
     }
 
-    const text = matches
-      .slice(0, 5)
-      .map((recipe, index) =>
-        [
-          `${index + 1}. **${recipe.name}** — ${recipe.description}`,
-          `   Reference: ${recipe.referenceBehavior || "none"}`,
-          `   Hooks: ${recipe.hooks.join(", ") || "none"}`,
-          `   Pitfalls: ${recipe.pitfalls.join("; ")}`,
-        ].join("\n")
-      )
-      .join("\n\n");
+    const header = [
+      `**Matched playbook:** \`${playbook.id}\` — ${playbook.title}`,
+      playbook.recipe.length > 0 ? `**Primary recipe:** \`${playbook.recipe}\`` : "",
+      playbook.referenceBehavior.length > 0
+        ? `**Reference:** ${playbook.referenceBehavior.replace(/\.ts$/, "")}.ts`
+        : "",
+      "",
+    ]
+      .filter((line) => line.length > 0)
+      .join("\n");
 
-    return { content: [{ type: "text", text }] };
+    const recipeLines =
+      matches.length > 0
+        ? matches
+            .slice(0, 5)
+            .map((recipe, index) =>
+              [
+                `${index + 1}. **${recipe.name}** — ${recipe.description}`,
+                `   Reference: ${recipe.referenceBehavior || "none"}`,
+                `   Hooks: ${recipe.hooks.join(", ") || "none"}`,
+                `   Pitfalls: ${recipe.pitfalls.join("; ")}`,
+              ].join("\n")
+            )
+            .join("\n\n")
+        : `(No additional recipe matches — use playbook \`${playbook.id}\`.)`;
+
+    return {
+      content: [{ type: "text", text: `${header}\n## Recipes\n\n${recipeLines}` }],
+    };
   }
 );
 
@@ -604,6 +622,7 @@ server.tool(
         "int",
         "bool",
         "string",
+        "file",
         "vector3",
         "color",
         "entity",

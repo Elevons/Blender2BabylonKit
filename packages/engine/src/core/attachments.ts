@@ -25,8 +25,10 @@ import type {
   ReflectionProbeComponent,
   ConstraintComponent,
   LodComponent,
+  AnimatorComponent,
   Gui3DComponent,
 } from "./types";
+import type { AnimatorController } from "../subsystems/animatorController";
 
 /** Runtime rows materialized from manifest components during load. */
 export type EntityAttachment =
@@ -37,6 +39,7 @@ export type EntityAttachment =
   | { type: "COLLIDER"; data: ColliderComponent; body: PhysicsBody }
   | { type: "RIGIDBODY"; data: RigidBodyComponent; body: PhysicsBody }
   | { type: "SCRIPT"; data: ScriptComponent; behavior: Behavior }
+  | { type: "ANIMATOR"; data: AnimatorComponent; behavior: AnimatorController }
   | { type: "AUDIO"; data: AudioComponent; sound: StaticSound }
   | { type: "GUI"; data: GuiComponent; texture: AdvancedDynamicTexture }
   | { type: "PARTICLE"; data: ParticleComponent; system: IParticleSystem; emptyEmitter?: Vector3 }
@@ -67,7 +70,12 @@ export function SyncConvenienceFields(entity: Entity): void
   entity.body = physicsRow !== undefined && "body" in physicsRow ? physicsRow.body : undefined;
 
   entity.behaviors = entity.attachments
-    .filter((row): row is Extract<EntityAttachment, { type: "SCRIPT" }> => row.type === "SCRIPT")
+    .filter(
+      (row): row is
+        | Extract<EntityAttachment, { type: "SCRIPT" }>
+        | Extract<EntityAttachment, { type: "ANIMATOR" }> =>
+        row.type === "SCRIPT" || row.type === "ANIMATOR"
+    )
     .map((row) => row.behavior);
 
   entity.sounds = entity.attachments
@@ -159,11 +167,19 @@ export function RemoveAttachmentsOfType(
     return [];
   }
 
-  const toRemove = index === undefined
-    ? matches
-    : matches[index] !== undefined
-      ? [matches[index]]
-      : [];
+  let toRemove: typeof matches;
+  if (index === undefined)
+  {
+    toRemove = matches;
+  }
+  else if (matches[index] !== undefined)
+  {
+    toRemove = [matches[index]];
+  }
+  else
+  {
+    toRemove = [];
+  }
 
   const removed: EntityAttachment[] = [];
   for (const entry of [...toRemove].sort((left, right) => right.rowIndex - left.rowIndex))

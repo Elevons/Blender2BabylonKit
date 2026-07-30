@@ -1,6 +1,6 @@
 <h1>13 — Feature List</h1>
 <p class="doc-links">Pipeline detail per feature: <a href="10-FEATURE-TRACES.html">10 — Feature Traces</a> · Runtime API: <a href="14-API-GUIDE.html">14 — API Guide</a> · Behavior authoring: <a href="../LLM_SCRIPTING_CONTEXT.md">LLM_SCRIPTING_CONTEXT.md</a></p>
-<p>Everything the kit can author in Blender and consume at runtime, in one place. Use this page to answer <strong>“does the kit support X?”</strong> and <strong>“where do I click?”</strong> Follow the trace link when you need the step-by-step file chain.</p>
+<p>This page lists everything the kit can author in Blender and consume at runtime. Use it to answer <strong>&quot;does the kit support X?&quot;</strong> and <strong>&quot;where do I click?&quot;</strong> Follow the trace link when you need the step-by-step file chain.</p>
 
 <h2>I want to…</h2>
 <table><thead><tr><th>Goal</th><th>Start here</th></tr></thead><tbody>
@@ -25,6 +25,7 @@
 <table><thead><tr><th>Component</th><th>What it does (plain)</th><th>Runtime result</th><th>Trace</th></tr></thead><tbody>
 <tr><td><strong>TAG</strong></td><td>Text label for queries and Event Message filters</td><td><code>entity.tag</code>, attachment row</td><td><a href="10-FEATURE-TRACES.html#tag">feature trace</a></td></tr>
 <tr><td><strong>SCRIPT</strong></td><td>Attach a TypeScript behavior + tunable <code>@exposed</code> fields</td><td><code>Behavior</code> instance on <code>entity.behaviors</code></td><td><a href="10-FEATURE-TRACES.html#script">feature trace</a> · <a href="trace-exposed.html">trace-exposed</a></td></tr>
+<tr><td><strong>ANIMATOR</strong></td><td>Action-clip state machine (node graph on the armature; clip names = Action names)</td><td>Built-in <code>AnimatorController</code> on <code>entity.behaviors</code></td><td><a href="10-FEATURE-TRACES.html#animator">feature trace</a> · <a href="08-AUDIO-ANIMATION.html">08 — Audio &amp; Animation</a></td></tr>
 <tr><td><strong>COLLIDER</strong></td><td>Collision shape (box, sphere, convex, mesh, …); optional Event Messages</td><td>Part of one <code>PhysicsBody</code> per entity (compound if several)</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a> · <a href="trace-physics.html">trace-physics</a></td></tr>
 <tr><td><strong>RIGIDBODY</strong></td><td>Mass, friction, dynamics (static / dynamic / animated)</td><td>Same body as colliders on that object</td><td><a href="10-FEATURE-TRACES.html#collider">feature trace</a></td></tr>
 <tr><td><strong>CONSTRAINT</strong></td><td>Physics joint to another body (hinge, slider, 6DoF, …)</td><td>Havok constraint on <code>level.constraints</code></td><td><a href="10-FEATURE-TRACES.html#constraint">feature trace</a> · <a href="trace-constraint.html">trace-constraint</a></td></tr>
@@ -49,16 +50,16 @@
 </tbody></table>
 
 <h2>Auto-derived per object (no component row)</h2>
-<p>These come from ordinary Blender objects and export blocks on the entity — you do not add a component for them.</p>
+<p>These come from ordinary Blender objects and export blocks on the entity. You do not add a component for them.</p>
 <table><thead><tr><th>Blender object</th><th>Manifest block</th><th>Runtime</th><th>Trace</th></tr></thead><tbody>
 <tr><td><strong>Lamp</strong></td><td><code>light</code> (+ optional <code>shadow</code>)</td><td>Babylon light; may cast shadows</td><td><a href="10-FEATURE-TRACES.html#light">lights</a> · <a href="trace-lights.html">trace-lights</a></td></tr>
 <tr><td><strong>Camera</strong></td><td><code>camera</code></td><td>FreeCamera (+ optional CAMERA component override)</td><td><a href="10-FEATURE-TRACES.html#camera">camera</a></td></tr>
-<tr><td><strong>NLA strips</strong></td><td><code>animation</code></td><td>Autoplay chosen clip after load</td><td><a href="10-FEATURE-TRACES.html#animation">animation</a></td></tr>
+<tr><td><strong>NLA / Actions</strong></td><td><code>animation</code></td><td>Autoplay chosen Action clip after load (ACTIONS export mode)</td><td><a href="10-FEATURE-TRACES.html#animation">animation</a></td></tr>
 <tr><td><strong>Mesh + material</strong></td><td>— (geometry in glb)</td><td>Imported mesh; optional NME override via material</td><td><a href="10-FEATURE-TRACES.html#materials">materials</a></td></tr>
 </tbody></table>
 
 <h2>Scene-wide settings (<code>scene</code> block)</h2>
-<p>Edited in <strong>Babylon Scene</strong>; serialized into the manifest’s <code>scene</code> object (not per-entity components).</p>
+<p>Edit these in <strong>Babylon Scene</strong>. Export serializes them into the manifest&apos;s <code>scene</code> object. They are not per-entity components.</p>
 <table><thead><tr><th>Feature</th><th>What it does</th><th>Prose</th><th>Trace</th></tr></thead><tbody>
 <tr><td><strong>Clear / ambient color</strong></td><td>Background and fill light</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="trace-load.html">trace-load</a></td></tr>
 <tr><td><strong>Environment / skybox</strong></td><td>IBL from World texture or default studio HDR</td><td><a href="07-RENDERING.html">07 — Rendering</a></td><td><a href="../blender/scene-settings.html">scene-settings</a></td></tr>
@@ -110,11 +111,11 @@
 <ul>
 <li><strong>MESH-shaped triggers never fire</strong> — use box/sphere/convex for triggers. Validator warns.</li>
 <li><strong>Skinned mesh object</strong> — put GUID, animation, and scripts on the <strong>armature</strong>, not the mesh. Validator warns.</li>
-<li><strong>MESH collider + DYNAMIC body</strong> — not supported; validator warns.</li>
-<li><strong>AREA lights</strong> — not exported to glTF; use SUN/POINT/SPOT.</li>
+<li><strong>MESH collider + DYNAMIC body</strong> — not supported. Validator warns.</li>
+<li><strong>AREA lights</strong> — not exported to glTF. Use SUN/POINT/SPOT.</li>
 <li><strong>Hook names must be PascalCase</strong> — <code>OnStart</code>, not <code>onStart</code>, or they never run.</li>
-<li><strong>GUID matching needs ExtrasAsMetadata</strong> — the loader imports this glTF extension; without it, entities fail to match nodes.</li>
-<li><strong>Paint masks need COLOR_1+</strong> — stock Babylon drops glTF <code>COLOR_1+</code>; LevelLoader registers <code>bjs_extra_vertex_colors</code>. Blender may invent an all-white <code>COLOR_0</code> and put real paint in <code>COLOR_1</code> — see <code>populateprefabs.ts</code> / <a href="../blender/PREFABS.html">Prefabs</a>.</li>
+<li><strong>GUID matching needs ExtrasAsMetadata</strong> — the loader imports this glTF extension. Without it, entities fail to match nodes.</li>
+<li><strong>Paint masks need COLOR_1+</strong> — stock Babylon drops glTF <code>COLOR_1+</code>. LevelLoader registers <code>bjs_extra_vertex_colors</code>. Blender may invent an all-white <code>COLOR_0</code> and put real paint in <code>COLOR_1</code>. See <code>populateprefabs.ts</code> and <a href="../blender/PREFABS.html">Prefabs</a>.</li>
 <li><strong>Right-handed glTF import</strong> — required for correct collider orientation (<a href="06-PHYSICS.html#right-handed">why</a>).</li>
 <li><strong>3D GUI button content</strong> — text/images must be applied <em>after</em> the control is added to a panel (<a href="11-UI.html">11 — UI</a>).</li>
 </ul>

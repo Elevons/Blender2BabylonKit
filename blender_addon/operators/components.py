@@ -10,7 +10,7 @@ from ..core.bounds import compute_local_bounds
 from ..core.ids import ensure_object_id
 from ..core.inspector import inspector_object
 from ..core.prop_copy import remove_collection_item
-from ..components.constants import ADD_COMPONENT_MENU
+from ..components.constants import ADD_COMPONENT_MENU, component_type_label
 from ..components.exposed_vars import add_list_item
 from ..components.clipboard import copy_component
 from ..components.particle_scan import sync_component_particle_textures
@@ -50,6 +50,7 @@ class BJS_OT_add_component(Operator):
         ensure_object_id(obj)  # entity gets a stable GUID as soon as it has a component
         comp = obj.bjs_components.add()
         comp.comp_type = self.comp_type
+        comp.display_name = component_type_label(self.comp_type)
         obj.bjs_components_index = len(obj.bjs_components) - 1
         return {'FINISHED'}
 

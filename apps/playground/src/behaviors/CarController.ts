@@ -3,6 +3,7 @@ import type { ConstraintAxisName, ConstraintComponent, InputActionMap } from "@b
 import {
   Color3,
   LinesMesh,
+  Matrix,
   MeshBuilder,
   Physics6DoFConstraint,
   PhysicsConstraintAxis,
@@ -122,18 +123,17 @@ export default class CarController extends Behavior
   playerEntity: Entity | null = null;
 
   /**
-   * Distance (meters) below the body to raycast each frame.  When the ray
-   * misses (car is in the air) the velocity assist and angular assist are
-   * skipped so the car arcs naturally instead of being snapped back to
-   * the ground.
+   * Distance (meters) below each wheel to raycast each frame.  When a wheel's
+   * ray misses (wheel is in the air) that wheel's motor is skipped and the
+   * body velocity/angular assists are withheld until at least one wheel hits
+   * ground again.
    */
   @exposed({ min: 0.05, max: 5, label: "Ground Raycast Distance (m)" })
   groundRaycastDistance = 0.5;
 
   /**
-   * Draw the ground raycast as a colored line (green = grounded, red = airborne)
-   * and log the hit each frame.  Leave off in shipping builds — the per-frame
-   * console.log alone is enough to visibly cost framerate.
+   * Draw each wheel's ground raycast as a colored line (green = grounded,
+   * red = airborne).  Leave off in shipping builds.
    */
   @exposed({ label: "Debug Ground Ray" })
   debugGroundRay = false;
@@ -151,25 +151,32 @@ export default class CarController extends Behavior
   private debounceTime = Date.now();
   /** Current ramped forward speed used by the velocity assist so it doesn't snap. */
   private rampedSpeed = 0;
+  /** Per-wheel grounded state aligned with CollectWheelEntities() slot order. */
+  private wheelGrounded: boolean[] = [];
   /** Reusable raycast result — must be pooled between calls (BJS V2 physics). */
   private raycastResult = new PhysicsRaycastResult();
-  /** Debug line showing the ground raycast each frame; null when debug is off. */
-  private debugLine: LinesMesh | null = null;
-  /** Scratch vectors so the per-frame raycast doesn't allocate. */
+  /** Debug line per wheel slot; null entries when debug is off or unassigned. */
+  private debugLines: (LinesMesh | null)[] = [];
+  /** Scratch vectors and matrix so the per-frame raycast doesn't allocate. */
   private rayStart = new Vector3();
   private rayEnd = new Vector3();
+  private rayDirection = new Vector3();
+  private rayWorldMatrix = Matrix.Identity();
   /** Reused point array for the CreateLines instance update. */
   private debugPoints: Vector3[] = [new Vector3(), new Vector3()];
 
   OnStart(): void
   {
-    this.wheelDrives = this.CollectWheelEntities().map(
+    const wheelEntities = this.CollectWheelEntities();
+    this.wheelDrives = wheelEntities.map(
       (wheelEntity) => this.ResolveWheelDrive(wheelEntity)
     );
+    this.wheelGrounded = wheelEntities.map(() => false);
+    this.debugLines = wheelEntities.map(() => null);
 
     if (this.debugGroundRay)
     {
-      this.CreateDebugLine();
+      this.CreateDebugLines();
     }
   }
 
@@ -222,23 +229,23 @@ export default class CarController extends Behavior
       ? this.CollectWheelEntities().map(() => 0)
       : this.ComputeWheelSpeeds(throttle, steer);
 
+    // Per-wheel ground rays update debug lines and wheelGrounded[] even while placing.
+    const anyWheelGrounded = this.UpdateWheelGroundStates();
+
     for (let slotIndex = 0; slotIndex < this.wheelDrives.length; slotIndex++)
     {
       const drive = this.wheelDrives[slotIndex];
       if (drive !== undefined)
       {
-        this.SetWheelMotor(drive, speeds[slotIndex]);
+        const wheelSpeed = this.wheelGrounded[slotIndex] ? speeds[slotIndex] : 0;
+        this.SetWheelMotor(drive, wheelSpeed);
       }
     }
 
-    // Evaluate the ground check unconditionally so the debug line keeps updating
-    // during the recover maneuver instead of freezing at its last position.
-    const grounded = this.IsGrounded();
-
     // Cheat: directly nudge the body so the car feels instant rather than
     // waiting for wheel friction → ground reaction → body movement.
-    // Only apply assists when the car is grounded.
-    if (!this.isPlacing && grounded)
+    // Only apply assists when at least one wheel is grounded.
+    if (!this.isPlacing && anyWheelGrounded)
     {
       this.ApplyVelocityAssist(throttle, steer, deltaSeconds);
     }
@@ -246,8 +253,11 @@ export default class CarController extends Behavior
 
   OnDestroy(): void
   {
-    this.debugLine?.dispose();
-    this.debugLine = null;
+    for (const debugLine of this.debugLines)
+    {
+      debugLine?.dispose();
+    }
+    this.debugLines = [];
   }
 
   /** Wheel entity slots in hinge order: four corners, outer then inner per corner. */
@@ -574,31 +584,66 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Cast a downward ray from the body to determine if the car is on the ground.
-   * Returns true when the ray intersects any collider within groundRaycastDistance.
+   * Raycast each assigned wheel from its world position along the body mesh's
+   * local down axis and refresh wheelGrounded[]. Returns true when at least
+   * one wheel hits ground.
    */
-   private IsGrounded(): boolean
-     {
-       if (!this.body)
-       {
-         return false;
-       }
+  private UpdateWheelGroundStates(): boolean
+  {
+    const wheelEntities = this.CollectWheelEntities();
+    let anyWheelGrounded = false;
 
-       const node = this.body.node;
+    for (let slotIndex = 0; slotIndex < wheelEntities.length; slotIndex++)
+    {
+      const wheelEntity = wheelEntities[slotIndex];
+      if (wheelEntity === null)
+      {
+        this.wheelGrounded[slotIndex] = false;
+        continue;
+      }
 
-       // Property, not getAbsolutePosition() — the method calls computeWorldMatrix()
-       // and stamps the result with the current render id. Called from OnUpdate
-       // (pre-physics-step), that caches a stale transform for the rest of the frame
-       // and anything reading the cached matrix afterwards renders a frame behind.
-       this.rayStart.copyFrom(node.parent ? node.absolutePosition : node.position);
-       this.rayEnd.copyFrom(this.rayStart);
-       this.rayEnd.y -= this.groundRaycastDistance;
+      const grounded = this.RaycastWheelGround(wheelEntity);
+      this.wheelGrounded[slotIndex] = grounded;
+      if (grounded)
+      {
+        anyWheelGrounded = true;
+      }
 
-       this.scene.getPhysicsEngine()?.raycastToRef(
-         this.rayStart,
-         this.rayEnd,
-         this.raycastResult
-       );
+      if (this.debugGroundRay)
+      {
+        this.UpdateDebugLine(slotIndex, grounded);
+      }
+    }
+
+    return anyWheelGrounded;
+  }
+
+  /**
+   * Cast a ray from the wheel's world position along the body mesh's local down
+   * axis so spinning wheels don't skew the direction. Returns true when the
+   * ray intersects any collider within groundRaycastDistance.
+   */
+  private RaycastWheelGround(wheelEntity: Entity): boolean
+  {
+    const wheelMatrix = wheelEntity.node.getWorldMatrix();
+    this.rayStart.set(
+      wheelMatrix.m[12],
+      wheelMatrix.m[13],
+      wheelMatrix.m[14]
+    );
+
+    const orientationNode = this.body?.node ?? this.node;
+    this.rayWorldMatrix.copyFrom(orientationNode.getWorldMatrix());
+    this.rayDirection.set(0, -1, 0);
+    Vector3.TransformNormalToRef(this.rayDirection, this.rayWorldMatrix, this.rayDirection);
+    this.rayEnd.copyFrom(this.rayStart);
+    this.rayEnd.addInPlace(this.rayDirection.scale(this.groundRaycastDistance));
+
+    this.scene.getPhysicsEngine()?.raycastToRef(
+      this.rayStart,
+      this.rayEnd,
+      this.raycastResult
+    );
 
     let grounded = this.raycastResult.hasHit;
 
@@ -612,61 +657,64 @@ export default class CarController extends Behavior
       grounded = false;
     }
 
-    if (this.debugGroundRay)
-    {
-      this.UpdateDebugLine(grounded);
-    }
-
     return grounded;
   }
 
   /**
-   * Create the debug line once.  Two details matter here:
+   * Create one debug line per wheel slot.  Two details matter here:
    *  - `updatable: true` is required for the CreateLines instance update below.
    *  - `alwaysSelectAsActiveMesh` skips frustum culling.  The mesh's bounding
    *    info is computed at creation and never refreshed when we move the
    *    vertices, so without this it gets culled the moment the car leaves the
    *    area the bounding box was built around.
    */
-  private CreateDebugLine(): void
+  private CreateDebugLines(): void
   {
-    if (this.debugLine)
+    const wheelEntities = this.CollectWheelEntities();
+
+    for (let slotIndex = 0; slotIndex < wheelEntities.length; slotIndex++)
     {
-      return;
-    }
-
-    this.debugLine = MeshBuilder.CreateLines(
-      "groundRaycastDebug",
+      if (wheelEntities[slotIndex] === null || this.debugLines[slotIndex] !== null)
       {
-        points: [Vector3.Zero(), Vector3.Zero()],
-        updatable: true,
-      },
-      this.scene
-    );
+        continue;
+      }
 
-    this.debugLine.alwaysSelectAsActiveMesh = true;
-    this.debugLine.isPickable = false;
-    // NOTE: isEnabled is a *method* on Node — `mesh.isEnabled = true` shadows it
-    // with a boolean and Babylon throws when it later calls mesh.isEnabled().
-    // Use setEnabled() if you ever need to toggle it.
-    this.debugLine.setEnabled(true);
+      const debugLine = MeshBuilder.CreateLines(
+        `groundRaycastDebug_${slotIndex}`,
+        {
+          points: [Vector3.Zero(), Vector3.Zero()],
+          updatable: true,
+        },
+        this.scene
+      );
+
+      debugLine.alwaysSelectAsActiveMesh = true;
+      debugLine.isPickable = false;
+      // NOTE: isEnabled is a *method* on Node — `mesh.isEnabled = true` shadows it
+      // with a boolean and Babylon throws when it later calls mesh.isEnabled().
+      // Use setEnabled() if you ever need to toggle it.
+      debugLine.setEnabled(true);
+      this.debugLines[slotIndex] = debugLine;
+    }
   }
 
   /**
-   * Move the debug line onto the current ray and recolor it.  Uses the
+   * Move one wheel's debug line onto the current ray and recolor it.  Uses the
    * CreateLines `instance` overload rather than setVerticesData so Babylon
    * updates the vertex buffer through its own path.  Color comes from
    * LinesMesh.color, not a vertex-color buffer — LinesMesh bakes its
    * useVertexColor define at construction, so a colors buffer added afterwards
    * is ignored by the shader.
    */
-  private UpdateDebugLine(grounded: boolean): void
+  private UpdateDebugLine(slotIndex: number, grounded: boolean): void
   {
-    if (!this.debugLine)
+    if (this.debugLines[slotIndex] === null)
     {
-      this.CreateDebugLine();
+      this.CreateDebugLines();
     }
-    if (!this.debugLine)
+
+    let debugLine = this.debugLines[slotIndex];
+    if (debugLine === null)
     {
       return;
     }
@@ -675,16 +723,17 @@ export default class CarController extends Behavior
     this.debugPoints[0].copyFrom(this.rayStart);
     this.debugPoints[1].copyFrom(endPoint);
 
-    this.debugLine = MeshBuilder.CreateLines(
-      "groundRaycastDebug",
+    debugLine = MeshBuilder.CreateLines(
+      `groundRaycastDebug_${slotIndex}`,
       {
         points: this.debugPoints,
-        instance: this.debugLine,
+        instance: debugLine,
       },
       this.scene
     );
 
-    this.debugLine.color = grounded ? Color3.Green() : Color3.Red();
+    debugLine.color = grounded ? Color3.Green() : Color3.Red();
+    this.debugLines[slotIndex] = debugLine;
   }
 
   /**

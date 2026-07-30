@@ -1,3 +1,5 @@
+import { ScoreKeywordMatches, Tokenize } from "./keywords.js";
+
 export interface Recipe
 {
   name: string;
@@ -111,6 +113,7 @@ export const RECIPES: Recipe[] = [
     pitfalls: [
       "Attach behavior to the armature entity, not the skinned mesh.",
       "Need 2+ animation clips on the entity.",
+      "For Idle/Walk FSMs prefer ANIMATOR (playbook animator-fsm) instead of cycling in script. Clip names = Action names.",
     ],
     exposedFields: [
       '@exposed({ min: 0.5, label: "Switch every (s)" }) interval = 3',
@@ -219,7 +222,8 @@ export const RECIPES: Recipe[] = [
     hooks: ["OnStart", "OnDestroy"],
     referenceBehavior: "TrainCamera.ts",
     pitfalls: [
-      "Collision is line-of-sight raycast from target to camera — not a trigger probe.",
+      "Collision is line-of-sight physics raycast from target to camera — not pickWithRay and not a trigger probe.",
+      "Use scene.getPhysicsEngine()?.raycastToRef — pickWithRay only hits pickable meshes, not Havok colliders.",
       "attachControl enables drag orbit and wheel zoom; clamp radius after pointer input via onBeforeRender.",
       "Sets scene.activeCamera — only one active camera per scene.",
       "Copy authored FOV/clip with FindCameraForNode + CopyLens before activating the new camera.",
@@ -307,15 +311,32 @@ export const RECIPES: Recipe[] = [
     name: "reveal-on-message",
     description: "Show a hidden entity when a trigger or SendMessage delivers a matching message.",
     keywords: ["reveal", "show", "hidden", "invisible", "visibility", "trigger", "eye"],
-    hooks: ["OnMessage"],
+    hooks: ["OnStart", "OnMessage"],
     referenceBehavior: "",
     pitfalls: [
-      "Viewport-hidden and Make Invisible entities load with isVisible = false — this only toggles runtime visibility.",
-      "Re-enable child lights with getLightByName when the entity is a lamp.",
+      "Viewport-hidden and Make Invisible entities load hidden via HideEntityNode — physics and scripts still run.",
+      "Load hide keeps entity.active === true, so SetEntityActive(entity, true) alone is a no-op — disable in OnStart, then enable on message.",
       "Render-disabled objects are not exported — they cannot be revealed.",
     ],
     exposedFields: [
       '@exposed({ label: "Reveal on message" }) revealMessage = "reveal"',
+    ],
+  },
+  {
+    name: "toggle-entity-active",
+    description: "Enable or disable target entities at runtime (full SetActive — ToggleInWater pattern).",
+    keywords: ["setactive", "enable", "disable", "toggle", "underwater", "zone", "active"],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "ToggleInWater.ts",
+    pitfalls: [
+      "Use SetEntityActive — not isVisible alone (physics and OnUpdate keep running).",
+      "Poll IsEntityInsideColliderVolume when the probe host is not the sample point.",
+      "Set resting state in OnStart before the first inside test.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "entity", label: "Volume" }) volume: Entity | null = null',
+      '@exposed({ type: "entity", label: "Probe" }) probe: Entity | null = null',
+      '@exposed({ type: "list", of: "entity", label: "Targets" }) targets: (Entity | null)[] = []',
     ],
   },
   {
@@ -371,6 +392,68 @@ export const RECIPES: Recipe[] = [
     ],
   },
   {
+    name: "animator-driver",
+    description:
+      "Thin SCRIPT driver for an ANIMATOR component — SetFloat / SetTrigger from input or logic.",
+    keywords: [
+      "animator",
+      "driveanimator",
+      "setfloat",
+      "settrigger",
+      "fsm driver",
+      "locomotion driver",
+      "animatorcontroller",
+    ],
+    hooks: ["OnStart", "OnUpdate"],
+    referenceBehavior: "DriveAnimator.ts",
+    pitfalls: [
+      "Attach SCRIPT and ANIMATOR to the armature, not the skinned mesh.",
+      "Author the FSM in Blender (ANIMATOR graph) — do not reimplement states in TypeScript.",
+      "Turn off Animation panel autoplay when Animator owns playback.",
+      "Clip / State names = Blender Action names (glTF ACTIONS export).",
+      "list_input_actions for real Move / Jump action names.",
+    ],
+    exposedFields: ['@exposed({ min: 0, label: "Speed scale" }) speedScale = 1'],
+  },
+  {
+    name: "pool-prefab-spawner",
+    description:
+      "Maintain a fixed pool of prefab instances — interval spawn, grow-in, lifetime, shrink, dispose (see animalSpawner).",
+    keywords: [
+      "pool",
+      "interval",
+      "grow",
+      "shrink",
+      "lifetime",
+      "recycle",
+      "steady",
+      "fish",
+      "animal",
+      "dispose",
+      "count",
+      "animalspawner",
+    ],
+    hooks: ["OnStart", "OnUpdate", "OnDestroy"],
+    referenceBehavior: "animalSpawner.ts",
+    pitfalls: [
+      "Use parent: null when instances must stay in world space (not follow spawner parent).",
+      "Pass scaling: Vector3.Zero() in SpawnOptions for grow-in — do not spawn at full scale then hide.",
+      "Do NOT use deferShadowRefresh — interval spawns need immediate shadow registration.",
+      "Sample spawn positions in world space from a volume collider each spawn.",
+      "await this.spawner.Spawn — never node.clone() + copy attachments.",
+      "See animalSpawner.ts for trigger gating, shrink-out, and pool refill.",
+    ],
+    exposedFields: [
+      '@exposed({ type: "list", of: "entity", label: "Prefabs", spawnTemplate: true }) prefabs: (Entity | null)[] = []',
+      '@exposed({ type: "entity", label: "Spawn volume (collider)" }) spawnVolume: Entity | null = null',
+      '@exposed({ min: 1, step: 1, label: "Spawn count" }) spawnCount = 10',
+      '@exposed({ min: 0, step: 0.1, label: "Spawn interval (s)" }) spawnInterval = 0.5',
+      '@exposed({ min: 0.1, max: 300, label: "Min lifetime (s)" }) lifetimeMin = 60',
+      '@exposed({ min: 0.1, max: 600, label: "Max lifetime (s)" }) lifetimeMax = 120',
+      '@exposed({ min: 0.1, max: 30, step: 0.1, label: "Grow duration (s)" }) growDuration = 3',
+    ],
+  },
+  {
     name: "scatter-prefab-spawner",
     description:
       "Spawn full prefab instances of an @exposed template entity at authored positions, or paint-scatter on a mesh Color Attribute (see populateprefabs).",
@@ -392,16 +475,19 @@ export const RECIPES: Recipe[] = [
     referenceBehavior: "populateprefabs.ts",
     pitfalls: [
       "Use await this.spawner.Spawn(template, { position }) — never node.clone() + copy attachments.",
+      "Spawn hides the template by default when each call starts — pass keepTemplate: true to leave the source visible.",
       "Template is any in-level entity (linked collection root or in-scene hierarchy).",
-      "Call await this.spawner.HideTemplate(template) for in-scene templates — hides visuals and tears down live components (physics/scripts/…); Spawn still rebuilds from EntityData. Or hide in Blender with the viewport eye icon.",
+      "Hide templates in Blender (viewport eye) when they should never appear at load.",
       "REFLECTION_PROBE on templates is skipped at spawn with a console warning; LOD works when its target meshes live inside the template hierarchy, are real scene members in Blender (orphan override children never export — 'target not found'), and own unique mesh data (InstancedMesh targets are rejected by Babylon LOD).",
       "Cameras spawn per instance with remapped targets but are never auto-activated — set scene.activeCamera = handle.cameras[0] explicitly.",
+      "Animated templates: manifest animation block auto-plays per instance — spawn clones skeleton + AnimationGroups (independent timelines from frame 0). Templates hide at spawn start by default; use @exposed({ spawnTemplate: true }) for deferred spawners.",
+      "Multi-spawn loops: deferShadowRefresh: true on each Spawn, then spawner.FlushSpawnShadowRefresh() once (populateprefabs.ts). Do not defer for interval spawners — shadows register per spawn.",
       "Spawn is async — call from OnStart via void this.SpawnAll().catch(...) or an async helper.",
       "Paint-scatter: leave color kind blank (auto). Blender may put real paint in COLOR_1 with a fake all-white COLOR_0 — do not require RGB >= 0.99; use luminance threshold (~0.5).",
       "Blender Color Attribute names (Color.001) are not glTF kinds — getVerticesData(\"Color.001\") fails; use COLOR_0 / COLOR_1 or auto-pick.",
     ],
     exposedFields: [
-      '@exposed({ type: "list", of: "entity", label: "Prefabs" }) prefabs: (Entity | null)[] = []',
+      '@exposed({ type: "list", of: "entity", label: "Prefabs", spawnTemplate: true }) prefabs: (Entity | null)[] = []',
       '@exposed({ type: "entity", label: "Target mesh" }) target: Entity | null = null',
       '@exposed({ type: "list", of: "vector3", label: "Spawn points" }) points: Vector3[] = []',
       '@exposed({ min: 0, max: 1, step: 0.05, label: "Paint luminance threshold" }) paintThreshold = 0.5',
@@ -413,7 +499,7 @@ export const RECIPES: Recipe[] = [
 export function FindRecipesByIntent(intent: string): Recipe[]
 {
   const normalized = intent.toLowerCase();
-  const tokens = normalized.split(/\W+/).filter((token) => token.length > 1);
+  const tokens = Tokenize(intent);
 
   const scored = RECIPES.map((recipe) =>
   {
@@ -424,21 +510,7 @@ export function FindRecipesByIntent(intent: string): Recipe[]
       score += 10;
     }
 
-    for (const keyword of recipe.keywords)
-    {
-      if (normalized.includes(keyword))
-      {
-        score += 5;
-      }
-
-      for (const token of tokens)
-      {
-        if (keyword.includes(token) || token.includes(keyword))
-        {
-          score += 2;
-        }
-      }
-    }
+    score += ScoreKeywordMatches(normalized, tokens, recipe.keywords);
 
     if (recipe.description.toLowerCase().split(/\W+/).some((word) => tokens.includes(word)))
     {
@@ -1219,13 +1291,20 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "reveal-on-message": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "reveal-on-message": (className) => `import { Behavior, exposed, SetEntityActive, type Entity } from "@bjs/engine";
 
 /** Reveals this entity when a matching message arrives (trigger or SendMessage). */
 export default class ${className} extends Behavior
 {
   @exposed({ label: "Reveal on message" })
   revealMessage = "reveal";
+
+  OnStart(): void
+  {
+    // Load hide keeps entity.active === true, so create a real transition first —
+    // otherwise the enable below would be a no-op.
+    SetEntityActive(this.entity, false);
+  }
 
   OnMessage(message: string, _source: Entity): void
   {
@@ -1234,12 +1313,71 @@ export default class ${className} extends Behavior
       return;
     }
 
-    this.node.isVisible = true;
+    SetEntityActive(this.entity, true);
+  }
+}
+`,
 
-    const light = this.scene.getLightByName(this.entity.name);
-    if (light !== null)
+  "toggle-entity-active": (className) => `import { Behavior, exposed, IsEntityInsideColliderVolume, SetEntityActive } from "@bjs/engine";
+import type { AttachmentOfType, Entity } from "@bjs/engine";
+
+/** Toggle target entities when a probe enters or exits a trigger volume. */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "entity", label: "Volume" })
+  volume: Entity | null = null;
+
+  @exposed({ type: "entity", label: "Probe" })
+  probe: Entity | null = null;
+
+  @exposed({ type: "list", of: "entity", label: "Targets" })
+  targets: (Entity | null)[] = [];
+
+  private volumeAttachment: AttachmentOfType<"COLLIDER"> | undefined;
+  private probeInside = false;
+
+  OnStart(): void
+  {
+    if (this.volume !== null)
     {
-      light.setEnabled(true);
+      this.volumeAttachment = this.volume.GetAttachment("COLLIDER");
+    }
+
+    this.ApplyTargets(false);
+    this.probeInside = this.IsProbeInsideVolume();
+    this.ApplyTargets(this.probeInside);
+  }
+
+  OnUpdate(_deltaSeconds: number): void
+  {
+    const inside = this.IsProbeInsideVolume();
+    if (inside === this.probeInside)
+    {
+      return;
+    }
+
+    this.probeInside = inside;
+    this.ApplyTargets(inside);
+  }
+
+  private IsProbeInsideVolume(): boolean
+  {
+    if (this.volume === null || this.probe === null)
+    {
+      return false;
+    }
+
+    return IsEntityInsideColliderVolume(this.probe, this.volume, this.volumeAttachment);
+  }
+
+  private ApplyTargets(active: boolean): void
+  {
+    for (const target of this.targets)
+    {
+      if (target !== null)
+      {
+        SetEntityActive(target, active);
+      }
     }
   }
 }
@@ -1410,7 +1548,7 @@ import { Vector3 } from "@babylonjs/core";
  */
 export default class ${className} extends Behavior
 {
-  @exposed({ type: "entity", label: "Prefab" })
+  @exposed({ type: "entity", label: "Prefab", spawnTemplate: true })
   prefab: Entity | null = null;
 
   @exposed({ type: "list", of: "vector3", label: "Spawn points" })
@@ -1443,8 +1581,121 @@ export default class ${className} extends Behavior
     {
       await this.spawner.Spawn(this.prefab, {
         position: point.clone(),
+        deferShadowRefresh: true,
       });
     }
+
+    this.spawner.FlushSpawnShadowRefresh();
+  }
+}
+`,
+
+  "animator-driver": (className) => `import { Behavior, exposed, type AnimatorController } from "@bjs/engine";
+
+/**
+ * Thin driver for an ANIMATOR component on the same entity (the armature).
+ * Sets animator parameters from input — the FSM graph lives in Blender.
+ */
+export default class ${className} extends Behavior
+{
+  @exposed({ min: 0, label: "Speed scale" })
+  speedScale = 1;
+
+  private animator: AnimatorController | undefined;
+
+  OnStart(): void
+  {
+    const attachment = this.entity.GetAttachment("ANIMATOR");
+    if (attachment === undefined || attachment.type !== "ANIMATOR")
+    {
+      console.warn(
+        \`[${className}] no ANIMATOR on "\${this.entity.name}" — attach Animator in Blender\`
+      );
+      return;
+    }
+
+    this.animator = attachment.behavior;
+  }
+
+  OnUpdate(_deltaSeconds: number): void
+  {
+    if (this.animator === undefined)
+    {
+      return;
+    }
+
+    const move = this.input?.FindAction("Move");
+    const magnitude = move !== undefined ? move.ReadValue() : 0;
+    this.animator.SetFloat("Speed", magnitude * this.speedScale);
+  }
+}
+`,
+
+  "pool-prefab-spawner": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Vector3 } from "@babylonjs/core";
+
+/**
+ * Maintains a fixed pool of prefab instances. Spawns at intervals with
+ * grow-in scaling; disposes and replaces when lifetime expires.
+ * See animalSpawner.ts for trigger gating, shrink-out, and volume sampling.
+ */
+export default class ${className} extends Behavior
+{
+  @exposed({ type: "list", of: "entity", label: "Prefabs", spawnTemplate: true })
+  prefabs: (Entity | null)[] = [];
+
+  @exposed({ type: "entity", label: "Spawn volume (collider)" })
+  spawnVolume: Entity | null = null;
+
+  @exposed({ min: 1, step: 1, label: "Spawn count" })
+  spawnCount = 10;
+
+  @exposed({ min: 0, step: 0.1, label: "Spawn interval (s)" })
+  spawnInterval = 0.5;
+
+  @exposed({ min: 0.1, max: 300, label: "Min lifetime (s)" })
+  lifetimeMin = 60;
+
+  @exposed({ min: 0.1, max: 600, label: "Max lifetime (s)" })
+  lifetimeMax = 120;
+
+  @exposed({ min: 0.1, max: 30, step: 0.1, label: "Grow duration (s)" })
+  growDuration = 3;
+
+  private readonly zeroScale = new Vector3(0, 0, 0);
+
+  OnStart(): void
+  {
+    void this.FillPool().catch((error) =>
+    {
+      console.error("[${className}] spawn failed", error);
+    });
+  }
+
+  OnUpdate(_deltaSeconds: number): void
+  {
+    // Tick lifetimes, lerp grow/shrink scales, dispose expired — see animalSpawner.ts
+  }
+
+  /** Spawn one instance at a world position — parent: null, zero initial scale. */
+  private async SpawnOne(template: Entity, position: Vector3): Promise<Entity | null>
+  {
+    const targetScale = template.node.scaling.clone();
+
+    const handle = await this.spawner.Spawn(template, {
+      position,
+      parent: null,
+      scaling: this.zeroScale,
+    });
+
+    // Lerp handle.rootEntity.node.scaling from zero → targetScale in OnUpdate
+    return handle.rootEntity;
+  }
+
+  private async FillPool(): Promise<void>
+  {
+    // Sample spawnVolume collider bounds in world space; call SpawnOne on an interval
+    // Do NOT pass deferShadowRefresh — spawns are spread over time
   }
 }
 `,

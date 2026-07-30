@@ -40,10 +40,9 @@
         "scale": 0.5
       },
       "ssao": false,
-      "toneMapping": true,
-      "exposure": 1.5,
-      "contrast": 2.0,
-      "toneMappingType": "ACES",
+      "toneMapping": false,
+      "exposure": 1.0,
+      "contrast": 1.0,
       "sharpen": {
         "enabled": true,
         "edgeAmount": 0.30000001192092896,
@@ -55,25 +54,6 @@
         "stretch": 0.0,
         "centerX": 0.0,
         "centerY": 0.0
-      },
-      "colorCurves": {
-        "enabled": true,
-        "globalHue": 30.0,
-        "globalDensity": 0.0,
-        "globalSaturation": 0.0,
-        "globalExposure": 0.0,
-        "highlightsHue": 30.0,
-        "highlightsDensity": 0.0,
-        "highlightsSaturation": 0.0,
-        "highlightsExposure": 1.0,
-        "midtonesHue": 30.0,
-        "midtonesDensity": 0.0,
-        "midtonesSaturation": 0.0,
-        "midtonesExposure": 0.0,
-        "shadowsHue": 30.0,
-        "shadowsDensity": 0.0,
-        "shadowsSaturation": 0.0,
-        "shadowsExposure": 0.0
       }
     },
     "inputActions": {
@@ -317,6 +297,17 @@
                   "index": 0
                 }
               ]
+            },
+            {
+              "name": "Reset",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "r"
+                }
+              ]
             }
           ]
         }
@@ -340,7 +331,7 @@
     {
       "id": "822d77a3cdc1455bbf92a6869804df71",
       "name": "Camera",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "SCRIPT",
@@ -382,11 +373,27 @@
               "d3c7bd1fc8d14aca83cb5c5fa0c81da8",
               "6f550b0cc048439dba20d86963a1e8ee",
               "09cecd459b6f40649df0b8da4f5aefd2",
-              "b74c7dd2b833408bb7cd9060b64bfc6c",
-              "7cbb2ac58d1445589af85dae7e5d5a9c",
-              "3399f7eacac64ced85d883ed4c5711f6"
-            ]
+              "debd3e82c0c741799d065fa332247b51",
+              "999821435d0a4ba3af5b497f6135894b",
+              "ed7f5a235ab142f2965e0857e6432187"
+            ],
+            "maxDistance": 2000.0
           }
+        },
+        {
+          "type": "SCRIPT",
+          "script": "ToggleInWater",
+          "path": "//../src/behaviors/ToggleInWater.ts",
+          "vars": {
+            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "targetObjects": [
+              "d3c7bd1fc8d14aca83cb5c5fa0c81da8"
+            ],
+            "probe": "161b6bdb08f345e2b3e15276592a139e",
+            "debugLogs": true,
+            "enableInWater": true
+          },
+          "name": "TurnoffBubbles"
         }
       ],
       "camera": {
@@ -401,42 +408,21 @@
       "id": "161b6bdb08f345e2b3e15276592a139e",
       "name": "CameraBlock",
       "parent": "822d77a3cdc1455bbf92a6869804df71",
+      "components": []
+    },
+    {
+      "id": "66a3acd326744067aacea59309e9c78b",
+      "name": "Water Particles",
+      "parent": "822d77a3cdc1455bbf92a6869804df71",
       "components": [
         {
-          "type": "COLLIDER",
-          "shape": "BOX",
-          "isTrigger": true,
-          "makeInvisible": false,
-          "autoFit": false,
-          "applyObjectScale": true,
-          "size": [
-            20.0,
-            20.0,
-            20.0
-          ],
-          "radius": 0.5,
-          "height": 2.0,
-          "center": [
-            0.0,
-            0.0,
-            -0.0
-          ],
-          "rotation": [
-            0.0,
-            0.0,
-            -0.0,
-            1.0
-          ]
-        },
-        {
-          "type": "RIGIDBODY",
-          "bodyType": "ANIMATED",
-          "mass": 1.0,
-          "friction": 0.5,
-          "restitution": 0.20000000298023224,
-          "linearDamping": 0.0,
-          "angularDamping": 0.0,
-          "startAsleep": false
+          "type": "PARTICLE",
+          "file": "particles/siltparticles.json",
+          "gpu": false,
+          "autoStart": true,
+          "attachToEntity": true,
+          "capacity": 0,
+          "name": "Particles"
         }
       ]
     },
@@ -490,7 +476,7 @@
             ],
             "fogARange": [
               4000.0,
-              20000.0
+              18000.0
             ],
             "fogBColor": [
               0.012286488898098469,
@@ -498,9 +484,11 @@
               0.2704978883266449
             ],
             "fogBRange": [
-              0.0,
-              1000.0
-            ]
+              1000.0,
+              2000.0
+            ],
+            "outsideToneMap": "ACES",
+            "zoneLut": "post/Videofullness_FREE_Underwater_LUT_05.cube"
           }
         },
         {
@@ -510,13 +498,19 @@
           "vars": {
             "source": "bc2042e80fcf404e988e0c9160a85b94",
             "surfaceTarget": "7e048d6033fc450fae6d64324a5b1bea",
-            "nearDistance": 10.0,
+            "nearDistance": 100.0,
             "farDistance": 1000.0,
             "intensityNear": 1.0,
-            "intensityFar": 0.0
+            "intensityFar": 0.10000000149011612
           }
         }
       ]
+    },
+    {
+      "id": "4e7065d88c2842d1abca2e2bd3733500",
+      "name": "Cube",
+      "parent": null,
+      "components": []
     },
     {
       "id": "9bd293f96866411c8a9cb82c1d045551",
@@ -552,9 +546,49 @@
       ]
     },
     {
+      "id": "248b86de014d4c7aafd1daa6b52ba0da",
+      "name": "WaterUnder",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "1c2d97f647f14b2ea2a57f9d7fdc33e5",
+      "name": "Game Boundary",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "MESH",
+          "isTrigger": false,
+          "makeInvisible": true,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ],
+          "name": "Collider"
+        }
+      ]
+    },
+    {
       "id": "f4af1a53adc841d399dfe48ba660f955",
       "name": "RR.Wheel",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -623,7 +657,7 @@
     {
       "id": "39d031ebb7734eb5808ab2c3f175bdee",
       "name": "RR.ArmCenter",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -742,7 +776,7 @@
     {
       "id": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
       "name": "RR.Arm",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -861,7 +895,7 @@
     {
       "id": "5289be0774ba4b21a0e1e8835de946fe",
       "name": "RL.Wheel.004",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -930,7 +964,7 @@
     {
       "id": "49d565ba2c3b4efe911c2528098aba83",
       "name": "RL.Wheel.002",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -999,7 +1033,7 @@
     {
       "id": "da55807f3f654ff08426862b1e8a5cd3",
       "name": "RL.Wheel",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1068,7 +1102,7 @@
     {
       "id": "ed4d3659c1e3460db74090ce02467f66",
       "name": "RL.ArmCenter",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1187,7 +1221,7 @@
     {
       "id": "06e674c66e85489ba3970b4ff2766f6d",
       "name": "RL.Arm",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1306,7 +1340,7 @@
     {
       "id": "861a855d6d164e1f968eeb03b58e337b",
       "name": "FRArmCenter",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1425,7 +1459,7 @@
     {
       "id": "a4d8494367754a15b4fe2aaf4b7fdaa8",
       "name": "FR.Wheel",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1494,7 +1528,7 @@
     {
       "id": "d98484a8b72b42079248fdcd49588429",
       "name": "FR.Arm",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1613,7 +1647,7 @@
     {
       "id": "0806f0e60b8f4c26a3fd0902e6b7e203",
       "name": "FL.Wheel.004",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1682,7 +1716,7 @@
     {
       "id": "7dd53a6e90a641e3991c48255b3209ae",
       "name": "FL.Wheel.002",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1751,7 +1785,7 @@
     {
       "id": "f77c4c18494849acb4f70461ec2fe694",
       "name": "FL.Wheel",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1820,7 +1854,7 @@
     {
       "id": "52fc5ee512a04668bb44ac7535c7db23",
       "name": "Fl.ArmCenter",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -1939,7 +1973,7 @@
     {
       "id": "8459be8129c1471f8ec3e255791c8f19",
       "name": "Fl.Arm",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -2058,7 +2092,7 @@
     {
       "id": "bc2042e80fcf404e988e0c9160a85b94",
       "name": "Engine Rover.003",
-      "parent": "3399f7eacac64ced85d883ed4c5711f6",
+      "parent": "ed7f5a235ab142f2965e0857e6432187",
       "components": [
         {
           "type": "COLLIDER",
@@ -2113,7 +2147,7 @@
             "angularAssist": 10.0,
             "playerEntity": "bc2042e80fcf404e988e0c9160a85b94",
             "groundRaycastDistance": 40.0,
-            "debugGroundRay": false
+            "debugGroundRay": true
           }
         },
         {
@@ -2140,13 +2174,13 @@
             "lights": [
               "6f550b0cc048439dba20d86963a1e8ee",
               "09cecd459b6f40649df0b8da4f5aefd2",
-              "b74c7dd2b833408bb7cd9060b64bfc6c",
-              "7cbb2ac58d1445589af85dae7e5d5a9c"
+              "debd3e82c0c741799d065fa332247b51",
+              "999821435d0a4ba3af5b497f6135894b"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
             "brightnessX": 0.0,
-            "brightnessY": 3000.0
+            "brightnessY": 8000.0
           }
         }
       ]
@@ -2307,7 +2341,7 @@
       }
     },
     {
-      "id": "b74c7dd2b833408bb7cd9060b64bfc6c",
+      "id": "debd3e82c0c741799d065fa332247b51",
       "name": "Spot.009",
       "parent": "ced2b89a28b0407d972bd9615bc93ba2",
       "components": [],
@@ -2336,7 +2370,7 @@
       }
     },
     {
-      "id": "7cbb2ac58d1445589af85dae7e5d5a9c",
+      "id": "999821435d0a4ba3af5b497f6135894b",
       "name": "Spot.010",
       "parent": "ced2b89a28b0407d972bd9615bc93ba2",
       "components": [],
@@ -2365,7 +2399,7 @@
       }
     },
     {
-      "id": "3399f7eacac64ced85d883ed4c5711f6",
+      "id": "ed7f5a235ab142f2965e0857e6432187",
       "name": "Engine Rover Parent",
       "parent": null,
       "components": []
@@ -2414,15 +2448,33 @@
       ]
     },
     {
-      "id": "60f341e95710489e8c568fd921b5c2d4",
+      "id": "44fdaf8f277340f193c190f553ef8073",
       "name": "Island",
       "parent": null,
+      "components": []
+    },
+    {
+      "id": "e9db0fb4e1b043428b6a93a8be510e21",
+      "name": "ScatteredRocks",
+      "parent": null,
+      "components": []
+    },
+    {
+      "id": "baaaba7c07ce463ba144a55917ccbffe",
+      "name": "Coral",
+      "parent": "e9db0fb4e1b043428b6a93a8be510e21",
+      "components": []
+    },
+    {
+      "id": "70a121cd7eb84cd489deb919f3a8225f",
+      "name": "RockCollider",
+      "parent": "e9db0fb4e1b043428b6a93a8be510e21",
       "components": [
         {
           "type": "COLLIDER",
           "shape": "MESH",
           "isTrigger": false,
-          "makeInvisible": false,
+          "makeInvisible": true,
           "autoFit": true,
           "applyObjectScale": true,
           "size": [
@@ -2442,24 +2494,21 @@
             0.0,
             -0.0,
             1.0
-          ]
-        },
-        {
-          "type": "RIGIDBODY",
-          "bodyType": "STATIC",
-          "mass": 1.0,
-          "friction": 1.0,
-          "restitution": 0.20000000298023224,
-          "linearDamping": 0.0,
-          "angularDamping": 0.0,
-          "startAsleep": false
+          ],
+          "name": "Collider"
         }
       ]
     },
     {
+      "id": "1ba38058ab834868b8080a25c8f307af",
+      "name": "Shark_LOD1",
+      "parent": "1770cfb3e5174a05b00a1e1167571a8b",
+      "components": []
+    },
+    {
       "id": "1770cfb3e5174a05b00a1e1167571a8b",
-      "name": "Armature",
-      "parent": null,
+      "name": "Shark",
+      "parent": "c5c29af92a8d447abd3f78b8729c9a47",
       "components": [
         {
           "type": "SCRIPT",
@@ -2467,27 +2516,347 @@
           "path": "//../src/behaviors/fishNavigator.ts",
           "vars": {
             "raycastCount": 6.0,
-            "speedMin": 30.0,
+            "speedMin": 10.0,
             "speedMax": 30.0,
-            "lifetimeMin": 60.0,
-            "lifetimeMax": 120.0,
-            "raycastLength": 3.0,
+            "raycastLength": 10.0,
             "coneAngle": 10.0,
             "directionChangeInterval": 10.0,
             "ignoreCollider": "7e048d6033fc450fae6d64324a5b1bea",
             "turnSmoothness": 1.5
           }
+        },
+        {
+          "type": "ANIMATOR",
+          "defaultState": "State",
+          "states": [
+            {
+              "id": "State",
+              "clip": "SharkSwim",
+              "loop": true,
+              "speed": 1.0
+            }
+          ],
+          "transitions": [],
+          "parameters": []
         }
       ],
       "animation": {
-        "autoPlay": true,
-        "clip": "",
+        "autoPlay": false,
+        "clip": "SharkSwim",
         "loop": true,
         "speed": 1.0,
         "clips": [
           "SharkSwim"
         ]
       }
+    },
+    {
+      "id": "c5c29af92a8d447abd3f78b8729c9a47",
+      "name": "Animal Spawner",
+      "parent": "bc2042e80fcf404e988e0c9160a85b94",
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "BOX",
+          "isTrigger": true,
+          "makeInvisible": false,
+          "autoFit": false,
+          "applyObjectScale": true,
+          "size": [
+            1000.0,
+            300.0,
+            1000.0
+          ],
+          "radius": 0.0,
+          "height": 0.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ],
+          "name": "Spawn Volume"
+        },
+        {
+          "type": "SCRIPT",
+          "script": "animalSpawner",
+          "path": "//../src/behaviors/animalSpawner.ts",
+          "vars": {
+            "prefabs": [
+              "1770cfb3e5174a05b00a1e1167571a8b"
+            ],
+            "spawnVolume": "c5c29af92a8d447abd3f78b8729c9a47",
+            "spawnCount": 10.0,
+            "randomYawRange": 360.0,
+            "spawnInterval": 10.0,
+            "lifetimeMin": 20.0,
+            "lifetimeMax": 60.0,
+            "shrinkDuration": 3.0,
+            "growDuration": 0.10000000149011612,
+            "trainCollider": "bc2042e80fcf404e988e0c9160a85b94",
+            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "waterEntryDelay": 10.0,
+            "minSpawnDistance": 250.0,
+            "minimumDepth": -5000.0,
+            "spawnClearanceRadius": 100.0
+          },
+          "name": "Shark Spawner"
+        },
+        {
+          "type": "SCRIPT",
+          "script": "animalSpawner",
+          "path": "//../src/behaviors/animalSpawner.ts",
+          "vars": {
+            "prefabs": [
+              "33269ac4eed54a399e63d97f06984d29"
+            ],
+            "spawnVolume": "c5c29af92a8d447abd3f78b8729c9a47",
+            "spawnCount": 10.0,
+            "randomYawRange": 360.0,
+            "spawnInterval": 40.0,
+            "lifetimeMin": 70.0,
+            "lifetimeMax": 150.0,
+            "shrinkDuration": 3.0,
+            "growDuration": 0.10000000149011612,
+            "trainCollider": "bc2042e80fcf404e988e0c9160a85b94",
+            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "waterEntryDelay": 10.0,
+            "minSpawnDistance": 250.0,
+            "minimumDepth": -17000.0,
+            "spawnClearanceRadius": 100.0
+          },
+          "name": "Squid Spawner"
+        },
+        {
+          "type": "SCRIPT",
+          "script": "animalSpawner",
+          "path": "//../src/behaviors/animalSpawner.ts",
+          "vars": {
+            "prefabs": [
+              "daf75293537444f5bedb261f1677e550"
+            ],
+            "spawnVolume": "c5c29af92a8d447abd3f78b8729c9a47",
+            "spawnCount": 3.0,
+            "randomYawRange": 360.0,
+            "spawnInterval": 30.0,
+            "lifetimeMin": 60.0,
+            "lifetimeMax": 120.0,
+            "shrinkDuration": 3.0,
+            "growDuration": 0.10000000149011612,
+            "trainCollider": "bc2042e80fcf404e988e0c9160a85b94",
+            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "waterEntryDelay": 10.0,
+            "minSpawnDistance": 250.0,
+            "minimumDepth": -17000.0,
+            "spawnClearanceRadius": 350.0
+          },
+          "name": "Whale Spawner"
+        },
+        {
+          "type": "SCRIPT",
+          "script": "animalSpawner",
+          "path": "//../src/behaviors/animalSpawner.ts",
+          "vars": {
+            "prefabs": [
+              "fce8d40557e14563b7b0b94f36c1ac89"
+            ],
+            "spawnVolume": "c5c29af92a8d447abd3f78b8729c9a47",
+            "spawnCount": 20.0,
+            "randomYawRange": 360.0,
+            "spawnInterval": 15.0,
+            "lifetimeMin": 20.0,
+            "lifetimeMax": 40.0,
+            "shrinkDuration": 3.0,
+            "growDuration": 0.10000000149011612,
+            "trainCollider": "bc2042e80fcf404e988e0c9160a85b94",
+            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "waterEntryDelay": 10.0,
+            "minSpawnDistance": 250.0,
+            "minimumDepth": -3000.0,
+            "spawnClearanceRadius": 100.0
+          },
+          "name": "Turtle Spawner"
+        }
+      ]
+    },
+    {
+      "id": "7f9e13b4233b460a889edb366552313c",
+      "name": "Whale.002",
+      "parent": "daf75293537444f5bedb261f1677e550",
+      "components": []
+    },
+    {
+      "id": "daf75293537444f5bedb261f1677e550",
+      "name": "Whale",
+      "parent": "c5c29af92a8d447abd3f78b8729c9a47",
+      "components": [
+        {
+          "type": "ANIMATOR",
+          "defaultState": "Idle",
+          "states": [
+            {
+              "id": "Idle",
+              "clip": "WhaleSwim",
+              "loop": true,
+              "speed": 0.5
+            }
+          ],
+          "transitions": [],
+          "parameters": []
+        },
+        {
+          "type": "SCRIPT",
+          "script": "fishNavigator",
+          "path": "//../src/behaviors/fishNavigator.ts",
+          "vars": {
+            "speedMin": 40.0,
+            "speedMax": 40.0,
+            "raycastCount": 3.0,
+            "raycastLength": 200.0,
+            "coneAngle": 60.0,
+            "directionChangeInterval": 20.0,
+            "ignoreCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "turnSmoothness": 0.5
+          }
+        }
+      ],
+      "animation": {
+        "autoPlay": false,
+        "clip": "",
+        "loop": true,
+        "speed": 1.0,
+        "clips": [
+          "WhaleSwim"
+        ]
+      }
+    },
+    {
+      "id": "3e5d61f3175743129d3b9028f57a81cc",
+      "name": "Tortoise",
+      "parent": "fce8d40557e14563b7b0b94f36c1ac89",
+      "components": [
+        {
+          "type": "ANIMATOR",
+          "defaultState": "Idle",
+          "states": [
+            {
+              "id": "Idle",
+              "clip": "TurtleSwim",
+              "loop": true,
+              "speed": 1.0
+            }
+          ],
+          "transitions": [],
+          "parameters": []
+        }
+      ],
+      "animation": {
+        "autoPlay": false,
+        "clip": "",
+        "loop": true,
+        "speed": 1.0,
+        "clips": [
+          "TurtleSwim"
+        ]
+      }
+    },
+    {
+      "id": "79cb1d7e39fe4d069a6e539c3bd4162f",
+      "name": "props_g",
+      "parent": "3e5d61f3175743129d3b9028f57a81cc",
+      "components": []
+    },
+    {
+      "id": "7b0ed2635407453e840d4599d6fd2d05",
+      "name": "greenseaturtle_F",
+      "parent": "3e5d61f3175743129d3b9028f57a81cc",
+      "components": []
+    },
+    {
+      "id": "fce8d40557e14563b7b0b94f36c1ac89",
+      "name": "Toirtoise Locator",
+      "parent": "c5c29af92a8d447abd3f78b8729c9a47",
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "fishNavigator",
+          "path": "//../src/behaviors/fishNavigator.ts",
+          "vars": {
+            "raycastCount": 6.0,
+            "speedMin": 10.0,
+            "speedMax": 30.0,
+            "raycastLength": 10.0,
+            "coneAngle": 10.0,
+            "directionChangeInterval": 10.0,
+            "ignoreCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "turnSmoothness": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "ca7cf513acf04facac4e2c5897c0d8eb",
+      "name": "Squid1_bone",
+      "parent": "33269ac4eed54a399e63d97f06984d29",
+      "components": [
+        {
+          "type": "ANIMATOR",
+          "defaultState": "Idle",
+          "states": [
+            {
+              "id": "Idle",
+              "clip": "Take 001",
+              "loop": true,
+              "speed": 1.0
+            }
+          ],
+          "transitions": [],
+          "parameters": [],
+          "name": "Animator"
+        }
+      ],
+      "animation": {
+        "autoPlay": false,
+        "clip": "",
+        "loop": true,
+        "speed": 1.0,
+        "clips": [
+          "Take 001"
+        ]
+      }
+    },
+    {
+      "id": "061ec74380544eb0b860c5866bb45f77",
+      "name": "Squid",
+      "parent": "ca7cf513acf04facac4e2c5897c0d8eb",
+      "components": []
+    },
+    {
+      "id": "33269ac4eed54a399e63d97f06984d29",
+      "name": "SquidParent",
+      "parent": "c5c29af92a8d447abd3f78b8729c9a47",
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "fishNavigator",
+          "path": "//../src/behaviors/fishNavigator.ts",
+          "vars": {
+            "speedMin": 40.0,
+            "speedMax": 40.0,
+            "raycastCount": 3.0,
+            "raycastLength": 200.0,
+            "coneAngle": 60.0,
+            "directionChangeInterval": 20.0,
+            "ignoreCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "turnSmoothness": 0.5
+          }
+        }
+      ]
     }
   ],
   "materials": [
@@ -2500,8 +2869,8 @@
           "blockName": "Large Wave Speed",
           "type": "VECTOR2",
           "value": [
-            0.0010000000474974513,
-            0.0010000000474974513
+            0.0005000000237487257,
+            0.0005000000237487257
           ]
         },
         {
@@ -2663,11 +3032,11 @@
     {
       "name": "OceanHalf",
       "file": "materials/OceanHalf_detail.png",
-      "coordinatesIndex": 1,
+      "coordinatesIndex": 0,
       "uvScale": 25.0,
-      "diffuseBlendLevel": 0.10000000149011612,
-      "roughnessBlendLevel": 0.10000000149011612,
-      "bumpLevel": 0.25,
+      "diffuseBlendLevel": 0.25,
+      "roughnessBlendLevel": 0.25,
+      "bumpLevel": 0.6000000238418579,
       "normalBlendMethod": "WHITEOUT"
     }
   ],

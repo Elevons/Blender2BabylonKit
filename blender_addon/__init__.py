@@ -8,6 +8,7 @@ lives in the manifest.
 Where things are:
     core/           GUIDs and TypeScript @exposed/@inputMap parsing
     components/     the per-object component data model (Object.bjs_components)
+    animator/       NLA state-machine NodeTree (ANIMATOR component)
     scene/          scene-wide render settings (Scene.bjs_scene)
     input_actions/  the Input Actions asset: data, defaults, JSON I/O, operators
     export/         everything that writes the .glb + .scene.json (+ live link)
@@ -36,11 +37,14 @@ if "components" in locals():
     for _name in _names:
         importlib.reload(sys.modules[_name])
 
-from . import components, scene, input_actions, collision_layers, materials, export, operators, ui, viewport
+# animator before components: BJSComponent references BJSAnimatorParam, and
+# importing components first would load animator mid-component (circular risk).
+from . import animator, components, scene, input_actions, collision_layers, materials, export, operators, ui, viewport
 
 # Registration order: data first (properties the UI reads), then behavior,
 # then presentation, then overlays. core/ is pure functions — nothing to register.
-_modules = (components, scene, input_actions, collision_layers, materials, export, operators, ui, viewport)
+# animator registers before components so BJSAnimatorParam exists for BJSComponent.
+_modules = (animator, components, scene, input_actions, collision_layers, materials, export, operators, ui, viewport)
 
 
 def register():

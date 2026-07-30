@@ -76,7 +76,7 @@ def _draw_var(layout, comp_index, var_index, v):
         return
 
     slot = {
-        'FLOAT': "f_val", 'BOOL': "b_val", 'STRING': "s_val",
+        'FLOAT': "f_val", 'BOOL': "b_val", 'STRING': "s_val", 'FILE': "file_val",
         'VECTOR2': "v2_val", 'VECTOR3': "v_val", 'COLOR': "c_val",
     }.get(v.vtype, "f_val")
     layout.prop(v, slot, text=label)
@@ -480,6 +480,49 @@ def _draw_script(body, obj, comp, index):
             _draw_var(vbox, index, vi, v)
 
 
+def _draw_animator(body, obj, comp, index):
+    """Animator: graph picker, Edit button, synced Parameters, summary."""
+    body.prop(comp, "animator_tree", text="Graph")
+
+    row = body.row(align=True)
+    edit = row.operator("bjs.edit_animator", text="Edit Animator", icon="NODETREE")
+    edit.comp_index = index
+    row.operator("bjs.animator_purge_unused_trees", text="", icon="TRASH")
+
+    if comp.animator_tree is None:
+        body.label(text="Pick a graph above, or Edit Animator to create one", icon="INFO")
+
+    vbox = body.box()
+    vhdr = vbox.row(align=True)
+    vhdr.label(text="Parameters", icon="PRESET")
+    sync = vhdr.operator("bjs.sync_animator_params", text="", icon="FILE_REFRESH")
+    sync.comp_index = index
+    if len(comp.animator_vars) == 0:
+        vbox.label(text="No parameters — add Parameter nodes in the graph")
+    for var in comp.animator_vars:
+        label = var.label or var.name
+        if var.ptype == 'FLOAT':
+            vbox.prop(var, "f_val", text=label)
+        elif var.ptype == 'BOOL':
+            vbox.prop(var, "b_val", text=label)
+        elif var.ptype == 'INT':
+            vbox.prop(var, "i_val", text=label)
+        else:
+            vbox.label(text=f"{label}  (trigger)")
+
+    # Summary from the graph when present.
+    tree = comp.animator_tree
+    if tree is not None and getattr(tree, "bl_idname", "") == "BJSAnimationStateTree":
+        from ..animator.serialize import serialize_animator_tree
+        graph = serialize_animator_tree(tree)
+        n_states = len(graph["states"])
+        n_trans = len(graph["transitions"])
+        default = graph["defaultState"] or "(none)"
+        body.label(
+            text=f"{n_states} states · {n_trans} transitions · default: {default}",
+            icon="INFO")
+
+
 def _draw_lod(body, obj, comp, index):
     """LOD levels: distance thresholds + lower-detail mesh targets."""
     box = body.box()
@@ -595,6 +638,7 @@ BODY_DRAWERS = {
     'MSDF_TEXT': _draw_msdf_text,
     'REFLECTION_PROBE': _draw_reflection_probe,
     'LOD': _draw_lod,
+    'ANIMATOR': _draw_animator,
     **{comp_type: _draw_gui3d_control for comp_type in GUI3D_CONTROLS},
     **{comp_type: _draw_gui3d_panel for comp_type in GUI3D_PANELS},
 }

@@ -176,7 +176,7 @@ def _clear_gltf_extras(stamped):
 def _export_glb(glb_path):
     """Call Blender's built-in glTF exporter, tolerating version differences
     in the available keyword arguments."""
-    base_kwargs = dict(
+    kwargs = dict(
         filepath=glb_path,
         export_format='GLB',
         use_selection=False,
@@ -185,13 +185,44 @@ def _export_glb(glb_path):
         export_yup=True,      # Babylon is Y-up
         export_extras=True,   # REQUIRED: writes obj["bjs_id"] into node extras
     )
-    # Optional kwargs that exist on most but not all Blender versions.
-    optional = dict(export_cameras=True, export_lights=True,
-                    export_animations=True, export_nla_strips=True)
+
+    # Animation: ACTIONS mode (Blender 4.2+) exports stashed/active Actions as
+    # glTF animations named after the Action (or a renamed NLA track). The
+    # legacy export_nla_strips flag only controls track-name grouping in that
+    # mode — it does NOT export strip display names. Keep clip enumeration in
+    # export/animation.py in sync with this.
+    optional = {
+        "export_cameras": True,
+        "export_lights": True,
+        "export_animations": True,
+        "export_animation_mode": "ACTIONS",
+        "export_nla_strips": True,
+    }
+
     try:
-        bpy.ops.export_scene.gltf(**base_kwargs, **optional)
+        accepted = {
+            prop.identifier
+            for prop in bpy.ops.export_scene.gltf.get_rna_type().properties
+        }
+    except Exception:
+        accepted = set()
+
+    for key, value in optional.items():
+        if not accepted or key in accepted:
+            kwargs[key] = value
+
+    try:
+        bpy.ops.export_scene.gltf(**kwargs)
     except TypeError:
-        bpy.ops.export_scene.gltf(**base_kwargs)
+        # Older Blender: drop unknown animation kwargs and retry once.
+        for key in ("export_animation_mode", "export_nla_strips"):
+            kwargs.pop(key, None)
+        try:
+            bpy.ops.export_scene.gltf(**kwargs)
+        except TypeError:
+            for key in ("export_cameras", "export_lights", "export_animations"):
+                kwargs.pop(key, None)
+            bpy.ops.export_scene.gltf(**kwargs)
 
 
 def export_level(context, filepath):

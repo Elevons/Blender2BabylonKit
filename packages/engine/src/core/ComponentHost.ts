@@ -40,6 +40,14 @@ import {
 import { HideEntityNode } from "./loader/nodeResolution";
 import { FlushGlobalRefresh, type GlobalRefreshFlag } from "./componentGlobalRefresh";
 
+/** Context passed to per-type component teardown handlers. */
+interface ComponentTeardownContext
+{
+  entity: Entity;
+  attachmentIndex: number;
+  attachment: EntityAttachment;
+}
+
 /** Options for {@link ComponentHost.AddComponent}. */
 export interface AddComponentOptions
 {
@@ -58,6 +66,99 @@ export class ComponentHost
   readonly physicsShapesByEntity = new Map<string, PhysicsShape[]>();
   readonly eventMessageRegistrations: EventMessageRegistration[] = [];
   readonly panelsByEntity = new Map<string, Container3D>();
+
+  /** Per-type runtime teardown — mirrors the load-time handler registry. */
+  private readonly componentTeardownHandlers: Partial<
+    Record<ComponentType, (context: ComponentTeardownContext) => void>
+  > = {
+    TAG: ({ entity }) =>
+    {
+      RemoveAttachmentsOfType(entity, "TAG");
+    },
+
+    SCRIPT: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "SCRIPT")
+      {
+        TeardownScript(attachment.behavior);
+        UnregisterAttachment(entity, attachment);
+      }
+    },
+
+    ANIMATOR: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "ANIMATOR")
+      {
+        TeardownScript(attachment.behavior);
+        UnregisterAttachment(entity, attachment);
+      }
+    },
+
+    AUDIO: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "AUDIO")
+      {
+        attachment.sound.dispose();
+        UnregisterAttachment(entity, attachment);
+      }
+    },
+
+    GUI: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "GUI")
+      {
+        attachment.texture.dispose();
+        UnregisterAttachment(entity, attachment);
+      }
+    },
+
+    PARTICLE: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "PARTICLE")
+      {
+        attachment.system.dispose();
+        UnregisterAttachment(entity, attachment);
+        this.QueueGlobalRefresh("particleEmitters");
+      }
+    },
+
+    MSDF_TEXT: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "MSDF_TEXT")
+      {
+        attachment.renderer.dispose();
+        UnregisterAttachment(entity, attachment);
+        this.QueueGlobalRefresh("msdfRendering");
+      }
+    },
+
+    COLLIDER: (context) =>
+    {
+      this.TeardownPhysicsAttachment(context);
+      this.SyncEntityEventMessages(context.entity);
+      this.QueueGlobalRefresh("collisionCallbacks");
+    },
+
+    RIGIDBODY: (context) =>
+    {
+      this.TeardownPhysicsAttachment(context);
+      this.QueueGlobalRefresh("collisionCallbacks");
+    },
+
+    CONSTRAINT: ({ entity, attachment }) =>
+    {
+      if (attachment.type === "CONSTRAINT")
+      {
+        attachment.constraint.dispose();
+        const levelIndex = this.level.constraints.indexOf(attachment.constraint);
+        if (levelIndex !== -1)
+        {
+          this.level.constraints.splice(levelIndex, 1);
+        }
+        UnregisterAttachment(entity, attachment);
+      }
+    },
+  };
 
   constructor(
     readonly level: Level,
@@ -195,96 +296,31 @@ export class ComponentHost
     }
 
     const attachment = entity.attachments[attachmentIndex];
+    const context: ComponentTeardownContext = { entity, attachmentIndex, attachment };
+    const handler = this.componentTeardownHandlers[type];
 
-    switch (type)
+    if (handler !== undefined)
     {
-      case "TAG":
-        RemoveAttachmentsOfType(entity, "TAG");
-        break;
-
-      case "SCRIPT":
-        if (attachment.type === "SCRIPT")
-        {
-          TeardownScript(attachment.behavior);
-          UnregisterAttachment(entity, attachment);
-        }
-        break;
-
-      case "AUDIO":
-        if (attachment.type === "AUDIO")
-        {
-          attachment.sound.dispose();
-          UnregisterAttachment(entity, attachment);
-        }
-        break;
-
-      case "GUI":
-        if (attachment.type === "GUI")
-        {
-          attachment.texture.dispose();
-          UnregisterAttachment(entity, attachment);
-        }
-        break;
-
-      case "PARTICLE":
-        if (attachment.type === "PARTICLE")
-        {
-          attachment.system.dispose();
-          UnregisterAttachment(entity, attachment);
-          this.pendingGlobalRefresh.add("particleEmitters");
-        }
-        break;
-
-      case "MSDF_TEXT":
-        if (attachment.type === "MSDF_TEXT")
-        {
-          attachment.renderer.dispose();
-          UnregisterAttachment(entity, attachment);
-          this.pendingGlobalRefresh.add("msdfRendering");
-        }
-        break;
-
-      case "COLLIDER":
-        RemoveAttachmentAt(entity, attachmentIndex);
-        RebuildEntityPhysics(entity, this.scene, this.physicsShapesByEntity);
-        this.SyncEntityEventMessages(entity);
-        this.pendingGlobalRefresh.add("collisionCallbacks");
-        break;
-
-      case "RIGIDBODY":
-        RemoveAttachmentAt(entity, attachmentIndex);
-        RebuildEntityPhysics(entity, this.scene, this.physicsShapesByEntity);
-        this.pendingGlobalRefresh.add("collisionCallbacks");
-        break;
-
-      case "CONSTRAINT":
-        if (attachment.type === "CONSTRAINT")
-        {
-          attachment.constraint.dispose();
-          const levelIndex = this.level.constraints.indexOf(attachment.constraint);
-          if (levelIndex !== -1)
-          {
-            this.level.constraints.splice(levelIndex, 1);
-          }
-          UnregisterAttachment(entity, attachment);
-        }
-        break;
-
-      default:
-        if (type.startsWith("GUI3D_") && "control" in attachment)
-        {
-          const manager = this.EnsureGui3DManager();
-          TeardownGui3DAttachment(
-            entity,
-            attachment as Extract<EntityAttachment, { control: Control3D }>,
-            manager,
-            this.panelsByEntity
-          );
-        }
-        break;
+      handler.call(this, context);
+    }
+    else if (type.startsWith("GUI3D_") && "control" in attachment)
+    {
+      const manager = this.EnsureGui3DManager();
+      TeardownGui3DAttachment(
+        entity,
+        attachment as Extract<EntityAttachment, { control: Control3D }>,
+        manager,
+        this.panelsByEntity
+      );
     }
 
     this.FlushGlobalRefresh();
+  }
+
+  /** Queue a deferred global subsystem refresh from teardown handlers. */
+  QueueGlobalRefresh(flag: GlobalRefreshFlag): void
+  {
+    this.pendingGlobalRefresh.add(flag);
   }
 
   /** Run any deferred global subsystem refresh from recent mutations. */
@@ -302,6 +338,19 @@ export class ComponentHost
       this.eventMessageRegistrations
     );
     this.pendingGlobalRefresh.clear();
+  }
+
+  /** Rebuild physics after collider/rigidbody mutations. */
+  private RebuildPhysics(entity: Entity): void
+  {
+    RebuildEntityPhysics(entity, this.scene, this.physicsShapesByEntity);
+  }
+
+  /** Remove one physics attachment row and rebuild the entity body. */
+  private TeardownPhysicsAttachment(context: ComponentTeardownContext): void
+  {
+    RemoveAttachmentAt(context.entity, context.attachmentIndex);
+    this.RebuildPhysics(context.entity);
   }
 
   private RegisterTag(entity: Entity, component: Extract<Component, { type: "TAG" }>): void
@@ -345,6 +394,8 @@ export class ComponentHost
       {
         console.error(`[bjs] OnStart "${entity.name}"`, error);
       }
+
+      this.level.RunPostReady(scriptAttachment.behavior, entity.name);
     }
   }
 

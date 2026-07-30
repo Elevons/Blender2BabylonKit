@@ -16,6 +16,7 @@ Backed by:
 
 ```bash
 npm run mcp:build   # from repo root
+npm run mcp:index   # also runs automatically via npm run docs:build
 ```
 
 ## Cursor configuration
@@ -60,7 +61,7 @@ Or use **Babylon Launcher** → Services → Copy Cursor Config.
 
 | Tool | Purpose |
 |------|---------|
-| `search_docs` | Full-text search across every doc (engine, Blender, launcher, contracts) |
+| `search_docs` | Semantic search across every doc (local embeddings + keyword boost; no external server) |
 | `list_doc_chapters` | Slugs for every chapter |
 | `get_doc_chapter` | One chapter (or one section) converted to markdown |
 
@@ -92,6 +93,29 @@ Or use **Babylon Launcher** → Services → Copy Cursor Config.
 
 Also: `get_authoring_workflow`, `get_kernel`, `list_recipes`, `suggest_recipe`.
 
+## Semantic doc search
+
+`search_docs(query)` finds relevant documentation by **meaning**, not just exact keywords.
+It powers the "I don't know which chapter covers X" path in the human documentation map.
+
+### How it works
+
+| Layer | When | What |
+|-------|------|------|
+| **Index build** | `npm run mcp:index` or `npm run docs:build` | Embeds every prose section (`scripts/docs/prose/content/`) and contract markdown (`docs/LLM_*.md`, `STYLE_GUIDE.md`) with `Xenova/all-MiniLM-L6-v2`; writes `data/doc-embeddings.json` |
+| **Query** | Each `search_docs` call | Same model runs **in-process** inside the MCP Node server — no Ollama, no embedding API |
+| **Ranking** | Per result | 75% cosine similarity + 25% keyword boost (section titles + exact identifiers like `@exposed`) |
+
+First query after MCP start loads the ONNX model (~1–3 s, ~23 MB cached). Later queries
+are fast. Results include `get_doc_chapter(chapter, section)` fetch commands.
+
+### Maintainer notes
+
+- Commit `data/doc-embeddings.json` after re-indexing.
+- Partial doc edits: `npm run docs:prose` does **not** refresh the index — use
+  `npm run mcp:index` or full `docs:build`.
+- Full details: `docs/BUILDING-DOCS.html` (MCP semantic doc search section).
+
 ## Workflow (dumb-model safe)
 
 ```
@@ -106,12 +130,13 @@ route_task("rover drives with wasd", "RoverDrive")
   → validate_behavior(source, "RoverDrive.ts")  # repeat until valid
 ```
 
-## Playbooks (16 tasks)
+## Playbooks (19 tasks)
 
 `first-behavior`, `player-mover`, `trigger-reaction`, `moving-platform`,
 `waypoint-patrol`, `train-on-path`, `rover-drive`, `spin-object`,
-`look-at-target`, `animation-cycle`, `reveal-on-trigger`, `sound-on-trigger`,
-`update-msdf-label`, `orbit-camera`, `geospatial-flyto`, `debug-triggers`
+`look-at-target`, `animation-cycle`, `animator-fsm`, `reveal-on-trigger`, `sound-on-trigger`,
+`update-msdf-label`, `orbit-camera`, `geospatial-flyto`, `debug-triggers`,
+`spawn-prefab-instances`, `pool-spawner`
 
 Full text: `docs/LLM_PLAYBOOK.md` or `get_playbook(name="…")`.
 

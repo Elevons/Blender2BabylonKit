@@ -12,7 +12,7 @@ Use MCP tool **`route_task(intent, className)`** first — it picks a playbook a
 ## Golden rules (never violate)
 
 1. **One class per file** — `export default class Name extends Behavior`; **Name === filename stem**.
-2. **PascalCase hooks** — `OnStart`, `OnUpdate`, `OnDestroy`, `OnMessage`, `OnCollision*`, `OnTrigger*` (lowercase = silent no-op).
+2. **PascalCase hooks** — `OnStart`, `OnPostReady`, `OnUpdate`, `OnDestroy`, `OnMessage`, `OnCollision*`, `OnTrigger*` (lowercase = silent no-op).
 3. **Lowercase decorators** — `@exposed`, `@inputMap` (Blender parses these literals).
 4. **Never invent** input action names or entity names — call `list_input_actions` / `list_scene_entities`.
 5. **Never write** `node.position` every frame on a **DYNAMIC** body — use velocity or ANIMATED mode.
@@ -33,7 +33,8 @@ Use MCP tool **`route_task(intent, className)`** first — it picks a playbook a
 | Rover / car wheels | `rover-drive` | `rover-wheel-drive` |
 | Spin on axis | `spin-object` | `constant-rotate` |
 | Face a target | `look-at-target` | `look-at-target` |
-| Cycle animations | `animation-cycle` | `animation-cycle` |
+| Cycle animations (script only) | `animation-cycle` | `animation-cycle` |
+| Locomotion FSM (Idle/Walk/…) | `animator-fsm` | `animator-driver` |
 | Reveal hidden mesh | `reveal-on-trigger` | `reveal-on-message` |
 | Play sound on event | `sound-on-trigger` | `sound-on-message` |
 | Update 3D MSDF label | `update-msdf-label` | `msdf-label-update` |
@@ -41,6 +42,7 @@ Use MCP tool **`route_task(intent, className)`** first — it picks a playbook a
 | Fly globe camera | `geospatial-flyto` | `geospatial-camera-flyto` |
 | Debug trigger overlaps | `debug-triggers` | `trigger-logger` |
 | Spawn prefab instances | `spawn-prefab-instances` | `scatter-prefab-spawner` |
+| Pool spawner (interval + grow/shrink) | `pool-spawner` | `pool-prefab-spawner` |
 
 Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")` for one recipe.
 
@@ -56,7 +58,7 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 | Trigger never fires | MESH trigger shape | `get_scripting_context(section="physics")` |
 | Trigger log silent | `getCollisionObservable()` used for triggers | `get_do_not_list` · recipe `trigger-logger` |
 | Script camera wrong FOV | Forgot `CopyLens` after `new` camera | `get_fragment(name="copy-lens-from-authored-camera")` |
-| Animation ignored | Script on mesh not armature | `get_playbook(name="animation-cycle")` |
+| Animation ignored | Script/Animator on mesh not armature | `get_playbook(name="animator-fsm")` |
 | @exposed field missing in Blender | Forgot Sync | Re-export + Sync in Blender |
 
 ---
@@ -262,17 +264,41 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 
 ### Blender setup
 - SCRIPT on **armature** (not skinned mesh).
-- NLA / clips exported on that entity.
+- Stashed/pushed **Actions** on that entity (clip names = Action names).
 
 ### Behavior file
 - Recipe: `animation-cycle`
 - Reference: `ClipSwitcher.ts`
+- Prefer **`animator-fsm`** for real Idle/Walk state machines.
 
 ### MCP steps
 1. `get_engine_basics(topic="components-vs-behaviors")`
 2. `get_recipe_template(recipe="animation-cycle", className="AnimCycler")`
 3. `get_scripting_context(section="animation")`
 4. `validate_behavior(source, "AnimCycler.ts")`
+
+---
+
+## Playbook: animator-fsm
+
+### Blender setup
+- Stash/push **Actions** (Idle, Walk, …) on the **armature** — one strip per NLA track. Clip names = **Action** names (or a renamed NLA track), not strip labels.
+- **ANIMATOR** component → **Edit Animator** (opens this object’s graph; clip dropdowns follow the graph owner): Entry → Idle, Parameter `Speed`, Transitions Idle↔Walk on `Speed`.
+- Sync Parameters on the component. Turn **off** Animation autoplay.
+- Optional SCRIPT `DriveAnimator` (or your own) on the same armature to set `Speed` from Move.
+- Trim looping Actions so the last frame matches the first (avoid end-of-cycle holds).
+
+### Behavior file
+- Recipe: `animator-driver` (thin input driver) — or hand-write like `DriveAnimator.ts`
+- Reference: `DriveAnimator.ts`
+- Do **not** reimplement the FSM in TypeScript when ANIMATOR can own it.
+
+### MCP steps
+1. `get_recipe_template(recipe="animator-driver", className="DriveAnimator")`
+2. `get_scripting_context(section="animation")`
+3. `get_fragment(name="set-animator-float")`
+4. `get_engine_basics(topic="components-vs-behaviors")`
+5. `validate_behavior(source, "DriveAnimator.ts")` (if writing a driver script)
 
 ---
 
@@ -400,9 +426,11 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 1. Place a **template** in the level — either link a collection from another
    `.blend` (ENTITY picker → link button / `bjs.link_prefab`, or File → Link +
    library override) or use any in-scene hierarchy with components.
-2. Hide the template in the viewport (eye icon) — or
-   `await this.spawner.HideTemplate(template)` at runtime for in-scene
-   templates (also tears down the template's live physics/scripts/…).
+2. Hide the template in the viewport (eye icon) when it should never appear at
+   load — or mark `@exposed({ spawnTemplate: true })` on deferred spawner fields
+   so the engine hides referenced templates before `OnStart`. Pass
+   `keepTemplate: true` on `Spawn` when the source must stay visible through
+   spawn. `HideTemplate` is for hiding without spawning.
 3. SCRIPT on a spawner object; `@exposed({ type: "entity" })` prefab → pick the
    template root.
 4. Placement options:
@@ -417,6 +445,9 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 - Recipe: `scatter-prefab-spawner`
 - Reference: `populateprefabs.ts`
 - Core call: `await this.spawner.Spawn(this.prefab, { position })`
+- Multi-spawn loops: `deferShadowRefresh: true` on each call, then
+  `this.spawner.FlushSpawnShadowRefresh()` once (see `populateprefabs.ts`).
+  Skip defer for interval spawners — register shadows per spawn.
 
 ### MCP steps
 1. `route_task(intent="spawn prefab instances", className="ScatterSpawner")`
@@ -433,7 +464,49 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 - Put REFLECTION_PROBE on templates (skipped at spawn in v1).
 - Point template LOD levels at meshes outside the template hierarchy — keep LOD targets inside the subtree so each instance clones its own.
 - Expect a spawned camera to activate itself — cameras spawn per instance (targets remapped) but are never made active; set `scene.activeCamera = handle.cameras[0]` yourself.
+- Defer shadow refresh in interval spawners — fish/animal spawns seconds apart need immediate registration; batch defer only for tight multi-spawn loops.
+- Assume spawned skinned meshes share the template animation phase — spawn isolates skeletons and clones AnimationGroups; templates hide at spawn start by default (`keepTemplate: true` to retain; `spawnTemplate: true` on @exposed fields for deferred spawners).
 - Sample only `VertexBuffer.ColorKind` with `RGB >= 0.99` for paint masks — that hits Blender's fake white `COLOR_0` and scatters everywhere (or misses soft strokes).
+
+---
+
+## Playbook: pool-spawner
+
+### Blender setup
+1. Link or place **prefab template(s)** in the level (fish, animals, …) — hide templates in the viewport when only clones should appear.
+2. Add a **spawn volume** empty with a box/sphere **trigger collider** (for position sampling).
+3. Optional: trigger colliders to gate spawning (e.g. train enters water zone).
+4. SCRIPT on a spawner object; `@exposed` prefab list + spawn volume entity picks.
+
+### Behavior file
+- Recipe: `pool-prefab-spawner`
+- Reference: `animalSpawner.ts`
+- Core spawn call:
+
+```ts
+await this.spawner.Spawn(template, {
+  position: worldPosition,
+  parent: null,
+  scaling: Vector3.Zero(),
+});
+```
+
+- Grow instances by lerping `node.scaling` toward `template.node.scaling` in `OnUpdate`.
+- Track lifetimes; shrink then dispose; refill pool to `spawnCount`.
+- **Do not** use `deferShadowRefresh` — spawns are spread over time.
+
+### MCP steps
+1. `route_task(intent="pool spawner with grow shrink lifecycle", className="PoolSpawner")`
+2. `get_recipe_template(recipe="pool-prefab-spawner", className="PoolSpawner")`
+3. `get_behavior("animalSpawner")` or `find_similar_behavior(query="animalSpawner", includeSource=true)`
+4. `get_scripting_context(section="prefab-spawn")`
+5. `get_fragment(name="spawn-prefab-instance")`
+6. `validate_behavior(source, "PoolSpawner.ts")`
+
+### Do not
+- Parent spawned instances under the spawner if they must stay fixed in world space — use `parent: null`.
+- Spawn at full scale and patch afterward — pass zero scale in `SpawnOptions`.
+- Batch shadow deferral across interval spawns — register each instance immediately.
 
 ---
 
@@ -446,7 +519,7 @@ These topics are available via `get_engine_basics(topic=…)`:
 | `architecture` | glb + scene.json, GUIDs |
 | `frame-loop` | OnStart vs OnUpdate, deltaSeconds |
 | `components-vs-behaviors` | SCRIPT vs TAG/COLLIDER |
-| `load-order` | What exists in OnStart |
+| `load-order` | What exists in OnStart vs OnPostReady |
 | `blender-vs-behavior` | What to author where |
 
 Human chapters: `docs/engine/01-ARCHITECTURE.html` through `docs/engine/05-SCRIPTING.html`.

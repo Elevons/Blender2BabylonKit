@@ -1,11 +1,11 @@
 <h1>Babylon Level Kit — Engine (Runtime) Documentation</h1>
-<p>The runtime half of the kit, current as of <strong>__KIT_VERSION__</strong>. Not sure where to start? Use <strong>Choose your path</strong> below. Or open <a href="index.html">subsystem diagrams</a> for interactive maps, or <a href="../index.html">Search</a> to jump to a topic.</p>
+<p>This documentation covers the runtime half of the kit. It is current as of <strong>__KIT_VERSION__</strong>. If you do not know where to start, use <strong>Choose your path</strong> below. You can also open <a href="index.html">subsystem diagrams</a> for interactive maps. You can use <a href="../index.html">Search</a> to jump to a topic.</p>
 
 <h2>Choose your path</h2>
-<p>Chapter numbers are for reference — you do not need to read 01 through 14 in order.</p>
+<p>Chapter numbers are for reference. You do not need to read 01 through 14 in order.</p>
 <table><thead><tr><th>I want to…</th><th>Read this (in order)</th></tr></thead><tbody>
 <tr><td><strong>Brand new — first level in ~15 minutes</strong></td><td><a href="../QUICKSTART.html">Quickstart</a></td></tr>
-<tr><td><strong>Write a behavior with an LLM / MCP</strong></td><td><a href="../LLM_PLAYBOOK.md">LLM Playbook</a> · <code>route_task</code> on bjs-mcp · <a href="../LLM_SCRIPTING_CONTEXT.md">Scripting context</a></td></tr>
+<tr><td><strong>Write a behavior with an LLM / MCP</strong></td><td><a href="../LLM_PLAYBOOK.md">LLM Playbook</a> · <code>route_task</code> on bjs-mcp · <code>search_docs</code> for unknown topics · <a href="../LLM_SCRIPTING_CONTEXT.md">Scripting context</a></td></tr>
 <tr><td><strong>Write or debug behavior scripts (human)</strong></td><td><a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> → <a href="14-API-GUIDE.html">14 — API Guide</a> → <a href="05-SCRIPTING.html">05 — Scripting</a></td></tr>
 <tr><td><strong>Understand how a level becomes a running game</strong></td><td><a href="01-ARCHITECTURE.html">01 — Architecture</a> (two files, GUIDs) → <a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a> → <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> (what happens each frame).</td></tr>
 <tr><td><strong>Hack on engine code or trace a bug</strong></td><td><a href="01-ARCHITECTURE.html">01 — Architecture</a> → <a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a> → pick a <a href="10-FEATURE-TRACES.html">feature trace</a> or <a href="trace-load.html">trace-load</a> for step-by-step source.</td></tr>
@@ -15,13 +15,13 @@
 <h2>Doc types (quick glossary)</h2>
 <ul>
 <li><strong>Prose chapter</strong> (<code>01-ARCHITECTURE.html</code>, …) — narrative explanation. Start here for concepts.</li>
-<li><strong>Subsystem diagram</strong> (<code>physics.html</code>, <code>load-pipeline.html</code>, …) — clickable node graph for one slice of the engine. Good once you know the vocabulary.</li>
-<li><strong>Code trace</strong> (<code>trace-*.html</code>) — step-by-step walkthrough with live source extracted at build time. Best when you need exact file and function names.</li>
+<li><strong>Subsystem diagram</strong> (<code>physics.html</code>, <code>load-pipeline.html</code>, …) — clickable node graph for one slice of the engine. Use it after you know the vocabulary.</li>
+<li><strong>Code trace</strong> (<code>trace-*.html</code>) — step-by-step walkthrough with live source extracted at build time. Use it when you need exact file and function names.</li>
 </ul>
-<p>Many topics exist in all three forms — the <strong>subsystem map</strong> table below links them. Contributors: traces and diagrams are wired from <code>PAGE_TOPICS</code>; see <a href="../BUILDING-DOCS.html">BUILDING-DOCS</a>.</p>
+<p>Many topics exist in all three forms. The <strong>subsystem map</strong> table below links them. Contributors wire traces and diagrams from <code>PAGE_TOPICS</code>. See <a href="../BUILDING-DOCS.html">BUILDING-DOCS</a>.</p>
 
 <h2>What the runtime does</h2>
-<p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports — <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything it can't) — and turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb, indexes nodes by GUID, builds an <code>Entity</code> per manifest entry, applies components through small subsystems (physics, lights, cameras, audio, …), then runs your <code>Behavior</code> scripts.</p>
+<p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports. These are <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything glTF cannot express). The loader turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb. It indexes nodes by GUID. It builds an <code>Entity</code> per manifest entry. It applies components through small subsystems (physics, lights, cameras, audio, …). Then it runs your <code>Behavior</code> scripts.</p>
 
 <h2>Subsystem map</h2>
 <table><thead><tr><th>Subsystem</th><th>Engine diagram</th><th>Blender diagram</th><th>Prose</th></tr></thead><tbody>
@@ -44,8 +44,8 @@
 </tbody></table>
 
 <h2>The interactive pages</h2>
-<p>Subsystem diagrams: <a href="index.html"><strong>index.html</strong></a> (engine overview) · <a href="architecture.html"><strong>architecture.html</strong></a> (two artifacts) · <a href="runtime-loop.html"><strong>runtime-loop.html</strong></a> (frame timeline) · <a href="load-pipeline.html"><strong>load-pipeline.html</strong></a> · <a href="scripting.html"><strong>scripting.html</strong></a> · <a href="input.html"><strong>input.html</strong></a> · <a href="physics.html"><strong>physics.html</strong></a> · <a href="rendering.html"><strong>rendering.html</strong></a> · <a href="audio-animation.html"><strong>audio-animation.html</strong></a> · <a href="ui.html"><strong>ui.html</strong></a> · <a href="workflow.html"><strong>workflow.html</strong></a> · <a href="blender-addon.html"><strong>blender-addon.html</strong></a> (the editor, from the runtime's point of view).</p>
-<p>Code traces (each node is a step; click for the explanation + the actual current TypeScript source): <strong>Load</strong> · <strong>Runtime loop</strong> · <strong>Lifecycle</strong> · <strong>Components</strong> · <strong>Physics</strong> · <strong>@exposed</strong> · <strong>Triggers</strong> · <strong>Constraints</strong> · <strong>Audio</strong> · <strong>Input</strong> · <strong>Live Link</strong> · <strong>2D GUI</strong> · <strong>Particles</strong> · <strong>MSDF text</strong> · <strong>3D GUI</strong> · <strong>Atmosphere</strong> · <strong>Lights</strong> · <strong>Cameras</strong> · <strong>Shadows</strong> · <strong>Post-processing</strong> (<a href="trace-runtime-loop.html">trace-runtime-loop</a> · <a href="trace-lifecycle.html">trace-lifecycle</a> · <a href="trace-components.html">trace-components</a> · …).</p>
+<p>Subsystem diagrams: <a href="index.html"><strong>index.html</strong></a> (engine overview) · <a href="architecture.html"><strong>architecture.html</strong></a> (two artifacts) · <a href="runtime-loop.html"><strong>runtime-loop.html</strong></a> (frame timeline) · <a href="load-pipeline.html"><strong>load-pipeline.html</strong></a> · <a href="scripting.html"><strong>scripting.html</strong></a> · <a href="input.html"><strong>input.html</strong></a> · <a href="physics.html"><strong>physics.html</strong></a> · <a href="rendering.html"><strong>rendering.html</strong></a> · <a href="audio-animation.html"><strong>audio-animation.html</strong></a> · <a href="ui.html"><strong>ui.html</strong></a> · <a href="workflow.html"><strong>workflow.html</strong></a> · <a href="blender-addon.html"><strong>blender-addon.html</strong></a> (the editor, from the runtime&apos;s point of view).</p>
+<p>Code traces show each node as a step. Click a node for the explanation and the current TypeScript source: <strong>Load</strong> · <strong>Runtime loop</strong> · <strong>Lifecycle</strong> · <strong>Components</strong> · <strong>Physics</strong> · <strong>@exposed</strong> · <strong>Triggers</strong> · <strong>Constraints</strong> · <strong>Audio</strong> · <strong>Input</strong> · <strong>Live Link</strong> · <strong>2D GUI</strong> · <strong>Particles</strong> · <strong>MSDF text</strong> · <strong>3D GUI</strong> · <strong>Atmosphere</strong> · <strong>Lights</strong> · <strong>Cameras</strong> · <strong>Shadows</strong> · <strong>Post-processing</strong> (<a href="trace-runtime-loop.html">trace-runtime-loop</a> · <a href="trace-lifecycle.html">trace-lifecycle</a> · <a href="trace-components.html">trace-components</a> · …).</p>
 
 <h2>The prose chapters</h2>
 <ol>
@@ -58,7 +58,7 @@
 <li><a href="07-RENDERING.html">Rendering</a> — lights, cameras, shadows, environment, atmosphere, scene look</li>
 <li><a href="08-AUDIO-ANIMATION.html">Audio &amp; Animation</a> — sounds, NLA clips, the skinned-mesh rule</li>
 <li><a href="09-WORKFLOW.html">Workflow</a> — Live Link, the validator, Debug Build, tooling, <a href="../launcher/00-INDEX.html">Babylon Launcher</a></li>
-<li><a href="10-FEATURE-TRACES.html">Feature Traces</a> — every feature's Blender → runtime file/function chain</li>
+<li><a href="10-FEATURE-TRACES.html">Feature Traces</a> — every feature&apos;s Blender → runtime file/function chain</li>
 <li><a href="11-UI.html">UI</a> — 2D GUI, particles, MSDF text, 3D GUI</li>
 <li><a href="12-INPUT.html">Input</a> — Input Actions, stick vs 1D/2D bindings, control type, gamepad, axis half, <code>@inputMap</code></li>
 <li><a href="13-FEATURE-LIST.html">Feature List</a> — every component, scene setting, and workflow feature in one table</li>
@@ -66,5 +66,5 @@
 </ol>
 
 <h2>Regenerating</h2>
-<p><code>npm run docs:build</code> regenerates both sides from the shared shell template (<code>docs/_template/diagram-shell.html</code>) and rebuilds the searchable landing page. <code>npm run docs:trace</code> rebuilds only this folder; it re-extracts every trace's source from <code>packages/engine/</code>. A renamed/deleted symbol fails the build loudly — the anti-rot guard. (The Blender side alone is <code>npm run docs:blender</code>.)</p>
+<p><code>npm run docs:build</code> regenerates both sides from the shared shell template (<code>docs/_template/diagram-shell.html</code>). It also rebuilds the searchable landing page. <code>npm run docs:trace</code> rebuilds only this folder. It re-extracts every trace&apos;s source from <code>packages/engine/</code>. A renamed or deleted symbol fails the build loudly. This is the anti-rot guard. The Blender side alone uses <code>npm run docs:blender</code>.</p>
 <p>Full build pipeline, file layout, and how to add traces or subsystem diagrams: <a href="../BUILDING-DOCS.html"><strong>Building the documentation</strong></a>.</p>

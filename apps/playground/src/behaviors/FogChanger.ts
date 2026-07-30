@@ -1,12 +1,27 @@
-import { Behavior, exposed } from "@bjs/engine";
-import type { AttachmentOfType, ColliderComponent, Entity } from "@bjs/engine";
-import { Color3, Matrix, Quaternion, Scene, Vector3 } from "@babylonjs/core";
+import { ApplyColorGradingLut, Behavior, exposed, IsEntityInsideColliderVolume } from "@bjs/engine";
+import type { AttachmentOfType, Entity, Level } from "@bjs/engine";
+import {
+  Color3,
+  ImageProcessingConfiguration,
+  Scene,
+} from "@babylonjs/core";
+import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture";
+import type { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { InputBlock } from "@babylonjs/core/Materials/Node/Blocks/Input/inputBlock";
 import { NodeMaterial } from "@babylonjs/core/Materials/Node/nodeMaterial";
 
+/** Manifest-aligned tone mapper ids (matches `postProcessing.toneMappingType`). */
+type ToneMappingPreset = "STANDARD" | "ACES" | "KHR_PBR_NEUTRAL";
+
+const TONE_MAPPING_TYPES = {
+  STANDARD: ImageProcessingConfiguration.TONEMAPPING_STANDARD,
+  ACES: ImageProcessingConfiguration.TONEMAPPING_ACES,
+  KHR_PBR_NEUTRAL: ImageProcessingConfiguration.TONEMAPPING_KHR_PBR_NEUTRAL,
+} as const;
+
 /**
- * Lives on a trigger volume. Swaps scene linear fog between two authored presets
- * when a referenced moving object enters or leaves this entity's collider.
+ * Lives on a trigger volume. Outside the collider: linear fog A + ACES tone mapping.
+ * Inside: fog B + a manifest-relative color-grading LUT (tone mapping off).
  */
 export default class FogChanger extends Behavior
 {
@@ -25,12 +40,28 @@ export default class FogChanger extends Behavior
   @exposed({ type: "vector2", label: "Fog B start / end" })
   fogBRange: [number, number] = [5, 50];
 
+  @exposed({
+    type: "enum",
+    options: ["STANDARD", "ACES", "KHR_PBR_NEUTRAL"],
+    label: "Tone map (outside)",
+  })
+  outsideToneMap: ToneMappingPreset = "ACES";
+
+  @exposed({
+    type: "file",
+    label: "LUT (inside)",
+  })
+  zoneLut = "";
+
   private colliderAttachment: AttachmentOfType<"COLLIDER"> | undefined;
 
   /** Whether the assigned moving object is currently inside this trigger volume. */
   private movingObjectInside = false;
 
-  /** Cache this zone's collider, validate the probe, and apply the active fog preset. */
+  /** Runtime LUT loaded for the inside zone (disposed when leaving). */
+  private activeGradingTexture: BaseTexture | null = null;
+
+  /** Cache this zone's collider, validate the probe, and seed inside state. */
   OnStart(): void
   {
     this.colliderAttachment = this.entity.GetAttachment("COLLIDER");
@@ -42,7 +73,7 @@ export default class FogChanger extends Behavior
     else if (!this.colliderAttachment.data.isTrigger)
     {
       console.warn(
-        `[FogChanger:${this.entity.name}] Collider is not a trigger — OnTriggerEnter/Exit will not fire`
+        `[FogChanger:${this.entity.name}] Collider is not a trigger — IsEntityInsideColliderVolume requires a trigger volume`
       );
     }
 
@@ -50,41 +81,20 @@ export default class FogChanger extends Behavior
     {
       console.warn(`[FogChanger:${this.entity.name}] No moving object assigned`);
     }
-    else
-    {
-      const probeCollider = this.movingObject.GetAttachment("COLLIDER");
-      if (probeCollider === undefined)
-      {
-        console.warn(
-          `[FogChanger:${this.entity.name}] Moving object "${this.movingObject.name}" has no COLLIDER`
-        );
-      }
-      else if (probeCollider.data.isTrigger)
-      {
-        console.warn(
-          `[FogChanger:${this.entity.name}] Moving object "${this.movingObject.name}" collider is a trigger — use a solid collider on the probe so it can enter this volume`
-        );
-      }
 
-      if (this.movingObject.body === undefined)
-      {
-        console.warn(
-          `[FogChanger:${this.entity.name}] Moving object "${this.movingObject.name}" has no physics body — add RIGIDBODY (DYNAMIC or ANIMATED)`
-        );
-      }
-    }
+    this.movingObjectInside = this.IsProbeInsideVolume();
+  }
 
-    this.movingObjectInside = this.IsMovingObjectInsideTrigger();
+  /** Apply the initial fog/LUT preset once post-processing is attached. */
+  OnPostReady(): void
+  {
     this.ApplyActiveFog();
   }
 
-  /**
-   * Keep fog in sync with probe position. Trigger enter/exit can be missed when
-   * the probe collider is also a trigger, or when the probe starts overlapped.
-   */
+  /** Keep fog in sync with the probe position each frame. */
   OnUpdate(_deltaSeconds: number): void
   {
-    const inside = this.IsMovingObjectInsideTrigger();
+    const inside = this.IsProbeInsideVolume();
     if (inside === this.movingObjectInside)
     {
       return;
@@ -94,57 +104,96 @@ export default class FogChanger extends Behavior
     this.ApplyActiveFog();
   }
 
-  /** Switch to fog B when the moving object enters this trigger volume. */
-  OnTriggerEnter(other: Entity): void
-  {
-    if (!this.IsMovingObject(other))
-    {
-      return;
-    }
-
-    if (this.movingObjectInside)
-    {
-      return;
-    }
-
-    this.movingObjectInside = true;
-    this.ApplyActiveFog();
-  }
-
-  /** Restore fog A when the moving object leaves this trigger volume. */
-  OnTriggerExit(other: Entity): void
-  {
-    if (!this.IsMovingObject(other))
-    {
-      return;
-    }
-
-    if (!this.movingObjectInside)
-    {
-      return;
-    }
-
-    this.movingObjectInside = false;
-    this.ApplyActiveFog();
-  }
-
-  /** Whether the overlapping entity is the assigned moving object. */
-  private IsMovingObject(other: Entity): boolean
-  {
-    return this.movingObject !== null && other === this.movingObject;
-  }
-
-  /** Apply fog A or B based on whether the probe is inside this trigger volume. */
+  /** Apply fog A/B and outside tone map or inside LUT from probe position. */
   private ApplyActiveFog(): void
   {
     if (this.movingObjectInside)
     {
       this.ApplyLinearFog(this.fogBColor, this.fogBRange);
+      this.ApplyZoneLut();
     }
     else
     {
       this.ApplyLinearFog(this.fogAColor, this.fogARange);
+      this.ApplyOutsideToneMap();
     }
+  }
+
+  /** ACES (or another preset) with color grading off. */
+  private ApplyOutsideToneMap(): void
+  {
+    const imageProcessing = this.TryGetImageProcessing();
+    if (imageProcessing === undefined)
+    {
+      return;
+    }
+
+    this.ClearZoneLut(imageProcessing);
+    imageProcessing.toneMappingEnabled = true;
+    imageProcessing.toneMappingType = TONE_MAPPING_TYPES[this.outsideToneMap];
+    imageProcessing._updateParameters();
+  }
+
+  /** LUT-only look for the inside zone (tone mapping off). */
+  private ApplyZoneLut(): void
+  {
+    const imageProcessing = this.TryGetImageProcessing();
+    if (imageProcessing === undefined)
+    {
+      return;
+    }
+
+    const trimmedPath = this.zoneLut.trim();
+    if (trimmedPath.length === 0)
+    {
+      console.warn(`[FogChanger:${this.entity.name}] Zone LUT path is empty — keeping outside tone map`);
+      this.ApplyOutsideToneMap();
+      return;
+    }
+
+    imageProcessing.toneMappingEnabled = false;
+    ApplyColorGradingLut(
+      this.scene,
+      this.level.componentHost.baseUrl,
+      imageProcessing,
+      { file: trimmedPath }
+    );
+
+    this.ReplaceActiveGradingTexture(imageProcessing.colorGradingTexture ?? null);
+  }
+
+  /** Turn off grading and dispose any LUT loaded for the inside zone. */
+  private ClearZoneLut(
+    imageProcessing: NonNullable<DefaultRenderingPipeline["imageProcessing"]>
+  ): void
+  {
+    this.ReplaceActiveGradingTexture(null);
+    imageProcessing.colorGradingEnabled = false;
+    imageProcessing.colorGradingTexture = null;
+    imageProcessing._updateParameters();
+  }
+
+  /** Dispose a previously swapped LUT and track the new runtime instance. */
+  private ReplaceActiveGradingTexture(nextTexture: BaseTexture | null): void
+  {
+    if (this.activeGradingTexture !== null)
+    {
+      this.activeGradingTexture.dispose();
+    }
+
+    this.activeGradingTexture = nextTexture;
+  }
+
+  /** Default rendering pipeline image processing, when post was authored on the scene. */
+  private TryGetImageProcessing(): DefaultRenderingPipeline["imageProcessing"] | undefined
+  {
+    return this.level.post?.pipeline?.imageProcessing;
+  }
+
+  /** Level container injected as `spawner` on every behavior instance. */
+  private get level(): Level
+  {
+    return this.spawner as Level;
   }
 
   /** Write linear fog color and start/end onto the scene. */
@@ -180,61 +229,18 @@ export default class FogChanger extends Behavior
   }
 
   /** Whether the assigned moving object is inside this entity's trigger collider. */
-  private IsMovingObjectInsideTrigger(): boolean
+  private IsProbeInsideVolume(): boolean
   {
-    if (this.movingObject === null || this.colliderAttachment === undefined)
+    if (this.movingObject === null)
     {
       return false;
     }
 
-    const collider = this.colliderAttachment.data;
-    if (collider.shape !== "BOX")
-    {
-      return false;
-    }
-
-    const scaledCollider = this.ScaleColliderForObjectScale(collider);
-    const probeWorld = this.movingObject.node.getAbsolutePosition();
-    const inverseWorldMatrix = Matrix.Invert(this.entity.node.getWorldMatrix());
-    const localProbe = Vector3.TransformCoordinates(probeWorld, inverseWorldMatrix);
-    const offset = localProbe.subtract(Vector3.FromArray(scaledCollider.center));
-
-    if (collider.rotation !== undefined)
-    {
-      const inverseRotation = Quaternion.FromArray(collider.rotation).conjugate();
-      offset.applyRotationQuaternionInPlace(inverseRotation);
-    }
-
-    const halfExtents = Vector3.FromArray(scaledCollider.size).scaleInPlace(0.5);
-
-    return Math.abs(offset.x) <= halfExtents.x
-      && Math.abs(offset.y) <= halfExtents.y
-      && Math.abs(offset.z) <= halfExtents.z;
-  }
-
-  /** Match physics collider scaling when applyObjectScale is enabled on this volume. */
-  private ScaleColliderForObjectScale(collider: ColliderComponent): ColliderComponent
-  {
-    if (collider.applyObjectScale === false)
-    {
-      return collider;
-    }
-
-    const scaling = this.entity.node.scaling;
-
-    return {
-      ...collider,
-      size: [
-        collider.size[0] * scaling.x,
-        collider.size[1] * scaling.y,
-        collider.size[2] * scaling.z,
-      ],
-      center: [
-        collider.center[0] * scaling.x,
-        collider.center[1] * scaling.y,
-        collider.center[2] * scaling.z,
-      ],
-    };
+    return IsEntityInsideColliderVolume(
+      this.movingObject,
+      this.entity,
+      this.colliderAttachment
+    );
   }
 
   /** Keep water NME fog-alpha inputs aligned with the active scene fog range. */

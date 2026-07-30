@@ -4,6 +4,7 @@ import type {
   AnimationGroup,
   StaticSound,
   IParticleSystem,
+  PhysicsConstraint,
 } from "@babylonjs/core";
 import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import type { AdvancedDynamicTexture, Control3D } from "@babylonjs/gui";
@@ -11,6 +12,11 @@ import type { TextRenderer } from "@babylonjs/addons/msdfText";
 // Type-only import: Entity references Behavior, Behavior references Entity.
 // `import type` erases at compile time, so the cycle is harmless at runtime.
 import type { Behavior } from "../scripting/Behavior";
+import { IsEntityActive } from "./entityActive";
+import type {
+  ColliderComponent,
+  RigidBodyComponent,
+} from "./types";
 import type {
   AttachmentOfType,
   ComponentType,
@@ -47,6 +53,36 @@ export class Entity
   /** Reflection probes created from REFLECTION_PROBE components. */
   reflectionProbes: ReflectionProbe[] = [];
 
+  /**
+   * When false, this entity is locally inactive (`activeSelf`). Effective activity
+   * also requires every ancestor entity to be locally active — see {@link IsEntityActive}.
+   */
+  active = true;
+
+  /**
+   * Cached effective-active state updated by {@link SetEntityActive} reconciliation.
+   * Do not set directly.
+   */
+  effectiveActive = true;
+
+  /**
+   * Authored collider/rigidbody rows preserved while Havok is suspended by
+   * effective deactivation.
+   */
+  suspendedPhysics?: {
+    colliders: ColliderComponent[];
+    rigidBody: RigidBodyComponent | undefined;
+  };
+
+  /** Runtime playback state preserved while effectively inactive. */
+  suspendedRuntime?: {
+    playingSounds: StaticSound[];
+    playingAnimations: AnimationGroup[];
+    emittingParticles: IParticleSystem[];
+    enabledConstraints: PhysicsConstraint[];
+    probeRefreshRates: Array<{ probe: ReflectionProbe; refreshRate: number }>;
+  };
+
   constructor(id: string, name: string, node: TransformNode)
   {
     this.id = id;
@@ -78,6 +114,44 @@ export class Entity
   HasAttachment(type: ComponentType): boolean
   {
     return this.attachments.some((attachment) => attachment.type === type);
+  }
+
+  /**
+   * Find one attachment of the given type by its Blender instance name
+   * (exact match, then contains; case-insensitive).
+   */
+  GetNamedAttachment<T extends ComponentType>(
+    type: T,
+    instanceName: string
+  ): AttachmentOfType<T> | undefined
+  {
+    const attachments = this.GetAttachmentsOfType(type);
+    const wanted = instanceName.toLowerCase();
+
+    const exactMatch = attachments.find(
+      (attachment) =>
+        attachment.data.name !== undefined &&
+        attachment.data.name.toLowerCase() === wanted
+    );
+    if (exactMatch !== undefined)
+    {
+      return exactMatch;
+    }
+
+    return attachments.find(
+      (attachment) =>
+        attachment.data.name !== undefined &&
+        attachment.data.name.toLowerCase().includes(wanted)
+    );
+  }
+
+  /**
+   * Find one SCRIPT behavior by its Blender instance name
+   * (exact match, then contains; case-insensitive).
+   */
+  GetScript(instanceName: string): Behavior | undefined
+  {
+    return this.GetNamedAttachment("SCRIPT", instanceName)?.behavior;
   }
 
   /** Return the first attached behavior of the given class, if present. */
@@ -198,6 +272,11 @@ export class Entity
   /** Deliver a message to every behavior on this entity (their OnMessage hook). */
   SendMessage(message: string, source: Entity): void
   {
+    if (!IsEntityActive(this))
+    {
+      return;
+    }
+
     for (const behavior of this.behaviors)
     {
       try

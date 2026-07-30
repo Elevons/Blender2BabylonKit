@@ -1,4 +1,5 @@
-import type { Scene, TransformNode, Node } from "@babylonjs/core";
+import type { Scene, TransformNode } from "@babylonjs/core";
+import { ApplyNodeSubtreeVisibility } from "../entityActive";
 import { ID_KEY, VISIBLE_KEY } from "../types";
 
 /**
@@ -50,20 +51,6 @@ export function FindNodeByName(scene: Scene, name: string): TransformNode | null
  * guard: if a mirrored root ever reappears (negative determinant), physics
  * orientation is broken again and we want a loud, specific warning.
  */
-function IsDescendantOf(node: Node, ancestor: Node): boolean
-{
-  let parent: Node | null = node.parent;
-  while (parent !== null)
-  {
-    if (parent === ancestor)
-    {
-      return true;
-    }
-    parent = parent.parent;
-  }
-  return false;
-}
-
 function IsMarkedHiddenInExtras(extras: Record<string, unknown> | undefined): boolean
 {
   const marked = extras?.[VISIBLE_KEY];
@@ -73,27 +60,7 @@ function IsMarkedHiddenInExtras(extras: Record<string, unknown> | undefined): bo
 /** Hide a loaded node and its descendants; disable child lights/cameras. */
 export function HideEntityNode(scene: Scene, root: TransformNode): void
 {
-  root.isVisible = false;
-
-  for (const descendant of root.getDescendants(false))
-  {
-    descendant.isVisible = false;
-  }
-
-  for (const light of scene.lights)
-  {
-    if (IsDescendantOf(light, root))
-    {
-      light.setEnabled(false);
-    }
-  }
-  for (const camera of scene.cameras)
-  {
-    if (IsDescendantOf(camera, root))
-    {
-      camera.isVisible = false;
-    }
-  }
+  ApplyNodeSubtreeVisibility(scene, root, false);
 }
 
 /** Hide glTF nodes whose extras carry `bjs_visible` (Blender viewport-hidden). */

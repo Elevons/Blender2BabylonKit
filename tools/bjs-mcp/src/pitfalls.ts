@@ -47,13 +47,55 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "SCRIPT behavior on skinned mesh instead of armature",
     symptom: "Animation / transform ignored",
-    fix: "Attach SCRIPT component to the armature object in Blender",
+    fix: "Attach SCRIPT / ANIMATOR components to the armature object in Blender",
+    mcpTool: "get_scripting_context(section=\"animation\")",
+  },
+  {
+    mistake: "ANIMATOR on skinned mesh instead of armature",
+    symptom: "No clips found; states never play",
+    fix: "Add ANIMATOR on the armature; Validate before export",
+    mcpTool: "get_playbook(name=\"animator-fsm\")",
+  },
+  {
+    mistake: "ANIMATOR + Animation panel autoplay both enabled",
+    symptom: "Clips fight each other / wrong clip on load",
+    fix: "Turn off autoplay — Animator owns playback",
+    mcpTool: "get_scripting_context(section=\"animation\")",
+  },
+  {
+    mistake: "Hand-written SCRIPT FSM instead of ANIMATOR for Idle/Walk",
+    symptom: "Duplicated state logic; hard to author",
+    fix: "Author ANIMATOR node graph in Blender; thin driver script only sets parameters",
+    mcpTool: "get_playbook(name=\"animator-fsm\")",
+  },
+  {
+    mistake: "Using NLA strip display names as Animator / GetAnimation clip ids",
+    symptom: "Clip not found; dropdown empty or wrong name vs runtime",
+    fix: "Use Action names (glTF ACTIONS mode). Renamed NLA tracks override. One Action per track; stashed muted tracks still count",
+    mcpTool: "get_scripting_context(section=\"animation\")",
+  },
+  {
+    mistake: "Reusing one Animator graph / wrong State clip across two armatures",
+    symptom: "WhaleSwim on shark (or clip list stuck on the other object)",
+    fix: "Each armature gets its own ANIMATOR + Edit Animator; State clips must be that object's Actions",
+    mcpTool: "get_playbook(name=\"animator-fsm\")",
+  },
+  {
+    mistake: "Looping Action with hold / dead frames at the end",
+    symptom: "Character freezes briefly every cycle (worse on short clips)",
+    fix: "Trim the Action so last pose matches first; remove end ease-out holds before export",
     mcpTool: "get_scripting_context(section=\"animation\")",
   },
   {
     mistake: "MESH-shaped trigger collider",
     symptom: "OnMessage never fires",
     fix: "Use box/sphere/capsule/convex trigger in Blender",
+    mcpTool: "get_scripting_context(section=\"physics\")",
+  },
+  {
+    mistake: "scene.pickWithRay for obstacle / ground / line-of-sight checks",
+    symptom: "Rays miss terrain and colliders; avoidance or grounding never triggers",
+    fix: "pickWithRay only hits pickable render meshes, not Havok colliders. Terrain and obstacles are physics bodies, so rays often miss them. Use scene.getPhysicsEngine()?.raycastToRef(start, end, PhysicsRaycastResult) instead — same as TrainCamera.ts, CarController.ts, fishNavigator.ts",
     mcpTool: "get_scripting_context(section=\"physics\")",
   },
   {
@@ -89,8 +131,26 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "Creating Atmosphere / DefaultRenderingPipeline in behavior",
     symptom: "Duplicates loader; wrong on reload",
-    fix: "Author Babylon Scene › Atmosphere / Post-Processing in Blender",
+    fix: "Author Babylon Scene › Atmosphere / Post-Processing in Blender; zone LUT swaps use ApplyColorGradingLut on level.post.pipeline.imageProcessing",
     mcpTool: "get_scripting_context(section=\"scene-look\")",
+  },
+  {
+    mistake: "ApplyColorGradingLut or level.post access in OnStart",
+    symptom: "Zone LUT skipped; pipeline undefined at startup",
+    fix: "Use OnPostReady for level.post.pipeline work — post attaches after Begin/OnStart, then NotifyPostReady runs",
+    mcpTool: "get_scripting_context(section=\"load-order\")",
+  },
+  {
+    mistake: "Loading a .cube color-grading LUT as Texture or ad-hoc fetch in behavior",
+    symptom: "Black/red image or no visible grade",
+    fix: "Scene-wide: Post-Processing › Color Grading in Blender. Per-zone: @exposed({ type: \"file\" }) + ApplyColorGradingLut from @bjs/engine (see FogChanger.ts)",
+    mcpTool: "get_fragment(name=\"zone-lut-swap\")",
+  },
+  {
+    mistake: "Manifest-relative LUT path typed into @exposed({ type: \"string\" })",
+    symptom: "No file picker; export does not copy the asset",
+    fix: "Use @exposed({ type: \"file\" }) — export copies to post/ via copy_asset",
+    mcpTool: "get_exposed_field_snippet(type=\"file\")",
   },
   {
     mistake: "Creating MSDF TextRenderer in behavior",
@@ -128,6 +188,24 @@ export const PITFALLS: PitfallEntry[] = [
     fix: "Leave color kind blank (auto-pick) or use COLOR_1; threshold on luminance (~0.5). Stock Babylon drops COLOR_1+ — LevelLoader registers bjs_extra_vertex_colors so getVerticesData(\"COLOR_1\") works. Blender often invents all-white COLOR_0 when Export all vertex colors is on.",
     mcpTool: "get_scripting_context(section=\"prefab-spawn\")",
   },
+  {
+    mistake: "Multi-spawn loop without batched shadow registration",
+    symptom: "Hitches when scattering many prefabs; repeated shadow map refresh per instance",
+    fix: "Pass deferShadowRefresh: true on each this.spawner.Spawn in the loop, then this.spawner.FlushSpawnShadowRefresh() once after. Skip defer for interval spawners (spawn seconds apart).",
+    mcpTool: "get_scripting_context(section=\"prefab-spawn\")",
+  },
+  {
+    mistake: "Spawning at full scale then setting scale to zero after Spawn() returns",
+    symptom: "One-frame flash of full-size prefab at the template pose or spawn position",
+    fix: "Pass scaling (and position / rotation) in SpawnOptions — loader/prefabSpawn applies transform on the hidden clone before reveal (clone.ts → ApplySpawnTransform). For grow-in, use scaling: Vector3.Zero() and lerp to template.node.scaling in OnUpdate (animalSpawner.ts).",
+    mcpTool: "get_scripting_context(section=\"prefab-spawn\")",
+  },
+  {
+    mistake: "Expecting spawned skinned prefabs to share the template animation phase",
+    symptom: "All instances swim in sync or spawn mid-cycle from the template pose",
+    fix: "Spawn clones skeletons and AnimationGroups per instance and hides the template at spawn start by default. Pass keepTemplate: true when the source rig should stay visible; use @exposed({ spawnTemplate: true }) for deferred spawners.",
+    mcpTool: "get_scripting_context(section=\"prefab-spawn\")",
+  },
 
   {
     mistake: "Runtime-adding REFLECTION_PROBE or RENDERING_GROUP",
@@ -160,10 +238,16 @@ export const PITFALLS: PitfallEntry[] = [
     mcpTool: "get_scripting_context(section=\"lights\")",
   },
   {
-    mistake: "Trigger probe collider on a zone behavior (FogChanger, etc.)",
-    symptom: "Enter/exit never fires or fires inverted; wrong fog/light preset sticks",
-    fix: "Solid collider on the moving probe; poll overlap in OnStart/OnUpdate as fallback",
-    mcpTool: "get_scripting_context(section=\"physics\")",
+    mistake: "Toggling entity.node.isVisible / setEnabled manually for full enable/disable",
+    symptom: "Mesh hides but Havok still collides; behaviors keep running OnUpdate",
+    fix: "Use `SetEntityActive(entity, active)` from `@bjs/engine` — not `isVisible` alone (physics and OnUpdate keep running)",
+    mcpTool: "get_fragment(name=\"set-entity-active\")",
+  },
+  {
+    mistake: "Zone behavior relies on Havok OnTriggerEnter/Exit only (FogChanger, ToggleInWater, etc.)",
+    symptom: "Enter/exit never fires or state sticks — common when the probe collider is also a trigger",
+    fix: "Poll with `IsEntityInsideColliderVolume(probe, volume)` in OnStart/OnUpdate; assign an explicit probe entity when the script host is not the moving sample point (e.g. CameraBlock for TrainCamera rigs)",
+    mcpTool: "get_fragment(name=\"poll-trigger-volume\")",
   },
   {
     mistake: "Linear fog with equal or inverted start/end (e.g. `[10000, 10000]`)",

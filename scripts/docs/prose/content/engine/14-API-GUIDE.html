@@ -1,6 +1,6 @@
 <h1>14 — API Guide (runtime)</h1>
 <p class="doc-links">Feature inventory: <a href="13-FEATURE-LIST.html">13 — Feature List</a> · Behavior quick-start: <a href="../LLM_SCRIPTING_CONTEXT.md">LLM_SCRIPTING_CONTEXT.md</a> · Scripting prose: <a href="05-SCRIPTING.html">05 — Scripting</a> · Input: <a href="12-INPUT.html">12 — Input</a></p>
-<p>Reference for <strong>behavior authors</strong> and anyone reading runtime code. Import from <code>@bjs/engine</code> in app behavior files. This guide covers the kit’s public surface — not every Babylon.js API.</p>
+<p>This guide is a reference for <strong>behavior authors</strong> and anyone who reads runtime code. Import from <code>@bjs/engine</code> in app behavior files. This guide covers the kit&apos;s public surface. It does not cover every Babylon.js API.</p>
 
 <h2>Quick example</h2>
 <pre><code class="language-typescript">import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
@@ -37,20 +37,23 @@ export default class Patrol extends Behavior
 }</code></pre>
 
 <h2 id="behavior">Behavior</h2>
-<p>Base class for all scripts. One <code>export default class</code> per file; filename stem = Blender registry key (<code>Patrol.ts</code> → <code>"Patrol"</code>).</p>
+<p>This class is the base class for all scripts. Use one <code>export default class</code> per file. The filename stem is the Blender registry key (<code>Patrol.ts</code> → <code>"Patrol"</code>).</p>
 <h3>Lifecycle (PascalCase required)</h3>
 <table><thead><tr><th>Method</th><th>When</th></tr></thead><tbody>
 <tr><td><code>OnStart(): void</code></td><td>Once, after load finishes and all <code>@exposed</code> entity refs resolve</td></tr>
-<tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every frame, inside <code>Level.RunFrame</code> (before physics step)</td></tr>
+<tr><td><code>OnPostReady(): void</code></td><td>Once, after NME compile and post attach (<code>level.postReady</code>)</td></tr>
+<tr><td><code>OnDisable(): void</code></td><td>When the entity becomes effectively inactive (<code>SetEntityActive</code> / hierarchy)</td></tr>
+<tr><td><code>OnEnable(): void</code></td><td>When the entity becomes effectively active again</td></tr>
+<tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every frame, inside <code>Level.RunFrame</code> (before physics step). Skipped when <code>!IsEntityActive(entity)</code></td></tr>
 <tr><td><code>OnDestroy(): void</code></td><td>When the level is disposed</td></tr>
 <tr><td><code>OnMessage(message, source): void</code></td><td>When this entity receives a message (Event Messages, 3D GUI, <code>SendMessage</code>)</td></tr>
 <tr><td><code>OnCollisionEnter(other, contact): void</code></td><td>Solid collider first contacts another entity (<code>contact</code> is a <code>CollisionContact</code>: point, normal, impulse, distance)</td></tr>
-<tr><td><code>OnCollisionStay(other, contact): void</code></td><td>While solid contact continues (Havok <code>COLLISION_CONTINUED</code>; stops when bodies sleep)</td></tr>
+<tr><td><code>OnCollisionStay(other, contact): void</code></td><td>While solid contact continues (Havok <code>COLLISION_CONTINUED</code>. Stops when bodies sleep)</td></tr>
 <tr><td><code>OnCollisionExit(other): void</code></td><td>Solid contact ends</td></tr>
 <tr><td><code>OnTriggerEnter(other): void</code></td><td>Trigger volume on this entity first overlapped</td></tr>
-<tr><td><code>OnTriggerExit(other): void</code></td><td>Trigger overlap ends (no <code>OnTriggerStay</code> — track overlap state in code if needed)</td></tr>
+<tr><td><code>OnTriggerExit(other): void</code></td><td>Trigger overlap ends (no <code>OnTriggerStay</code>). Track overlap state in code if needed</td></tr>
 </tbody></table>
-<p>Physics hooks are opt-in: override one and the engine enables the matching Havok callbacks automatically — no manual observable subscription. Both bodies in a solid contact receive collision hooks (Unity semantics); trigger hooks fire on the trigger entity's behaviors. Details: <a href="06-PHYSICS.html#collision-hooks">06 — Physics › Collision lifecycle hooks</a>.</p>
+<p>Physics hooks are optional. Override one hook and the engine enables the matching Havok callbacks. You do not need a manual observable subscription. Both bodies in a solid contact receive collision hooks (Unity semantics). Trigger hooks fire on the trigger entity&apos;s behaviors. See <a href="06-PHYSICS.html#collision-hooks">06 — Physics › Collision lifecycle hooks</a>.</p>
 <h3>Injected members</h3>
 <table><thead><tr><th>Member</th><th>Type</th><th>When set</th></tr></thead><tbody>
 <tr><td><code>entity</code></td><td><code>Entity</code></td><td>Before <code>OnStart</code></td></tr>
@@ -58,10 +61,10 @@ export default class Patrol extends Behavior
 <tr><td><code>node</code></td><td><code>TransformNode</code> (getter)</td><td>Same as <code>entity.node</code></td></tr>
 <tr><td><code>input?</code></td><td><code>InputActionMap</code></td><td>Scene default map when the script has no <code>@inputMap</code> fields</td></tr>
 </tbody></table>
-<p>Scale continuous motion by <code>deltaSeconds</code>. Babylon <em>velocities</em> are already per-second — do not multiply those by <code>deltaSeconds</code>.</p>
+<p>Scale continuous motion by <code>deltaSeconds</code>. Babylon <em>velocities</em> are already per-second. Do not multiply those values by <code>deltaSeconds</code>.</p>
 
 <h2 id="entity">Entity</h2>
-<p>One Blender object that exported successfully. File: <code>packages/engine/src/core/Entity.ts</code>.</p>
+<p>An entity is one Blender object that exported successfully. File: <code>packages/engine/src/core/Entity.ts</code>.</p>
 <h3>Fields</h3>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>id</code></td><td>GUID string (<code>bjs_id</code>)</td></tr>
@@ -69,7 +72,7 @@ export default class Patrol extends Behavior
 <tr><td><code>node</code></td><td>Babylon node (mesh, empty, camera, …)</td></tr>
 <tr><td><code>tag</code></td><td>From TAG component (default <code>"Untagged"</code>)</td></tr>
 <tr><td><code>attachments</code></td><td>All applied component rows (see <a href="#attachments">Attachments</a>)</td></tr>
-<tr><td><code>behaviors</code></td><td>Live <code>Behavior</code> instances from SCRIPT rows</td></tr>
+<tr><td><code>behaviors</code></td><td>Live <code>Behavior</code> instances from SCRIPT and ANIMATOR rows</td></tr>
 <tr><td><code>body?</code></td><td>Havok <code>PhysicsBody</code> when physics was built</td></tr>
 <tr><td><code>animations</code></td><td><code>AnimationGroup</code>s scoped to this node</td></tr>
 <tr><td><code>sounds</code></td><td><code>StaticSound</code>s from AUDIO components</td></tr>
@@ -78,14 +81,18 @@ export default class Patrol extends Behavior
 <tr><td><code>particleSystems</code></td><td>Particle systems from PARTICLE components</td></tr>
 <tr><td><code>textRenderers</code></td><td>MSDF renderers from MSDF_TEXT components</td></tr>
 <tr><td><code>reflectionProbes</code></td><td>Reflection probes from REFLECTION_PROBE components</td></tr>
+<tr><td><code>active</code></td><td>Local <code>activeSelf</code> (default <code>true</code>). Effective activity = <code>IsEntityActive(entity)</code> (ancestors must also be active)</td></tr>
+<tr><td><code>effectiveActive</code></td><td>Cached effective state — do not set directly</td></tr>
 </tbody></table>
 <h3>Methods</h3>
 <table><thead><tr><th>Method</th><th>Returns</th><th>Notes</th></tr></thead><tbody>
 <tr><td><code>GetAttachments()</code></td><td>readonly attachment rows</td><td>Full list</td></tr>
-<tr><td><code>GetAttachment(type)</code></td><td>First row of type, or undefined</td><td>e.g. <code>GetAttachment("SCRIPT")?.behavior</code></td></tr>
+<tr><td><code>GetAttachment(type)</code></td><td>First row of type, or undefined</td><td>e.g. <code>GetAttachment("SCRIPT")?.behavior</code>; <code>GetAttachment("ANIMATOR")?.behavior</code> → <code>AnimatorController</code></td></tr>
 <tr><td><code>GetAttachmentsOfType(type)</code></td><td>All rows of type</td><td>e.g. multiple COLLIDER rows</td></tr>
+<tr><td><code>GetNamedAttachment(type, name)</code></td><td>One row of type by Blender instance name</td><td>Manifest <code>name</code> from header <strong>Name</strong>; exact match, then contains</td></tr>
 <tr><td><code>HasAttachment(type)</code></td><td><code>boolean</code></td><td></td></tr>
-<tr><td><code>GetBehavior(Ctor)</code></td><td>First instance of class</td><td><code>GetBehavior(Patrol)</code></td></tr>
+<tr><td><code>GetBehavior(Ctor)</code></td><td>First instance of class</td><td><code>GetBehavior(Patrol)</code> — not useful when two SCRIPT rows share a class; use <code>GetScript(name)</code></td></tr>
+<tr><td><code>GetScript(name)</code></td><td><code>Behavior?</code></td><td>SCRIPT row matched by manifest <code>name</code> (Blender <strong>Name</strong> field)</td></tr>
 <tr><td><code>GetAnimation(name)</code></td><td><code>AnimationGroup?</code></td><td>Exact name, then substring match</td></tr>
 <tr><td><code>GetSound(name)</code></td><td><code>StaticSound?</code></td><td>File stem match</td></tr>
 <tr><td><code>GetGui(name)</code></td><td><code>AdvancedDynamicTexture?</code></td><td>JSON file stem</td></tr>
@@ -98,7 +105,7 @@ export default class Patrol extends Behavior
 </tbody></table>
 
 <h2 id="level">Level</h2>
-<p>Runtime container returned by <code>LevelLoader.Load</code>. File: <code>packages/engine/src/core/Level.ts</code>.</p>
+<p>A level is the runtime container that <code>LevelLoader.Load</code> returns. File: <code>packages/engine/src/core/Level.ts</code>.</p>
 <h3>Fields (common)</h3>
 <table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>entities</code></td><td><code>Map&lt;string, Entity&gt;</code> by GUID</td></tr>
@@ -126,18 +133,18 @@ export default class Patrol extends Behavior
 <tr><td><code>AddUpdater(fn)</code></td><td>Per-frame callback after all <code>OnUpdate</code> (cameras use this)</td></tr>
 <tr><td><code>Dispose()</code></td><td>Teardown — input detach, <code>OnDestroy</code>, dispose assets</td></tr>
 </tbody></table>
-<p><code>Begin()</code> and <code>RunFrame()</code> are called by the loader — behaviors do not call them.</p>
+<p>The loader calls <code>Begin()</code> and <code>RunFrame()</code>. Behaviors do not call them.</p>
 
 <h2 id="attachments">Attachments</h2>
-<p>Each successfully applied component becomes one row on <code>entity.attachments</code>. Types match manifest component types plus GUI3D variants.</p>
+<p>Each component that applies successfully becomes one row on <code>entity.attachments</code>. Types match manifest component types and GUI3D variants. Manifest rows can have an optional <code>name</code> (Blender header <strong>Name</strong> / <code>display_name</code>). Use <code>GetNamedAttachment</code> or <code>GetScript</code> for instance lookup.</p>
 <table><thead><tr><th><code>type</code></th><th><code>data</code></th><th>Runtime object on row</th></tr></thead><tbody>
-<tr><td><code>TAG</code></td><td>tag string</td><td>—</td></tr>
+<tr><td><code>TAG</code></td><td>tag string (+ optional <code>name</code>)</td><td>—</td></tr>
 <tr><td><code>RENDERING_GROUP</code></td><td>group id + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>LAYER_MASK</code></td><td>mask + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>COLLISION_LAYER</code></td><td>layer name + propagation flags</td><td>— (Havok filter masks applied in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>COLLIDER</code></td><td>collider manifest</td><td><code>body</code> (shared per entity)</td></tr>
 <tr><td><code>RIGIDBODY</code></td><td>body manifest</td><td><code>body</code> (same ref as colliders)</td></tr>
-<tr><td><code>SCRIPT</code></td><td>script + vars</td><td><code>behavior</code></td></tr>
+<tr><td><code>SCRIPT</code></td><td><code>script</code> + <code>vars</code> (+ optional <code>name</code>)</td><td><code>behavior</code></td></tr>
 <tr><td><code>AUDIO</code></td><td>audio manifest</td><td><code>sound</code></td></tr>
 <tr><td><code>GUI</code></td><td>gui manifest</td><td><code>texture</code></td></tr>
 <tr><td><code>PARTICLE</code></td><td>particle manifest</td><td><code>system</code>, optional <code>emptyEmitter</code></td></tr>
@@ -146,10 +153,10 @@ export default class Patrol extends Behavior
 <tr><td><code>CONSTRAINT</code></td><td>constraint manifest</td><td><code>constraint</code></td></tr>
 <tr><td><code>GUI3D_*</code></td><td>layout + events</td><td><code>control</code></td></tr>
 </tbody></table>
-<p>Convenience arrays on <code>Entity</code> (<code>sounds</code>, <code>behaviors</code>, …) mirror attachments for common access patterns. At load and at runtime, <code>RegisterAttachment</code> is the write path; runtime remove goes through <code>ComponentHost</code> (see below).</p>
+<p>Convenience arrays on <code>Entity</code> (<code>sounds</code>, <code>behaviors</code>, …) mirror attachments for common access. At load and at runtime, code writes attachments with <code>RegisterAttachment</code>. Runtime remove goes through <code>ComponentHost</code> (see below).</p>
 
 <h2 id="component-host">ComponentHost (runtime mutations)</h2>
-<p>App code mutates components after load via <code>level.componentHost</code>. File: <code>packages/engine/src/core/ComponentHost.ts</code>. <strong>Behaviors do not receive <code>Level</code></strong> — orchestrate add/remove from your app layer or pass results into behaviors via messages / <code>@exposed</code> entity refs.</p>
+<p>App code can change components after load through <code>level.componentHost</code>. File: <code>packages/engine/src/core/ComponentHost.ts</code>. <strong>Behaviors do not receive <code>Level</code></strong>. Add or remove components from your app layer. You can also pass results into behaviors through messages or <code>@exposed</code> entity refs.</p>
 <pre><code class="language-typescript">await level.componentHost.AddComponent(enemy, {
   type: "SCRIPT",
   script: "Patrol",
@@ -166,14 +173,15 @@ await level.componentHost.RemoveComponent(enemy, "SCRIPT", 0);</code></pre>
 <table><thead><tr><th>Supported at runtime</th><th>Load-only (policy error)</th></tr></thead><tbody>
 <tr><td><code>TAG</code>, <code>SCRIPT</code>, <code>AUDIO</code>, <code>GUI</code>, <code>PARTICLE</code>, <code>MSDF_TEXT</code>, <code>COLLIDER</code>, <code>RIGIDBODY</code>, <code>CONSTRAINT</code>, <code>GUI3D_*</code></td><td><code>CAMERA</code>, <code>REFLECTION_PROBE</code>, <code>RENDERING_GROUP</code>, <code>LAYER_MASK</code>, <code>COLLISION_LAYER</code></td></tr>
 </tbody></table>
-<p>Mutations are <strong>ephemeral</strong> — they are not written back to <code>.scene.json</code>. SCRIPT added after <code>level.Begin()</code> runs <code>OnStart</code> immediately. COLLIDER / RIGIDBODY changes rebuild the entity's single Havok body from all remaining attachment data.</p>
+<p>Mutations are <strong>ephemeral</strong>. They are not written back to <code>.scene.json</code>. A SCRIPT added after <code>level.Begin()</code> runs <code>OnStart</code> immediately (and <code>OnPostReady</code> when <code>level.postReady</code> is already true). COLLIDER or RIGIDBODY changes rebuild the entity&apos;s single Havok body from all remaining attachment data.</p>
 
 <h2 id="exposed">@exposed (Blender-editable fields)</h2>
-<p>Decorator: <code>exposed(options?)</code> from <code>@bjs/engine</code>. Must stay lowercase — Blender regex-parses the token literally.</p>
+<p>This decorator is <code>exposed(options?)</code> from <code>@bjs/engine</code>. It must stay lowercase. Blender regex-parses the token literally.</p>
 <table><thead><tr><th>Type / option</th><th>Blender UI</th><th>Runtime value</th></tr></thead><tbody>
 <tr><td><code>float</code> / <code>int</code> (+ min, max, step)</td><td>Number slider</td><td><code>number</code></td></tr>
 <tr><td><code>bool</code></td><td>Checkbox</td><td><code>boolean</code></td></tr>
 <tr><td><code>string</code></td><td>Text field</td><td><code>string</code></td></tr>
+<tr><td><code>type: "file"</code></td><td>File picker (<code>FILE_PATH</code>)</td><td><code>string</code> — manifest path under <code>post/</code> after export</td></tr>
 <tr><td><code>type: "vector2"</code></td><td>XY fields</td><td><code>[number, number]</code></td></tr>
 <tr><td><code>vector3</code> or <code>[n,n,n]</code> default</td><td>XYZ fields</td><td><code>Vector3</code></td></tr>
 <tr><td><code>color</code> or <code>Color3</code> default</td><td>Color picker</td><td><code>Color3</code></td></tr>
@@ -181,10 +189,10 @@ await level.componentHost.RemoveComponent(enemy, "SCRIPT", 0);</code></pre>
 <tr><td><code>type: "enum"</code>, <code>options: [...]</code></td><td>Dropdown</td><td><code>string</code></td></tr>
 <tr><td><code>type: "list"</code>, <code>of: "entity"|…</code></td><td>List rows</td><td>Array (entity slots resolve by index)</td></tr>
 </tbody></table>
-<p>Defaults in source must be <strong>single-line literals</strong> so Blender’s parser can read them. After changing fields, press <strong>Sync</strong> on the SCRIPT component.</p>
+<p>Defaults in source must be <strong>single-line literals</strong>. Blender&apos;s parser reads them this way. After you change fields, press <strong>Sync</strong> on the SCRIPT component.</p>
 
 <h2 id="input">Input (@inputMap + polling)</h2>
-<p>See <a href="12-INPUT.html">12 — Input</a> for authoring (stick vs 1D/2D composites, control type, gamepad labels, LT/RT as axis 4/5, <code>axisHalf</code>, disambiguation). In behaviors:</p>
+<p>See <a href="12-INPUT.html">12 — Input</a> for authoring (stick vs 1D/2D composites, control type, gamepad labels, LT/RT as axis 4/5, <code>axisHalf</code>, disambiguation). In behaviors, use:</p>
 <pre><code class="language-typescript">@inputMap("Player") player!: InputActionMap;  // named map
 @inputMap("Vehicle") vehicle!: InputActionMap; // e.g. CarController
 
@@ -207,20 +215,20 @@ const steer = control.x;</code></pre>
 <tr><td><code>WasPerformedThisFrame()</code></td><td>Edge: performed callback fired</td></tr>
 </tbody></table>
 <h3>InputAction (callbacks)</h3>
-<p><code>action.started.add(fn)</code>, <code>action.performed.add(fn)</code>, <code>action.canceled.add(fn)</code> — same semantics as Unity Input System.</p>
+<p><code>action.started.add(fn)</code>, <code>action.performed.add(fn)</code>, and <code>action.canceled.add(fn)</code> use the same semantics as Unity Input System.</p>
 <h3>Global access (optional)</h3>
-<p><code>InputManager.actions</code> · <code>InputManager.FindAction("Player/Move")</code> · <code>InputManager.GetDefaultMap()</code> — prefer <code>@inputMap</code> fields on behaviors.</p>
+<p>You can use <code>InputManager.actions</code>, <code>InputManager.FindAction("Player/Move")</code>, and <code>InputManager.GetDefaultMap()</code>. Prefer <code>@inputMap</code> fields on behaviors.</p>
 
 <h2 id="registry">BehaviorRegistry</h2>
-<p>Maps script name → class. Apps register before load:</p>
+<p>This registry maps script name to class. Apps register before load:</p>
 <pre><code class="language-typescript">const registry = new BehaviorRegistry();
 const modules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
 AutoRegisterBehaviors(registry, modules);
 const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></pre>
-<p><code>registry.Create("Patrol")</code> is called internally for each SCRIPT row.</p>
+<p>The loader calls <code>registry.Create("Patrol")</code> internally for each SCRIPT row.</p>
 
 <h2 id="app">App bootstrap (not in behaviors)</h2>
-<p>Typical <code>main.ts</code> responsibilities — see <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>:</p>
+<p>A typical <code>main.ts</code> handles these tasks. See <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>:</p>
 <ol>
 <li><code>FetchAndValidateManifest(url)</code> — optional; required before <code>CreateLevelEngine</code> when using large-world rendering</li>
 <li><code>CreateLevelEngine(canvas, antialias, manifest)</code></li>
@@ -241,13 +249,32 @@ const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></
 </tbody></table>
 
 <h2 id="physics">Physics (from behaviors)</h2>
-<p>When an entity has a body: <code>this.entity.body</code> is a Babylon <code>PhysicsBody</code>. Use Havok APIs for impulses, velocities, etc. Collider overlay: app debug key → <code>level.ShowColliders()</code> (when <code>level.debugEnabled</code>).</p>
+<p>When an entity has a body, <code>this.entity.body</code> is a Babylon <code>PhysicsBody</code>. Use Havok APIs for impulses, velocities, and similar values. Toggle the collider overlay with the app debug key and <code>level.ShowColliders()</code> (when <code>level.debugEnabled</code>).</p>
+<h3>Trigger volume queries</h3>
+<p>Exported from <code>@bjs/engine</code> (<code>subsystems/physics/shapes.ts</code>). Test whether a probe is inside an authored BOX/SPHERE trigger collider (manifest data — not Havok events). See <a href="06-PHYSICS.html#trigger-volume-queries">06 — Physics › Trigger volume queries</a>.</p>
+<table><thead><tr><th>Function</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>IsEntityInsideColliderVolume(probe, volume, collider?)</code></td><td><code>probe.node</code> world position inside <code>volume</code>&apos;s trigger collider</td></tr>
+<tr><td><code>IsPointInsideColliderVolume(point, volume, collider?)</code></td><td>World <code>Vector3</code> inside volume trigger collider</td></tr>
+</tbody></table>
+<p>Zone behaviors poll in <code>OnStart</code>/<code>OnUpdate</code>. Assign an explicit probe entity when the script host is not the sample point. Fragment: <code>poll-trigger-volume</code>.</p>
+
+<h2 id="entity-active">Runtime enable / disable (<code>SetEntityActive</code>)</h2>
+<p>Exported from <code>@bjs/engine</code> (<code>core/entityActive/</code>). Unity-style SetActive — distinct from load-time <code>HideEntityNode</code> (rendering only).</p>
+<table><thead><tr><th>Function</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>SetEntityActive(entity, active)</code></td><td>Set local <code>activeSelf</code>, reconcile descendant entities, fire <code>OnDisable</code>/<code>OnEnable</code>, suspend/resume Havok, attachments, constraints, probes, MSDF draw</td></tr>
+<tr><td><code>IsEntityActive(entity)</code></td><td><code>activeInHierarchy</code> — local active && every ancestor entity active</td></tr>
+</tbody></table>
+<pre><code class="language-typescript">import { SetEntityActive, IsEntityActive } from "@bjs/engine";
+
+SetEntityActive(targetEntity, false);
+SetEntityActive(targetEntity, true);</code></pre>
+<p>Example: <code>ToggleInWater.ts</code>. MCP fragments: <code>set-entity-active</code>, <code>reveal-entity</code>.</p>
 
 <h2 id="messages">Messages</h2>
-<p>Authored Event Messages and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target gets <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
+<p>Event Messages and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target receives <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
 
 <h2 id="lights">Runtime lights (<code>FindLightForNode</code>)</h2>
-<p>Exported from <code>@bjs/engine</code> (<code>subsystems/lights.ts</code>). Resolves the Babylon <code>Light</code> for a lamp entity's glTF node — parent-chain walk, then name match, then lights inside <code>ClusteredLightContainer</code>.</p>
+<p>This helper is exported from <code>@bjs/engine</code> (<code>subsystems/lights.ts</code>). It resolves the Babylon <code>Light</code> for a lamp entity&apos;s glTF node. It walks the parent chain, then matches by name, then checks lights inside <code>ClusteredLightContainer</code>.</p>
 <pre><code class="language-typescript">import { FindLightForNode } from "@bjs/engine";
 
 const light = FindLightForNode(this.scene, lampEntity.node);
@@ -255,10 +282,10 @@ if (light !== null)
 {
   light.intensity = value;
 }</code></pre>
-<p>Do <strong>not</strong> iterate <code>scene.lights</code> alone on large scenes — clustered point/spot lamps are removed from that array but stay drivable through this helper. See <code>increaselights.ts</code> / <code>07-RENDERING.html</code> (punctual light budget). Author budget and per-lamp clustering in Blender (<strong>Scene › Export</strong>, <strong>Object › Light › Cluster When Over Budget</strong>).</p>
+<p>Do <strong>not</strong> iterate <code>scene.lights</code> alone on large scenes. Clustered point and spot lamps are removed from that array. You can still drive them through this helper. See <code>increaselights.ts</code> and <code>07-RENDERING.html</code> (punctual light budget). Set budget and per-lamp clustering in Blender (<strong>Scene › Export</strong>, <strong>Object › Light › Cluster When Over Budget</strong>).</p>
 
 <h2 id="cameras">Runtime cameras (<code>FindCameraForNode</code> / <code>CopyLens</code>)</h2>
-<p>Exported from <code>@bjs/engine</code> (<code>subsystems/cameras/</code>). <code>FindCameraForNode</code> resolves the Babylon <code>Camera</code> for a camera entity's glTF node (parent-chain walk, then name match) — the same helper the loader uses. <code>CopyLens</code> copies FOV, <code>fovMode</code>, clip planes, and projection mode; <code>BuildTypedCamera</code> calls it when Blender Camera-component overrides swap the FreeCamera for Arc/Follow/etc.</p>
+<p>These helpers are exported from <code>@bjs/engine</code> (<code>subsystems/cameras/</code>). <code>FindCameraForNode</code> resolves the Babylon <code>Camera</code> for a camera entity&apos;s glTF node. It walks the parent chain, then matches by name. The loader uses the same helper. <code>CopyLens</code> copies FOV, <code>fovMode</code>, clip planes, and projection mode. <code>BuildTypedCamera</code> calls it when Blender Camera-component overrides swap the FreeCamera for Arc/Follow/etc.</p>
 <pre><code class="language-typescript">import { CopyLens, FindCameraForNode } from "@bjs/engine";
 import { ArcRotateCamera } from "@babylonjs/core";
 
@@ -269,7 +296,18 @@ if (authored !== null)
   CopyLens(authored, camera);
 }
 this.scene.activeCamera = camera;</code></pre>
-<p>Prefer authoring camera <strong>type</strong> in Blender. Use these helpers when a behavior must create its own camera (see <code>TrainCamera.ts</code>). Without <code>CopyLens</code>, a script-built camera keeps Babylon defaults and silently ignores the authored FOV.</p>
+<p>Prefer to author camera <strong>type</strong> in Blender. Use these helpers when a behavior must create its own camera (see <code>TrainCamera.ts</code>). Without <code>CopyLens</code>, a script-built camera keeps Babylon defaults. It will silently ignore the authored FOV.</p>
+
+<h2 id="animator">AnimatorController</h2>
+<p>This controller is a built-in FSM from an <strong>ANIMATOR</strong> component (not a SCRIPT). It is exported from <code>@bjs/engine</code> (<code>subsystems/animatorController.ts</code>). Retrieve it with <code>entity.GetAttachment(&quot;ANIMATOR&quot;)?.behavior</code>.</p>
+<table><thead><tr><th>Method</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>SetFloat(name, value)</code> / <code>GetFloat(name)</code></td><td>Float parameters</td></tr>
+<tr><td><code>SetBool(name, value)</code> / <code>GetBool(name)</code></td><td>Bool parameters</td></tr>
+<tr><td><code>SetInt(name, value)</code> / <code>GetInt(name)</code></td><td>Int parameters</td></tr>
+<tr><td><code>SetTrigger(name)</code></td><td>One-shot; cleared after transition evaluation</td></tr>
+<tr><td><code>currentState</code></td><td>Active state id</td></tr>
+</tbody></table>
+<p>Author the graph in Blender (Entry / State / Parameter / Transition). State clips use <strong>Action</strong> names from the owning armature. See <a href="08-AUDIO-ANIMATION.html">08 — Audio &amp; Animation</a> and playground <code>DriveAnimator.ts</code>.</p>
 
 <h2>Related exports</h2>
-<p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types.ts</code>), subsystem helpers (physics, lights, cameras, …), and UI loaders — mainly for app code and advanced scripts. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>
+<p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types/</code>, barrel <code>core/types.ts</code>), subsystem helpers (physics, lights, cameras, …), and UI loaders. App code and advanced scripts use these most often. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>

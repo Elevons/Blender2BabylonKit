@@ -50,7 +50,7 @@ def _serialize_list(v):
     return out
 
 
-def _serialize_vars(comp):
+def _serialize_vars(comp, output_dir):
     out = {}
     for v in comp.exposed_vars:
         if v.vtype == 'FLOAT':
@@ -59,6 +59,9 @@ def _serialize_vars(comp):
             out[v.name] = bool(v.b_val)
         elif v.vtype == 'STRING':
             out[v.name] = v.s_val
+        elif v.vtype == 'FILE':
+            copied = copy_asset(v.file_val, output_dir, "post") if v.file_val else None
+            out[v.name] = copied or ""
         elif v.vtype == 'ENUM':
             # s_val holds the selected choice; clamp to a valid option if needed.
             choices = [o for o in v.enum_options.split(ENUM_SEP) if o != ""]
@@ -149,7 +152,7 @@ def _serialize_rigidbody(comp, out, output_dir):
 def _serialize_script(comp, out, output_dir):
     out["script"] = comp.script_name
     out["path"] = comp.script_path
-    out["vars"] = _serialize_vars(comp)
+    out["vars"] = _serialize_vars(comp, output_dir)
 
 
 def _serialize_camera(comp, out, output_dir):
@@ -329,6 +332,50 @@ def _serialize_gui3d_control(comp, out, output_dir):
         out["tooltip"] = comp.gui3d_tooltip
 
 
+def _serialize_animator_params(comp):
+    """Panel defaults as a name → value map (overlays graph schema defaults)."""
+    out = {}
+    for row in comp.animator_vars:
+        name = (row.name or "").strip()
+        if not name:
+            continue
+        if row.ptype == 'FLOAT':
+            out[name] = float(row.f_val)
+        elif row.ptype == 'BOOL':
+            out[name] = bool(row.b_val)
+        elif row.ptype == 'INT':
+            out[name] = int(row.i_val)
+        else:
+            out[name] = False
+    return out
+
+
+def _serialize_animator(comp, out, output_dir):
+    from ..animator.serialize import serialize_animator_tree
+    from ..animator.sync import sync_animator_params, write_param_defaults_to_tree
+
+    tree = comp.animator_tree
+    if tree is None or getattr(tree, "bl_idname", "") != "BJSAnimationStateTree":
+        out["defaultState"] = ""
+        out["parameters"] = []
+        out["states"] = []
+        out["transitions"] = []
+        return
+
+    # Keep panel defaults and graph Parameter nodes aligned before export.
+    write_param_defaults_to_tree(comp, tree)
+    sync_animator_params(comp, tree)
+
+    graph = serialize_animator_tree(tree)
+    out["defaultState"] = graph["defaultState"]
+    out["states"] = graph["states"]
+    out["transitions"] = graph["transitions"]
+    out["parameters"] = graph["parameters"]
+    vars_map = _serialize_animator_params(comp)
+    if vars_map:
+        out["vars"] = vars_map
+
+
 def _serialize_gui3d_panel(comp, out, output_dir):
     out["margin"] = comp.gui3d_margin
     if comp.comp_type == 'GUI3D_STACK':
@@ -360,6 +407,7 @@ SERIALIZERS = {
     'MSDF_TEXT': _serialize_msdf_text,
     'REFLECTION_PROBE': _serialize_reflection_probe,
     'LOD': _serialize_lod,
+    'ANIMATOR': _serialize_animator,
     **{comp_type: _serialize_gui3d_control for comp_type in GUI3D_CONTROLS},
     **{comp_type: _serialize_gui3d_panel for comp_type in GUI3D_PANELS},
 }

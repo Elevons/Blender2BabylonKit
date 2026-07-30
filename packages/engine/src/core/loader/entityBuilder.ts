@@ -49,9 +49,9 @@ function ProcessCameraForEntity(
   context: LoadContext
 ): void
 {
-  const node = entity.node;
+  const entityNode = entity.node;
   const cameraInfo = entityData.camera as CameraInfo;
-  let camera = ApplyBlenderCamera(scene, node, cameraInfo);
+  let camera = ApplyBlenderCamera(scene, entityNode, cameraInfo);
 
   const cameraComponent = entityData.components.find(
     (component) => component.type === "CAMERA"

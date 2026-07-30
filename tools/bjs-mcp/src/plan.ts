@@ -1,4 +1,5 @@
 import { FindSimilarBehavior } from "./io.js";
+import { MatchPlaybook } from "./playbooks.js";
 import { FindRecipesByIntent, GetRecipeByName, type Recipe } from "./recipes.js";
 
 export interface PlannedRecipe
@@ -31,21 +32,24 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["constraint", "hinge", "joint", "spring", "6dof", "motor", "wheel", "trailer"], section: "physics" },
   { keywords: ["trigger", "overlap", "collision"], section: "physics" },
   { keywords: ["input", "wasd", "keyboard", "gamepad", "jump", "move", "stick", "throttle"], section: "input" },
-  { keywords: ["exposed", "inspector", "blender", "dropdown", "enum", "picker"], section: "exposed" },
-  { keywords: ["animation", "clip", "armature", "walk", "idle", "nla"], section: "animation" },
+  { keywords: ["exposed", "inspector", "blender", "dropdown", "enum", "picker", "file picker", "lut file"], section: "exposed" },
+  { keywords: ["fog zone", "fogchanger", "aces lut", "zone lut", "underwater lut"], section: "scene-look" },
+  { keywords: ["animation", "clip", "armature", "walk", "idle", "nla", "animator", "fsm", "state machine", "locomotion"], section: "animation" },
   { keywords: ["message", "trigger event", "sendmessage", "onclick", "door"], section: "audio" },
   { keywords: ["gui", "hud", "button", "particle", "3d gui", "holographic"], section: "gui" },
   { keywords: ["msdf", "text", "label", "font", "score"], section: "gui" },
   { keywords: ["sound", "audio", "sfx", "play"], section: "audio" },
   { keywords: ["hover", "bob", "float", "levitate"], section: "lifecycle" },
   { keywords: ["reveal", "show", "hidden"], section: "visibility" },
+  { keywords: ["setactive", "set active", "enable object", "disable object", "toggle entity"], section: "visibility" },
   { keywords: ["attachment", "getbehavior", "entity api", "component"], section: "entity" },
   { keywords: ["camera", "geospatial", "globe", "planet", "map", "orbit", "follow"], section: "cameras" },
   { keywords: ["atmosphere", "physical sky", "aerial perspective", "rayleigh", "mie", "skybox", "sky"], section: "scene-look" },
-  { keywords: ["volumetric", "light shaft", "god ray", "sun ray", "scattering", "post-processing", "postprocess", "bloom", "ssao", "dof", "vignette"], section: "scene-look" },
-  { keywords: ["lifecycle", "onstart", "onupdate", "ondestroy"], section: "lifecycle" },
+  { keywords: ["volumetric", "light shaft", "god ray", "sun ray", "scattering", "post-processing", "postprocess", "bloom", "ssao", "dof", "vignette", "color grading", "color grade", "lut", "cube lut", ".cube", "3dl"], section: "scene-look" },
+  { keywords: ["lifecycle", "onstart", "onpostready", "onupdate", "ondestroy"], section: "lifecycle" },
   { keywords: ["visible", "visibility", "hidden", "hide", "isvisible", "eye icon", "viewport"], section: "visibility" },
   { keywords: ["spawn", "prefab", "scatter", "instance", "populate", "spawner", "duplicate"], section: "prefab-spawn" },
+  { keywords: ["pool", "interval", "grow", "shrink", "lifetime", "recycle", "animalspawner"], section: "prefab-spawn" },
 ];
 
 const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
@@ -53,9 +57,14 @@ const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
   { keywords: ["wasd", "move", "walk", "vector2", "stick"], fragment: "move-by-input-vector2" },
   { keywords: ["jump"], fragment: "subscribe-jump-performed" },
   { keywords: ["kinematic", "animated", "platform", "patrol", "path", "train"], fragment: "make-body-kinematic" },
+  { keywords: ["trigger", "overlap", "zone", "inside", "volume", "poll"], fragment: "poll-trigger-volume" },
+  { keywords: ["setactive", "set active", "enable object", "disable object", "toggle entity", "underwater toggle"], fragment: "set-entity-active" },
+  { keywords: ["reveal", "show hidden", "eye icon"], fragment: "reveal-entity" },
   { keywords: ["trigger", "overlap", "collision log"], fragment: "enable-trigger-logging" },
   { keywords: ["keyboard", "key", "observable"], fragment: "cleanup-keyboard-observer" },
   { keywords: ["animation", "clip", "walk"], fragment: "play-animation" },
+  { keywords: ["animator", "setfloat", "fsm", "locomotion"], fragment: "set-animator-float" },
+  { keywords: ["trigger", "settrigger", "jump"], fragment: "set-animator-trigger" },
   { keywords: ["sendmessage", "message", "door"], fragment: "send-message" },
   { keywords: ["hinge", "motor", "wheel", "constraint"], fragment: "resolve-hinge-constraint" },
   { keywords: ["hinge", "motor", "wheel"], fragment: "set-hinge-motor-velocity" },
@@ -66,7 +75,7 @@ const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [
   { keywords: ["teleport", "lift", "snap", "checkpoint", "respawn", "reset"], fragment: "move-animated-body" },
   { keywords: ["reveal", "show", "hidden", "invisible"], fragment: "reveal-entity" },
   { keywords: ["sound", "audio", "sfx", "play"], fragment: "play-sound" },
-  { keywords: ["throttle", "train", "accelerat"], fragment: "throttle-from-actions" },
+  { keywords: ["lut", "color grade", "color grading", "underwater", "fog zone"], fragment: "zone-lut-swap" },
   { keywords: ["msdf", "label", "score", "text"], fragment: "update-msdf-text" },
   { keywords: ["hover", "bob", "sine"], fragment: "ease-smoothstep" },
   { keywords: ["spawn", "prefab", "scatter", "instance", "populate", "spawner"], fragment: "spawn-prefab-instance" },
@@ -83,7 +92,8 @@ const RECIPE_ROLES: Record<string, string> = {
   "on-message-handler": "react to triggers / SendMessage / GUI clicks",
   "message-state-handler": "OnMessage-driven state machine with enum state",
   "hover-bob": "sine vertical bob with optional look-at",
-  "reveal-on-message": "set isVisible true when a message arrives",
+  "reveal-on-message": "disable in OnStart, SetEntityActive(true) when a message arrives",
+  "toggle-entity-active": "SetEntityActive on target list (full disable — ToggleInWater pattern)",
   "sound-on-message": "play AUDIO stem on matching OnMessage",
   "msdf-label-update": "update MSDF_TEXT paragraphs at runtime",
   "rover-wheel-drive": "multiple hinge motors for wheeled vehicles",
@@ -95,7 +105,9 @@ const RECIPE_ROLES: Record<string, string> = {
   "look-at-target": "face another entity each frame",
   "constant-rotate": "spin on a fixed axis",
   "trigger-logger": "debug physics trigger overlaps via OnTriggerEnter/OnTriggerExit",
-  "scatter-prefab-spawner": "spawn template instances at points or paint-scatter on vertex colors",
+  "scatter-prefab-spawner": "spawn template instances at points or paint-scatter; batch shadows with deferShadowRefresh + FlushSpawnShadowRefresh",
+  "pool-prefab-spawner": "interval pool with grow/shrink lifecycle — parent: null, no deferShadowRefresh; see animalSpawner.ts",
+  "animator-driver": "thin SCRIPT driver for ANIMATOR SetFloat/SetTrigger — FSM authored in Blender",
 };
 
 function Tokenize(text: string): string[]
@@ -152,6 +164,12 @@ function MatchFragments(intent: string): string[]
 
 function PickReferenceBehavior(recipes: Recipe[], intent: string): string
 {
+  const playbook = MatchPlaybook(intent);
+  if (playbook.referenceBehavior.length > 0)
+  {
+    return playbook.referenceBehavior.replace(/\.ts$/, "");
+  }
+
   for (const recipe of recipes)
   {
     if (recipe.referenceBehavior.length > 0)
@@ -171,10 +189,34 @@ function PickReferenceBehavior(recipes: Recipe[], intent: string): string
 
 function BuildRecipeList(intent: string): PlannedRecipe[]
 {
+  const playbook = MatchPlaybook(intent);
+  const playbookRecipe =
+    playbook.recipe.length > 0 ? GetRecipeByName(playbook.recipe) : undefined;
   const matches = FindRecipesByIntent(intent);
-  const chosen = matches.length > 0 ? matches.slice(0, 3) : [GetRecipeByName("minimal-behavior")!];
 
-  return chosen.map((recipe, index) => ({
+  const chosen: Recipe[] = [];
+
+  if (playbookRecipe !== undefined)
+  {
+    chosen.push(playbookRecipe);
+  }
+
+  for (const recipe of matches)
+  {
+    if (!chosen.some((entry) => entry.name === recipe.name))
+    {
+      chosen.push(recipe);
+    }
+  }
+
+  if (chosen.length === 0)
+  {
+    chosen.push(GetRecipeByName("minimal-behavior")!);
+  }
+
+  const slice = chosen.slice(0, 3);
+
+  return slice.map((recipe, index) => ({
     name: recipe.name,
     description: recipe.description,
     role:
@@ -286,13 +328,26 @@ export function PlanBehavior(intent: string, className = "MyBehavior"): Behavior
 
 export function FormatBehaviorPlan(plan: BehaviorPlan): string
 {
+  const playbook = MatchPlaybook(plan.intent);
   const lines: string[] = [
     `# Behavior plan`,
     ``,
     `**Intent:** ${plan.intent}`,
     ``,
-    `## Recipes`,
+    `**Matched playbook:** \`${playbook.id}\` — ${playbook.title}`,
   ];
+
+  if (playbook.recipe.length > 0)
+  {
+    lines.push(`**Primary recipe:** \`${playbook.recipe}\``);
+  }
+
+  if (playbook.referenceBehavior.length > 0)
+  {
+    lines.push(`**Reference behavior:** ${playbook.referenceBehavior.replace(/\.ts$/, "")}.ts`);
+  }
+
+  lines.push(``, `## Recipes`);
 
   for (const recipe of plan.recipes)
   {

@@ -18,13 +18,21 @@ from ..core.inspector import inspector_object
 
 
 def _nla_strips(obj):
-    ad = obj.animation_data
-    strips = []
-    if ad and ad.nla_tracks:
-        for track in ad.nla_tracks:
-            for strip in track.strips:
-                strips.append(strip)
-    return strips
+    """Exportable clips as (display_name, frame_start, frame_end, source_label)."""
+    from ..export.animation import iter_exported_clips
+    rows = []
+    for clip_name, strip, track in iter_exported_clips(obj):
+        if strip is not None:
+            rows.append((clip_name, int(strip.frame_start), int(strip.frame_end),
+                         getattr(strip.action, "name", "") if strip.action else ""))
+        else:
+            rows.append((clip_name, 0, 0, clip_name))
+    return rows
+
+
+def _has_exportable_clips(obj):
+    from ..export.animation import nla_clip_names
+    return len(nla_clip_names(obj)) > 0
 
 
 class BJS_PT_components(Panel):
@@ -183,7 +191,7 @@ class BJS_PT_animation_info(Panel):
     @classmethod
     def poll(cls, context):
         obj = inspector_object(context)
-        return obj is not None and len(_nla_strips(obj)) > 0
+        return obj is not None and _has_exportable_clips(obj)
 
     def draw(self, context):
         layout = self.layout
@@ -196,10 +204,16 @@ class BJS_PT_animation_info(Panel):
             col.prop(a, "default_clip")
             col.prop(a, "loop")
             col.prop(a, "speed")
-        layout.label(text="NLA clips (exported):")
-        for s in _nla_strips(obj):
-            layout.label(text=f"   {s.name}   [{int(s.frame_start)}-{int(s.frame_end)}]",
-                         icon='ACTION')
+        layout.label(text="Exported clips (Action / track name):")
+        for clip_name, frame_start, frame_end, action_name in _nla_strips(obj):
+            if action_name and action_name != clip_name:
+                label = f"   {clip_name}  ← {action_name}  [{frame_start}-{frame_end}]"
+            else:
+                label = f"   {clip_name}   [{frame_start}-{frame_end}]"
+            layout.label(text=label, icon='ACTION')
+        layout.label(
+            text="Rename the NLA track to override the Action name in the glb",
+            icon='INFO')
 
 
 classes = (

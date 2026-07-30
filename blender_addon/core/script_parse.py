@@ -14,6 +14,7 @@ Supported forms (one field per match):
     @exposed() enabled = true;
     @exposed() title = "hello";
     @exposed({ type: "enum", options: ["a", "b"] }) mode = "a";
+    @exposed({ type: "file" }) lut = "post/grade.cube";
     @exposed({ type: "list", of: "float" }) speeds = [1, 2, 3];
     @exposed({ type: "list", of: "vector3" }) points = [[0,0,0],[1,1,1]];
 
@@ -216,6 +217,11 @@ def parse_exposed(filepath):
             if value is None:
                 value = options[0] if options else ""
             vtype = "ENUM"
+        elif type_hint == "file":
+            value = _parse_string_literal(default)
+            if value is None:
+                value = ""
+            vtype = "FILE"
         elif type_hint == "list":
             elem_type = opts.get("of", "float")
             value = _parse_list_default(default, elem_type)

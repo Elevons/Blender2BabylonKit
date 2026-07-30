@@ -346,11 +346,15 @@
 <h2>Component stack UI</h2>
 <p>Select an object → <strong>Babylon Object</strong> → <strong>Add Component</strong>. Each row is one manifest entry when enabled:</p>
 <ul>
-<li><strong>Header</strong> — enable toggle, type name, <strong>▾ menu</strong> (duplicate, copy/cut/paste, reorder, delete)</li>
+<li><strong>Header</strong> — enable toggle, editable <strong>instance name</strong> (defaults to the component type label, e.g. <code>Script</code>), a subtitle with type detail (e.g. <code>Script: animalSpawner</code>), reorder arrows, and <strong>▾ menu</strong> (duplicate, copy/cut/paste, delete)</li>
 <li><strong>Body</strong> — type-specific fields (collider shape, script path, audio file, …)</li>
 <li><strong>Pin</strong> (header) — lock the inspector to this object while you pick targets in the viewport</li>
 </ul>
-<p>Cut/paste moves a component to another object; copy/paste duplicates it. Clipboard is session-scoped.</p>
+<p>Cut/paste moves a component to another object; copy/paste duplicates it (including the instance name). Clipboard is session-scoped.</p>
+
+<h2>Component instance names</h2>
+<p>Each row's header <strong>Name</strong> field is stored as <code>display_name</code> on <code>BJSComponent</code>. When non-empty, export writes optional <code>&quot;name&quot;</code> on that manifest component row. This is separate from the Blender object name, a TAG string, or the script registry key (<code>script</code> = filename stem).</p>
+<p>Use distinct names when one entity has multiple rows of the same kind — two SCRIPT components, several Colliders, etc. At runtime: <code>entity.GetScript(&quot;Fish Spawner&quot;)</code> or <code>entity.GetNamedAttachment(&quot;COLLIDER&quot;, &quot;Hitbox&quot;)</code> (exact match, then contains; case-insensitive). See <a href="../engine/14-API-GUIDE.html#entity">14 — API Guide › Entity</a>. <strong>Validate</strong> warns when two enabled components on the same object share the same name.</p>
 
 <h2>GUID identity</h2>
 <p>Adding a component (or <strong>Assign GUID</strong>) stamps <code>bjs_id</code> on the object. That id rides in glTF node extras and manifest <code>entities[].id</code> — renaming the object in Blender does not break links.</p>
@@ -365,7 +369,7 @@
 <li>Exposed fields appear as typed widgets (parsed from source — not executed)</li>
 <li><strong>Sync</strong> — refresh widgets after you change <code>@exposed</code> / <code>@inputMap</code> in code</li>
 </ol>
-<p>Cross-language rules: decorator stays lowercase <code>@exposed</code>; single-line literal defaults; press Sync after edits. Entity fields need <code>type: "entity"</code> in the decorator. Trace: <a href="trace-exposed.html">trace-exposed</a>. Runtime scripting: <a href="../engine/05-SCRIPTING.html">05 — Scripting</a>.</p>
+<p>Cross-language rules: decorator stays lowercase <code>@exposed</code>; single-line literal defaults; press Sync after edits. Entity fields need <code>type: "entity"</code> in the decorator. Asset paths (LUTs, etc.) use <code>type: "file"</code> for a file picker — export copies into <code>post/</code>. Trace: <a href="trace-exposed.html">trace-exposed</a>. Runtime scripting: <a href="../engine/05-SCRIPTING.html">05 — Scripting</a>.</p>
 
 <h2>Collider preview</h2>
 <p>On a selected object with a <strong>Collider</strong>, enable <strong>Show Preview</strong> to draw a cyan wireframe in the viewport. Manual size/offset/rotation are in Blender axes (what you see); export converts to Babylon Y-up. Convex/mesh shapes use the mesh geometry — no separate wireframe.</p>
@@ -403,15 +407,20 @@
 <li><strong>Apply to Child Entities</strong> (default off) — propagates the layer down the Blender parent hierarchy until a descendant defines its own <strong>Collision Layer</strong>.</li>
 </ul>
 <p>Entities without this component (and no inherited propagation) keep Havok defaults — they collide with everything. Filtered pairs will not generate contacts or trigger events.</p>
-<p>The component stores the layer <em>name</em>, so removing or reordering layers in the scene panel never silently retargets other components. If you rename a layer, re-pick it on components that used the old name — <strong>Validate</strong> flags stale layer names.</p>
+<p>The component stores the layer <em>name</em>, so removing or reordering layers in the scene panel never silently retargets other components. If you rename a layer, re-pick it on components that point at a stale name — <strong>Validate</strong> flags stale layer names.</p>
 <p>Runtime detail: <a href="../engine/06-PHYSICS.html#collision-layers">06 — Physics › Collision layers</a> · Feature trace: <a href="../engine/10-FEATURE-TRACES.html#collision-layers">10 — Feature Traces</a>.</p>
+
+<h2>Animator component</h2>
+<p>Add an <strong>Animator</strong> row on the <strong>armature</strong> for multi-state clip FSMs. Use the <strong>Graph</strong> picker to assign or clear a <code>BJSAnimationStateTree</code>, or <strong>Edit Animator</strong> to create/open that object’s graph (Entry / State / Parameter / Transition). State clip dropdowns list that object’s <strong>Action</strong> names (glTF ACTIONS export — not NLA strip labels). Press <strong>Sync</strong> after graph edits so Parameters appear on the component. Turn off Animation-panel autoplay when Animator owns playback.</p>
+<p>Unused graphs (0 users after you clear <strong>Graph</strong>) can be removed with the trash button next to Edit Animator, or via Outliner › Blender File › Node Trees / Orphan Data.</p>
+<p>Runtime: <a href="../engine/08-AUDIO-ANIMATION.html">08 — Audio &amp; Animation</a>.</p>
 
 <h2>Auto-derived blocks (not components)</h2>
 <p>These appear as child panels when relevant — no Add Component row:</p>
 <ul>
 <li><strong>Light</strong> on lamp objects — color, energy, shadows, <strong>Cluster When Over Budget</strong> (point/spot)</li>
 <li><strong>Camera</strong> on camera objects — clip, FOV; optional <strong>Camera</strong> component for orbit/follow/geospatial</li>
-<li><strong>Animation</strong> when NLA strips exist — auto-play clip, loop, speed</li>
+<li><strong>Animation</strong> when exportable Actions exist — auto-play clip (Action name), loop, speed</li>
 </ul>
 <p>Full component table: <a href="../engine/13-FEATURE-LIST.html">13 — Feature List</a>.</p>
 </article>

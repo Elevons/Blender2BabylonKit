@@ -103,6 +103,24 @@ def _check_scripts(obj, warnings):
                     f"{obj.name}: script file not found: {comp.script_path}")
 
 
+def _check_component_names(obj, warnings):
+    """Duplicate display_name values on one entity break runtime name lookup."""
+    seen = {}
+    for comp in obj.bjs_components:
+        if not comp.enabled:
+            continue
+        name = comp.display_name.strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            warnings.append(
+                f"{obj.name}: duplicate component name '{name}' "
+                f"({seen[key]} and {comp.comp_type}) — rename one for runtime lookup")
+            continue
+        seen[key] = comp.comp_type
+
+
 def _append_entity_ref_warnings(owner_obj, label, target, context, warnings):
     """Shared checks for stale prefab pointers, orphan datablocks, and
     render-disabled targets."""
@@ -490,6 +508,32 @@ def _check_skinned_meshes(obj, warnings):
             f"skeletal clips target the armature's joints — set it on the "
             f"armature object instead")
 
+    for comp in obj.bjs_components:
+        if comp.comp_type == 'ANIMATOR':
+            warnings.append(
+                f"{obj.name}: ANIMATOR on a skinned mesh won't find clips — "
+                f"attach it to the armature object instead")
+            break
+
+
+def _check_animator(obj, warnings):
+    """ANIMATOR graph sanity + conflict with NLA autoplay."""
+    from ..animator.validate import validate_animator_component
+
+    has_animator = False
+    for comp in obj.bjs_components:
+        if comp.comp_type != 'ANIMATOR':
+            continue
+        has_animator = True
+        validate_animator_component(obj, comp, warnings)
+
+    if has_animator:
+        a = getattr(obj, "bjs_animation", None)
+        if a is not None and a.auto_play:
+            warnings.append(
+                f"{obj.name}: ANIMATOR and Animation autoplay both enabled — "
+                f"turn off autoplay; the Animator owns playback")
+
 
 def _check_lights(obj, warnings):
     """Area lights aren't part of glTF and silently vanish from the export."""
@@ -763,6 +807,7 @@ def validate_scene(context):
         if not is_renderable(obj, context):
             continue
         _check_scripts(obj, warnings)
+        _check_component_names(obj, warnings)
         _check_entity_refs(obj, context, warnings)
         _check_reflection_probes(obj, context, warnings)
         _check_render_layers(obj, warnings)
@@ -773,6 +818,7 @@ def validate_scene(context):
         _check_gui3d(obj, warnings)
         _check_constraints(obj, warnings)
         _check_skinned_meshes(obj, warnings)
+        _check_animator(obj, warnings)
         _check_lights(obj, warnings)
 
     _check_input_map(scene, warnings)
