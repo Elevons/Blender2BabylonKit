@@ -59,6 +59,7 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 | Trigger log silent | `getCollisionObservable()` used for triggers | `get_do_not_list` · recipe `trigger-logger` |
 | Script camera wrong FOV | Forgot `CopyLens` after `new` camera | `get_fragment(name="copy-lens-from-authored-camera")` |
 | Animation ignored | Script/Animator on mesh not armature | `get_playbook(name="animator-fsm")` |
+| HUD arrow never rotates / mesh points sideways | `lookAt` without `Space.WORLD` on parented node, or assumed +Z not +Y | `get_axis_conversion(topic="look-at")` · `get_do_not_list` |
 | @exposed field missing in Blender | Forgot Sync | Re-export + Sync in Blender |
 
 ---

@@ -248,6 +248,7 @@ class BJSComponent(PropertyGroup):
         name="Rendering Group",
         description="Babylon draw-order group (0–3); lower groups render first",
         default=0,
+        min=0, max=3,
     )
     layer_mask_preset: EnumProperty(
         name="Layer Mask Preset",

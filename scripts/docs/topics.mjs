@@ -261,6 +261,7 @@ export const PAGE_TOPICS = {
   "engine/12-INPUT.html": ["input", "runtime"],
   "engine/13-FEATURE-LIST.html": ["start", "reference"],
   "engine/14-API-GUIDE.html": ["start", "reference", "scripting"],
+  "engine/15-AXIS-CONVERSION.html": ["scripting", "runtime", "blender", "export", "physics", "reference"],
 
   // — Blender prose —
   "blender/00-INDEX.html": ["blender", "start"],

@@ -54,3 +54,6 @@ desktop.ini
 !.vscode/extensions.json
 *.swp
 *~
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/

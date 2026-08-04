@@ -97,10 +97,13 @@ function ValidateEngineChapterChain()
     errors.push(`engine/00-INDEX.html should next→01-ARCHITECTURE.html (got ${indexChapter.next ?? "null"})`);
   }
 
-  const lastChapter = PROSE_CHAPTERS.find((chapter) => chapter.href === "engine/14-API-GUIDE.html");
-  if (lastChapter !== undefined && lastChapter.next !== undefined && lastChapter.next !== null)
+  const numberedEngine = PROSE_CHAPTERS.filter((chapter) =>
+    /^engine\/\d{2}-/.test(chapter.href));
+  const terminalChapters = numberedEngine.filter((chapter) =>
+    chapter.next === undefined || chapter.next === null);
+  if (terminalChapters.length !== 1)
   {
-    errors.push("engine/14-API-GUIDE.html should be the last engine chapter (next should be omitted)");
+    errors.push(`Expected exactly one terminal numbered engine chapter (got ${terminalChapters.length}: ${terminalChapters.map((c) => c.href).join(", ") || "none"})`);
   }
 }
 

@@ -14,3 +14,6 @@ collision/render layers need testing
 adding/removing components at runtime
 autoLOD needs a saving and load generation system (to be implemented with build setup)
 Prefabs with cameras not tested, prefabs do not allow reflection prrobes
+IsEntityInsideColliderVolume does not use babylon or havok volumes, it uses manifest volumes. This is a bit confusing
+Export/Scene tab needs a rendering manager block for settings
+

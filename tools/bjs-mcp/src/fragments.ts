@@ -41,7 +41,7 @@ if (move.x !== 0 || move.y !== 0)
   },
   {
     name: "poll-trigger-volume",
-    description: "Poll whether a probe entity is inside an authored trigger volume (BOX/SPHERE) each frame.",
+    description: "Poll whether a probe entity is inside a BOX/SPHERE trigger volume each frame (auto-fit bounds match Havok body build).",
     code: `import { Behavior, exposed, IsEntityInsideColliderVolume } from "@bjs/engine";
 import type { AttachmentOfType, Entity } from "@bjs/engine";
 

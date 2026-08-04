@@ -42,6 +42,9 @@ import {
   GetMovementMode,
   MOVEMENT_MODES,
 } from "./physics.js";
+import {
+  FormatAxisConversion,
+} from "./axis-conversion.js";
 
 const server = new McpServer({
   name: "bjs-level-kit",
@@ -776,6 +779,30 @@ server.tool(
 
     return { content: [{ type: "text", text: FormatMovementMode(found) }] };
   }
+);
+
+server.tool(
+  "get_axis_conversion",
+  "Blender Z-up vs Babylon Y-up — when manifest physics data is converted vs when node/@exposed values stay Blender-local. Call before lookAt, camera-child HUD arrows, @exposed vector3 offsets, or when rotations look wrong / mesh points sideways. Topics: overview, authoring, export-formula, manifest-vs-local, look-at, exposed-vector3, pitfalls.",
+  {
+    topic: z
+      .enum([
+        "overview",
+        "authoring",
+        "export-formula",
+        "manifest-vs-local",
+        "look-at",
+        "exposed-vector3",
+        "pitfalls",
+      ])
+      .optional()
+      .describe(
+        'Section to return. Omit for decision tree + topic list. Use "look-at" for Space.WORLD + local +Y rule; "manifest-vs-local" for @exposed vector3 vs collider data.'
+      ),
+  },
+  async ({ topic }) => ({
+    content: [{ type: "text", text: FormatAxisConversion(topic) }],
+  })
 );
 
 // --- BJS Docs ---------------------------------------------------------------

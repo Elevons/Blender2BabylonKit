@@ -77,6 +77,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | `lights` | `FindLightForNode`, clustered punctual lights, IBL compensation |
 | `visibility` | Eye icon, Make Invisible, `SetEntityActive`, shadow casters |
 | `lod` | Level-of-detail mesh swapping (author in Blender) |
+| `coordinate-axes` | Blender local vs Babylon world — **prefer `get_axis_conversion`** |
 | `animation` | ANIMATOR FSM, clips, armature rule |
 | `gui` | 2D GUI, particles, 3D GUI, MSDF text |
 | `detail-maps` | Detail texture overrides on glTF PBR — **author in Blender** |
@@ -182,6 +183,70 @@ attachment copying.
 / `RemoveComponent` after load (mutations are not written back to the manifest).
 Behaviors cannot call `componentHost` — orchestrate from your app layer or use
 messages.
+
+## Blender local axes vs Babylon world space
+
+> **Full guide:** `docs/engine/15-AXIS-CONVERSION.html` · `get_doc_chapter(chapter="engine/15-axis-conversion")` · **`get_axis_conversion(topic?)`**
+
+Two coordinate frames show up in behavior code. Mixing them up causes silent
+wrong rotations (an arrow that never turns, a mesh pointing sideways, pitch
+applied on the wrong axis).
+
+### World space (Babylon Y-up)
+
+- The **game world** uses glTF/Babylon convention: **+Y up**, **−Z forward**
+  (cameras look down −Z).
+- **Manifest / component data** (collider offsets, constraint pivots, rigid-body
+  CoM, etc.) is converted at export:
+  `(x, y, z)_Blender → (x, z, −y)_Babylon` in
+  `export/component_serializers.py`. The runtime reads those values as
+  Babylon-space — do not convert again in behaviors.
+- Babylon helpers like `Vector3.Up()`, `Vector3.Forward()`, and world positions
+  from `getAbsolutePosition()` are in this frame.
+
+### Node local space (Blender axes preserved)
+
+- Each exported object's **local axes stay Blender's** (Z-up): **+X lateral**,
+  **+Y forward**, **+Z up**. The Y-up flip is applied at the scene/root level,
+  not by remapping every mesh's local frame.
+- glTF loads each node's rest rotation as a quaternion; rotations you apply in
+  behaviors act in this Blender-local frame. See `BoatRocker.ts` (comment on
+  local pitch/roll).
+- `@exposed` vector3 defaults such as `[0, 1, 0]` mean **Blender forward**,
+  not Babylon forward.
+
+### `lookAt` / `setDirection`
+
+- `node.lookAt(worldTarget)` calls `setDirection`, which aligns the node's
+  **local +Y axis** toward the target — **not +Z** (despite some Babylon doc
+  wording elsewhere).
+- **Model tip/forward along Blender +Y** when using `lookAt`.
+- Default space is `Space.LOCAL`. When the node has a **rotated parent** (e.g.
+  an arrow parented to the camera), LOCAL space mis-computes the direction — the
+  mesh appears not to rotate. Pass **`Space.WORLD`**:
+
+```ts
+import { Space } from "@babylonjs/core";
+
+this.node.lookAt(target.node.getAbsolutePosition(), 0, 0, 0, Space.WORLD);
+```
+
+Reference: `ObjectiveArrow.ts` (camera-child arrow), `BoatRocker.ts` (local
+pitch/roll on rest rotation).
+
+### Quick reference
+
+| What | Frame | Notes |
+|------|-------|-------|
+| `@exposed` vector3 / list of vector3 | Blender local | **Not** converted at export — same frame as `node.position` |
+| Collider offset / CoM in manifest | Babylon (exported) | Already converted at export |
+| `node.position` / `node.rotation` on a loaded mesh | Blender local | +Y = forward, +Z = up |
+| `lookAt` / `setDirection` | Aligns local **+Y** | Model forward along Blender +Y |
+| `Vector3.Forward()` | Babylon world | World −Z, not Blender +Y |
+| Camera local −Z | Babylon camera space | View / look direction |
+
+Human docs: `docs/engine/15-AXIS-CONVERSION.html` · export math:
+`docs/engine/03-BLENDER-ADDON.html` › Axis conversions.
 
 ## Entity API
 
@@ -593,7 +658,7 @@ volumes. Reliable pattern (poll-only — do not rely on `OnTriggerEnter`/`Exit` 
   `TrainCamera.colliderProbe` / `FogChanger.movingObject`).
 - Poll **`IsEntityInsideColliderVolume(probe, volumeEntity)`** in `OnStart` and
   `OnUpdate` (exported from `@bjs/engine`, `physics/shapes.ts`). BOX and SPHERE
-  trigger colliders only.
+  trigger colliders only; auto-fit volumes resolve owned-mesh bounds like Havok body build.
 - Apply the initial fog/LUT preset in **`OnPostReady`** (when `level.post` exists).
 - Linear fog divides by `(fogEnd - fogStart)` — equal or inverted ranges break scene
   fog and water NME blocks that mirror the range; use a valid span or treat equal
@@ -787,7 +852,7 @@ entities (see `TrainCamera.ts` `IsBlockingRayHit`).
 
 Havok **`OnTriggerEnter` / `OnTriggerExit`** and Event Messages work for many setups,
 but **zone behaviors** (fog swaps, underwater toggles, lighting presets) should poll
-authored collider geometry when overlap must stay correct (dual-trigger probes,
+trigger collider geometry when overlap must stay correct (dual-trigger probes,
 start-overlapped volumes, scripts on the moving entity rather than the volume).
 
 ```ts
@@ -804,8 +869,14 @@ const insidePoint = IsPointInsideColliderVolume(worldPoint, volumeEntity);
 - **`probeEntity`** — entity whose **node position** is the sample point. When the
   script lives on a camera pivot, wire a child probe (`CameraBlock`) via `@exposed`.
 - Optional third arg: cached `AttachmentOfType<"COLLIDER">` from `GetAttachment`.
-- Returns `false` for missing collider, non-trigger, or unsupported shapes
-  (CAPSULE, CYLINDER, CONVEX, MESH).
+- **Manual colliders** (`autoFit: false`) — manifest `center` / `size` / `radius`
+  (matches the Blender collider preview).
+- **Auto-fit colliders** (`autoFit: true`) — owned-mesh bounds resolved the same
+  way as Havok body build (`FitColliderShape`), not placeholder manifest `size`.
+- **Not Havok overlap queries** — analytic point-in-volume math so bodyless probes
+  work reliably in `OnStart` / `OnUpdate`.
+- Returns `false` for missing collider, non-trigger, unsupported shapes
+  (CAPSULE, CYLINDER, CONVEX, MESH), or auto-fit with no owned mesh geometry.
 - Poll in **`OnStart`** (initial state) and **`OnUpdate`** (edge-detect state changes).
   Fragment: **`poll-trigger-volume`**. Examples: `FogChanger.ts`, `ToggleInWater.ts`.
 
@@ -1510,6 +1581,7 @@ export default class HoverBob extends Behavior
 | MCP tool order | `get_authoring_workflow` · **`route_task`** |
 | Task playbooks | `docs/LLM_PLAYBOOK.md` · `get_playbook` · `list_playbooks` |
 | Runtime loop / OnUpdate / delta time | `docs/engine/02-RUNTIME-BASICS.html` · `trace-runtime-loop` |
+| Coordinate axes (Blender local vs Babylon world) | `get_scripting_context(section="coordinate-axes")` · `docs/engine/15-AXIS-CONVERSION.html` |
 | Engine doc index (choose your path) | `docs/engine/00-INDEX.html` |
 | Full scripting chapter | `docs/engine/05-SCRIPTING.html` |
 | Physics (bodies, triggers, constraints) | `docs/engine/06-PHYSICS.html` · `get_physics_movement` |

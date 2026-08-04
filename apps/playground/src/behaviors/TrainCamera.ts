@@ -29,14 +29,24 @@ const MAX_CAMERA_STEP_METERS = 0.5;
 /** Absolute floor for collision pull-in (minRadius only limits free zoom). */
 const COLLISION_RADIUS_FLOOR = 0.1;
 
+/** Lateral proximity samples evenly spaced around the horizontal ring. */
+const LATERAL_PROBE_DIRECTIONS = 16;
+
+/** Parallel rays on a ring perpendicular to motion — approximates a sphere sweep. */
+const SHAPE_SWEEP_RING_SAMPLES = 8;
+
+/** Outward rays when the lens may already be inside solid geometry. */
+const PENETRATION_RECOVERY_DIRECTIONS = 16;
+
 /**
  * Manual orbit camera around a target with collision via proximity raycasts.
  *
  * Drag to orbit, scroll to zoom. Obstacles between the lens and target do not
  * pull the orbit inward — you can orbit behind cover without the view snapping
  * toward the target. Rays from the camera only push it out when it is flush
- * against or inside solid geometry. Left/right lateral probes block orbit rotation
- * that would swing the lens into a nearby wall.
+ * against or inside solid geometry. A ring of lateral probes blocks orbit rotation
+ * that would swing the lens into a nearby wall. Motion between frames uses a shape
+ * sweep (parallel rays offset by standoff) so tangential approaches cannot tunnel.
  *
  * Blender setup:
  * - Attach this script to an empty (the camera pivot).
@@ -95,10 +105,18 @@ export default class TrainCamera extends Behavior
   private travelEstimateEnd = new Vector3();
   private probeSyncPosition = new Vector3();
   private rayDirectionScratch = new Vector3();
-  private cameraRightScratch = new Vector3();
   private lateralOffsetScratch = new Vector3();
   private lastBlockingHitNormal = new Vector3();
   private standoffLiftScratch = new Vector3();
+  private motionRightScratch = new Vector3();
+  private motionUpScratch = new Vector3();
+  private shapeSweepOffsetScratch = new Vector3();
+  private shapeSweepStartScratch = new Vector3();
+  private shapeSweepEndScratch = new Vector3();
+  private lateralDirectionScratch = new Vector3();
+  private lateralReferenceScratch = new Vector3();
+  private penetrationDirectionScratch = new Vector3();
+  private penetrationPushScratch = new Vector3();
 
   /** Create the arc camera and wire collision clamping after pointer input. */
   OnStart(): void
@@ -222,6 +240,7 @@ export default class TrainCamera extends Behavior
       }
 
       this.ClampCameraGroundStandoff();
+      this.RecoverCameraFromPenetration();
     }
 
     this.lastOrbitAlpha = this.camera.alpha;
@@ -307,8 +326,8 @@ export default class TrainCamera extends Behavior
   }
 
   /**
-   * Left/right rays from the lens. Returns true when either side hits solid
-   * geometry within lateral standoff — the current orbit step should be reverted.
+   * Horizontal ring of rays from the lens. Returns true when any direction hits
+   * solid geometry within lateral standoff — the current orbit step should revert.
    */
   private IsCameraTooCloseLaterally(): boolean
   {
@@ -321,26 +340,49 @@ export default class TrainCamera extends Behavior
     const standoff = this.GetLateralStandoffDistance();
     const probeLength = standoff + Math.max(this.preferredRadius * 0.5, 2);
 
-    this.GetCameraWorldRight(this.cameraRightScratch);
-
-    if (this.IsLateralRayBlocked(this.cameraRightScratch, probeLength, standoff))
+    for (let directionIndex = 0; directionIndex < LATERAL_PROBE_DIRECTIONS; directionIndex++)
     {
-      return true;
+      this.GetLateralProbeDirection(directionIndex, this.lateralDirectionScratch);
+      if (this.IsLateralRayBlocked(this.lateralDirectionScratch, probeLength, standoff))
+      {
+        return true;
+      }
     }
 
-    this.cameraRightScratch.scaleInPlace(-1);
-    return this.IsLateralRayBlocked(this.cameraRightScratch, probeLength, standoff);
+    return false;
   }
 
-  /** World-space camera +X (view-right) unit vector. */
-  private GetCameraWorldRight(out: Vector3): void
+  /**
+   * Unit probe direction on the horizontal ring around the lens. Uses world-up
+   * so walls are caught from every azimuth, not only camera-left/right.
+   */
+  private GetLateralProbeDirection(directionIndex: number, out: Vector3): void
   {
     if (this.camera === null)
     {
       return;
     }
 
-    this.camera.getDirectionToRef(Vector3.Right(), out);
+    this.camera.getDirectionToRef(Vector3.Forward(), this.lateralReferenceScratch);
+    this.lateralReferenceScratch.y = 0;
+    if (this.lateralReferenceScratch.lengthSquared() < 0.0001)
+    {
+      this.lateralReferenceScratch.set(1, 0, 0);
+    }
+    else
+    {
+      this.lateralReferenceScratch.normalize();
+    }
+
+    const angle = (directionIndex / LATERAL_PROBE_DIRECTIONS) * Math.PI * 2;
+    const cosine = Math.cos(angle);
+    const sine = Math.sin(angle);
+    const referenceX = this.lateralReferenceScratch.x;
+    const referenceZ = this.lateralReferenceScratch.z;
+
+    out.x = referenceX * cosine - referenceZ * sine;
+    out.y = 0;
+    out.z = referenceX * sine + referenceZ * cosine;
     out.normalize();
   }
 
@@ -379,8 +421,9 @@ export default class TrainCamera extends Behavior
   }
 
   /**
-   * Raycast along the camera's actual motion segment (not just target→camera).
-   * Catches geometry beside the look ray that arc-orbit sub-steps would otherwise skip.
+   * Shape sweep along the camera's motion segment: a center ray plus a ring of
+   * parallel rays offset perpendicular to travel by up to standoff. Catches walls
+   * beside the path that a single center ray would miss.
    */
   private ClampCameraSweep(from: Vector3, to: Vector3): void
   {
@@ -395,7 +438,7 @@ export default class TrainCamera extends Behavior
       return;
     }
 
-    const hitDistance = this.FindClosestBlockingHit(from, to);
+    const hitDistance = this.FindClosestShapeSweepHit(from, to);
     if (hitDistance === null)
     {
       return;
@@ -414,6 +457,145 @@ export default class TrainCamera extends Behavior
     const blend = safeDistance / rayLength;
     Vector3.LerpToRef(from, to, blend, this.sweepSafePosition);
     this.camera.setPosition(this.sweepSafePosition);
+  }
+
+  /**
+   * Closest blocking hit across a center ray and a standoff-radius ring of
+   * parallel rays — approximates sweeping a sphere along the motion segment.
+   */
+  private FindClosestShapeSweepHit(from: Vector3, to: Vector3): number | null
+  {
+    let closestDistance: number | null = null;
+
+    const centerHit = this.FindClosestBlockingHit(from, to);
+    if (centerHit !== null)
+    {
+      closestDistance = centerHit;
+    }
+
+    this.rayDirectionScratch.copyFrom(to).subtractInPlace(from);
+    const rayLength = this.rayDirectionScratch.length();
+    if (rayLength < 0.0001)
+    {
+      return closestDistance;
+    }
+    this.rayDirectionScratch.scaleInPlace(1 / rayLength);
+
+    const standoff = this.GetStandoffDistance();
+    this.BuildMotionPerpendicularBasis(this.rayDirectionScratch, this.motionRightScratch, this.motionUpScratch);
+
+    for (let sampleIndex = 0; sampleIndex < SHAPE_SWEEP_RING_SAMPLES; sampleIndex++)
+    {
+      const angle = (sampleIndex / SHAPE_SWEEP_RING_SAMPLES) * Math.PI * 2;
+      const cosineScale = Math.cos(angle) * standoff;
+      const sineScale = Math.sin(angle) * standoff;
+      this.shapeSweepOffsetScratch
+        .copyFrom(this.motionRightScratch)
+        .scaleInPlace(cosineScale);
+      this.lateralOffsetScratch.copyFrom(this.motionUpScratch).scaleInPlace(sineScale);
+      this.shapeSweepOffsetScratch.addInPlace(this.lateralOffsetScratch);
+
+      this.shapeSweepStartScratch.copyFrom(from).addInPlace(this.shapeSweepOffsetScratch);
+      this.shapeSweepEndScratch.copyFrom(to).addInPlace(this.shapeSweepOffsetScratch);
+
+      const offsetHit = this.FindClosestBlockingHit(this.shapeSweepStartScratch, this.shapeSweepEndScratch);
+      if (offsetHit !== null && (closestDistance === null || offsetHit < closestDistance))
+      {
+        closestDistance = offsetHit;
+      }
+    }
+
+    return closestDistance;
+  }
+
+  /**
+   * Orthonormal axes spanning the plane perpendicular to motionDirection. Falls
+   * back when travel is nearly parallel to world up.
+   */
+  private BuildMotionPerpendicularBasis(
+    motionDirection: Vector3,
+    outRight: Vector3,
+    outUp: Vector3,
+  ): void
+  {
+    Vector3.CrossToRef(motionDirection, Vector3.Up(), outRight);
+    if (outRight.lengthSquared() < 0.0001)
+    {
+      outRight.set(1, 0, 0);
+    }
+    else
+    {
+      outRight.normalize();
+    }
+
+    Vector3.CrossToRef(outRight, motionDirection, outUp);
+    outUp.normalize();
+  }
+
+  /**
+   * When the lens is already inside or flush with geometry, cast outward in many
+   * directions and push along the deepest penetrating surface normal.
+   */
+  private RecoverCameraFromPenetration(): void
+  {
+    if (this.camera === null)
+    {
+      return;
+    }
+
+    const standoff = this.GetStandoffDistance();
+    const probeLength = standoff * 3 + Math.max(this.preferredRadius * 0.25, 1);
+    let deepestPenetration = 0;
+
+    this.rayStart.copyFrom(this.camera.position);
+
+    for (let directionIndex = 0; directionIndex < PENETRATION_RECOVERY_DIRECTIONS; directionIndex++)
+    {
+      this.GetPenetrationRecoveryDirection(directionIndex, this.penetrationDirectionScratch);
+      this.penetrationDirectionScratch.scaleToRef(probeLength, this.rayEnd);
+      this.rayEnd.addInPlace(this.rayStart);
+
+      const hitDistance = this.FindClosestBlockingHit(this.rayStart, this.rayEnd);
+      if (hitDistance === null || hitDistance >= standoff)
+      {
+        continue;
+      }
+
+      const penetration = standoff - hitDistance;
+      if (penetration > deepestPenetration)
+      {
+        deepestPenetration = penetration;
+        this.penetrationPushScratch.copyFrom(this.lastBlockingHitNormal);
+      }
+    }
+
+    if (deepestPenetration <= 0.0001)
+    {
+      return;
+    }
+
+    this.penetrationPushScratch.scaleInPlace(deepestPenetration);
+    this.sweepSafePosition.copyFrom(this.camera.position).addInPlace(this.penetrationPushScratch);
+    this.camera.setPosition(this.sweepSafePosition);
+  }
+
+  /**
+   * Evenly distributed outward directions on a sphere (Fibonacci lattice) for
+   * penetration recovery casts.
+   */
+  private GetPenetrationRecoveryDirection(directionIndex: number, out: Vector3): void
+  {
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const sampleCount = PENETRATION_RECOVERY_DIRECTIONS;
+    const normalizedIndex = directionIndex + 0.5;
+    const y = 1 - (normalizedIndex / sampleCount) * 2;
+    const ringRadius = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * directionIndex;
+
+    out.x = Math.cos(theta) * ringRadius;
+    out.y = y;
+    out.z = Math.sin(theta) * ringRadius;
+    out.normalize();
   }
 
   /**

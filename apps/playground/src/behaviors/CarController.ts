@@ -647,14 +647,30 @@ export default class CarController extends Behavior
 
     let grounded = this.raycastResult.hasHit;
 
-    // The player can't count as ground.  Note this is a post-hit rejection, not a
-    // true exclusion: raycastToRef's 4th argument is an IRaycastQuery of collision
-    // bitmasks, not a body list, so there's no way to skip a specific body without
-    // putting the player in its own filter group.  If the player is standing
-    // between the car and the ground this will read as airborne for a frame.
-    if (grounded && this.playerEntity?.body && this.raycastResult.body === this.playerEntity.body)
+    if (grounded)
     {
-      grounded = false;
+      const hitBody = this.raycastResult.body;
+
+      // The player can't count as ground.  Note this is a post-hit rejection, not a
+      // true exclusion: raycastToRef's 4th argument is an IRaycastQuery of collision
+      // bitmasks, not a body list, so there's no way to skip a specific body without
+      // putting the player in its own filter group.  If the player is standing
+      // between the car and the ground this will read as airborne for a frame.
+      if (this.playerEntity?.body && hitBody === this.playerEntity.body)
+      {
+        grounded = false;
+      }
+
+      // Level boundary colliders are invisible walls — treat them as a miss.
+      if (grounded && hitBody !== null && hitBody !== undefined)
+      {
+        const metadata = hitBody.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
+        const hitEntity = metadata?.bjsEntity;
+        if (hitEntity !== null && hitEntity !== undefined && hitEntity.tag === "levelboundary")
+        {
+          grounded = false;
+        }
+      }
     }
 
     return grounded;

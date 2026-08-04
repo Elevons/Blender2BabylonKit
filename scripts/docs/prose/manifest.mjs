@@ -148,6 +148,14 @@ export const PROSE_CHAPTERS = [
     title: "14 — API Guide",
     fragment: "engine/14-API-GUIDE.html",
     prev: "13-FEATURE-LIST.html",
+    next: "15-AXIS-CONVERSION.html",
+  },
+  {
+    href: "engine/15-AXIS-CONVERSION.html",
+    side: "engine",
+    title: "15 — Axis Conversion",
+    fragment: "engine/15-AXIS-CONVERSION.html",
+    prev: "14-API-GUIDE.html",
   },
   // — Blender —
   {

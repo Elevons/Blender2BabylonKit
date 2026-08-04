@@ -460,7 +460,7 @@ export default class LandingDetector extends Behavior
 <p>Working demo: <code>apps/playground/src/behaviors/CollisionProbe.ts</code> logs all five hooks with an optional tag filter. Trigger-only logging: <code>TriggerLogger.ts</code> (<code>OnTriggerEnter</code> / <code>OnTriggerExit</code>).</p>
 <p><strong>Do not use <code>body.getCollisionObservable()</code> for triggers.</strong> That per-body observable only receives solid contacts (<code>COLLISION_STARTED</code> / <code>CONTINUED</code>). Trigger overlaps (<code>TRIGGER_ENTERED</code> / <code>EXITED</code>) are dispatched on <code>HavokPlugin.onTriggerCollisionObservable</code>. Override <code>OnTriggerEnter</code> / <code>OnTriggerExit</code> on the entity that owns the trigger body, or subscribe to the plugin observable when listening from another entity (see <code>animalSpawner.ts</code>).</p>
 <h2>Trigger volume queries (<code>IsEntityInsideColliderVolume</code>) <a name="trigger-volume-queries"></a></h2>
-<p>For <strong>zone behaviors</strong> (fog/LUT swaps, underwater toggles) that must stay correct when Havok trigger events are missed (dual-trigger probes, start-overlapped volumes), poll authored collider geometry instead of relying on <code>OnTriggerEnter</code>/<code>OnTriggerExit</code> alone. Exported from <code>@bjs/engine</code> (<code>subsystems/physics/shapes.ts</code>):</p>
+<p>For <strong>zone behaviors</strong> (fog/LUT swaps, underwater toggles) that must stay correct when Havok trigger events are missed (dual-trigger probes, start-overlapped volumes), poll trigger collider geometry instead of relying on <code>OnTriggerEnter</code>/<code>OnTriggerExit</code> alone. Exported from <code>@bjs/engine</code> (<code>subsystems/physics/shapes.ts</code>):</p>
 <pre><code class="language-typescript">import { IsEntityInsideColliderVolume, IsPointInsideColliderVolume } from "@bjs/engine";
 
 const inside = IsEntityInsideColliderVolume(probeEntity, volumeEntity);
@@ -469,6 +469,10 @@ const insidePoint = IsPointInsideColliderVolume(worldPoint, volumeEntity);</code
 <li><strong>volumeEntity</strong> — owns the trigger <code>COLLIDER</code> (BOX or SPHERE).</li>
 <li><strong>probeEntity</strong> — sample point is <code>probeEntity.node.getAbsolutePosition()</code>. When the script host is a camera pivot, assign a child probe via <code>@exposed</code> (e.g. <code>CameraBlock</code>).</li>
 <li>Optional third argument: cached <code>GetAttachment("COLLIDER")</code> on the volume.</li>
+<li><strong>Manual colliders</strong> (<code>autoFit: false</code>) — tests manifest <code>center</code> / <code>size</code> / <code>radius</code> (same as the Blender collider preview).</li>
+<li><strong>Auto-fit colliders</strong> (<code>autoFit: true</code>) — resolves owned-mesh bounds the same way as Havok body build (<code>FitColliderShape</code>), not placeholder manifest <code>size</code> values.</li>
+<li>Does <strong>not</strong> call Havok overlap APIs — analytic point-in-volume math so probes without physics bodies (e.g. <code>CameraBlock</code>) work reliably in <code>OnStart</code>/<code>OnUpdate</code>.</li>
+<li>Returns <code>false</code> for missing collider, non-trigger, unsupported shapes (CAPSULE, CYLINDER, CONVEX, MESH), or auto-fit with no owned mesh geometry.</li>
 <li>Poll in <code>OnStart</code> (initial state) and <code>OnUpdate</code> (edge-detect changes). MCP fragment: <code>poll-trigger-volume</code>.</li>
 <li>Examples: <code>FogChanger.ts</code>, <code>ToggleInWater.ts</code>.</li>
 </ul>

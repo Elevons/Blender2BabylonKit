@@ -49,6 +49,7 @@ Then \`preflight_behavior\` for the checklist. Skim \`get_do_not_list\` once per
 |------|------|
 | \`get_scripting_context(section?)\` | Full contract or one section — \`section="list"\` |
 | \`get_physics_movement(mode?)\` | **Before any body motion** |
+| \`get_axis_conversion(topic?)\` | **Before lookAt / vector3 offsets / HUD markers** — Blender vs Babylon frames |
 | \`get_fragment(name)\` / \`list_fragments\` | Paste-in code blocks |
 | \`get_exposed_field_snippet(…)\` | Blender-safe @exposed line |
 | \`get_style_guide(section?)\` | Allman braces, naming |
@@ -72,6 +73,7 @@ Then \`preflight_behavior\` for the checklist. Skim \`get_do_not_list\` once per
 | API tables | \`get_doc_chapter(chapter="engine/14-api-guide")\` or \`docs/engine/14-API-GUIDE.html\` |
 | Feature inventory | \`get_doc_chapter(chapter="engine/13-feature-list")\` or \`docs/engine/13-FEATURE-LIST.html\` |
 | Frame loop | \`get_doc_chapter(chapter="engine/02-runtime-basics")\` or \`docs/engine/02-RUNTIME-BASICS.html\` |
+| Axis conversion | \`get_axis_conversion\` · \`get_doc_chapter(chapter="engine/15-axis-conversion")\` · \`docs/engine/15-AXIS-CONVERSION.html\` |
 | Doc index | \`docs/engine/00-INDEX.html\` |
 
 ## Resources (attach in Cursor)

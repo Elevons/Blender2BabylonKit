@@ -11,7 +11,8 @@ interface PhysicsRaycastEngine
  * of forward physics raycasts.
  *
  * Obstacle avoidance:
- * - Fires a fan of Havok raycasts spread across a cone along the travel direction.
+ * - Fires a 2D grid of Havok raycasts spread across a cone along the travel
+ *   direction, covering both horizontal (left/right) and vertical (up/down) angles.
  * - When the center ray is blocked, steers toward the nearest clear side ray.
  * - If every ray is blocked, picks a random fallback direction.
  */
@@ -31,6 +32,12 @@ export default class FishNavigator extends Behavior
 
   @exposed({ min: 1, max: 180, label: "Cone Angle (deg)" })
   coneAngle = 60;
+
+  @exposed({ min: 1, max: 20, label: "Vertical Raycast Count" })
+  verticalRaycastCount = 3;
+
+  @exposed({ min: 1, max: 180, label: "Vertical Cone Angle (deg)" })
+  verticalConeAngle = 30;
 
   @exposed({ min: 0.5, max: 10, label: "Direction Change Interval (s)" })
   directionChangeInterval = 3;
@@ -96,7 +103,8 @@ export default class FishNavigator extends Behavior
   }
 
   /**
-   * Fires a cone of physics raycasts along the travel direction. When the center
+   * Fires a 2D grid of physics raycasts along the travel direction, spread across
+   * both horizontal (left/right) and vertical (up/down) angles. When the center
    * ray hits a solid collider, steers toward the nearest clear side direction.
    */
   private SteerAroundObstacles(): void
@@ -112,45 +120,63 @@ export default class FishNavigator extends Behavior
     this.rayStart.copyFrom(this.node.position);
 
     const halfAngleRad = (this.coneAngle * 0.5) * Math.PI / 180;
+    const halfVerticalAngleRad = (this.verticalConeAngle * 0.5) * Math.PI / 180;
     const centerRayIndex = Math.floor((this.raycastCount - 1) * 0.5);
+    const centerVerticalIndex = Math.floor((this.verticalRaycastCount - 1) * 0.5);
+
+    // Local horizontal axis used to tilt rays up and down.
+    const rightVector = Vector3.Cross(this.travelForward, Vector3.Up());
+    rightVector.normalize();
 
     let travelDirectionBlocked = false;
     let bestClearAngle = Number.MAX_VALUE;
     let hasClearDirection = false;
 
-    for (let index = 0; index < this.raycastCount; index++)
+    for (let verticalIndex = 0; verticalIndex < this.verticalRaycastCount; verticalIndex++)
     {
-      const parameter = this.raycastCount > 1 ? index / (this.raycastCount - 1) : 0.5;
-      const spread = (parameter - 0.5) * 2;
-      const angle = spread * halfAngleRad;
+      const verticalParameter = this.verticalRaycastCount > 1
+        ? verticalIndex / (this.verticalRaycastCount - 1)
+        : 0.5;
+      const verticalSpread = (verticalParameter - 0.5) * 2;
+      const verticalAngle = verticalSpread * halfVerticalAngleRad;
 
-      const rotationMatrix = Matrix.RotationAxis(Vector3.Up(), angle);
-      Vector3.TransformNormalToRef(this.travelForward, rotationMatrix, this.rayDirection);
-      this.rayDirection.normalize();
-
-      this.rayDirection.scaleToRef(this.raycastLength, this.rayOffset);
-      this.rayEnd.copyFrom(this.rayStart);
-      this.rayEnd.addInPlace(this.rayOffset);
-
-      physicsEngine.raycastToRef(this.rayStart, this.rayEnd, this.raycastResult);
-
-      const blocked = this.raycastResult.hasHit && this.IsBlockingRayHit();
-      if (blocked)
+      for (let index = 0; index < this.raycastCount; index++)
       {
-        if (index === centerRayIndex)
+        const parameter = this.raycastCount > 1 ? index / (this.raycastCount - 1) : 0.5;
+        const spread = (parameter - 0.5) * 2;
+        const angle = spread * halfAngleRad;
+
+        const horizontalMatrix = Matrix.RotationAxis(Vector3.Up(), angle);
+        Vector3.TransformNormalToRef(this.travelForward, horizontalMatrix, this.rayDirection);
+
+        const verticalMatrix = Matrix.RotationAxis(rightVector, verticalAngle);
+        Vector3.TransformNormalToRef(this.rayDirection, verticalMatrix, this.rayDirection);
+        this.rayDirection.normalize();
+
+        this.rayDirection.scaleToRef(this.raycastLength, this.rayOffset);
+        this.rayEnd.copyFrom(this.rayStart);
+        this.rayEnd.addInPlace(this.rayOffset);
+
+        physicsEngine.raycastToRef(this.rayStart, this.rayEnd, this.raycastResult);
+
+        const blocked = this.raycastResult.hasHit && this.IsBlockingRayHit();
+        if (blocked)
         {
-          travelDirectionBlocked = true;
+          if (index === centerRayIndex && verticalIndex === centerVerticalIndex)
+          {
+            travelDirectionBlocked = true;
+          }
+          continue;
         }
-        continue;
-      }
 
-      const dot = Vector3.Dot(this.travelForward, this.rayDirection);
-      const clearAngle = Math.acos(Math.min(Math.max(dot, -1.0), 1.0));
-      if (clearAngle < bestClearAngle)
-      {
-        bestClearAngle = clearAngle;
-        this.bestClearDirection.copyFrom(this.rayDirection);
-        hasClearDirection = true;
+        const dot = Vector3.Dot(this.travelForward, this.rayDirection);
+        const clearAngle = Math.acos(Math.min(Math.max(dot, -1.0), 1.0));
+        if (clearAngle < bestClearAngle)
+        {
+          bestClearAngle = clearAngle;
+          this.bestClearDirection.copyFrom(this.rayDirection);
+          hasClearDirection = true;
+        }
       }
     }
 

@@ -81,6 +81,7 @@ Or use **Babylon Launcher** → Services → Copy Cursor Config.
 |------|---------|
 | `get_scripting_context` | Full contract or one section |
 | `get_physics_movement` | Decision tree for moving bodies |
+| `get_axis_conversion` | Blender Z-up vs Babylon Y-up — lookAt, @exposed vector3, manifest vs local |
 | `get_fragment` / `list_fragments` | Paste-in code |
 | `get_exposed_field_snippet` | Blender-safe @exposed |
 | `get_style_guide` | Allman braces, naming |

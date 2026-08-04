@@ -69,7 +69,7 @@ export default class animalSpawner extends Behavior
   @exposed({ min: 0, step: 0.1, label: "Water entry delay (s)" })
   waterEntryDelay = 3;
 
-  @exposed({ min: 0, step: 0.1, label: "Minimum depth" })
+  @exposed({ min: 0, step: 0.1, label: "Minimum depth below Y=0 (m)" })
   minimumDepth = 0;
 
   @exposed({ min: 0, step: 0.1, label: "Min spawn distance from center" })
@@ -328,6 +328,15 @@ export default class animalSpawner extends Behavior
       scaling: this.zeroScale,
     });
 
+    if (this.spawnVolume !== null)
+    {
+      this.spawnVolume.node.computeWorldMatrix(true);
+      const spawnerWorldPosition = this.spawnVolume.node.getAbsolutePosition();
+      console.log(
+        `[animalSpawner] spawned "${template.name}" at world (${worldPosition.x.toFixed(2)}, ${worldPosition.y.toFixed(2)}, ${worldPosition.z.toFixed(2)}) | spawner world position (${spawnerWorldPosition.x.toFixed(2)}, ${spawnerWorldPosition.y.toFixed(2)}, ${spawnerWorldPosition.z.toFixed(2)})`
+      );
+    }
+
     this.trackedFish.push({
       entity: handle.rootEntity,
       lifetimeRemaining: RandomInRange(this.lifetimeMin, this.lifetimeMax),
@@ -433,24 +442,21 @@ export default class animalSpawner extends Behavior
   }
 
   /**
-   * Whether the train collider is at least minimumDepth below the water
-   * collider mesh position (world Y).
+   * Whether the train collider is at least minimumDepth below world Y=0.
    */
   private IsTrainAtMinimumDepth(): boolean
   {
-    if (this.trainCollider === null || this.waterCollider === null)
+    if (this.trainCollider === null)
     {
       return false;
     }
 
-    this.waterCollider.node.computeWorldMatrix(true);
     this.trainCollider.node.computeWorldMatrix(true);
 
-    const waterSurfaceY = this.waterCollider.node.getAbsolutePosition().y;
     const trainY = this.trainCollider.node.getAbsolutePosition().y;
-    const depthBelowSurface = waterSurfaceY - trainY;
+    const depthBelowWorldZero = -trainY;
 
-    return depthBelowSurface >= this.minimumDepth;
+    return depthBelowWorldZero >= this.minimumDepth;
   }
 
   /** Whether a trigger event involves the assigned train and water entities. */

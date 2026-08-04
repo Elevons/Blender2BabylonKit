@@ -9,18 +9,18 @@ you see here matches the runtime body.
 import math
 
 import bpy
-import gpu
-from gpu_extras.batch import batch_for_shader
 from mathutils import Vector, Euler
 
-from ..core.bounds import compute_local_bounds
+from ..core.bounds import compute_local_bounds, BoundsInputSignature
 from ..core.collider_scale import (
     manual_collider_dimensions,
     object_world_matrix_for_collider,
     scaled_fit_bounds,
 )
+from .gpu_cache import GetOverlayShader, LineBatchCache, MatrixSignature
 
 _handle = None
+_batch_cache = LineBatchCache()
 _COLOR = (0.3, 0.9, 1.0, 0.9)   # cyan
 _SEGMENTS = 24                  # circle resolution
 _ARC = 12                       # hemisphere arc resolution
@@ -114,17 +114,29 @@ def _capsule(center, radius, height):
     return pts
 
 
-def _local_geometry(obj, comp, eval_obj, depsgraph=None):
+def _needs_bounds(comp):
+    if comp.collider_shape in {'CONVEX', 'MESH'}:
+        return True
+    return comp.auto_fit
+
+
+def _local_geometry(obj, comp, eval_obj, depsgraph, mesh_bounds=None):
     """Local-space line segments for a collider, or None if the mesh is the shape."""
     shape = comp.collider_shape
     if shape in {'CONVEX', 'MESH'}:
         # Hull/mesh colliders use geometry at runtime; preview with a scaled AABB.
-        center, size = compute_local_bounds(obj, depsgraph)
+        if mesh_bounds is None:
+            center, size = compute_local_bounds(obj, depsgraph)
+        else:
+            center, size = mesh_bounds
         center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)
         return _box_edges(center, size)
 
     if comp.auto_fit:
-        center, size = compute_local_bounds(obj, depsgraph)
+        if mesh_bounds is None:
+            center, size = compute_local_bounds(obj, depsgraph)
+        else:
+            center, size = mesh_bounds
         center, size = scaled_fit_bounds(obj, comp, center, size, eval_obj)
         if shape == 'SPHERE':
             return _sphere(center, max(size) / 2)
@@ -150,6 +162,69 @@ def _local_geometry(obj, comp, eval_obj, depsgraph=None):
     return [(rot @ p) + center for p in pts]
 
 
+def _collider_comp_signature(comp_index, comp):
+    """Hashable preview state for one collider component."""
+    return (
+        comp_index,
+        comp.collider_shape,
+        comp.auto_fit,
+        comp.collider_apply_scale,
+        tuple(comp.collider_center),
+        tuple(comp.collider_size),
+        comp.collider_radius,
+        comp.collider_height,
+        tuple(comp.collider_rotation),
+    )
+
+
+def _draw_signature(selected, depsgraph):
+    """Hashable state for the full collider overlay draw pass."""
+    parts = []
+    for obj in sorted(selected, key=lambda item: item.as_pointer()):
+        eval_obj = obj.evaluated_get(depsgraph)
+        parts.append((
+            obj.as_pointer(),
+            MatrixSignature(eval_obj.matrix_world),
+            tuple(obj.scale),
+            BoundsInputSignature(obj, depsgraph),
+        ))
+        for comp_index, comp in enumerate(obj.bjs_components):
+            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:
+                continue
+            parts.append(_collider_comp_signature(comp_index, comp))
+    return tuple(parts)
+
+
+def _build_points(selected, depsgraph):
+    """World-space line endpoints for all visible collider previews."""
+    mesh_bounds_by_object = {}
+    points = []
+    for obj in selected:
+        eval_obj = obj.evaluated_get(depsgraph)
+        obj_key = obj.as_pointer()
+        mesh_bounds = None
+        for comp in obj.bjs_components:
+            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:
+                continue
+            if _needs_bounds(comp):
+                mesh_bounds = mesh_bounds_by_object.get(obj_key)
+                if mesh_bounds is None:
+                    mesh_bounds = compute_local_bounds(obj, depsgraph)
+                    mesh_bounds_by_object[obj_key] = mesh_bounds
+                break
+
+        for comp in obj.bjs_components:
+            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:
+                continue
+            bounds = mesh_bounds_by_object.get(obj_key) if _needs_bounds(comp) else None
+            local = _local_geometry(obj, comp, eval_obj, depsgraph, bounds)
+            if not local:
+                continue
+            matrix = object_world_matrix_for_collider(obj, eval_obj, comp.collider_apply_scale)
+            points.extend(matrix @ point for point in local)
+    return points
+
+
 def _draw():
     ctx = bpy.context
     selected = getattr(ctx, "selected_objects", None)
@@ -157,32 +232,16 @@ def _draw():
         return
 
     depsgraph = bpy.context.evaluated_depsgraph_get()
-    points = []
-    for obj in selected:
-        eval_obj = obj.evaluated_get(depsgraph)
-        for comp in obj.bjs_components:
-            if comp.comp_type != 'COLLIDER' or not comp.enabled or not comp.collider_show:
-                continue
-            local = _local_geometry(obj, comp, eval_obj, depsgraph)
-            if not local:
-                continue
-            mw = object_world_matrix_for_collider(obj, eval_obj, comp.collider_apply_scale)
-            points.extend(mw @ p for p in local)
+    draw_key = _draw_signature(selected, depsgraph)
+    shader = GetOverlayShader()
+    positions = None
+    if not _batch_cache.HasKey(draw_key):
+        positions = [(point.x, point.y, point.z) for point in _build_points(selected, depsgraph)]
+        if not positions:
+            _batch_cache.Clear()
+            return
 
-    if not points:
-        return
-
-    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-    gpu.state.blend_set('ALPHA')
-    gpu.state.line_width_set(1.5)
-    gpu.state.depth_test_set('LESS_EQUAL')
-    batch = batch_for_shader(shader, 'LINES', {"pos": [(p.x, p.y, p.z) for p in points]})
-    shader.bind()
-    shader.uniform_float("color", _COLOR)
-    batch.draw(shader)
-    gpu.state.depth_test_set('NONE')
-    gpu.state.line_width_set(1.0)
-    gpu.state.blend_set('NONE')
+    _batch_cache.Draw(draw_key, positions, shader, _COLOR, line_width=1.5, depth_test='LESS_EQUAL')
 
 
 def register():
@@ -196,3 +255,4 @@ def unregister():
     if _handle is not None:
         bpy.types.SpaceView3D.draw_handler_remove(_handle, 'WINDOW')
         _handle = None
+    _batch_cache.Clear()

@@ -106,7 +106,7 @@ ANIMATOR, REFLECTION_PROBE, render/collision layer kinds are load-only.`,
 - \`ApplyLateRendering\`: \`BuildNodeMaterials\` + \`ApplyPostProcessing\` on \`scene.activeCamera\`
 - \`NotifyPostReady()\`: every behavior's \`OnPostReady\` once (\`level.postReady = true\`)
 - Color grading LUTs (\`.3dl\`, Adobe \`.cube\`, strip \`.png\`) run in the pipeline image-processing pass; \`.cube\` loads via \`CubeColorGradingTexture\` (\`subsystems/postprocess/cubeLutTexture.ts\`). Zone behaviors call exported \`ApplyColorGradingLut\` on \`level.post.pipeline.imageProcessing\` in **\`OnPostReady\`** — cast \`this.spawner as Level\` for \`componentHost.baseUrl\` (see \`FogChanger.ts\`, fragment \`zone-lut-swap\`).
-- Zone overlap (fog, underwater toggles): poll \`IsEntityInsideColliderVolume(probe, volume)\` in \`OnStart\`/\`OnUpdate\` — fragment \`poll-trigger-volume\`; assign explicit probe entity when script host ≠ sample point (\`FogChanger.ts\`, \`ToggleInWater.ts\`). Underwater FX targets: \`SetEntityActive(target, inside)\` — fragment \`set-entity-active\`.
+- Zone overlap (fog, underwater toggles): poll \`IsEntityInsideColliderVolume(probe, volume)\` in \`OnStart\`/\`OnUpdate\` — fragment \`poll-trigger-volume\`; manual colliders use manifest dimensions, auto-fit colliders resolve owned-mesh bounds like Havok body build; assign explicit probe entity when script host ≠ sample point (\`FogChanger.ts\`, \`ToggleInWater.ts\`). Underwater FX targets: \`SetEntityActive(target, inside)\` — fragment \`set-entity-active\`.
 
 **Spawn / runtime SCRIPT add:** when \`level.postReady\` is already true, \`OnPostReady\` runs immediately after \`OnStart\`.
 

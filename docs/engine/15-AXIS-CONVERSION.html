@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 15 — Axis Conversion</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="has-mermaid">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Engine</a>
+    <span class="sep">/</span>
+    <a href="../blender/00-INDEX.html">Blender</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="14-API-GUIDE.html">Prev</a></p>
+  <article><h1>15 — Axis Conversion (Blender Z-up → Babylon Y-up)</h1>
+<p>Blender uses <strong>Z-up</strong> (+Z up, +Y forward on objects). Babylon and glTF use <strong>Y-up</strong> (+Y up, −Z forward in world space). This kit bridges the two. Most confusion comes from not knowing <em>which</em> numbers are already converted and which still live in Blender local space.</p>
+
+<p class="doc-links">
+  <strong>See also:</strong>
+  <a href="05-SCRIPTING.html">05 — Scripting</a> ·
+  <a href="03-BLENDER-ADDON.html">03 — Blender Add-on</a> (export) ·
+  <a href="06-PHYSICS.html">06 — Physics</a> ·
+  <a href="../LLM_SCRIPTING_CONTEXT.md">LLM scripting context</a> ·
+  MCP: <code>get_axis_conversion(topic?)</code> ·
+  <code>get_scripting_context(section=&quot;coordinate-axes&quot;)</code>
+</p>
+
+<hr>
+
+<h2>The rule of thumb</h2>
+<blockquote>
+<p><strong>Author as if Blender axes are the object&apos;s axes.</strong> Model forward along <strong>+Y</strong>, up along <strong>+Z</strong>. The export pipeline converts physics/component manifest data to Babylon Y-up. Script logic and mesh transforms stay in Blender local space — do not convert <code>@exposed</code> vector3 vars in the manifest.</p>
+</blockquote>
+
+<h2>Two coordinate frames</h2>
+<table>
+<thead><tr><th></th><th>Blender (object local)</th><th>Babylon (world / glTF)</th></tr></thead>
+<tbody>
+<tr><td><strong>Up</strong></td><td>+Z</td><td>+Y</td></tr>
+<tr><td><strong>Forward</strong></td><td>+Y</td><td>−Z (cameras look down −Z)</td></tr>
+<tr><td><strong>Right</strong></td><td>+X</td><td>+X</td></tr>
+<tr><td><strong>Handedness</strong></td><td>Right-handed</td><td>Right-handed</td></tr>
+</tbody>
+</table>
+<p>These are not the same frame. Mixing them in one calculation (e.g. adding a Babylon <code>Vector3.Forward()</code> offset to a Blender-local <code>node.position</code>) produces silent 90° errors.</p>
+
+<h2>Where conversion happens</h2>
+<pre class="mermaid">flowchart TB
+  subgraph blender [Blender authoring]
+    A[Object local Z-up]
+    B[Component panels]
+    C["@exposed vector3 vars"]
+  end
+  subgraph export [Export Level]
+    D["component_serializers.py\n(x,y,z)→(x,z,−y)"]
+    E["glTF exporter\nroot Y-up flip"]
+    F["_serialize_vars\nno axis change"]
+  end
+  subgraph runtime [Runtime]
+    G["Havok / constraints\nBabylon Y-up"]
+    H["node.position / rotation\nBlender local"]
+    I["Behavior @exposed vars\nBlender local"]
+  end
+  B --> D --> G
+  A --> E --> H
+  C --> F --> I</pre>
+
+<h2>The export formula</h2>
+<p>Component and physics serializers in <code>blender_addon/export/component_serializers.py</code> convert vectors from Blender to Babylon:</p>
+<pre><code>(x, y, z)_Blender  →  (x, z, −y)_Babylon</code></pre>
+<p>Related rules in the same module:</p>
+<ul>
+  <li><strong>Extents / size</strong> — Y and Z components swap (<code>[sx, sy, sz] → [sx, sz, sy]</code> on colliders).</li>
+  <li><strong>Quaternions</strong> — <code>w</code> unchanged; vector part converted with the same axis map (<code>[qx, qy, qz, w] → [qx, qz, −qy, w]</code>).</li>
+  <li><strong>Constraint preset axes</strong> — Blender X/Y/Z enum maps to Babylon unit vectors (<code>Y → [0,0,−1]</code>, <code>Z → [0,1,0]</code>, etc.).</li>
+</ul>
+<p>The runtime reads manifest physics values <strong>as Babylon space</strong>. Do not apply the formula again in behaviors.</p>
+
+<h2>What gets converted (manifest / components)</h2>
+<table>
+<thead><tr><th>Authored in Blender</th><th>Manifest field</th><th>Converted?</th></tr></thead>
+<tbody>
+<tr><td>Collider center offset</td><td><code>COLLIDER.center</code></td><td>Yes</td></tr>
+<tr><td>Collider size / rotation</td><td><code>COLLIDER.size</code>, <code>rotation</code></td><td>Yes</td></tr>
+<tr><td>Rigid-body center of mass</td><td><code>RIGIDBODY.centerOfMass</code></td><td>Yes</td></tr>
+<tr><td>Constraint pivot / axis</td><td><code>CONSTRAINT.pivot</code>, <code>axis</code></td><td>Yes</td></tr>
+<tr><td>Environment rotation Y</td><td><code>scene.environment.rotationY</code></td><td>Yes (from Mapping node −Z)</td></tr>
+<tr><td><strong>Script @exposed vector3</strong></td><td><code>SCRIPT.vars</code></td><td><strong>No</strong></td></tr>
+<tr><td><strong>Script @exposed vector3 lists</strong></td><td><code>SCRIPT.vars</code> (list)</td><td><strong>No</strong></td></tr>
+<tr><td>Mesh object transform</td><td>glTF node TRS</td><td>glTF root Y-up; <strong>local axes preserved</strong></td></tr>
+</tbody>
+</table>
+
+<h3>Why @exposed vector3 is not converted</h3>
+<p><code>_serialize_vars</code> writes <code>list(v.v_val)</code> unchanged. At runtime <code>ApplyExposedVars</code> assigns them with <code>Vector3.FromArray</code>. Behaviors use these values in the <strong>same frame as <code>node.position</code></strong> — Blender local space:</p>
+<ul>
+  <li><strong>Rotator</strong> — <code>axis: [0, 1, 0]</code> → spin around Blender forward (<code>node.rotate</code>).</li>
+  <li><strong>Patrol</strong> — <code>offset: [5, 0, 0]</code> → added to <code>node.position</code> (both local).</li>
+  <li><strong>Waypoints</strong> — point list written directly to <code>node.position</code>.</li>
+</ul>
+<p>Converting only the manifest var (but not <code>node.position</code>) would mix frames and break these behaviors. For <strong>world-space</strong> targets, use an <code>@exposed({ type: "entity" })</code> picker or compute from <code>getAbsolutePosition()</code> — not a raw converted vector3.</p>
+
+<h2>Node local space at runtime</h2>
+<p>glTF export applies the Y-up flip at the <strong>scene/root</strong> level. Each loaded node&apos;s <strong>local axes remain Blender&apos;s</strong>: +X lateral, +Y forward, +Z up. The rest rotation quaternion from Blender is loaded as-is; local rotations in behaviors act in this frame (<code>BoatRocker.ts</code> documents pitch on X and roll on Y in local space).</p>
+<p><code>node.position</code> is parent-local (standard Babylon hierarchy). World position: <code>node.getAbsolutePosition()</code> (Babylon world Y-up).</p>
+
+<h2>Behavior APIs that confuse authors</h2>
+
+<h3><code>lookAt</code> / <code>setDirection</code></h3>
+<p><code>TransformNode.lookAt(target)</code> calls <code>setDirection</code>, which aligns the node&apos;s <strong>local +Y axis</strong> toward the target — <strong>not +Z</strong> (despite some Babylon documentation wording).</p>
+<ul>
+  <li>Model arrow tips / forward along <strong>Blender +Y</strong>.</li>
+  <li>Default space is <code>Space.LOCAL</code>. Works for unparented nodes.</li>
+  <li>When the node has a <strong>rotated parent</strong> (e.g. HUD mesh parented to the camera), LOCAL space mis-computes direction — the mesh appears not to rotate. Pass <code>Space.WORLD</code>:</li>
+</ul>
+<pre><code class="language-ts">import { Space } from "@babylonjs/core";
+
+this.arrow.lookAt(this.target.node.getAbsolutePosition(), 0, 0, 0, Space.WORLD);</code></pre>
+<p>Reference: <code>apps/playground/src/behaviors/ObjectiveArrow.ts</code>.</p>
+
+<h3>Babylon world helpers vs local axes</h3>
+<table>
+<thead><tr><th>API / value</th><th>Frame</th></tr></thead>
+<tbody>
+<tr><td><code>Vector3.Up()</code></td><td>Babylon world (+Y)</td></tr>
+<tr><td><code>Vector3.Forward()</code></td><td>Babylon world (−Z)</td></tr>
+<tr><td><code>node.position</code>, <code>node.rotation</code></td><td>Blender local (on loaded glTF nodes)</td></tr>
+<tr><td><code>@exposed</code> vector3</td><td>Blender local</td></tr>
+<tr><td><code>lookAt</code> / <code>setDirection</code></td><td>Aligns local <strong>+Y</strong> (Blender forward)</td></tr>
+<tr><td>Camera local −Z</td><td>View / look direction (Babylon camera convention)</td></tr>
+<tr><td>Manifest collider <code>center</code></td><td>Babylon (already converted)</td></tr>
+</tbody>
+</table>
+
+<h2>Viewport previews</h2>
+<p>Blender viewport overlays (<code>viewport/collider_preview.py</code>, <code>cog_preview.py</code>, <code>probe_preview.py</code>) draw <strong>raw Blender values</strong>. After export conversion, runtime physics bodies match what you authored — the cyan collider wire and amber CoM cross use the same numbers you typed, then export maps them to Havok space.</p>
+
+<h2>Common mistakes</h2>
+<table>
+<thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Arrow never rotates toward target</td><td><code>lookAt</code> without <code>Space.WORLD</code> on a camera-child node</td><td>Pass <code>Space.WORLD</code></td></tr>
+<tr><td>Mesh rotates but tip points sideways</td><td>Modeled forward along +Z; <code>lookAt</code> aligns +Y</td><td>Model tip along Blender +Y</td></tr>
+<tr><td>Patrol / waypoint motion 90° off</td><td>Manually converted <code>@exposed</code> offset in behavior code</td><td>Leave vars in Blender local; don&apos;t re-convert</td></tr>
+<tr><td>Spin axis wrong on Rotator</td><td>Used Babylon <code>Vector3.Forward()</code> as rotation axis</td><td>Use Blender-local axis, e.g. <code>[0, 1, 0]</code></td></tr>
+<tr><td>Assumed all manifest numbers are Blender space</td><td>Collider / constraint data is already Babylon</td><td>Read component fields as exported; only script vars stay Blender-local</td></tr>
+</tbody>
+</table>
+
+<h2>Source references</h2>
+<ul>
+  <li><code>blender_addon/export/component_serializers.py</code> — <code>_serialize_collider</code>, <code>_serialize_rigidbody</code>, <code>_serialize_vars</code>, <code>_CONSTRAINT_AXIS_TO_BABYLON</code></li>
+  <li><code>packages/engine/src/scripting/exposed.ts</code> — <code>ApplyExposedVars</code></li>
+  <li><code>apps/playground/src/behaviors/BoatRocker.ts</code> — local-axis comment</li>
+  <li><code>apps/playground/src/behaviors/ObjectiveArrow.ts</code> — <code>lookAt(..., Space.WORLD)</code></li>
+  <li><code>apps/playground/src/behaviors/Rotator.ts</code>, <code>Patrol.ts</code> — @exposed vector3 in local space</li>
+</ul>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/engine/15-AXIS-CONVERSION.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: "dark",
+  securityLevel: "loose",
+  themeVariables: {
+    fontSize: "16px",
+    fontFamily: "ui-sans-serif, system-ui, sans-serif",
+  },
+  flowchart: {
+    useMaxWidth: false,
+    htmlLabels: true,
+    nodeSpacing: 48,
+    rankSpacing: 56,
+    padding: 18,
+  },
+});
+</script>
+</body>
+</html>

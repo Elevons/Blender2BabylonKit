@@ -1,0 +1,143 @@
+<h1>15 — Axis Conversion (Blender Z-up → Babylon Y-up)</h1>
+<p>Blender uses <strong>Z-up</strong> (+Z up, +Y forward on objects). Babylon and glTF use <strong>Y-up</strong> (+Y up, −Z forward in world space). This kit bridges the two. Most confusion comes from not knowing <em>which</em> numbers are already converted and which still live in Blender local space.</p>
+
+<p class="doc-links">
+  <strong>See also:</strong>
+  <a href="05-SCRIPTING.html">05 — Scripting</a> ·
+  <a href="03-BLENDER-ADDON.html">03 — Blender Add-on</a> (export) ·
+  <a href="06-PHYSICS.html">06 — Physics</a> ·
+  <a href="../LLM_SCRIPTING_CONTEXT.md">LLM scripting context</a> ·
+  MCP: <code>get_axis_conversion(topic?)</code> ·
+  <code>get_scripting_context(section=&quot;coordinate-axes&quot;)</code>
+</p>
+
+<hr>
+
+<h2>The rule of thumb</h2>
+<blockquote>
+<p><strong>Author as if Blender axes are the object&apos;s axes.</strong> Model forward along <strong>+Y</strong>, up along <strong>+Z</strong>. The export pipeline converts physics/component manifest data to Babylon Y-up. Script logic and mesh transforms stay in Blender local space — do not convert <code>@exposed</code> vector3 vars in the manifest.</p>
+</blockquote>
+
+<h2>Two coordinate frames</h2>
+<table>
+<thead><tr><th></th><th>Blender (object local)</th><th>Babylon (world / glTF)</th></tr></thead>
+<tbody>
+<tr><td><strong>Up</strong></td><td>+Z</td><td>+Y</td></tr>
+<tr><td><strong>Forward</strong></td><td>+Y</td><td>−Z (cameras look down −Z)</td></tr>
+<tr><td><strong>Right</strong></td><td>+X</td><td>+X</td></tr>
+<tr><td><strong>Handedness</strong></td><td>Right-handed</td><td>Right-handed</td></tr>
+</tbody>
+</table>
+<p>These are not the same frame. Mixing them in one calculation (e.g. adding a Babylon <code>Vector3.Forward()</code> offset to a Blender-local <code>node.position</code>) produces silent 90° errors.</p>
+
+<h2>Where conversion happens</h2>
+<pre class="mermaid">flowchart TB
+  subgraph blender [Blender authoring]
+    A[Object local Z-up]
+    B[Component panels]
+    C["@exposed vector3 vars"]
+  end
+  subgraph export [Export Level]
+    D["component_serializers.py\n(x,y,z)→(x,z,−y)"]
+    E["glTF exporter\nroot Y-up flip"]
+    F["_serialize_vars\nno axis change"]
+  end
+  subgraph runtime [Runtime]
+    G["Havok / constraints\nBabylon Y-up"]
+    H["node.position / rotation\nBlender local"]
+    I["Behavior @exposed vars\nBlender local"]
+  end
+  B --> D --> G
+  A --> E --> H
+  C --> F --> I</pre>
+
+<h2>The export formula</h2>
+<p>Component and physics serializers in <code>blender_addon/export/component_serializers.py</code> convert vectors from Blender to Babylon:</p>
+<pre><code>(x, y, z)_Blender  →  (x, z, −y)_Babylon</code></pre>
+<p>Related rules in the same module:</p>
+<ul>
+  <li><strong>Extents / size</strong> — Y and Z components swap (<code>[sx, sy, sz] → [sx, sz, sy]</code> on colliders).</li>
+  <li><strong>Quaternions</strong> — <code>w</code> unchanged; vector part converted with the same axis map (<code>[qx, qy, qz, w] → [qx, qz, −qy, w]</code>).</li>
+  <li><strong>Constraint preset axes</strong> — Blender X/Y/Z enum maps to Babylon unit vectors (<code>Y → [0,0,−1]</code>, <code>Z → [0,1,0]</code>, etc.).</li>
+</ul>
+<p>The runtime reads manifest physics values <strong>as Babylon space</strong>. Do not apply the formula again in behaviors.</p>
+
+<h2>What gets converted (manifest / components)</h2>
+<table>
+<thead><tr><th>Authored in Blender</th><th>Manifest field</th><th>Converted?</th></tr></thead>
+<tbody>
+<tr><td>Collider center offset</td><td><code>COLLIDER.center</code></td><td>Yes</td></tr>
+<tr><td>Collider size / rotation</td><td><code>COLLIDER.size</code>, <code>rotation</code></td><td>Yes</td></tr>
+<tr><td>Rigid-body center of mass</td><td><code>RIGIDBODY.centerOfMass</code></td><td>Yes</td></tr>
+<tr><td>Constraint pivot / axis</td><td><code>CONSTRAINT.pivot</code>, <code>axis</code></td><td>Yes</td></tr>
+<tr><td>Environment rotation Y</td><td><code>scene.environment.rotationY</code></td><td>Yes (from Mapping node −Z)</td></tr>
+<tr><td><strong>Script @exposed vector3</strong></td><td><code>SCRIPT.vars</code></td><td><strong>No</strong></td></tr>
+<tr><td><strong>Script @exposed vector3 lists</strong></td><td><code>SCRIPT.vars</code> (list)</td><td><strong>No</strong></td></tr>
+<tr><td>Mesh object transform</td><td>glTF node TRS</td><td>glTF root Y-up; <strong>local axes preserved</strong></td></tr>
+</tbody>
+</table>
+
+<h3>Why @exposed vector3 is not converted</h3>
+<p><code>_serialize_vars</code> writes <code>list(v.v_val)</code> unchanged. At runtime <code>ApplyExposedVars</code> assigns them with <code>Vector3.FromArray</code>. Behaviors use these values in the <strong>same frame as <code>node.position</code></strong> — Blender local space:</p>
+<ul>
+  <li><strong>Rotator</strong> — <code>axis: [0, 1, 0]</code> → spin around Blender forward (<code>node.rotate</code>).</li>
+  <li><strong>Patrol</strong> — <code>offset: [5, 0, 0]</code> → added to <code>node.position</code> (both local).</li>
+  <li><strong>Waypoints</strong> — point list written directly to <code>node.position</code>.</li>
+</ul>
+<p>Converting only the manifest var (but not <code>node.position</code>) would mix frames and break these behaviors. For <strong>world-space</strong> targets, use an <code>@exposed({ type: "entity" })</code> picker or compute from <code>getAbsolutePosition()</code> — not a raw converted vector3.</p>
+
+<h2>Node local space at runtime</h2>
+<p>glTF export applies the Y-up flip at the <strong>scene/root</strong> level. Each loaded node&apos;s <strong>local axes remain Blender&apos;s</strong>: +X lateral, +Y forward, +Z up. The rest rotation quaternion from Blender is loaded as-is; local rotations in behaviors act in this frame (<code>BoatRocker.ts</code> documents pitch on X and roll on Y in local space).</p>
+<p><code>node.position</code> is parent-local (standard Babylon hierarchy). World position: <code>node.getAbsolutePosition()</code> (Babylon world Y-up).</p>
+
+<h2>Behavior APIs that confuse authors</h2>
+
+<h3><code>lookAt</code> / <code>setDirection</code></h3>
+<p><code>TransformNode.lookAt(target)</code> calls <code>setDirection</code>, which aligns the node&apos;s <strong>local +Y axis</strong> toward the target — <strong>not +Z</strong> (despite some Babylon documentation wording).</p>
+<ul>
+  <li>Model arrow tips / forward along <strong>Blender +Y</strong>.</li>
+  <li>Default space is <code>Space.LOCAL</code>. Works for unparented nodes.</li>
+  <li>When the node has a <strong>rotated parent</strong> (e.g. HUD mesh parented to the camera), LOCAL space mis-computes direction — the mesh appears not to rotate. Pass <code>Space.WORLD</code>:</li>
+</ul>
+<pre><code class="language-ts">import { Space } from "@babylonjs/core";
+
+this.arrow.lookAt(this.target.node.getAbsolutePosition(), 0, 0, 0, Space.WORLD);</code></pre>
+<p>Reference: <code>apps/playground/src/behaviors/ObjectiveArrow.ts</code>.</p>
+
+<h3>Babylon world helpers vs local axes</h3>
+<table>
+<thead><tr><th>API / value</th><th>Frame</th></tr></thead>
+<tbody>
+<tr><td><code>Vector3.Up()</code></td><td>Babylon world (+Y)</td></tr>
+<tr><td><code>Vector3.Forward()</code></td><td>Babylon world (−Z)</td></tr>
+<tr><td><code>node.position</code>, <code>node.rotation</code></td><td>Blender local (on loaded glTF nodes)</td></tr>
+<tr><td><code>@exposed</code> vector3</td><td>Blender local</td></tr>
+<tr><td><code>lookAt</code> / <code>setDirection</code></td><td>Aligns local <strong>+Y</strong> (Blender forward)</td></tr>
+<tr><td>Camera local −Z</td><td>View / look direction (Babylon camera convention)</td></tr>
+<tr><td>Manifest collider <code>center</code></td><td>Babylon (already converted)</td></tr>
+</tbody>
+</table>
+
+<h2>Viewport previews</h2>
+<p>Blender viewport overlays (<code>viewport/collider_preview.py</code>, <code>cog_preview.py</code>, <code>probe_preview.py</code>) draw <strong>raw Blender values</strong>. After export conversion, runtime physics bodies match what you authored — the cyan collider wire and amber CoM cross use the same numbers you typed, then export maps them to Havok space.</p>
+
+<h2>Common mistakes</h2>
+<table>
+<thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Arrow never rotates toward target</td><td><code>lookAt</code> without <code>Space.WORLD</code> on a camera-child node</td><td>Pass <code>Space.WORLD</code></td></tr>
+<tr><td>Mesh rotates but tip points sideways</td><td>Modeled forward along +Z; <code>lookAt</code> aligns +Y</td><td>Model tip along Blender +Y</td></tr>
+<tr><td>Patrol / waypoint motion 90° off</td><td>Manually converted <code>@exposed</code> offset in behavior code</td><td>Leave vars in Blender local; don&apos;t re-convert</td></tr>
+<tr><td>Spin axis wrong on Rotator</td><td>Used Babylon <code>Vector3.Forward()</code> as rotation axis</td><td>Use Blender-local axis, e.g. <code>[0, 1, 0]</code></td></tr>
+<tr><td>Assumed all manifest numbers are Blender space</td><td>Collider / constraint data is already Babylon</td><td>Read component fields as exported; only script vars stay Blender-local</td></tr>
+</tbody>
+</table>
+
+<h2>Source references</h2>
+<ul>
+  <li><code>blender_addon/export/component_serializers.py</code> — <code>_serialize_collider</code>, <code>_serialize_rigidbody</code>, <code>_serialize_vars</code>, <code>_CONSTRAINT_AXIS_TO_BABYLON</code></li>
+  <li><code>packages/engine/src/scripting/exposed.ts</code> — <code>ApplyExposedVars</code></li>
+  <li><code>apps/playground/src/behaviors/BoatRocker.ts</code> — local-axis comment</li>
+  <li><code>apps/playground/src/behaviors/ObjectiveArrow.ts</code> — <code>lookAt(..., Space.WORLD)</code></li>
+  <li><code>apps/playground/src/behaviors/Rotator.ts</code>, <code>Patrol.ts</code> — @exposed vector3 in local space</li>
+</ul>

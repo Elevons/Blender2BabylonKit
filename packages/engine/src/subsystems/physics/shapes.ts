@@ -22,9 +22,20 @@ import {
   BakeColliderScaleIntoMesh,
   ComputeLocalBounds,
   MergeChildrenIntoLocalMesh,
+  OwnedColliderMeshes,
   ScaleLocalBounds,
 } from "./geometry";
 import type { BodyBuildInput } from "./types";
+
+/** BOX/SPHERE trigger dimensions used by point-in-volume polling. */
+interface TriggerVolumeQueryShape
+{
+  center: Vector3;
+  rotation: Quaternion | undefined;
+  shape: "BOX" | "SPHERE";
+  size?: Vector3;
+  radius?: number;
+}
 
 /**
  * Auto-fit a primitive shape to a node's whole hierarchy, in the node's local
@@ -258,9 +269,87 @@ export function BuildColliderShape(
   return BuildManualShape(ApplyObjectScaleToCollider(collider, node), input.scene);
 }
 
+/** Whether this node owns mesh geometry for auto-fit collider resolution. */
+function HasColliderGeometry(node: TransformNode): boolean
+{
+  const isMesh = node instanceof AbstractMesh && node.getTotalVertices() > 0;
+  return isMesh || OwnedColliderMeshes(node).length > 0;
+}
+
 /**
- * Whether a world-space point lies inside an entity's authored trigger collider
- * (BOX or SPHERE). Uses manifest collider data — not Havok overlap events.
+ * Resolve BOX/SPHERE trigger dimensions for point-in-volume polling. Auto-fit
+ * colliders use the same owned-mesh bounds as {@link FitColliderShape} / Havok
+ * body build; manual colliders use manifest center/size/radius.
+ */
+function ResolveTriggerVolumeQueryShape(
+  collider: ColliderComponent,
+  node: TransformNode
+): TriggerVolumeQueryShape | undefined
+{
+  if (collider.shape !== "BOX" && collider.shape !== "SPHERE")
+  {
+    return undefined;
+  }
+
+  if (collider.autoFit)
+  {
+    if (!HasColliderGeometry(node))
+    {
+      return undefined;
+    }
+
+    let { center, size } = ComputeLocalBounds(node);
+    if (ApplyObjectScaleEnabled(collider.applyObjectScale))
+    {
+      ({ center, size } = ScaleLocalBounds({ center, size }, node));
+    }
+
+    if (collider.shape === "SPHERE")
+    {
+      return {
+        center,
+        rotation: undefined,
+        shape: "SPHERE",
+        radius: Math.max(size.x, size.y, size.z) / 2,
+      };
+    }
+
+    return {
+      center,
+      rotation: undefined,
+      shape: "BOX",
+      size,
+    };
+  }
+
+  const scaledCollider = ApplyObjectScaleToCollider(collider, node);
+
+  if (scaledCollider.shape === "SPHERE")
+  {
+    return {
+      center: Vector3.FromArray(scaledCollider.center),
+      rotation: scaledCollider.rotation !== undefined
+        ? Quaternion.FromArray(scaledCollider.rotation)
+        : undefined,
+      shape: "SPHERE",
+      radius: scaledCollider.radius,
+    };
+  }
+
+  return {
+    center: Vector3.FromArray(scaledCollider.center),
+    rotation: scaledCollider.rotation !== undefined
+      ? Quaternion.FromArray(scaledCollider.rotation)
+      : undefined,
+    shape: "BOX",
+    size: Vector3.FromArray(scaledCollider.size),
+  };
+}
+
+/**
+ * Whether a world-space point lies inside an entity's trigger collider (BOX or
+ * SPHERE). Resolves auto-fit bounds the same way as Havok body build — not via
+ * overlap events.
  */
 export function IsPointInsideColliderVolume(
   worldPoint: Vector3,
@@ -280,29 +369,46 @@ export function IsPointInsideColliderVolume(
     return false;
   }
 
-  const scaledCollider = ApplyObjectScaleToCollider(collider, volumeEntity.node);
+  const queryShape = ResolveTriggerVolumeQueryShape(collider, volumeEntity.node);
+  if (queryShape === undefined)
+  {
+    return false;
+  }
+
   volumeEntity.node.computeWorldMatrix(true);
   const inverseWorldMatrix = Matrix.Invert(volumeEntity.node.getWorldMatrix());
   const localPoint = Vector3.TransformCoordinates(worldPoint, inverseWorldMatrix);
-  const offset = localPoint.subtract(Vector3.FromArray(scaledCollider.center));
+  const offset = localPoint.subtract(queryShape.center);
 
-  if (scaledCollider.rotation !== undefined)
+  if (queryShape.rotation !== undefined)
   {
-    const inverseRotation = Quaternion.FromArray(scaledCollider.rotation).conjugate();
+    const inverseRotation = queryShape.rotation.conjugate();
     offset.applyRotationQuaternionInPlace(inverseRotation);
   }
 
-  switch (scaledCollider.shape)
+  switch (queryShape.shape)
   {
     case "BOX":
     {
-      const halfExtents = Vector3.FromArray(scaledCollider.size).scaleInPlace(0.5);
+      if (queryShape.size === undefined)
+      {
+        return false;
+      }
+
+      const halfExtents = queryShape.size.scale(0.5);
       return Math.abs(offset.x) <= halfExtents.x
         && Math.abs(offset.y) <= halfExtents.y
         && Math.abs(offset.z) <= halfExtents.z;
     }
     case "SPHERE":
-      return offset.length() <= scaledCollider.radius;
+    {
+      if (queryShape.radius === undefined)
+      {
+        return false;
+      }
+
+      return offset.length() <= queryShape.radius;
+    }
     default:
       return false;
   }

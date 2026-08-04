@@ -88,6 +88,17 @@ computed or multi-line defaults).
 
 **MCP:** `get_physics_movement` — full decision tree + copy-in code.
 
+## Coordinate axes (do not mix frames)
+
+- **World:** Babylon Y-up (+Y up, −Z forward). Manifest collider/constraint
+  vectors are converted at export — use as-is at runtime.
+- **Node local:** Blender Z-up (+X lateral, **+Y forward**, +Z up). glTF keeps
+  each object's local axes; behavior rotations act in this frame.
+- **`lookAt` / `setDirection`:** aligns local **+Y** (Blender forward), not +Z.
+  Parented nodes (e.g. camera HUD): pass `Space.WORLD` or the mesh won't turn.
+
+**MCP:** `get_axis_conversion(topic?)` · `get_doc_chapter(chapter="engine/15-axis-conversion")`.
+
 ## MCP workflow (use tools — do not guess)
 
 1. **`route_task(intent, className)`** — playbook + exact steps

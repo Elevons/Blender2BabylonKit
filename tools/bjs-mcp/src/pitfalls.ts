@@ -273,6 +273,24 @@ export const PITFALLS: PitfallEntry[] = [
     fix: "Make the LOD meshes single-user in the prefab library so they export as unique meshes instead of glTF instances",
     mcpTool: "get_scripting_context(section=\"lod\")",
   },
+  {
+    mistake: "`lookAt` on a node parented to the camera (or any rotated parent) without `Space.WORLD`",
+    symptom: "HUD arrow / child marker never rotates toward the target; no error",
+    fix: "Pass `Space.WORLD`: `node.lookAt(targetPos, 0, 0, 0, Space.WORLD)`. Default LOCAL space uses the parent's frame.",
+    mcpTool: "get_axis_conversion(topic=\"look-at\")",
+  },
+  {
+    mistake: "Assuming `lookAt` / `setDirection` aligns local +Z (Babylon forward)",
+    symptom: "Mesh rotates but tip points sideways — authored forward was Blender +Y",
+    fix: "Model forward along Blender local +Y. `setDirection` aligns local +Y, not +Z. See ObjectiveArrow.ts, BoatRocker.ts",
+    mcpTool: "get_axis_conversion(topic=\"look-at\")",
+  },
+  {
+    mistake: "Using `Vector3.Forward()` or Babylon +Z as Blender object forward in local-space math",
+    symptom: "Offsets or rotations 90° off — pitch on wrong axis, forward vector sideways",
+    fix: "Local frame is Blender Z-up (+Y forward, +Z up). World helpers (Vector3.Forward, Up) are Babylon Y-up. See get_axis_conversion.",
+    mcpTool: "get_axis_conversion(topic=\"manifest-vs-local\")",
+  },
 ];
 
 export function FormatDoNotList(): string
