@@ -69,7 +69,7 @@ export default class animalSpawner extends Behavior
   @exposed({ min: 0, step: 0.1, label: "Water entry delay (s)" })
   waterEntryDelay = 3;
 
-  @exposed({ min: 0, step: 0.1, label: "Minimum depth below Y=0 (m)" })
+  @exposed({ step: 0.1, label: "Spawn below world Y (m)" })
   minimumDepth = 0;
 
   @exposed({ min: 0, step: 0.1, label: "Min spawn distance from center" })
@@ -442,7 +442,10 @@ export default class animalSpawner extends Behavior
   }
 
   /**
-   * Whether the train collider is at least minimumDepth below world Y=0.
+   * Whether the train collider has descended to the authored spawn depth.
+   * minimumDepth is a Babylon world Y coordinate — negative below sea level —
+   * so it is compared against the train's world Y directly rather than
+   * against a distance from world zero.
    */
   private IsTrainAtMinimumDepth(): boolean
   {
@@ -453,10 +456,7 @@ export default class animalSpawner extends Behavior
 
     this.trainCollider.node.computeWorldMatrix(true);
 
-    const trainY = this.trainCollider.node.getAbsolutePosition().y;
-    const depthBelowWorldZero = -trainY;
-
-    return depthBelowWorldZero >= this.minimumDepth;
+    return this.trainCollider.node.getAbsolutePosition().y <= this.minimumDepth;
   }
 
   /** Whether a trigger event involves the assigned train and water entities. */
