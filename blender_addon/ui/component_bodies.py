@@ -280,7 +280,7 @@ def _draw_audio(body, obj, comp, index):
 def _draw_gui(body, obj, comp, index):
     body.prop(comp, "gui_file")
     row = body.row(align=True)
-    op = row.operator("bjs.open_launcher_gui", text="Open in Launcher", icon='WORLD')
+    op = row.operator("bjs.open_launcher_gui", text="Open in Control Panel", icon='WORLD')
     op.comp_index = index
     body.prop(comp, "gui_mode")
     if comp.gui_mode == 'FULLSCREEN':
@@ -297,7 +297,7 @@ def _draw_particle(body, obj, comp, index):
     row = body.row(align=True)
     scan = row.operator("bjs.scan_particle_textures", text="Scan Textures", icon='FILE_REFRESH')
     scan.comp_index = index
-    op = row.operator("bjs.open_launcher_particle", text="Open in Launcher", icon='WORLD')
+    op = row.operator("bjs.open_launcher_particle", text="Open in Control Panel", icon='WORLD')
     op.comp_index = index
     body.prop(comp, "particle_attach")
     body.prop(comp, "particle_autostart")

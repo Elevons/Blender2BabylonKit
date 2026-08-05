@@ -41,17 +41,19 @@ function ParseArgs(argv)
   return args;
 }
 
-function CopyTemplate(sourceDir, destinationDir)
+function CopyTemplate(sourceDir, destinationDir, relativeDir = "")
 {
   fs.mkdirSync(destinationDir, { recursive: true });
   for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true }))
   {
     if (SKIP.has(entry.name)) { continue; }
+    const relativePath = path.join(relativeDir, entry.name);
+    if (relativePath === path.join("public", "levels")) { continue; }
     const sourcePath = path.join(sourceDir, entry.name);
     const destinationPath = path.join(destinationDir, entry.name);
     if (entry.isDirectory())
     {
-      CopyTemplate(sourcePath, destinationPath);
+      CopyTemplate(sourcePath, destinationPath, relativePath);
     }
     else
     {
@@ -81,6 +83,10 @@ CopyTemplate(TEMPLATE, destination);
 // public/levels/ is gitignored in the playground so the template doesn't have it;
 // create it unconditionally so Blender exports have somewhere to land.
 fs.mkdirSync(path.join(destination, "public", "levels"), { recursive: true });
+if (args.level)
+{
+  fs.mkdirSync(path.join(destination, "public", "levels", args.level), { recursive: true });
+}
 
 // package.json: new name (dependencies already include "@bjs/engine": "*").
 const packagePath = path.join(destination, "package.json");
@@ -99,7 +105,10 @@ if (args.level)
 {
   const mainPath = path.join(destination, "src", "main.ts");
   let main = fs.readFileSync(mainPath, "utf8");
-  main = main.replace(/\/levels\/[^"]+\.scene\.json/, `/levels/${args.level}.scene.json`);
+  main = main.replace(
+    /\/levels\/[^"]+\.scene\.json/,
+    `/levels/${args.level}/${args.level}.scene.json`
+  );
   fs.writeFileSync(mainPath, main);
 }
 
@@ -110,10 +119,13 @@ for (const folder of DEFAULT_ASSET_FOLDERS)
   fs.mkdirSync(path.join(destination, "public", "workspace", folder), { recursive: true });
 }
 
-// Project manifest consumed by the Babylon Editor Launcher.
+// Project manifest consumed by the Project Control Panel.
 const manifest = {
   name: appName,
   title: args.title ?? appName,
+  entryLevel: args.level
+    ? `/levels/${args.level}/${args.level}.scene.json`
+    : undefined,
   defaultLevel: args.level ?? undefined,
   assetFolders: DEFAULT_ASSET_FOLDERS,
   dev: { port: 5173 },

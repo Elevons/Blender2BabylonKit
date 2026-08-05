@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const LAUNCHER_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const REPO_ROOT = path.resolve(LAUNCHER_DIR, "../..");
+const CONTROL_PANEL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const REPO_ROOT = path.resolve(CONTROL_PANEL_DIR, "../..");
 export const APPS_DIR = path.join(REPO_ROOT, "apps");
-export const LAUNCHER_PORT = Number(process.env.LAUNCHER_PORT ?? 3200);
+export const CONTROL_PANEL_PORT = Number(process.env.CONTROL_PANEL_PORT ?? 3200);
 
 export const ASSET_FOLDERS = [
   "gui",
@@ -27,6 +27,7 @@ export interface BabylonProjectManifest
 {
   name: string;
   title: string;
+  entryLevel?: string;
   defaultLevel?: string;
   assetFolders: string[];
   dev: { port: number };

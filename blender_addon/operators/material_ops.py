@@ -205,9 +205,9 @@ class BJS_OT_extract_nme_textures(Operator):
 
 
 class BJS_OT_open_launcher_nme(Operator):
-    """Open this node material in the local Babylon Editor Launcher"""
+    """Open this node material in the Project Control Panel"""
     bl_idname = "bjs.open_launcher_nme"
-    bl_label = "Open in Launcher"
+    bl_label = "Open in Control Panel"
     bl_options = {'REGISTER'}
 
     material_name: StringProperty(default="")

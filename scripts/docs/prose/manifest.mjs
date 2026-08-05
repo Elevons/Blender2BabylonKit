@@ -2,7 +2,7 @@
  * Prose chapter registry — HTML body fragments + output paths.
  *
  * New chapter checklist:
- *   1. Copy _FRAGMENT-TEMPLATE.html → engine/NN-TITLE.html (or blender/launcher/)
+ *   1. Copy _FRAGMENT-TEMPLATE.html → engine/NN-TITLE.html (or blender/control-panel/)
  *   2. Append entry below with prev/next wired into the chain
  *   3. Add href → topics in scripts/docs/topics.mjs (PAGE_TOPICS)
  *   4. Link from the side's 00-INDEX.html
@@ -204,20 +204,28 @@ export const PROSE_CHAPTERS = [
     fragment: "blender/PREFABS.html",
     prev: "04-WORKFLOW.html",
   },
-  // — Launcher —
+  // — Control Panel —
   {
-    href: "launcher/00-INDEX.html",
+    href: "control-panel/00-INDEX.html",
     side: "engine",
-    title: "Babylon Launcher",
-    fragment: "launcher/00-INDEX.html",
-    next: "01-LAUNCHER.html",
+    title: "Project Control Panel",
+    fragment: "control-panel/00-INDEX.html",
+    next: "01-CONTROL-PANEL.html",
   },
   {
-    href: "launcher/01-LAUNCHER.html",
+    href: "control-panel/01-CONTROL-PANEL.html",
     side: "engine",
-    title: "01 — Launcher",
-    fragment: "launcher/01-LAUNCHER.html",
+    title: "01 — Control Panel",
+    fragment: "control-panel/01-CONTROL-PANEL.html",
     prev: "00-INDEX.html",
+    next: "02-PUBLISHING.html",
+  },
+  {
+    href: "control-panel/02-PUBLISHING.html",
+    side: "engine",
+    title: "02 — Publishing",
+    fragment: "control-panel/02-PUBLISHING.html",
+    prev: "01-CONTROL-PANEL.html",
   },
 ];
 
@@ -250,13 +258,13 @@ export function ToolbarHtml(chapter)
   ].join("\n    ");
   }
 
-  const isLauncher = chapter.href.startsWith("launcher/");
-  if (isLauncher)
+  const isControlPanel = chapter.href.startsWith("control-panel/");
+  if (isControlPanel)
   {
     return [
       '<a href="../index.html" class="site">Docs</a>',
       '<span class="sep">/</span>',
-      '<a href="00-INDEX.html">Launcher</a>',
+      '<a href="00-INDEX.html">Control Panel</a>',
       '<span class="sep">/</span>',
       '<a href="../engine/00-INDEX.html">Engine</a>',
     ].join("\n    ");

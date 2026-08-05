@@ -9,6 +9,7 @@
     "tools/*"
   ],
   "scripts": {
+    "start": "npm run dev --workspace @bjs/project-control-panel",
     "dev": "npm run dev --workspace apps/playground",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "tsc --noEmit -p packages/engine && tsc --noEmit -p apps/playground && node scripts/check-component-types.mjs",
@@ -26,9 +27,9 @@
     "mcp:build": "npm run build --workspace @bjs/mcp",
     "mcp:index": "npm run index --workspace @bjs/mcp",
     "mcp:start": "npm run start --workspace @bjs/mcp",
-    "launcher:dev": "npm run dev --workspace @bjs/babylon-launcher",
-    "launcher:build": "npm run build --workspace @bjs/babylon-launcher",
-    "launcher:start": "npm run start --workspace @bjs/babylon-launcher"
+    "control-panel:dev": "npm run dev --workspace @bjs/project-control-panel",
+    "control-panel:build": "npm run build --workspace @bjs/project-control-panel",
+    "control-panel:start": "npm run start --workspace @bjs/project-control-panel"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

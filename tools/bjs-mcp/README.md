@@ -33,7 +33,7 @@ npm run mcp:index   # also runs automatically via npm run docs:build
 }
 ```
 
-Or use **Babylon Launcher** → Services → Copy Cursor Config.
+Or use **Project Control Panel** → Services → Copy Cursor Config.
 
 ## Resources
 

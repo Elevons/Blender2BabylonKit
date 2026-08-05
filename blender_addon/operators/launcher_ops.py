@@ -1,4 +1,4 @@
-"""Open Babylon Editor Launcher deep links for GUI and particle assets."""
+"""Open Project Control Panel deep links for GUI and particle assets."""
 
 import os
 import re
@@ -48,9 +48,9 @@ def _launcher_url(editor_id, project, level, filename):
 
 
 class BJS_OT_open_launcher_gui(Operator):
-    """Open this GUI asset in the local Babylon Editor Launcher"""
+    """Open this GUI asset in the Project Control Panel"""
     bl_idname = "bjs.open_launcher_gui"
-    bl_label = "Open in Launcher"
+    bl_label = "Open in Control Panel"
     bl_options = {'REGISTER'}
 
     comp_index: IntProperty(default=0)
@@ -77,9 +77,9 @@ class BJS_OT_open_launcher_gui(Operator):
 
 
 class BJS_OT_open_launcher_particle(Operator):
-    """Open this particle asset in the local Babylon Editor Launcher"""
+    """Open this particle asset in the Project Control Panel"""
     bl_idname = "bjs.open_launcher_particle"
-    bl_label = "Open in Launcher"
+    bl_label = "Open in Control Panel"
     bl_options = {'REGISTER'}
 
     comp_index: IntProperty(default=0)
@@ -106,9 +106,9 @@ class BJS_OT_open_launcher_particle(Operator):
 
 
 class BJS_OT_open_launcher_hub(Operator):
-    """Open the Babylon Editor Launcher hub in your browser"""
+    """Open the Project Control Panel in your browser"""
     bl_idname = "bjs.open_launcher_hub"
-    bl_label = "Open Editor Launcher"
+    bl_label = "Open Project Control Panel"
     bl_options = {'REGISTER'}
 
     def execute(self, context):

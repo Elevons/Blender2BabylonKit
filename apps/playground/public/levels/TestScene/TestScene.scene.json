@@ -1,0 +1,217 @@
+{
+  "version": 5,
+  "glb": "TestScene.glb",
+  "scene": {
+    "clearColor": [
+      0.05,
+      0.05,
+      0.08,
+      1.0
+    ],
+    "ambientColor": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "environment": null,
+    "freezeShadows": false,
+    "fog": null,
+    "atmosphere": null,
+    "postProcessing": null,
+    "inputActions": {
+      "maps": [
+        {
+          "name": "Player",
+          "actions": [
+            {
+              "name": "Move",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "w"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "s"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "a"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "d"
+                    }
+                  }
+                },
+                {
+                  "composite": "2DVECTOR",
+                  "parts": {
+                    "up": {
+                      "device": "KEYBOARD",
+                      "control": "arrowup"
+                    },
+                    "down": {
+                      "device": "KEYBOARD",
+                      "control": "arrowdown"
+                    },
+                    "left": {
+                      "device": "KEYBOARD",
+                      "control": "arrowleft"
+                    },
+                    "right": {
+                      "device": "KEYBOARD",
+                      "control": "arrowright"
+                    }
+                  }
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Look",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Jump",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": " "
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "name": "Interact",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "e"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "axis",
+                  "index": 2
+                }
+              ]
+            },
+            {
+              "name": "Sprint",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "shift"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 10
+                }
+              ]
+            },
+            {
+              "name": "Crouch",
+              "type": "BUTTON",
+              "controlType": "BUTTON",
+              "bindings": [
+                {
+                  "device": "KEYBOARD",
+                  "control": "c"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "defaultInputMap": "Player",
+    "collisionLayers": {
+      "layers": [
+        "Default"
+      ],
+      "matrix": [
+        [
+          true
+        ]
+      ]
+    },
+    "clusterPunctualLights": true,
+    "lightBudget": 8
+  },
+  "entities": [
+    {
+      "id": "8cb4a0fddf074d0f92fe92a33ba890af",
+      "name": "Light",
+      "parent": null,
+      "components": [],
+      "light": {
+        "type": "POINT",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 1000.0,
+        "castShadows": true,
+        "shadow": {
+          "mapSize": 0,
+          "bias": 4.999999873689376e-05,
+          "normalBias": 0.019999999552965164,
+          "darkness": 0.0,
+          "minZ": 0.0,
+          "maxZ": 0.0,
+          "filter": "PCF",
+          "forceBackFaces": false,
+          "frustumEdgeFalloff": 0.0
+        }
+      }
+    },
+    {
+      "id": "b3b96e623d5b436da8d96eb0ed0e726b",
+      "name": "Camera",
+      "parent": null,
+      "components": [],
+      "camera": {
+        "type": "PERSP",
+        "clipStart": 0.10000000149011612,
+        "clipEnd": 100.0,
+        "active": true,
+        "fov": 0.4710899591445923
+      }
+    }
+  ],
+  "debug": true
+}

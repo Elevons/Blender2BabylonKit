@@ -271,9 +271,10 @@ export const PAGE_TOPICS = {
   "blender/04-WORKFLOW.html": ["blender", "export", "start"],
   "blender/PREFABS.html": ["blender", "export", "start"],
 
-  // — Launcher prose —
-  "launcher/00-INDEX.html": ["start"],
-  "launcher/01-LAUNCHER.html": ["start", "export"],
+  // — Control Panel prose —
+  "control-panel/00-INDEX.html": ["start"],
+  "control-panel/01-CONTROL-PANEL.html": ["start", "export"],
+  "control-panel/02-PUBLISHING.html": ["start", "export"],
 };
 
 /** Topic ids that do not imply a subsystem ↔ trace pairing. */

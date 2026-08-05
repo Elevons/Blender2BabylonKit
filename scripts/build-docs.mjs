@@ -8,7 +8,7 @@
  * Engine data: scripts/docs/engine-areas.mjs + build-trace-docs.mjs traces
  * Blender data: build-blender-docs.mjs area + trace definitions
  * Landing:  scripts/build-landing.mjs → docs/index.html (searchable index)
- * Prose:    scripts/docs/prose/content/*.html → docs/engine|launcher chapter pages
+ * Prose:    scripts/docs/prose/content/*.html → docs/engine|control-panel chapter pages
  * MCP:      npm run mcp:index → tools/bjs-mcp/data/doc-embeddings.json
  */
 import { BuildEngineDocs } from "./build-trace-docs.mjs";

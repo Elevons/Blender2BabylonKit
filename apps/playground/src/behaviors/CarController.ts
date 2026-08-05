@@ -639,7 +639,13 @@ export default class CarController extends Behavior
     this.rayEnd.copyFrom(this.rayStart);
     this.rayEnd.addInPlace(this.rayDirection.scale(this.groundRaycastDistance));
 
-    this.scene.getPhysicsEngine()?.raycastToRef(
+    // getPhysicsEngine() is typed as IPhysicsEngine, which omits raycastToRef
+    // even though the Havok-backed engine implements it at runtime.
+    const physicsEngine = this.scene.getPhysicsEngine() as
+      | { raycastToRef: (from: Vector3, to: Vector3, result: PhysicsRaycastResult) => void }
+      | null
+      | undefined;
+    physicsEngine?.raycastToRef(
       this.rayStart,
       this.rayEnd,
       this.raycastResult

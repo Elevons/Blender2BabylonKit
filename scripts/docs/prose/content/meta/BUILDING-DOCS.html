@@ -20,7 +20,7 @@
 <p>Every built prose page footer shows the exact fragment path. Full build (<code>docs:build</code>) runs validate + link check at the end.</p>
 <hr>
 <h2>Three kinds of documentation</h2>
-<table><thead><tr><th>Kind</th><th>Location</th><th>How it is maintained</th></tr></thead><tbody><tr><td><strong>Interactive HTML</strong></td><td><code>docs/engine/*.html</code>, <code>docs/blender/*.html</code>, <code>docs/index.html</code></td><td><strong>Generated</strong> — diagrams and traces from build scripts + data</td></tr><tr><td><strong>Prose chapters</strong></td><td><code>scripts/docs/prose/content/</code> → <code>docs/engine/</code>, <code>docs/launcher/</code></td><td><strong>Hand-authored HTML fragments</strong> — assembled by <code>build-prose-docs.mjs</code></td></tr><tr><td><strong>Meta markdown</strong></td><td><code>docs/*.md</code> (style guide, test plan, LLM contracts, …)</td><td><strong>Hand-authored</strong> — stays <code>.md</code>; not indexed on the landing page</td></tr><tr><td><strong>This guide</strong></td><td><code>scripts/docs/prose/content/meta/BUILDING-DOCS.html</code> → <code>docs/BUILDING-DOCS.html</code></td><td><strong>HTML fragment</strong> — same prose build as chapters</td></tr></tbody></table>
+<table><thead><tr><th>Kind</th><th>Location</th><th>How it is maintained</th></tr></thead><tbody><tr><td><strong>Interactive HTML</strong></td><td><code>docs/engine/*.html</code>, <code>docs/blender/*.html</code>, <code>docs/index.html</code></td><td><strong>Generated</strong> — diagrams and traces from build scripts + data</td></tr><tr><td><strong>Prose chapters</strong></td><td><code>scripts/docs/prose/content/</code> → <code>docs/engine/</code>, <code>docs/control-panel/</code></td><td><strong>Hand-authored HTML fragments</strong> — assembled by <code>build-prose-docs.mjs</code></td></tr><tr><td><strong>Meta markdown</strong></td><td><code>docs/*.md</code> (style guide, test plan, LLM contracts, …)</td><td><strong>Hand-authored</strong> — stays <code>.md</code>; not indexed on the landing page</td></tr><tr><td><strong>This guide</strong></td><td><code>scripts/docs/prose/content/meta/BUILDING-DOCS.html</code> → <code>docs/BUILDING-DOCS.html</code></td><td><strong>HTML fragment</strong> — same prose build as chapters</td></tr></tbody></table>
 <p>The interactive pages are clickable node graphs and step-by-step <strong>code traces</strong> that pull live source from <code>packages/engine/</code> and <code>blender_addon/</code>. Prose chapters are longer-form narrative (architecture, workflow, feature traces in prose) as styled HTML — edit the fragment files directly, not markdown.</p>
 <p>Meta markdown (<code>STYLE_GUIDE.md</code>, <code>LLM_*.md</code>, …) is for contributors and tooling; it is listed on the landing footer but not converted to prose HTML. <strong>This guide</strong> (<code>BUILDING-DOCS.html</code>) is indexed in search under the <strong>Contributors</strong> topic.</p>
 <hr>
@@ -61,8 +61,8 @@
 </tr>
 <tr>
   <td><strong>Prose chapters</strong> — architecture, physics, workflow, …</td>
-  <td><code>docs/engine/0*.html</code>, <code>docs/blender/00-INDEX.html</code>, <code>docs/launcher/*.html</code></td>
-  <td><code>scripts/docs/prose/content/</code> (engine, blender, launcher, meta) · registry: <code>scripts/docs/prose/manifest.mjs</code></td>
+  <td><code>docs/engine/0*.html</code>, <code>docs/blender/00-INDEX.html</code>, <code>docs/control-panel/*.html</code></td>
+  <td><code>scripts/docs/prose/content/</code> (engine, blender, control-panel, meta) · registry: <code>scripts/docs/prose/manifest.mjs</code></td>
   <td><code>build-prose-docs.mjs</code></td>
 </tr>
 <tr>
@@ -137,7 +137,7 @@
 <li><code>scripts/docs/validate-docs.mjs</code> → fragment registry + topic coverage</li>
 <li><code>scripts/check-doc-links.mjs</code> → internal link validation</li>
 </ol>
-<p>The Babylon Launcher can also trigger a build via <code>POST /api/docs/build</code> (see <a href="launcher/01-LAUNCHER.html">launcher docs</a>).</p>
+<p>The Project Control Panel can also trigger a build via <code>POST /api/docs/build</code> (see <a href="control-panel/01-CONTROL-PANEL.html">control panel docs</a>).</p>
 <hr>
 <h2>Architecture</h2>
 <pre class="mermaid">flowchart LR
@@ -167,7 +167,7 @@
     direction TB
     engineHtml[&quot;docs/engine/*.html&quot;]
     blenderHtml[&quot;docs/blender/*.html&quot;]
-    launcherHtml[&quot;docs/launcher/*.html&quot;]
+    controlPanelHtml[&quot;docs/control-panel/*.html&quot;]
     metaHtml[&quot;docs/BUILDING-DOCS.html&quot;]
     indexHtml[&quot;docs/index.html&quot;]
   end
@@ -193,7 +193,7 @@
   buildTrace --&gt; engineHtml
   buildBlender --&gt; blenderHtml
   buildProse --&gt; engineHtml
-  buildProse --&gt; launcherHtml
+  buildProse --&gt; controlPanelHtml
   buildProse --&gt; metaHtml
   engineAreas --&gt; buildLanding
   engineTraces --&gt; buildLanding
@@ -206,7 +206,7 @@
   buildLanding --&gt; indexHtml</pre>
 <hr>
 <h2>Prose chapters (HTML fragments)</h2>
-<p>Narrative docs (architecture, physics, workflow, launcher guide, …) are <strong>HTML body fragments</strong> edited directly:</p>
+<p>Narrative docs (architecture, physics, workflow, control panel guide, …) are <strong>HTML body fragments</strong> edited directly:</p>
 <p><strong><code>scripts/docs/prose/content/engine/01-ARCHITECTURE.html</code></strong> (etc.)</p>
 <p><code>scripts/build-prose-docs.mjs</code> wraps each fragment in <strong><code>docs/_template/prose-shell.html</code></strong> (toolbar, prev/next nav, typography) and writes <strong><code>docs/engine/01-ARCHITECTURE.html</code></strong> (etc.). Register new chapters in <strong><code>scripts/docs/prose/manifest.mjs</code></strong> (<code>PROSE_CHAPTERS</code>) and <strong><code>scripts/docs/topics.mjs</code></strong> (<code>PAGE_TOPICS</code>).</p>
 <p>Fragment files contain only the <code>&lt;article&gt;</code> inner HTML (<code>&lt;h1&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;table&gt;</code>, <code>&lt;pre&gt;</code>, …). Use <code>&lt;pre class=&quot;mermaid&quot;&gt;</code> for diagrams (mermaid.js loads from CDN when present). Link to other chapters with <code>.html</code> paths; contributor meta docs stay <code>.md</code> (<code>STYLE_GUIDE.md</code>, <code>LLM_KERNEL.md</code>, …).</p>
@@ -340,7 +340,7 @@
 <p>No Ollama, no HTTP embedding service, no API keys. Cursor config uses <code>node tools/bjs-mcp/dist/index.js</code>.</p>
 <h3>What gets indexed</h3>
 <ul>
-<li>Prose fragments under <code>scripts/docs/prose/content/</code> (engine, blender, launcher, meta) — split on <code>##</code> headings, same chunks <code>get_doc_chapter</code> returns</li>
+<li>Prose fragments under <code>scripts/docs/prose/content/</code> (engine, blender, control-panel, meta) — split on <code>##</code> headings, same chunks <code>get_doc_chapter</code> returns</li>
 <li>Contract markdown: <code>docs/LLM_KERNEL.md</code>, <code>docs/LLM_SCRIPTING_CONTEXT.md</code>, <code>docs/LLM_PLAYBOOK.md</code>, <code>docs/STYLE_GUIDE.md</code></li>
 </ul>
 <p>The index reads <strong>sources</strong>, not generated <code>docs/*.html</code>. After editing prose or LLM contract files, run <code>npm run docs:build</code> (or <code>npm run mcp:index</code> alone) before expecting <code>search_docs</code> to reflect the change.</p>
@@ -410,13 +410,13 @@
 <li><code>docs/index.html</code></li>
 <li><code>docs/engine/*.html</code> (including numbered prose chapters)</li>
 <li><code>docs/blender/*.html</code></li>
-<li><code>docs/launcher/*.html</code></li>
+<li><code>docs/control-panel/*.html</code></li>
 <li><code>docs/BUILDING-DOCS.html</code></li>
 </ul>
 <p><strong>Edit the sources</strong> instead: diagram/trace data in <code>scripts/</code>, prose fragments in <code>scripts/docs/prose/content/</code>. Generated HTML includes a footer pointing at the source fragment.</p>
 <hr>
 <h2>Viewing locally</h2>
-<p>Open <code>docs/index.html</code> in a browser (file:// or via a static server). The playground and launcher can serve <code>/docs</code> after a build. Diagram pages are self-contained single HTML files — no bundler required.</p>
+<p>Open <code>docs/index.html</code> in a browser (file:// or via a static server). The playground and Project Control Panel can serve <code>/docs</code> after a build. Diagram pages are self-contained single HTML files — no bundler required.</p>
 <hr>
 <h2>Related docs</h2>
 <ul>

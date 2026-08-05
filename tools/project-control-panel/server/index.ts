@@ -3,10 +3,10 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 
 import { CreateApiApp } from "./api.js";
-import { LAUNCHER_PORT } from "./paths.js";
+import { CONTROL_PANEL_PORT } from "./paths.js";
 
-const launcherRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const clientDir = path.join(launcherRoot, "dist", "client");
+const controlPanelRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const clientDir = path.join(controlPanelRoot, "dist", "client");
 
 const app = express();
 app.use(CreateApiApp());
@@ -22,7 +22,7 @@ app.get("*", (req, res) =>
   res.sendFile(path.join(clientDir, "index.html"));
 });
 
-app.listen(LAUNCHER_PORT, () =>
+app.listen(CONTROL_PANEL_PORT, () =>
 {
-  console.log(`Babylon Launcher (production): http://localhost:${LAUNCHER_PORT}`);
+  console.log(`Project Control Panel (production): http://localhost:${CONTROL_PANEL_PORT}`);
 });

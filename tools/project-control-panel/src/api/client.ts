@@ -2,9 +2,11 @@ export interface ProjectSummary
 {
   name: string;
   title: string;
+  entryLevel?: string;
   defaultLevel?: string;
   devPort: number;
   blenderExportPath: string;
+  hasManifest: boolean;
   hasLevels: boolean;
 }
 
@@ -50,6 +52,47 @@ export interface DocsStatus
   url: string;
 }
 
+export interface LevelManifestEntry
+{
+  level: string;
+  file: string;
+  url: string;
+}
+
+export interface PublishOptions
+{
+  platform: "web" | "tauri";
+  title?: string;
+  version?: string;
+  destination: string;
+  levels: string[];
+  startLevel: string;
+  encryptAssets: boolean;
+  includeServer: boolean;
+}
+
+export type PublishPhase =
+  | "idle"
+  | "building"
+  | "filtering"
+  | "copying"
+  | "encrypting"
+  | "done"
+  | "error"
+  | "cancelled";
+
+export interface PublishStatus
+{
+  app: string;
+  phase: PublishPhase;
+  log: string[];
+  error?: string;
+  destination?: string;
+  startedAt?: number;
+  finishedAt?: number;
+  progress?: number;
+}
+
 async function Request<T>(url: string, init?: RequestInit): Promise<T>
 {
   const response = await fetch(url, init);
@@ -62,18 +105,22 @@ async function Request<T>(url: string, init?: RequestInit): Promise<T>
 }
 
 export const api = {
-  getProjects: () => Request<ProjectSummary[]>("/api/projects"),
+  getCurrentProject: () => Request<ProjectSummary>("/api/project"),
+  createProject: (body: { name: string; title?: string; level?: string }) =>
+    Request<{ name: string; path: string }>("/api/project", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  setEntryLevel: (manifestUrl: string) =>
+    Request<ProjectSummary>("/api/project/entry-level", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manifestUrl }),
+    }),
   getLevels: (app: string) => Request<string[]>(`/api/projects/${encodeURIComponent(app)}/levels`),
-  createProject: (body: {
-    name: string;
-    title?: string;
-    level?: string;
-    template?: "empty" | "minimal" | "sample";
-  }) => Request<{ name: string; path: string; blenderExportPath: string }>("/api/projects", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }),
+  getLevelManifests: (app: string) =>
+    Request<LevelManifestEntry[]>(`/api/projects/${encodeURIComponent(app)}/manifests`),
   listAssets: (app: string, level: string, folder?: string) =>
   {
     const query = folder ? `?folder=${encodeURIComponent(folder)}` : "";
@@ -99,4 +146,16 @@ export const api = {
     Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}/stop-all`, { method: "POST" }),
   getDocsStatus: () => Request<DocsStatus>("/api/docs"),
   buildDocs: () => Request<DocsStatus>("/api/docs/build", { method: "POST" }),
+  getPublishStatus: (app: string) =>
+    Request<PublishStatus>(`/api/publish/${encodeURIComponent(app)}`),
+  startPublish: (app: string, body: PublishOptions) =>
+    Request<PublishStatus>(`/api/publish/${encodeURIComponent(app)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  cancelPublish: (app: string) =>
+    Request<PublishStatus>(`/api/publish/${encodeURIComponent(app)}/cancel`, {
+      method: "POST",
+    }),
 };

@@ -1,0 +1,83 @@
+<h1>02 — Publishing</h1>
+<p>The Project Control Panel <strong>Publish</strong> tab builds a web copy of the current project. Choose the platform, included levels, entry level, and destination. Click <strong>Build</strong>. The server builds the project, removes excluded levels, and copies the result.</p>
+<p>Desktop (Tauri) is listed in the UI but is not implemented yet.</p>
+
+<hr>
+
+<h2>Dev: jump into a level</h2>
+<p>You do not need a publish build to test a level. The Development tab lists each scene manifest. Select one and click <strong>Open Level</strong>. Click <strong>Set as Entry</strong> to save it as the project entry level. The Publish tab uses the same setting.</p>
+<p>The app resolves the entry level in this order:</p>
+<ol>
+<li><code>?manifest=</code> URL query (dev jump)</li>
+<li><code>import.meta.env.VITE_START_LEVEL</code> (set by Publish)</li>
+<li>The project default in <code>main.ts</code></li>
+</ol>
+<p>Changing the query does not restart Vite. Reload the page after you change the parameter by hand.</p>
+
+<hr>
+
+<h2>Publish tab flow</h2>
+<ol>
+<li>Confirm the current project shown in the header.</li>
+<li>Open the <strong>Publish</strong> tab.</li>
+<li>Leave <strong>Platform</strong> on <strong>Web</strong>.</li>
+<li>Optional: set product title and version (written to <code>publish-meta.json</code>).</li>
+<li>Tick the level folders to include.</li>
+<li>Pick the <strong>Entry level</strong> from the included scene manifests. This also updates the Development tab.</li>
+<li>Type an absolute destination path (the folder is created if it does not exist).</li>
+<li>Optional: tick <strong>Encrypt / obfuscate level assets</strong>.</li>
+<li>Optional: tick <strong>Include Node.js web server</strong>.</li>
+<li>Click <strong>Build</strong> and watch the log. Click <strong>Cancel</strong> to stop a running job.</li>
+</ol>
+<p>The destination is cleared of previous contents before the copy. Do not point it at the app <code>src/</code> tree or the Project Control Panel tree.</p>
+
+<hr>
+
+<h2>What the build does</h2>
+<pre class="mermaid">flowchart LR
+  Form[Publish form] -->|POST /api/publish/app| Job[Publish job]
+  Job --> Build["npm run build with VITE_START_LEVEL"]
+  Build --> Filter[Remove excluded dist/levels folders]
+  Filter --> Copy[Copy dist to destination]
+  Copy --> Encrypt{Encrypt?}
+  Encrypt -->|no| Server{Include server?}
+  Encrypt -->|yes| Pack[assets.pak + pak-sw.js]
+  Pack --> Server
+  Server -->|no| Done[Hostable web folder]
+  Server -->|yes| NodeServer[server.mjs + package.json]
+  NodeServer --> Done
+</pre>
+<p>The job sets <code>VITE_START_LEVEL</code> to the chosen manifest URL while it runs <code>npm run build --workspace apps/&lt;project&gt;</code>. Vite still copies every folder under <code>public/levels/</code>. The job then deletes folders you did not include.</p>
+<p>Poll status with <code>GET /api/publish/:app</code>. Only one publish job runs per app at a time.</p>
+
+<hr>
+
+<h2>Encrypted asset pack</h2>
+<p>When encryption is on, every file under the output <code>levels/</code> tree is packed into one <code>assets.pak</code> file (AES-256-GCM per file). Loose level files are removed. The build writes <code>pak-sw.js</code> and rewrites <code>index.html</code> so a small bootstrap registers the service worker before it loads the app module.</p>
+<p>The service worker intercepts requests under <code>/levels/</code>, decrypts the matching pak entry, and returns the plain bytes. Engine <code>fetch</code> calls and Babylon loaders keep the same URLs. You do not change app or engine code for this mode.</p>
+<p><strong>Limits:</strong> the AES key ships inside the bundle. This slows casual asset ripping. It is not strong DRM. Encrypted builds need <code>http://</code> or <code>https://</code>. Service workers do not run from <code>file://</code>.</p>
+
+<hr>
+
+<h2>Included Node.js server</h2>
+<p>When <strong>Include Node.js web server</strong> is on, the output includes <code>server.mjs</code> and <code>package.json</code>. The server has no npm dependencies. It serves the generated files with the correct MIME types and falls back to <code>index.html</code> for browser routes.</p>
+<pre><code class="language-bash">cd /path/to/published-build
+npm start</code></pre>
+<p>The default address is <code>http://0.0.0.0:8080</code>. Set <code>PORT</code> or <code>HOST</code> to change it, for example <code>PORT=3000 npm start</code>.</p>
+
+<hr>
+
+<h2>How to host the output</h2>
+<p>Serve the destination folder as static files. Open the site root. Publish writes the entry level into the bundle through <code>VITE_START_LEVEL</code>.</p>
+<p>For a URL subdirectory deploy (for example <code>/demo/</code>), the existing <code>npm run deploy:playground -- --base /demo/</code> script still patches level URL prefixes. Prefer that path when you need a non-root base. The Publish tab targets a plain root-hosted folder in v1.</p>
+
+<hr>
+
+<h2>REST API</h2>
+<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>GET</code></td><td><code>/api/projects/:app/manifests</code></td><td>List <code>{ level, file, url }</code> for every <code>.scene.json</code></td></tr>
+<tr><td><code>POST</code></td><td><code>/api/publish/:app</code></td><td>Start a publish job. Body: <code>platform</code>, <code>destination</code>, <code>levels</code>, <code>startLevel</code>, <code>encryptAssets</code>, <code>includeServer</code>, optional <code>title</code>/<code>version</code>. Returns <code>202</code> + status.</td></tr>
+<tr><td><code>POST</code></td><td><code>/api/publish/:app/cancel</code></td><td>Cancel the running publish job and kill its build process.</td></tr>
+<tr><td><code>GET</code></td><td><code>/api/publish/:app</code></td><td>Current job status: <code>phase</code>, <code>log</code>, <code>error?</code>, <code>destination?</code>, <code>progress?</code></td></tr>
+</tbody></table>
+<p>Server code lives in <code>tools/project-control-panel/server/publish.ts</code>. The hub panel is <code>src/hub/PublishPanel.tsx</code>.</p>

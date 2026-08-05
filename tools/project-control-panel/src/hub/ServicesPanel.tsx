@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { api, type DevServerStatus, type ServicesStatus } from "../api/client";
+import {
+  api,
+  type DevServerStatus,
+  type LevelManifestEntry,
+  type ServicesStatus,
+} from "../api/client";
 
 interface Props
 {
   project: string;
+  entryLevel?: string;
+  onLevelChange: (level: string) => void;
+  onEntryLevelChange: (manifestUrl: string) => Promise<void>;
   onError: (message: string) => void;
 }
 
@@ -39,11 +47,45 @@ function McpStatusText(mcp: ServicesStatus["mcp"] | undefined): string
   return "built, stopped";
 }
 
-export function ServicesPanel({ project, onError }: Props): JSX.Element
+/**
+ * Find the configured entry manifest. A level folder can contain multiple
+ * manifests, so prefer the manifest whose filename matches the folder name.
+ */
+function ResolveEntryManifest(
+  manifests: LevelManifestEntry[],
+  entryLevel: string | undefined,
+): LevelManifestEntry | undefined
+{
+  if (entryLevel === undefined || entryLevel.length === 0)
+  {
+    return undefined;
+  }
+
+  const exactUrl = manifests.find((entry) => entry.url === entryLevel);
+  if (exactUrl !== undefined)
+  {
+    return exactUrl;
+  }
+
+  const levelManifests = manifests.filter((entry) => entry.level === entryLevel);
+  return levelManifests.find((entry) => entry.file === `${entryLevel}.scene.json`)
+    ?? levelManifests[0];
+}
+
+export function ServicesPanel({
+  project,
+  entryLevel,
+  onLevelChange,
+  onEntryLevelChange,
+  onError,
+}: Props): JSX.Element
 {
   const [services, setServices] = useState<ServicesStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [manifests, setManifests] = useState<LevelManifestEntry[]>([]);
+  const [jumpManifest, setJumpManifest] = useState("");
+  const [savingEntryLevel, setSavingEntryLevel] = useState(false);
 
   const refresh = useCallback(async () =>
   {
@@ -61,6 +103,30 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
     }, 3000);
     return () => clearInterval(timer);
   }, [refresh, onError]);
+
+  useEffect(() =>
+  {
+    if (!project)
+    {
+      setManifests([]);
+      setJumpManifest("");
+      return;
+    }
+    api.getLevelManifests(project).then((list) =>
+    {
+      setManifests(list);
+      const initialManifest = ResolveEntryManifest(list, entryLevel) ?? list[0];
+      if (initialManifest !== undefined)
+      {
+        setJumpManifest(initialManifest.url);
+        onLevelChange(initialManifest.level);
+      }
+      else
+      {
+        setJumpManifest("");
+      }
+    }).catch((e: Error) => onError(e.message));
+  }, [project, entryLevel, onLevelChange, onError]);
 
   async function Run(action: () => Promise<unknown>): Promise<void>
   {
@@ -98,6 +164,44 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
 
   const dev = services?.dev;
   const mcp = services?.mcp;
+  const entryManifest = ResolveEntryManifest(manifests, entryLevel);
+  const previewUrl = dev?.url !== undefined && entryManifest !== undefined
+    ? `${dev.url}?manifest=${encodeURIComponent(entryManifest.url)}`
+    : dev?.url;
+
+  function OpenLevelJump(): void
+  {
+    if (!dev?.url || !jumpManifest)
+    {
+      return;
+    }
+    const url = new URL(dev.url);
+    url.searchParams.set("manifest", jumpManifest);
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  }
+
+  /** Persist the selected manifest as the shared project entry level. */
+  async function SetSelectedAsEntry(): Promise<void>
+  {
+    if (jumpManifest.length === 0)
+    {
+      return;
+    }
+
+    setSavingEntryLevel(true);
+    try
+    {
+      await onEntryLevelChange(jumpManifest);
+    }
+    catch (error)
+    {
+      onError((error as Error).message);
+    }
+    finally
+    {
+      setSavingEntryLevel(false);
+    }
+  }
 
   return (
     <section className="panel panel-compact">
@@ -147,12 +251,65 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
             >
               Stop
             </button>
-            {dev?.url && (
-              <a href={dev.url} target="_blank" rel="noreferrer">
+            {previewUrl !== undefined && (
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                title={
+                  entryManifest !== undefined
+                    ? `Launch ${entryManifest.level} / ${entryManifest.file}`
+                    : "Launch the application"
+                }
+              >
                 Preview
               </a>
             )}
           </div>
+          {manifests.length > 0 && (
+            <div className="service-jump">
+              <select
+                value={jumpManifest}
+                onChange={(event) =>
+                {
+                  const manifestUrl = event.target.value;
+                  const manifest = manifests.find((entry) => entry.url === manifestUrl);
+                  setJumpManifest(manifestUrl);
+                  if (manifest !== undefined)
+                  {
+                    onLevelChange(manifest.level);
+                  }
+                }}
+                aria-label="Level to open"
+              >
+                {manifests.map((entry) => (
+                  <option key={entry.url} value={entry.url}>
+                    {entry.level} / {entry.file}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="secondary"
+                disabled={
+                  jumpManifest.length === 0
+                  || jumpManifest === entryLevel
+                  || savingEntryLevel
+                }
+                onClick={() => { void SetSelectedAsEntry(); }}
+              >
+                {jumpManifest === entryLevel ? "Entry Level" : "Set as Entry"}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!dev?.running || !jumpManifest}
+                onClick={OpenLevelJump}
+              >
+                Open Level
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="service-card">

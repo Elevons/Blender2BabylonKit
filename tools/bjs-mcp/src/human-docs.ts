@@ -25,7 +25,7 @@ export interface DocChapter
   slug: string;
   title: string;
   /** Which doc set the chapter belongs to. */
-  side: "engine" | "blender" | "launcher" | "meta" | "contract";
+  side: "engine" | "blender" | "control-panel" | "meta" | "contract";
   /** Human-readable source path relative to the repo root. */
   sourcePath: string;
   /** Built HTML page a human would read, when one exists. */
@@ -40,7 +40,7 @@ interface LoadedChapter extends DocChapter
 const PROSE_SIDES: { folder: string; side: DocChapter["side"] }[] = [
   { folder: "engine", side: "engine" },
   { folder: "blender", side: "blender" },
-  { folder: "launcher", side: "launcher" },
+  { folder: "control-panel", side: "control-panel" },
   { folder: "meta", side: "meta" },
 ];
 

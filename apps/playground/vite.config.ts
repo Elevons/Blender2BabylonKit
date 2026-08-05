@@ -54,10 +54,45 @@ function ReloadOnLevelExport(): Plugin
   };
 }
 
+/**
+ * Replace the Inspector entry point before dependency traversal when publishing
+ * without developer tools. TypeScript still checks calls against the real package.
+ */
+function ExcludeDeveloperTools(): Plugin
+{
+  const virtualInspectorId = "\0bjs-disabled-inspector";
+
+  return {
+    name: "bjs-exclude-developer-tools",
+    enforce: "pre",
+    resolveId(source)
+    {
+      if (
+        process.env.VITE_INCLUDE_DEVELOPER_TOOLS === "false" &&
+        source === "@babylonjs/inspector"
+      )
+      {
+        return virtualInspectorId;
+      }
+
+      return null;
+    },
+    load(id)
+    {
+      if (id === virtualInspectorId)
+      {
+        return "export const Inspector = undefined;";
+      }
+
+      return null;
+    },
+  };
+}
+
 // Havok ships a .wasm that must be served. Excluding it from dep-optimization
 // lets Vite resolve the wasm URL correctly in dev and build.
 export default defineConfig({
   optimizeDeps: { exclude: ["@babylonjs/havok"] },
   server: { port: 5173 },
-  plugins: [ReloadOnLevelExport()],
+  plugins: [ReloadOnLevelExport(), ExcludeDeveloperTools()],
 });

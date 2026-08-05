@@ -1,14 +1,14 @@
 {
-  "name": "@bjs/babylon-launcher",
+  "name": "@bjs/project-control-panel",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Self-hosted Babylon.js project hub for Blender2BabylonKit",
+  "description": "Project Control Panel for Blender2BabylonKit apps",
   "scripts": {
     "dev": "tsx server/dev.ts",
-    "launcher:dev": "npm run dev",
-    "launcher:build": "npm run build",
-    "launcher:start": "npm run start",
+    "control-panel:dev": "npm run dev",
+    "control-panel:build": "npm run build",
+    "control-panel:start": "npm run start",
     "build": "tsc -p tsconfig.server.json && vite build",
     "start": "NODE_ENV=production node dist/server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.server.json"

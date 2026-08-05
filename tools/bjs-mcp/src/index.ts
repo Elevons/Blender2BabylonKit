@@ -217,7 +217,7 @@ server.tool(
 
 server.tool(
   "list_doc_chapters",
-  "List every human documentation chapter (engine, blender, launcher, quickstart, LLM contracts) with slugs for get_doc_chapter. Use when you need engine/Blender knowledge beyond the scripting contract.",
+  "List every human documentation chapter (engine, blender, control-panel, quickstart, LLM contracts) with slugs for get_doc_chapter. Use when you need engine/Blender knowledge beyond the scripting contract.",
   {},
   async () => ({
     content: [{ type: "text", text: FormatChapterList() }],

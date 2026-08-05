@@ -21,7 +21,29 @@ import {
  * lives in the engine — this file is only the wiring.
  */
 
-const MANIFEST_URL = "/levels/Train Scene/Train Scene.scene.json";
+const DEFAULT_MANIFEST_URL = "/levels/Train Scene/Train Scene.scene.json";
+const INCLUDE_DEVELOPER_TOOLS = import.meta.env.VITE_INCLUDE_DEVELOPER_TOOLS !== "false";
+
+/**
+ * Pick the level to load: `?manifest=` (dev jump from the Project Control Panel), then the
+ * publish-time `VITE_START_LEVEL`, then the project default.
+ */
+function ResolveManifestUrl(): string
+{
+  const fromQuery = new URLSearchParams(window.location.search).get("manifest");
+  if (fromQuery !== null && fromQuery.length > 0)
+  {
+    return fromQuery;
+  }
+
+  const fromEnv = import.meta.env.VITE_START_LEVEL as string | undefined;
+  if (fromEnv !== undefined && fromEnv.length > 0)
+  {
+    return fromEnv;
+  }
+
+  return DEFAULT_MANIFEST_URL;
+}
 
 /** Register every behavior in ./behaviors by filename stem (the Blender key). */
 function RegisterBehaviors(): BehaviorRegistry
@@ -48,9 +70,9 @@ function CreateFallbackCameraIfNeeded(scene: Scene, canvas: HTMLCanvasElement): 
 }
 
 /**
- * Bind the dev debug keys — C for collider wireframes, I for the Babylon
- * Inspector — gated by the Blender export's "Debug Build" flag. The inspector
- * is dynamically imported so it stays out of production bundles.
+ * Bind the dev debug keys — Shift+C for collider wireframes, Shift+I for the
+ * Babylon Inspector — gated by the Blender export's "Debug Build" flag. The
+ * inspector is dynamically imported so it stays out of production bundles.
  */
 function BindDebugKeys(scene: Scene, level: Level): void
 {
@@ -74,7 +96,7 @@ function BindDebugKeys(scene: Scene, level: Level): void
 
   window.addEventListener("keydown", (keyboardEvent) =>
   {
-    if (!level.debugEnabled)
+    if (!level.debugEnabled || !keyboardEvent.shiftKey)
     {
       return;
     }
@@ -99,7 +121,8 @@ async function Main(): Promise<void>
 
   // Large-world rendering is an engine option — read the manifest before
   // creating the Engine/Scene (Blender Scene › Rendering › Large World Rendering).
-  const manifest = await FetchAndValidateManifest(MANIFEST_URL);
+  const manifestUrl = ResolveManifestUrl();
+  const manifest = await FetchAndValidateManifest(manifestUrl);
   const engine = CreateLevelEngine(canvas, true, manifest);
   const scene = new Scene(engine);
 
@@ -108,10 +131,13 @@ async function Main(): Promise<void>
 
   const registry = RegisterBehaviors();
   const loader = new LevelLoader(scene, registry);
-  const level = await loader.Load(MANIFEST_URL, manifest);
+  const level = await loader.Load(manifestUrl, manifest);
 
   CreateFallbackCameraIfNeeded(scene, canvas);
-  BindDebugKeys(scene, level);
+  if (INCLUDE_DEVELOPER_TOOLS)
+  {
+    BindDebugKeys(scene, level);
+  }
 
   // Example: query by tag set in Blender.
   console.log("Players:", level.ByTag("Player").map((entity) => entity.name));

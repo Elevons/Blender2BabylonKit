@@ -24,6 +24,6 @@ def draw_export_controls(layout, scene):
     layout.prop(scene, "bjs_debug_build", text="Debug Build", icon='TOOL_SETTINGS')
 
     layout.separator()
-    layout.operator("bjs.open_launcher_hub", text="Open Editor Launcher", icon='WORLD')
+    layout.operator("bjs.open_launcher_hub", text="Open Project Control Panel", icon='WORLD')
 
     layout.operator("bjs.validate_scene", text="Validate", icon='CHECKMARK')

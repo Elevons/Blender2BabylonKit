@@ -68,7 +68,7 @@ Then \`preflight_behavior\` for the checklist. Skim \`get_do_not_list\` once per
 | API contract | \`docs/LLM_SCRIPTING_CONTEXT.md\` · \`get_scripting_context\` |
 | Minimal rules | \`docs/LLM_KERNEL.md\` · \`get_kernel\` |
 | Engine concepts | \`get_engine_basics\` → \`docs/engine/*.html\` |
-| Full prose chapters | \`list_doc_chapters\` · \`get_doc_chapter\` (engine + blender + launcher as markdown) |
+| Full prose chapters | \`list_doc_chapters\` · \`get_doc_chapter\` (engine + blender + control-panel as markdown) |
 | Anything else | \`search_docs(query)\` — semantic search across every doc |
 | API tables | \`get_doc_chapter(chapter="engine/14-api-guide")\` or \`docs/engine/14-API-GUIDE.html\` |
 | Feature inventory | \`get_doc_chapter(chapter="engine/13-feature-list")\` or \`docs/engine/13-FEATURE-LIST.html\` |

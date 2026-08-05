@@ -42,6 +42,7 @@ code {
 .hub-header {
   display: flex;
   align-items: center;
+  gap: 1rem;
   padding: 0.55rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
@@ -51,6 +52,38 @@ code {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.hub-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.hub-tab {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.86rem;
+}
+
+.hub-tab:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border);
+  background: transparent;
+}
+
+.hub-tab-active {
+  color: var(--text);
+  border-color: var(--border);
+  background: #121622;
+}
+
+.hub-tab-active:hover:not(:disabled) {
+  background: #121622;
+  border-color: var(--accent);
 }
 
 .hub-main {
@@ -82,6 +115,11 @@ code {
   color: var(--muted);
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.current-project-name {
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 
 .panel-head {
@@ -305,6 +343,88 @@ a.button-link:hover { border-color: var(--accent); }
 
 .service-actions a {
   font-size: 0.86rem;
+}
+
+.service-jump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid #22283a;
+}
+
+.service-jump select {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.publish-form {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.publish-form > label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.86rem;
+}
+
+.publish-levels {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.publish-levels legend {
+  padding: 0 0.25rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.publish-check {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.86rem;
+}
+
+.publish-check input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.publish-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.publish-progress progress {
+  flex: 1;
+  height: 0.65rem;
+  accent-color: var(--accent);
+}
+
+.publish-log {
+  margin: 0;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.55rem 0.65rem;
+  background: #0c0f16;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .status-dot {

@@ -7,9 +7,11 @@ import {
   type AssetFolder,
 } from "./paths.js";
 import {
+  GetCurrentProject,
   GetDevServerStatus,
+  ListLevelManifests,
   ListLevels,
-  ListProjects,
+  SetProjectEntryLevel,
   StartDevServer,
   StopDevServer,
 } from "./projects.js";
@@ -24,6 +26,12 @@ import {
   GetDocsStatus,
   MountDocsStatic,
 } from "./docs.js";
+import {
+  CancelPublish,
+  GetPublishStatus,
+  StartPublish,
+  type PublishOptions,
+} from "./publish.js";
 
 function AsyncHandler(
   handler: (req: Request, res: Response, next: NextFunction) => Promise<void>,
@@ -54,9 +62,42 @@ export function CreateApiApp(): Express
     res.json({ ok: true });
   });
 
-  app.get("/api/projects", (_req, res) =>
+  app.get("/api/project", (_req, res) =>
   {
-    res.json(ListProjects());
+    res.json(GetCurrentProject());
+  });
+
+  app.post("/api/project", AsyncHandler(async (req, res) =>
+  {
+    const body = req.body as {
+      name?: string;
+      title?: string;
+      level?: string;
+    };
+    if (body.name === undefined || body.name.trim().length === 0)
+    {
+      res.status(400).json({ error: "Project name is required" });
+      return;
+    }
+
+    const result = await CreateProject({
+      name: body.name,
+      title: body.title,
+      level: body.level,
+    });
+    res.status(201).json(result);
+  }));
+
+  app.put("/api/project/entry-level", (req, res) =>
+  {
+    const body = req.body as { manifestUrl?: string };
+    if (body.manifestUrl === undefined)
+    {
+      res.status(400).json({ error: "manifestUrl is required" });
+      return;
+    }
+    const currentProject = GetCurrentProject();
+    res.json(SetProjectEntryLevel(currentProject.name, body.manifestUrl));
   });
 
   app.get("/api/projects/:app/levels", (req, res) =>
@@ -64,22 +105,10 @@ export function CreateApiApp(): Express
     res.json(ListLevels(req.params.app));
   });
 
-  app.post("/api/projects", AsyncHandler(async (req, res) =>
+  app.get("/api/projects/:app/manifests", (req, res) =>
   {
-    const { name, title, level, template } = req.body as {
-      name?: string;
-      title?: string;
-      level?: string;
-      template?: "empty" | "minimal" | "sample";
-    };
-    if (!name)
-    {
-      res.status(400).json({ error: "name is required" });
-      return;
-    }
-    const result = await CreateProject({ name, title, level, template });
-    res.status(201).json(result);
-  }));
+    res.json(ListLevelManifests(req.params.app));
+  });
 
   app.get("/api/projects/:app/assets/:level", (req, res) =>
   {
@@ -201,6 +230,40 @@ export function CreateApiApp(): Express
   {
     res.json(await BuildDocs());
   }));
+
+  app.get("/api/publish/:app", (req, res) =>
+  {
+    res.json(GetPublishStatus(req.params.app));
+  });
+
+  app.post("/api/publish/:app", AsyncHandler(async (req, res) =>
+  {
+    const body = req.body as Partial<PublishOptions>;
+    const options: PublishOptions = {
+      platform: body.platform ?? "web",
+      title: body.title,
+      version: body.version,
+      destination: body.destination ?? "",
+      levels: body.levels ?? [],
+      startLevel: body.startLevel ?? "",
+      encryptAssets: Boolean(body.encryptAssets),
+      includeServer: Boolean(body.includeServer),
+    };
+
+    res.status(202).json(StartPublish(req.params.app, options));
+  }));
+
+  app.post("/api/publish/:app/cancel", (req, res) =>
+  {
+    try
+    {
+      res.json(CancelPublish(req.params.app));
+    }
+    catch (error)
+    {
+      res.status(409).json({ error: (error as Error).message });
+    }
+  });
 
   MountDocsStatic(app);
 

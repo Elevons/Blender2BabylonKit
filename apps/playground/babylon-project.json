@@ -1,7 +1,7 @@
 {
   "name": "playground",
   "title": "Playground",
-  "defaultLevel": "Train Scene",
+  "defaultLevel": "TestScene",
   "assetFolders": [
     "gui",
     "particles",
@@ -13,5 +13,6 @@
   "dev": {
     "port": 5173
   },
-  "blenderExportPath": "apps/playground/public/levels/"
+  "blenderExportPath": "apps/playground/public/levels/",
+  "entryLevel": "/levels/TestScene/TestScene.scene.json"
 }

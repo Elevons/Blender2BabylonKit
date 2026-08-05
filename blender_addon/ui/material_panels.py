@@ -135,7 +135,7 @@ def draw_babylon_material(layout, mat):
     scan = row.operator("bjs.scan_nme_textures", text="Scan NME", icon='FILE_REFRESH')
     scan.material_name = mat.name
     if mat.bjs_nme_file:
-        launch = row.operator("bjs.open_launcher_nme", text="Open in Launcher", icon='WORLD')
+        launch = row.operator("bjs.open_launcher_nme", text="Open in Control Panel", icon='WORLD')
         launch.material_name = mat.name
 
     if mat.bjs_nme_file:
