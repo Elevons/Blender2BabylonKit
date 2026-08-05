@@ -340,24 +340,37 @@
     <a href="../engine/00-INDEX.html">Engine</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-LAUNCHER.html">Next →</a></p>
   <article><h1>Babylon Launcher — Documentation</h1>
-<p>The <strong>Babylon Launcher</strong> (<code>tools/babylon-launcher/</code>, npm workspace <code>@bjs/babylon-launcher</code>) is a small self-hosted web hub for day-to-day work in the monorepo. It discovers apps under <code>apps/</code>, starts and stops the per-app Vite dev server, manages the <strong>bjs-mcp</strong> behavior-authoring server for Cursor, scaffolds new projects, and browses JSON asset folders next to each level.</p>
-<p>It does <strong>not</strong> embed Babylon.js editors. Author GUI, materials, particles, and similar assets with the <a href="https://doc.babylonjs.com/">online Babylon editors</a> or your own workflow, then place the exported <code>.json</code> files in the project's asset folders (see <a href="01-LAUNCHER.html#projects-and-assets">Projects &amp; assets</a>).</p>
+<p>The <strong>Babylon Launcher</strong> (<code>tools/babylon-launcher/</code>, npm package <code>@bjs/babylon-launcher</code>) is a local web hub for one game project at a time. It starts that project's Vite server, manages <strong>bjs-mcp</strong>, browses level assets, edits level include/boot settings, and runs publish builds for web, desktop, and Android.</p>
+<p>The hub does <strong>not</strong> embed Babylon.js editors. Author GUI, materials, and particles in the <a href="https://doc.babylonjs.com/">online Babylon editors</a>, then place the <code>.json</code> files in the project's asset folders.</p>
+
 <h2>Quick start</h2>
-<p>From the repo root:</p>
+<p>From the repo root, bind the hub to one app:</p>
 <pre><code class="language-bash">npm install
-npm run launcher:dev</code></pre>
-<p>Open <strong>http://localhost:3200</strong> (override with <code>LAUNCHER_PORT</code>).</p>
-<p>Production build (serves the compiled React client from <code>dist/client/</code>):</p>
+npm run hub -- --app playground</code></pre>
+<p>Open <strong>http://localhost:3200</strong>. The hub starts the game's Vite server (default port <strong>5173</strong>). Override the hub port with <code>LAUNCHER_PORT</code>.</p>
+<p>You can also resolve the project from the environment or the current directory:</p>
+<ul>
+<li><code>--app &lt;name&gt;</code> — monorepo app under <code>apps/&lt;name&gt;/</code></li>
+<li><code>BJS_PROJECT_DIR</code> — absolute path to a folder that contains <code>babylon-project.json</code></li>
+<li>Working directory — walk up until <code>babylon-project.json</code> is found</li>
+</ul>
+<p>Convention: run <strong>one hub at a time</strong>. The Blender add-on opens <code>http://localhost:3200</code>.</p>
+
+<p>Production build of the hub itself:</p>
 <pre><code class="language-bash">npm run launcher:build
-npm run launcher:start</code></pre>
+npm run hub -- --app playground
+# or: npm run launcher:start -- --app playground</code></pre>
+
 <h2>Chapters</h2>
 <ol>
-<li><a href="01-LAUNCHER.html">Launcher</a> — hub UI, services, projects, assets, REST API, and server layout</li>
+<li><a href="01-LAUNCHER.html">Launcher</a> — project-scoped hub, Levels panel, services, assets, REST API</li>
+<li><a href="02-PUBLISH.html">Publish</a> — boot manifest, web zip, Tauri desktop/Android, icons, targets, Linux deps</li>
 </ol>
+
 <h2>Related docs</h2>
 <ul>
-<li><a href="../engine/09-WORKFLOW.html">Workflow &amp; tooling</a> — Live Link, validator, monorepo commands</li>
-<li><a href="../engine/01-ARCHITECTURE.html">Architecture</a> — two-artifact export model and repo layout</li>
+<li><a href="../engine/09-WORKFLOW.html">Workflow &amp; tooling</a> — Live Link, monorepo commands</li>
+<li><a href="../engine/01-ARCHITECTURE.html">Architecture</a> — export model and repo layout</li>
 </ul>
 </article>
   <footer>

@@ -21,7 +21,24 @@ import {
  * lives in the engine — this file is only the wiring.
  */
 
-const MANIFEST_URL = "/levels/Train Scene/Train Scene.scene.json";
+interface BootManifest
+{
+  startLevel: string;
+  manifestPath: string;
+}
+
+/** Fetch the build-time boot manifest that names the level to load first. */
+async function FetchBootManifest(): Promise<BootManifest>
+{
+  const response = await fetch(`${import.meta.env.BASE_URL}bjs-boot.json`);
+  if (!response.ok)
+  {
+    throw new Error(
+      `bjs-boot.json missing (${response.status}) — is the ServeBootManifest plugin configured?`,
+    );
+  }
+  return await response.json() as BootManifest;
+}
 
 /** Register every behavior in ./behaviors by filename stem (the Blender key). */
 function RegisterBehaviors(): BehaviorRegistry
@@ -97,9 +114,12 @@ async function Main(): Promise<void>
 {
   const canvas = document.getElementById("app") as HTMLCanvasElement;
 
+  const bootManifest = await FetchBootManifest();
+  const manifestUrl = import.meta.env.BASE_URL + bootManifest.manifestPath;
+
   // Large-world rendering is an engine option — read the manifest before
   // creating the Engine/Scene (Blender Scene › Rendering › Large World Rendering).
-  const manifest = await FetchAndValidateManifest(MANIFEST_URL);
+  const manifest = await FetchAndValidateManifest(manifestUrl);
   const engine = CreateLevelEngine(canvas, true, manifest);
   const scene = new Scene(engine);
 
@@ -108,7 +128,7 @@ async function Main(): Promise<void>
 
   const registry = RegisterBehaviors();
   const loader = new LevelLoader(scene, registry);
-  const level = await loader.Load(MANIFEST_URL, manifest);
+  const level = await loader.Load(manifestUrl, manifest);
 
   CreateFallbackCameraIfNeeded(scene, canvas);
   BindDebugKeys(scene, level);

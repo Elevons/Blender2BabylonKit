@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(fileURLToPath(import.meta.url), "../..");
 const TEMPLATE = path.join(REPO_ROOT, "apps", "playground");
-const SKIP = new Set(["node_modules", "dist", ".vite"]);
+const SKIP = new Set(["node_modules", "dist", ".vite", "release", "src-tauri"]);
 const DEFAULT_ASSET_FOLDERS = [
   "gui",
   "particles",
@@ -94,15 +94,6 @@ let html = fs.readFileSync(htmlPath, "utf8");
 html = html.replace(/<title>.*<\/title>/, `<title>${args.title ?? appName}</title>`);
 fs.writeFileSync(htmlPath, html);
 
-// main.ts level name.
-if (args.level)
-{
-  const mainPath = path.join(destination, "src", "main.ts");
-  let main = fs.readFileSync(mainPath, "utf8");
-  main = main.replace(/\/levels\/[^"]+\.scene\.json/, `/levels/${args.level}.scene.json`);
-  fs.writeFileSync(mainPath, main);
-}
-
 // Workspace staging folder for pre-export editor assets.
 fs.mkdirSync(path.join(destination, "public", "workspace"), { recursive: true });
 for (const folder of DEFAULT_ASSET_FOLDERS)
@@ -110,14 +101,32 @@ for (const folder of DEFAULT_ASSET_FOLDERS)
   fs.mkdirSync(path.join(destination, "public", "workspace", folder), { recursive: true });
 }
 
-// Project manifest consumed by the Babylon Editor Launcher.
+const productTitle = args.title ?? appName;
+
+// Project manifest consumed by the Babylon Editor Launcher and publish scripts.
 const manifest = {
   name: appName,
-  title: args.title ?? appName,
+  title: productTitle,
   defaultLevel: args.level ?? undefined,
   assetFolders: DEFAULT_ASSET_FOLDERS,
   dev: { port: 5173 },
   blenderExportPath: `apps/${appName}/public/levels/`,
+  levels: {
+    include: args.level ? [args.level] : [],
+    start: args.level ?? undefined,
+  },
+  publish: {
+    productName: productTitle,
+    identifier: `com.bjs.${appName}`,
+    version: "0.1.0",
+    icon: "",
+    outputDir: "release",
+    web: { base: "/" },
+    desktop: {
+      targetsPreset: "all",
+      targets: "all",
+    },
+  },
 };
 fs.writeFileSync(
   path.join(destination, "babylon-project.json"),

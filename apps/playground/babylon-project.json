@@ -13,5 +13,25 @@
   "dev": {
     "port": 5173
   },
-  "blenderExportPath": "apps/playground/public/levels/"
+  "blenderExportPath": "apps/playground/public/levels/",
+  "levels": {
+    "include": [
+      "Train Scene"
+    ],
+    "start": "Train Scene"
+  },
+  "publish": {
+    "productName": "Playground",
+    "identifier": "com.bjs.playground",
+    "version": "0.1.0",
+    "icon": "",
+    "outputDir": "release",
+    "web": {
+      "base": "/"
+    },
+    "desktop": {
+      "targetsPreset": "linux",
+      "targets": "deb,appimage"
+    }
+  }
 }

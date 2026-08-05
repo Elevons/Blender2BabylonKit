@@ -1,135 +1,115 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { api, type ProjectSummary } from "../api/client";
 import { AssetBrowser } from "./AssetBrowser";
-import { BabylonEditorsPanel } from "./BabylonEditorsPanel";
-import { CreateProjectWizard } from "./CreateProjectWizard";
-import { DocsPanel } from "./DocsPanel";
+import { LevelsPanel } from "./LevelsPanel";
+import { PublishPanel } from "./PublishPanel";
 import { ServicesPanel } from "./ServicesPanel";
+import { ToolsPanel } from "./ToolsPanel";
 
+type HubTab = "develop" | "publish";
+
+/**
+ * Two-tab hub: Develop (levels, assets, services, tools) and Publish (ship builds).
+ */
 export function App(): JSX.Element
 {
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>("");
-  const [selectedLevel, setSelectedLevel] = useState<string>("_workspace");
-  const [levels, setLevels] = useState<string[]>([]);
-  const [showWizard, setShowWizard] = useState(false);
+  const [project, setProject] = useState<ProjectSummary | null>(null);
+  const [devUrl, setDevUrl] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
-
-  const activeProject = useMemo(
-    () => projects.find((p) => p.name === selectedProject),
-    [projects, selectedProject],
-  );
+  const [tab, setTab] = useState<HubTab>("develop");
 
   const refresh = useCallback(async () =>
   {
-    const projectList = await api.getProjects();
-    setProjects(projectList);
-    if (!selectedProject && projectList.length > 0)
-    {
-      setSelectedProject(projectList[0].name);
-    }
-  }, [selectedProject]);
-
-  useEffect(() => { refresh().catch((e: Error) => setError(e.message)); }, [refresh]);
+    const nextProject = await api.getProject();
+    setProject(nextProject);
+  }, []);
 
   useEffect(() =>
   {
-    if (!selectedProject)
+    refresh().catch((caught: Error) => setError(caught.message));
+  }, [refresh]);
+
+  useEffect(() =>
+  {
+    const poll = (): void =>
     {
-      setLevels([]);
-      return;
-    }
-    api.getLevels(selectedProject).then((list) =>
-    {
-      setLevels(list);
-      const project = projects.find((p) => p.name === selectedProject);
-      if (project?.defaultLevel && list.includes(project.defaultLevel))
-      {
-        setSelectedLevel(project.defaultLevel);
-      }
-      else if (list.length > 0)
-      {
-        setSelectedLevel(list[0]);
-      }
-      else
-      {
-        setSelectedLevel("_workspace");
-      }
-    }).catch((e: Error) => setError(e.message));
-  }, [selectedProject, projects]);
+      api.getDevStatus().then((status) => setDevUrl(status.url)).catch(() => undefined);
+    };
+    poll();
+    const timer = setInterval(poll, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function OnSaved(): void
+  {
+    refresh().catch((caught: Error) => setError(caught.message));
+  }
 
   return (
     <div className="hub-shell">
       <header className="hub-header">
-        <h1>Babylon Launcher</h1>
+        <h1>{project?.title ?? "Babylon Launcher"}</h1>
+        {project?.publishVersion && (
+          <span className="version-chip">v{project.publishVersion}</span>
+        )}
+
+        <nav className="hub-tabs" aria-label="Hub sections">
+          <button
+            type="button"
+            className={tab === "develop" ? "hub-tab hub-tab-active" : "hub-tab"}
+            aria-selected={tab === "develop"}
+            onClick={() => setTab("develop")}
+          >
+            Develop
+          </button>
+          <button
+            type="button"
+            className={tab === "publish" ? "hub-tab hub-tab-active" : "hub-tab"}
+            aria-selected={tab === "publish"}
+            onClick={() => setTab("publish")}
+          >
+            Publish
+          </button>
+        </nav>
+
+        <div className="hub-header-meta">
+          {devUrl ? (
+            <a className="button-link" href={devUrl} target="_blank" rel="noreferrer">
+              ▶ Open game
+            </a>
+          ) : (
+            <span className="muted">Dev server starting…</span>
+          )}
+        </div>
       </header>
 
       <main className="hub-main">
         {error && <p className="status-warn">{error}</p>}
 
-        <section className="panel panel-compact">
-          <div className="panel-head">
-            <h2>Project</h2>
-            <div className="panel-actions panel-actions-grow">
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                aria-label="Project"
-              >
-                {projects.map((project) => (
-                  <option key={project.name} value={project.name}>{project.title}</option>
-                ))}
-              </select>
-              <select
-                value={selectedLevel}
-                onChange={(e) => setSelectedLevel(e.target.value)}
-                aria-label="Level"
-              >
-                <option value="_workspace">Workspace</option>
-                {levels.map((level) => (
-                  <option key={level} value={level}>{level}</option>
-                ))}
-              </select>
-              <button type="button" className="secondary" onClick={() => setShowWizard(true)}>
-                New
-              </button>
-            </div>
-          </div>
-          {activeProject && (
-            <p className="muted panel-foot">
-              Live Link path: <code>{activeProject.blenderExportPath}</code>
-            </p>
-          )}
-        </section>
+        {tab === "develop" && (
+          <>
+            <ServicesPanel onError={(message) => setError(message)} />
 
-        {showWizard && (
-          <CreateProjectWizard
-            onClose={() => setShowWizard(false)}
-            onCreated={async (name) =>
-            {
-              setShowWizard(false);
-              await refresh();
-              setSelectedProject(name);
-            }}
-          />
+            <ToolsPanel onError={(message) => setError(message)} />
+
+            {project && (
+              <LevelsPanel
+                project={project}
+                onError={(message) => setError(message)}
+                onSaved={OnSaved}
+              />
+            )}
+
+            {project && <AssetBrowser defaultLevel={project.defaultLevel} />}
+          </>
         )}
 
-        <DocsPanel onError={(message) => setError(message)} />
-
-        <BabylonEditorsPanel />
-
-        {selectedProject && (
-          <ServicesPanel
-            project={selectedProject}
+        {tab === "publish" && project && (
+          <PublishPanel
+            project={project}
             onError={(message) => setError(message)}
-          />
-        )}
-
-        {selectedProject && (
-          <AssetBrowser
-            project={selectedProject}
-            level={selectedLevel}
+            onSaved={OnSaved}
           />
         )}
       </main>

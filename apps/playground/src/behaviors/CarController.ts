@@ -154,7 +154,7 @@ export default class CarController extends Behavior
   /** Per-wheel grounded state aligned with CollectWheelEntities() slot order. */
   private wheelGrounded: boolean[] = [];
   /** Reusable raycast result — must be pooled between calls (BJS V2 physics). */
-  private raycastResult = new PhysicsRaycastResult();
+  private raycastResult: PhysicsRaycastResult = new PhysicsRaycastResult();
   /** Debug line per wheel slot; null entries when debug is off or unassigned. */
   private debugLines: (LinesMesh | null)[] = [];
   /** Scratch vectors and matrix so the per-frame raycast doesn't allocate. */
@@ -639,11 +639,13 @@ export default class CarController extends Behavior
     this.rayEnd.copyFrom(this.rayStart);
     this.rayEnd.addInPlace(this.rayDirection.scale(this.groundRaycastDistance));
 
-    this.scene.getPhysicsEngine()?.raycastToRef(
-      this.rayStart,
-      this.rayEnd,
-      this.raycastResult
-    );
+    const physicsEngine = this.scene.getPhysicsEngine();
+    if (!physicsEngine)
+    {
+      return false;
+    }
+
+    this.raycastResult = physicsEngine.raycast(this.rayStart, this.rayEnd);
 
     let grounded = this.raycastResult.hasHit;
 

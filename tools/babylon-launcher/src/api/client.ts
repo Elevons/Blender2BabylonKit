@@ -6,6 +6,35 @@ export interface ProjectSummary
   devPort: number;
   blenderExportPath: string;
   hasLevels: boolean;
+  hasTauri: boolean;
+  hasAndroid: boolean;
+  publishVersion?: string;
+  webBase?: string;
+  desktopTargets?: string;
+  desktopTargetsPreset?: string;
+  icon?: string;
+  productName?: string;
+  identifier?: string;
+  outputDir?: string;
+  manifest?: {
+    levels?: {
+      include?: string[];
+      start?: string;
+      startManifest?: string;
+    };
+    publish?: {
+      productName?: string;
+      identifier?: string;
+      version?: string;
+      icon?: string;
+      outputDir?: string;
+      web?: { base?: string };
+      desktop?: {
+        targetsPreset?: string;
+        targets?: string | string[];
+      };
+    };
+  };
 }
 
 export interface DevServerStatus
@@ -50,6 +79,21 @@ export interface DocsStatus
   url: string;
 }
 
+export interface PublishJobStatus
+{
+  target: "web" | "desktop" | "android" | null;
+  running: boolean;
+  exitCode: number | null;
+  logLines: string[];
+}
+
+export interface ArtifactInfo
+{
+  fileName: string;
+  sizeBytes: number;
+  modifiedAt: string;
+}
+
 async function Request<T>(url: string, init?: RequestInit): Promise<T>
 {
   const response = await fetch(url, init);
@@ -62,41 +106,56 @@ async function Request<T>(url: string, init?: RequestInit): Promise<T>
 }
 
 export const api = {
-  getProjects: () => Request<ProjectSummary[]>("/api/projects"),
-  getLevels: (app: string) => Request<string[]>(`/api/projects/${encodeURIComponent(app)}/levels`),
-  createProject: (body: {
-    name: string;
-    title?: string;
-    level?: string;
-    template?: "empty" | "minimal" | "sample";
-  }) => Request<{ name: string; path: string; blenderExportPath: string }>("/api/projects", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }),
-  listAssets: (app: string, level: string, folder?: string) =>
+  getProject: () => Request<ProjectSummary>("/api/project"),
+  getLevels: () => Request<string[]>("/api/project/levels"),
+  updateLevels: (body: { include: string[]; start: string; startManifest?: string }) =>
+    Request<unknown>("/api/project/levels", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  getDesktopTargetPresets: () =>
+    Request<Array<{ id: string; label: string; targets: string }>>("/api/project/publish/presets"),
+  updatePublish: (body: {
+    productName?: string;
+    identifier?: string;
+    version?: string;
+    icon?: string;
+    outputDir?: string;
+    webBase?: string;
+    desktopTargetsPreset?: string;
+    desktopTargets?: string;
+  }) =>
+    Request<unknown>("/api/project/publish", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  applyIcon: () =>
+    Request<{ ok: boolean; log: string }>("/api/project/publish/icon", { method: "POST" }),
+  listAssets: (level: string, folder?: string) =>
   {
     const query = folder ? `?folder=${encodeURIComponent(folder)}` : "";
     return Request<string[] | Record<string, string[]>>(
-      `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}${query}`,
+      `/api/project/assets/${encodeURIComponent(level)}${query}`,
     );
   },
-  getDevStatus: (app: string) =>
-    Request<DevServerStatus>(`/api/dev/${encodeURIComponent(app)}`),
-  startDev: (app: string) =>
-    Request<DevServerStatus>(`/api/dev/${encodeURIComponent(app)}/start`, { method: "POST" }),
-  stopDev: (app: string) =>
-    Request<DevServerStatus>(`/api/dev/${encodeURIComponent(app)}/stop`, { method: "POST" }),
+  getDevStatus: () => Request<DevServerStatus>("/api/dev"),
+  startDev: () => Request<DevServerStatus>("/api/dev/start", { method: "POST" }),
+  stopDev: () => Request<DevServerStatus>("/api/dev/stop", { method: "POST" }),
   getMcpStatus: () => Request<McpStatus>("/api/mcp"),
   buildMcp: () => Request<McpStatus>("/api/mcp/build", { method: "POST" }),
   startMcp: () => Request<McpStatus>("/api/mcp/start", { method: "POST" }),
   stopMcp: () => Request<McpStatus>("/api/mcp/stop", { method: "POST" }),
-  getServices: (app: string) =>
-    Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}`),
-  startAllServices: (app: string) =>
-    Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}/start-all`, { method: "POST" }),
-  stopAllServices: (app: string) =>
-    Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}/stop-all`, { method: "POST" }),
+  getServices: () => Request<ServicesStatus>("/api/services"),
+  startAllServices: () =>
+    Request<ServicesStatus>("/api/services/start-all", { method: "POST" }),
+  stopAllServices: () =>
+    Request<ServicesStatus>("/api/services/stop-all", { method: "POST" }),
   getDocsStatus: () => Request<DocsStatus>("/api/docs"),
   buildDocs: () => Request<DocsStatus>("/api/docs/build", { method: "POST" }),
+  startPublish: (target: "web" | "desktop" | "android") =>
+    Request<PublishJobStatus>(`/api/project/publish/${target}`, { method: "POST" }),
+  getPublishStatus: () => Request<PublishJobStatus>("/api/project/publish/status"),
+  getArtifacts: () => Request<ArtifactInfo[]>("/api/project/publish/artifacts"),
 };

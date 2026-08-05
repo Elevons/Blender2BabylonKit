@@ -5,11 +5,13 @@ import { createServer as createViteServer } from "vite";
 
 import { CreateApiApp } from "./api.js";
 import { LAUNCHER_PORT } from "./paths.js";
+import { GetProjectSummary, StartDevServer } from "./project.js";
 
 const launcherRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 async function Main(): Promise<void>
 {
+  const summary = GetProjectSummary();
   const app = express();
   app.use(CreateApiApp());
 
@@ -24,6 +26,18 @@ async function Main(): Promise<void>
   const server = app.listen(LAUNCHER_PORT, () =>
   {
     console.log(`Babylon Launcher: http://localhost:${LAUNCHER_PORT}`);
+    console.log(`Project: ${summary.title} — game at http://localhost:${summary.devPort}`);
+    void StartDevServer().then((status) =>
+    {
+      if (status.error)
+      {
+        console.error(`Dev server: ${status.error}`);
+      }
+      else if (status.running)
+      {
+        console.log(`Dev server: ${status.url}`);
+      }
+    });
   });
 
   server.on("error", (error: NodeJS.ErrnoException) =>
@@ -33,7 +47,7 @@ async function Main(): Promise<void>
       console.error(
         `Port ${LAUNCHER_PORT} is already in use (another launcher may still be running).\n` +
         `Stop it with: fuser -k ${LAUNCHER_PORT}/tcp\n` +
-        `Or use another port: LAUNCHER_PORT=3201 npm run launcher:dev`,
+        `Or use another port: LAUNCHER_PORT=3201 npm run hub -- --app playground`,
       );
       process.exit(1);
     }

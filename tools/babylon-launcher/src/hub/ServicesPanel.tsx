@@ -4,7 +4,6 @@ import { api, type DevServerStatus, type ServicesStatus } from "../api/client";
 
 interface Props
 {
-  project: string;
   onError: (message: string) => void;
 }
 
@@ -39,7 +38,7 @@ function McpStatusText(mcp: ServicesStatus["mcp"] | undefined): string
   return "built, stopped";
 }
 
-export function ServicesPanel({ project, onError }: Props): JSX.Element
+export function ServicesPanel({ onError }: Props): JSX.Element
 {
   const [services, setServices] = useState<ServicesStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -47,14 +46,13 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
 
   const refresh = useCallback(async () =>
   {
-    if (!project) { return; }
-    const next = await api.getServices(project);
+    const next = await api.getServices();
     setServices(next);
-  }, [project]);
+  }, []);
 
   useEffect(() =>
   {
-    refresh().catch((e: Error) => onError(e.message));
+    refresh().catch((error: Error) => onError(error.message));
     const timer = setInterval(() =>
     {
       refresh().catch(() => undefined);
@@ -78,9 +76,9 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
         onError(devError);
       }
     }
-    catch (e)
+    catch (error)
     {
-      onError((e as Error).message);
+      onError((error as Error).message);
     }
     finally
     {
@@ -106,16 +104,16 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
         <div className="panel-actions">
           <button
             type="button"
-            disabled={busy || !project}
-            onClick={() => { Run(() => api.startAllServices(project)); }}
+            disabled={busy}
+            onClick={() => { Run(() => api.startAllServices()); }}
           >
             Start All
           </button>
           <button
             type="button"
             className="secondary"
-            disabled={busy || !project}
-            onClick={() => { Run(() => api.stopAllServices(project)); }}
+            disabled={busy}
+            onClick={() => { Run(() => api.stopAllServices()); }}
           >
             Stop All
           </button>
@@ -134,8 +132,8 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
           <div className="service-actions">
             <button
               type="button"
-              disabled={busy || !project}
-              onClick={() => { Run(() => api.startDev(project)); }}
+              disabled={busy}
+              onClick={() => { Run(() => api.startDev()); }}
             >
               Start
             </button>
@@ -143,7 +141,7 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
               type="button"
               className="secondary"
               disabled={busy || !dev?.running}
-              onClick={() => { Run(() => api.stopDev(project)); }}
+              onClick={() => { Run(() => api.stopDev()); }}
             >
               Stop
             </button>
@@ -191,7 +189,7 @@ export function ServicesPanel({ project, onError }: Props): JSX.Element
               type="button"
               className="secondary"
               disabled={!mcp?.built}
-              onClick={() => { CopyCursorConfig().catch((e: Error) => onError(e.message)); }}
+              onClick={() => { CopyCursorConfig().catch((error: Error) => onError(error.message)); }}
             >
               {copied ? "Copied" : "Cursor Config"}
             </button>

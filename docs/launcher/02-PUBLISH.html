@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<!-- Shared prose chapter shell. Edit once, then npm run docs:build.
+     Body HTML lives in scripts/docs/prose/content/ — not markdown. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Babylon Level Kit — 02 — Publish</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0c0c0a;
+    color: #d4d6e4;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+    padding: 0 20px 72px;
+  }
+  #toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    margin: 0 -4px 4px;
+    background: linear-gradient(#0c0c0a 85%, transparent);
+    border-bottom: 1px solid #1e1c28;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+  }
+  #toolbar a {
+    color: #9aa8e8;
+    text-decoration: none;
+  }
+  #toolbar a:hover { color: #c8d4ff; text-decoration: underline; }
+  #toolbar .site { color: #e8e4d8; font-weight: 600; }
+  #toolbar .sep { color: #454560; margin: 0 2px; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  body.has-mermaid .wrap { max-width: min(1180px, 96vw); }
+  .chapter-nav {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #8b91ad;
+    margin: 8px 0 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1e1c28;
+  }
+  .chapter-nav a { color: #9aa8e8; text-decoration: none; }
+  .chapter-nav a:hover { text-decoration: underline; }
+  .chapter-nav .dim { color: #565d7a; }
+  article h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #f0ead8;
+    letter-spacing: .01em;
+    margin-bottom: 16px;
+    line-height: 1.25;
+  }
+  article h2 {
+    font-size: 18px;
+    font-weight: 650;
+    color: #e8e4d8;
+    margin: 32px 0 12px;
+    padding-top: 8px;
+    border-top: 1px solid #1a1824;
+  }
+  article h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0cce0;
+    margin: 22px 0 8px;
+  }
+  article h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b8b4c8;
+    margin: 16px 0 6px;
+  }
+  article p { margin: 0 0 14px; }
+  article .doc-links {
+    font-size: 13.5px;
+    color: #9aa0bc;
+    margin: -8px 0 20px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+  }
+  article .feature-toc ul {
+    columns: 2;
+    gap: 24px;
+    margin: 0 0 0 1.1em;
+    font-size: 14px;
+  }
+  article .feature-toc {
+    margin-bottom: 8px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252330;
+  }
+  @media (max-width: 640px) {
+    article .feature-toc ul { columns: 1; }
+  }
+  article ul, article ol {
+    margin: 0 0 14px 1.35em;
+  }
+  article li { margin-bottom: 6px; }
+  article li p { margin-bottom: 6px; }
+  article blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border-left: 3px solid #4f6df5;
+    background: #12121a;
+    border-radius: 0 8px 8px 0;
+    color: #b8bdd8;
+    font-size: 14.5px;
+  }
+  article blockquote p:last-child { margin-bottom: 0; }
+  article a { color: #8fa3ff; }
+  article a:hover { color: #b8c8ff; }
+  article strong { color: #f0ead8; font-weight: 600; }
+  article .trace-interactive {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: #101018;
+    border: 1px solid #24222f;
+    border-left: 3px solid #4f6df5;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  article .trace-legend {
+    margin: 0 0 24px;
+    padding: 14px 16px;
+    background: #101018;
+    border: 1px solid #1e1c28;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  article .trace-legend p { margin-bottom: 10px; }
+  article .trace-legend ol {
+    margin: 0 0 0 1.2em;
+    font-size: 13.5px;
+    color: #b8bdd8;
+  }
+  article .trace-legend li { margin-bottom: 4px; }
+  article .trace-summary {
+    margin: 0 0 10px;
+    font-size: 14.5px;
+    color: #b8bdd8;
+  }
+  article section.trace-feature {
+    margin: 0 0 28px;
+    padding: 20px 22px 22px;
+    background: #0e0e16;
+    border: 1px solid #2a2838;
+    border-radius: 12px;
+  }
+  article section.trace-feature:last-of-type {
+    margin-bottom: 0;
+  }
+  article section.trace-feature h3 {
+    margin: 0 0 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #252330;
+    font-size: 16px;
+    color: #e8e4d8;
+  }
+  article section.trace-feature .trace-summary {
+    margin-bottom: 12px;
+  }
+  article section.trace-feature .trace-interactive {
+    margin-bottom: 14px;
+  }
+  article section.trace-feature ol.trace-flow {
+    margin-bottom: 0;
+  }
+  article section.trace-feature .trace-footnote {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid #1e1c28;
+  }
+  article ol.trace-flow {
+    margin: 0 0 18px;
+    padding: 0;
+    list-style: none;
+    counter-reset: trace-step;
+  }
+  article ol.trace-flow > li {
+    counter-increment: trace-step;
+    position: relative;
+    padding: 12px 12px 12px 38px;
+    margin-bottom: 8px;
+    background: #0e0e14;
+    border: 1px solid #1e1c28;
+    border-radius: 6px;
+    line-height: 1.55;
+  }
+  article ol.trace-flow > li::before {
+    content: counter(trace-step);
+    position: absolute;
+    left: 10px;
+    top: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #1a2040;
+    color: #9aa8e8;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  article .step-stage {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c8d4ff;
+    background: #1a2040;
+    border-radius: 3px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+  article .step-what {
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    color: #e0e2ee;
+  }
+  article .step-code {
+    margin: 0;
+    font-size: 12.5px;
+    color: #8b91ad;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    line-height: 1.45;
+  }
+  article .step-code code {
+    font-size: 1em;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #a8b4d8;
+  }
+  article .trace-footnote {
+    margin: 0;
+    font-size: 13px;
+    color: #8b91ad;
+  }
+  article code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: #16161e;
+    border: 1px solid #2a2838;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #e0c878;
+  }
+  article pre {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #c8ccd8;
+  }
+  article pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 18px;
+    font-size: 13.5px;
+  }
+  article th, article td {
+    border: 1px solid #2a2838;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  article th {
+    background: #16161e;
+    color: #e0dce8;
+    font-weight: 600;
+  }
+  article td { color: #c4c8d8; }
+  article td code { font-size: 0.85em; }
+  article hr {
+    border: none;
+    border-top: 1px solid #1e1c28;
+    margin: 28px 0;
+  }
+  article .mermaid {
+    margin: 0 0 24px;
+    padding: 20px 12px;
+    background: #0e0e14;
+    border: 1px solid #24222f;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  article .mermaid svg {
+    display: block;
+    margin: 0 auto;
+    max-width: none !important;
+    height: auto;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #1d1b27;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #565d7a;
+    line-height: 1.7;
+  }
+  footer a { color: #8fa3ff; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body class="has-mermaid">
+<div class="wrap">
+  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+    <span class="sep">/</span>
+    <a href="00-INDEX.html">Launcher</a>
+    <span class="sep">/</span>
+    <a href="../engine/00-INDEX.html">Engine</a></nav>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-LAUNCHER.html">Prev</a></p>
+  <article><h1>02 — Publish</h1>
+<p>This chapter covers how a kit app boots a level, how you choose which levels ship, and how you build web, desktop, and Android artifacts.</p>
+
+<p class="doc-links">
+  <strong>See also:</strong>
+  <a href="01-LAUNCHER.html">Launcher</a> ·
+  <a href="../engine/09-WORKFLOW.html">Workflow</a>
+</p>
+
+<hr>
+
+<h2>Overview</h2>
+<p>Publishing is <strong>per project</strong>. Shared scripts live in <code>scripts/publish/</code>. Project settings live in <code>babylon-project.json</code> under <code>levels</code> and <code>publish</code>. Artifacts land in the configured output folder (default <code>release/</code>).</p>
+<p>The hub Publish panel shells out to the same scripts. CLI works without the hub.</p>
+
+<pre class="mermaid">flowchart LR
+  manifest[babylon-project.json]
+  vite[vite build]
+  dist[dist/]
+  release[output folder]
+  tauri[tauri build]
+  manifest --> vite
+  vite --> dist
+  dist --> release
+  dist --> tauri
+  tauri --> release
+  hub[Hub Publish panel] --> scripts[scripts/publish]
+  scripts --> vite
+  scripts --> tauri</pre>
+
+<h2>Boot manifest</h2>
+<p>Apps do not hardcode a level path in <code>main.ts</code>. The Vite plugin <code>ServeBootManifest</code> in the app's <code>vite.config.ts</code>:</p>
+<ul>
+<li>Serves <code>GET /bjs-boot.json</code> in development (reads <code>babylon-project.json</code> each time)</li>
+<li>Emits <code>bjs-boot.json</code> into <code>dist/</code> on build</li>
+<li>Reloads the browser when <code>babylon-project.json</code> changes</li>
+</ul>
+<p>Payload shape:</p>
+<pre><code class="language-json">{
+  "startLevel": "Train Scene",
+  "manifestPath": "levels/Train Scene/Train Scene.scene.json"
+}</code></pre>
+<p><code>main.ts</code> loads:</p>
+<pre><code class="language-ts">const boot = await FetchBootManifest();
+const manifestUrl = import.meta.env.BASE_URL + boot.manifestPath;</code></pre>
+<p>Use a non-default manifest filename with <code>levels.startManifest</code>.</p>
+<p>This keeps web subdirectory deploys and Tauri custom-protocol loads working without patching built JS.</p>
+
+<h2>Levels block</h2>
+<pre><code class="language-json">"levels": {
+  "include": ["Tutorial", "Arena"],
+  "start": "Tutorial"
+}</code></pre>
+<table>
+<thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>include</code></td><td>Level folders under <code>public/levels/</code> that ship</td></tr>
+<tr><td><code>start</code></td><td>Boot level folder (must be in <code>include</code> for publish)</td></tr>
+<tr><td><code>startManifest</code></td><td>Optional file name if not <code>&lt;start&gt;.scene.json</code></td></tr>
+</tbody>
+</table>
+<p>If <code>levels</code> is missing, <code>start</code> falls back to <code>defaultLevel</code>, and <code>include</code> defaults to every exported folder.</p>
+<p>Edit this in the hub Levels panel or by hand. Publish scripts prune <code>dist/levels/</code> to the include list after <code>vite build</code>.</p>
+
+<h2>Publish block</h2>
+<pre><code class="language-json">"publish": {
+  "productName": "Playground",
+  "identifier": "com.bjs.playground",
+  "version": "0.1.0",
+  "icon": "icon.png",
+  "outputDir": "release",
+  "web": { "base": "/" },
+  "desktop": {
+    "targetsPreset": "linux",
+    "targets": "deb,appimage"
+  }
+}</code></pre>
+
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>productName</code></td><td>Window title and installer product name</td></tr>
+<tr><td><code>identifier</code></td><td>Reverse-DNS bundle id (e.g. <code>com.studio.game</code>)</td></tr>
+<tr><td><code>version</code></td><td>Version stamped into Tauri and zip names</td></tr>
+<tr><td><code>icon</code></td><td>Path to a square PNG relative to the app (or absolute)</td></tr>
+<tr><td><code>outputDir</code></td><td>Artifact folder — relative to the app, or absolute</td></tr>
+<tr><td><code>web.base</code></td><td>Vite <code>--base</code> for web builds (must start and end with <code>/</code>)</td></tr>
+<tr><td><code>desktop.targets</code></td><td>Tauri <code>bundle.targets</code> value or comma list</td></tr>
+<tr><td><code>desktop.targetsPreset</code></td><td>Hub preset id (<code>all</code>, <code>linux</code>, <code>windows</code>, …)</td></tr>
+</tbody>
+</table>
+<p>The hub Publish panel edits these fields and writes them back to the file.</p>
+
+<h2 id="cli">CLI commands</h2>
+<p>From the repo root:</p>
+<table>
+<thead><tr><th>Command</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><code>npm run publish:web -- --app &lt;name&gt; [--base /path/]</code></td><td>Typecheck, Vite build, prune levels, copy site to <code>outputDir/web/</code>, zip</td></tr>
+<tr><td><code>npm run publish:init -- --app &lt;name&gt; [--force]</code></td><td>Stamp <code>src-tauri/</code> from the template</td></tr>
+<tr><td><code>npm run publish:icon -- --app &lt;name&gt;</code></td><td>Generate Tauri icon set from <code>publish.icon</code></td></tr>
+<tr><td><code>npm run publish:desktop -- --app &lt;name&gt;</code></td><td>Web build (base <code>./</code>) + <code>tauri build</code></td></tr>
+<tr><td><code>npm run publish:android -- --app &lt;name&gt;</code></td><td>Web build + <code>tauri android build --apk</code></td></tr>
+</tbody>
+</table>
+<p>Shared helpers: <code>scripts/publish/config.mjs</code>, <code>web.mjs</code> (exports <code>TypecheckApp</code>, <code>BuildWeb</code>, <code>PruneLevels</code>), <code>icon.mjs</code>.</p>
+
+<h2>Web publish</h2>
+<ol>
+<li>Typecheck the app (<code>tsc --noEmit</code>).</li>
+<li>Run <code>vite build --base &lt;web.base or --base&gt;</code>.</li>
+<li>Delete level folders under <code>dist/levels/</code> that are not in <code>levels.include</code>.</li>
+<li>Copy the pruned site to <code>&lt;outputDir&gt;/web/</code> — that folder is the complete static site (index.html, assets/, levels/, bjs-boot.json).</li>
+<li>Zip that folder to <code>&lt;outputDir&gt;/&lt;app&gt;-&lt;version&gt;-web.zip</code> when the <code>zip</code> binary exists.</li>
+</ol>
+<p>Upload <code>web/</code> (or the zip) to any static host. Preview locally:</p>
+<pre><code class="language-bash">npx serve apps/playground/release/web</code></pre>
+<p>Example with a subdirectory base:</p>
+<pre><code class="language-bash">npm run publish:web -- --app playground --base /demo/</code></pre>
+
+<h2>Desktop (Tauri)</h2>
+
+<h3>Init</h3>
+<pre><code class="language-bash">npm run publish:init -- --app playground</code></pre>
+<p>Copies <code>scripts/publish/templates/tauri/</code> into <code>apps/&lt;name&gt;/src-tauri/</code>, fills product name, identifier, version, and desktop targets, then applies the icon if <code>publish.icon</code> is set.</p>
+
+<h3>Build</h3>
+<pre><code class="language-bash">npm run publish:desktop -- --app playground</code></pre>
+<p>Steps:</p>
+<ol>
+<li>Sync identity and <code>bundle.targets</code> into <code>tauri.conf.json</code>.</li>
+<li>Regenerate icons if <code>publish.icon</code> is set.</li>
+<li>Typecheck, Vite build with base <code>./</code>, prune levels.</li>
+<li>Run <code>npx tauri build</code>.</li>
+<li>Copy installers from <code>src-tauri/target/release/bundle/</code> into <code>outputDir</code>.</li>
+</ol>
+
+<h3>Desktop targets</h3>
+<p>Presets (hub dropdown and <code>targetsPreset</code>):</p>
+<table>
+<thead><tr><th>Preset</th><th>Tauri <code>bundle.targets</code></th></tr></thead>
+<tbody>
+<tr><td><code>all</code></td><td><code>all</code></td></tr>
+<tr><td><code>windows</code></td><td><code>msi</code></td></tr>
+<tr><td><code>macos</code></td><td><code>dmg</code></td></tr>
+<tr><td><code>linux</code></td><td><code>deb,appimage</code></td></tr>
+<tr><td><code>windows-macos</code></td><td><code>msi,dmg</code></td></tr>
+<tr><td><code>windows-linux</code></td><td><code>msi,deb,appimage</code></td></tr>
+<tr><td><code>macos-linux</code></td><td><code>dmg,deb,appimage</code></td></tr>
+<tr><td><code>none</code></td><td>Bundling off</td></tr>
+</tbody>
+</table>
+<p><strong>Important:</strong> targets select installer <em>formats</em>. A successful build still needs the matching OS (or CI). From Linux you get Linux packages even if the preset lists <code>msi</code> or <code>dmg</code>.</p>
+
+<h3>Linux prerequisites</h3>
+<p>Install before the first desktop build:</p>
+<pre><code class="language-bash">sudo apt install libwebkit2gtk-4.1-dev libdbus-1-dev pkg-config \
+  libayatana-appindicator3-dev librsvg2-dev</code></pre>
+<p>Also install a Rust toolchain (<a href="https://rustup.rs/">rustup</a>). Official guide: <a href="https://v2.tauri.app/start/prerequisites/">Tauri prerequisites</a>.</p>
+<p>If the build fails with <code>dbus-1.pc</code> not found, install <code>libdbus-1-dev</code>.</p>
+
+<h2>App icon</h2>
+<p>Tauri needs a real square PNG. A 1×1 placeholder produces broken <code>.ico</code> / <code>.icns</code> files.</p>
+<ol>
+<li>Put a square PNG in the app (prefer <strong>1024×1024</strong>, at least 512×512).</li>
+<li>Set <code>publish.icon</code> to that path (e.g. <code>icon.png</code>).</li>
+<li>Run <code>npm run publish:icon -- --app &lt;name&gt;</code> or click <strong>Apply icon</strong> in the hub.</li>
+</ol>
+<p><code>scripts/publish/icon.mjs</code> checks that the file exists, is PNG, is square, and is large enough, then runs <code>npx tauri icon</code>. Output goes to <code>src-tauri/icons/</code>.</p>
+
+<h2>Android</h2>
+<pre><code class="language-bash">npm run publish:android -- --app playground</code></pre>
+<p>Requires <code>ANDROID_HOME</code>, an NDK (or <code>NDK_HOME</code>), and Java 17+. On first run the script runs <code>tauri android init</code> if <code>src-tauri/gen/android/</code> is missing. Artifacts (<code>.apk</code> / <code>.aab</code>) copy into <code>outputDir</code>.</p>
+<p>v1 ships debug-signed APKs for sideloading. For Play Store signing, follow the <a href="https://v2.tauri.app/distribute/sign-android/">Tauri Android signing guide</a> and keep the keystore out of git.</p>
+<p><strong>iOS</strong> is not automated here. On a Mac with Xcode, use <code>npx tauri ios init</code> / <code>npx tauri ios build</code> with the same publish identity.</p>
+
+<h2>Hub Publish panel</h2>
+<p>Open the hub's <strong>Publish</strong> tab. Web / Desktop / Android <strong>Build</strong> buttons sit at the top. The collapsible <strong>Settings</strong> row below them holds the identity fields: app name, version, bundle id, web base path, output folder, desktop targets, icon path.</p>
+<p><strong>Save settings</strong> writes <code>babylon-project.json</code>. <strong>Build</strong> buttons save first, then start a job. While a job runs, the panel polls logs once per second and lists files in the output folder when the job ends.</p>
+
+<h2 id="rest-api">REST API</h2>
+<table>
+<thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>GET</code></td><td><code>/api/project/publish/presets</code></td><td>Desktop target presets</td></tr>
+<tr><td><code>PUT</code></td><td><code>/api/project/publish</code></td><td>Update publish identity / targets / icon / output</td></tr>
+<tr><td><code>POST</code></td><td><code>/api/project/publish/icon</code></td><td>Run <code>publish:icon</code></td></tr>
+<tr><td><code>POST</code></td><td><code>/api/project/publish/:target</code></td><td><code>web</code> | <code>desktop</code> | <code>android</code> — start job (409 if busy)</td></tr>
+<tr><td><code>GET</code></td><td><code>/api/project/publish/status</code></td><td>Running flag, exit code, log lines</td></tr>
+<tr><td><code>GET</code></td><td><code>/api/project/publish/artifacts</code></td><td>Files in the output folder</td></tr>
+</tbody>
+</table>
+
+<h2>Gitignore</h2>
+<p>These paths are ignored:</p>
+<ul>
+<li><code>apps/*/release/</code></li>
+<li><code>apps/*/src-tauri/target/</code></li>
+<li><code>apps/*/src-tauri/gen/</code></li>
+</ul>
+
+<h2>Source layout</h2>
+<pre><code>scripts/publish/
+  config.mjs              # Readers, target presets, output path
+  web.mjs                 # Web build + prune + zip
+  init.mjs                # Stamp src-tauri/
+  icon.mjs                # Validate PNG + tauri icon
+  desktop.mjs             # Tauri desktop build
+  android.mjs             # Tauri Android build
+  templates/tauri/        # Parameterized Tauri 2 scaffold
+
+apps/&lt;name&gt;/
+  babylon-project.json    # levels + publish blocks
+  vite.config.ts          # ServeBootManifest + level reload
+  src/main.ts             # FetchBootManifest
+  src-tauri/              # After publish:init
+  release/                # Default artifact folder</code></pre>
+</article>
+  <footer>
+    Edit <code>scripts/docs/prose/content/launcher/02-PUBLISH.html</code>, then <code>npm run docs:build</code>.
+    · <a href="../index.html">Search all docs</a>
+  </footer>
+</div>
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: "dark",
+  securityLevel: "loose",
+  themeVariables: {
+    fontSize: "16px",
+    fontFamily: "ui-sans-serif, system-ui, sans-serif",
+  },
+  flowchart: {
+    useMaxWidth: false,
+    htmlLabels: true,
+    nodeSpacing: 48,
+    rankSpacing: 56,
+    padding: 18,
+  },
+});
+</script>
+</body>
+</html>

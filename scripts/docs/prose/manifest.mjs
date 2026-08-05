@@ -218,6 +218,14 @@ export const PROSE_CHAPTERS = [
     title: "01 — Launcher",
     fragment: "launcher/01-LAUNCHER.html",
     prev: "00-INDEX.html",
+    next: "02-PUBLISH.html",
+  },
+  {
+    href: "launcher/02-PUBLISH.html",
+    side: "engine",
+    title: "02 — Publish",
+    fragment: "launcher/02-PUBLISH.html",
+    prev: "01-LAUNCHER.html",
   },
 ];
 

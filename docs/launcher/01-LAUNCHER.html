@@ -338,18 +338,20 @@
     <a href="00-INDEX.html">Launcher</a>
     <span class="sep">/</span>
     <a href="../engine/00-INDEX.html">Engine</a></nav>
-  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="00-INDEX.html">Prev</a></p>
+  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="00-INDEX.html">Prev</a> <span class="dim">·</span> <a href="02-PUBLISH.html">Next →</a></p>
   <article><h1>01 — Babylon Launcher</h1>
+
 <h2>What it is</h2>
-<p>The launcher is a <strong>local control panel</strong> for Blender2BabylonKit projects. One Express server exposes a JSON REST API and (in development) Vite middleware for the React hub. The hub lets you:</p>
+<p>The launcher is a <strong>local control panel for one project</strong>. One Express server exposes a JSON REST API and (in development) Vite middleware for the React hub. The hub:</p>
 <ul>
-<li>Pick a project and level</li>
-<li>Create a new app from the playground template</li>
-<li>Start/stop the game's Vite dev server and open the runtime preview</li>
-<li>Build, start, stop, and copy Cursor config for <strong>bjs-mcp</strong></li>
-<li>List JSON files in per-level asset folders (<code>gui/</code>, <code>particles/</code>, …)</li>
+<li>Shows the bound project and starts its Vite game server on boot</li>
+<li>Edits which levels ship and which level boots first</li>
+<li>Starts and stops Vite and <strong>bjs-mcp</strong></li>
+<li>Lists JSON files in per-level asset folders</li>
+<li>Runs publish jobs (see <a href="02-PUBLISH.html">Publish</a>)</li>
 </ul>
-<p>Nothing in the launcher runs inside the game runtime. It only orchestrates processes and reads/writes files under <code>apps/&lt;name&gt;/</code>.</p>
+<p>Create new apps with the CLI (<code>npm run create</code>). The hub does not scaffold projects.</p>
+
 <h2>Architecture</h2>
 <pre><code>┌─────────────────────────────────────────────────────────────┐
 │  Browser  →  http://localhost:3200                          │
@@ -357,126 +359,201 @@
                             │
          ┌──────────────────┴──────────────────┐
          │  Express (CreateApiApp)               │
-         │  /api/*  →  projects, dev, mcp, assets│
+         │  /api/project, /api/dev, /api/mcp, …  │
          └──────────────────┬──────────────────┘
                             │
-    dev: Vite middleware (server/dev.ts)  →  React hub (src/hub/)
-    prod: express.static(dist/client)     →  prebuilt hub (server/index.ts)</code></pre>
-<table><thead><tr><th>Piece</th><th>Location</th><th>Role</th></tr></thead><tbody><tr><td>Hub UI</td><td><code>src/hub/</code></td><td>React panels: project picker, services, assets</td></tr><tr><td>API client</td><td><code>src/api/client.ts</code></td><td><code>fetch</code> wrappers for <code>/api/*</code></td></tr><tr><td>REST routes</td><td><code>server/api.ts</code></td><td>Express router</td></tr><tr><td>Project discovery</td><td><code>server/projects.ts</code></td><td>Scan <code>apps/</code>, dev-server child processes</td></tr><tr><td>Project scaffold</td><td><code>server/createProject.ts</code></td><td>Shell out to <code>scripts/create-app.mjs</code></td></tr><tr><td>MCP control</td><td><code>server/mcp.ts</code></td><td>Build/start <code>tools/bjs-mcp</code></td></tr><tr><td>Asset I/O</td><td><code>server/assets.ts</code></td><td>List/read/write JSON under level roots</td></tr><tr><td>Docs</td><td><code>server/docs.ts</code></td><td>Build and serve <code>docs/</code> at <code>/docs</code></td></tr><tr><td>Paths &amp; manifest</td><td><code>server/paths.ts</code></td><td><code>REPO_ROOT</code>, <code>APPS_DIR</code>, <code>babylon-project.json</code></td></tr></tbody></table>
-<p><strong>Development</strong> (<code>npm run launcher:dev</code> → <code>server/dev.ts</code>): API is mounted first, then Vite runs in middleware mode so the hub hot-reloads.</p>
-<p><strong>Production</strong> (<code>npm run launcher:start</code> → <code>server/index.ts</code>): API plus static files from <code>dist/client/</code>; unknown paths fall through to <code>index.html</code>.</p>
-<p>Default port: <strong>3200</strong> (<code>LAUNCHER_PORT</code> env var). Each game's Vite port comes from that app's <code>babylon-project.json</code> (<code>dev.port</code>, default <strong>5173</strong>).</p>
+    auto-start → Vite in PROJECT_DIR (dev.port)
+    dev: Vite middleware (server/dev.ts) → React hub
+    prod: express.static(dist/client)    → prebuilt hub</code></pre>
+
+<table>
+<thead><tr><th>Piece</th><th>Location</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td>Hub UI</td><td><code>src/hub/</code></td><td>Levels, services, assets, publish panels</td></tr>
+<tr><td>API client</td><td><code>src/api/client.ts</code></td><td><code>fetch</code> wrappers for <code>/api/*</code></td></tr>
+<tr><td>REST routes</td><td><code>server/api.ts</code></td><td>Express router</td></tr>
+<tr><td>Project</td><td><code>server/project.ts</code></td><td>Single project summary, levels block, Vite child</td></tr>
+<tr><td>Publish jobs</td><td><code>server/publish.ts</code></td><td>Spawn <code>scripts/publish/*.mjs</code>, stream logs</td></tr>
+<tr><td>MCP control</td><td><code>server/mcp.ts</code></td><td>Build/start <code>tools/bjs-mcp</code></td></tr>
+<tr><td>Asset I/O</td><td><code>server/assets.ts</code></td><td>List/read/write JSON under level roots</td></tr>
+<tr><td>Docs</td><td><code>server/docs.ts</code></td><td>Build and serve <code>docs/</code> at <code>/docs</code></td></tr>
+<tr><td>Paths</td><td><code>server/paths.ts</code></td><td><code>REPO_ROOT</code>, <code>PROJECT_DIR</code>, <code>babylon-project.json</code></td></tr>
+</tbody>
+</table>
+
+<p><strong>Development</strong> (<code>npm run hub -- --app &lt;name&gt;</code> → <code>server/dev.ts</code>): API first, then Vite middleware for the hub.</p>
+<p><strong>Production</strong> (<code>npm run launcher:start -- --app &lt;name&gt;</code> → <code>server/index.ts</code>): API plus static <code>dist/client/</code>.</p>
+<p>Default hub port: <strong>3200</strong>. Game Vite port: <code>babylon-project.json</code> → <code>dev.port</code> (default <strong>5173</strong>).</p>
+
+<h2>Project resolution</h2>
+<p><code>ResolveProjectDir()</code> in <code>server/paths.ts</code> picks one root:</p>
+<ol>
+<li><code>--app &lt;name&gt;</code> → <code>apps/&lt;name&gt;/</code></li>
+<li><code>BJS_PROJECT_DIR</code> env var</li>
+<li>Walk up from <code>cwd</code> for <code>babylon-project.json</code></li>
+</ol>
+<p>If none match, the process exits with an error. That root is <code>PROJECT_DIR</code> for the whole process.</p>
+
 <h2>Hub UI</h2>
-<h3>Documentation panel</h3>
-<p>Repo-wide (not tied to a project). <strong>Build Docs</strong> runs <code>npm run docs:build</code> at the repo root, regenerating the interactive HTML under <code>docs/</code> (engine diagrams, Blender traces, searchable landing page). <strong>View Docs</strong> opens <code>/docs/</code> on the launcher host — static files are served from <code>docs/</code> by the same Express server.</p>
-<p>Docs are considered built when <code>docs/index.html</code> exists.</p>
-<h3>Project panel</h3>
-<p>On load, the hub calls <code>GET /api/projects</code> and fills the project dropdown. Projects are every directory under <code>apps/</code> that has a <code>package.json</code>. Optional <code>babylon-project.json</code> in the app root supplies display title, default level, dev port, and the Blender Live Link export path hint shown in the UI.</p>
-<p>The <strong>level</strong> dropdown lists subdirectories of <code>apps/&lt;project&gt;/public/levels/</code>, plus a synthetic <strong>Workspace (pre-export staging)</strong> entry (<code>_workspace</code> in the API), which maps to <code>apps/&lt;project&gt;/public/workspace/</code>.</p>
-<p><strong>Create Project</strong> opens a wizard that <code>POST</code>s to <code>/api/projects</code> with <code>name</code>, optional <code>title</code>, <code>level</code>, and <code>template</code> (<code>empty</code> | <code>minimal</code> | <code>sample</code>). The server runs <code>scripts/create-app.mjs</code>; <code>sample</code> additionally copies <code>.ts</code> behavior files from <code>apps/playground/src/behaviors/</code>.</p>
-<h3>Services panel</h3>
-<p>Polls <code>GET /api/services/:app</code> every three seconds.</p>
-<p><strong>Game Dev Server (Vite)</strong> — <code>Start</code> runs <code>npm run dev --workspace apps/&lt;app&gt;</code> from the repo root as a detached child. The launcher tracks the PID when it spawned the process; it also probes the configured TCP port to detect an already- running server (e.g. started manually). <code>Stop</code> sends <code>SIGTERM</code> to the process group, then on Linux runs <code>fuser -k &lt;port&gt;/tcp</code> if the port is still open. <strong>Open Runtime Preview</strong> links to <code>http://localhost:&lt;dev.port&gt;</code> when the port accepts connections.</p>
-<p><strong>bjs-mcp (Behavior Authoring)</strong> — <strong>Build</strong> runs <code>npm run mcp:build</code> at the repo root. <strong>Start</strong> launches <code>node tools/bjs-mcp/dist/index.js</code> (builds first if needed). <strong>Copy Cursor Config</strong> writes the stdio MCP snippet for <code>bjs-level-kit</code> (command, args, cwd) to the clipboard — paste into <code>~/.cursor/mcp.json</code>.</p>
-<p><strong>Start All Services</strong> / <strong>Stop All Services</strong> call the combined endpoints that run dev + MCP in parallel.</p>
-<h3>Assets panel</h3>
-<p>When a project is selected, <code>GET /api/projects/:app/assets/:level</code> lists <code>.json</code> files in each known asset folder (see below). The UI is read-only: it shows folder names and filenames. Writes go through the REST API (<code>PUT</code>) if you build tooling on top; the hub does not edit files.</p>
+
+<p>Two tabs in the header: <strong>Develop</strong> (day-to-day) and <strong>Publish</strong> (ship builds). The header also shows the project title, version chip, and an <strong>Open game</strong> link once Vite is up.</p>
+
+<h3>Develop tab</h3>
+
+<h4>Services panel</h4>
+<p>Polls <code>GET /api/services</code> every three seconds.</p>
+<p><strong>Vite Dev Server</strong> — start/stop the game in <code>PROJECT_DIR</code> (<code>npm run dev</code>). The hub also starts it automatically on launch.</p>
+<p><strong>bjs-mcp</strong> — build/start/stop and copy Cursor MCP config.</p>
+
+<h4>Docs &amp; Tools panel</h4>
+<p><strong>Build docs</strong> runs <code>npm run docs:build</code> at the repo root; <strong>View docs</strong> opens <code>/docs/</code> on the hub host. Below that, links to the online Babylon node editors whose JSON you save into the asset folders.</p>
+
+<h4>Levels panel</h4>
+<p>Lists folders under <code>public/levels/</code>. For each level you set:</p>
+<ul>
+<li><strong>In build</strong> — include in publish artifacts</li>
+<li><strong>Boots first</strong> — start level (must be included)</li>
+</ul>
+<p><strong>Save</strong> writes the <code>levels</code> block in <code>babylon-project.json</code>. The app's Vite plugin watches that file and reloads the game. The panel footer shows the Blender Live Link export path.</p>
+
+<h4>Assets panel</h4>
+<p>Lists <code>.json</code> files in known asset folders for the selected exported level. Read-only in the UI.</p>
+
+<h3>Publish tab</h3>
+<p>Build buttons for Web / Desktop / Android up front; name, version, targets, icon, and output folder live behind a collapsible <strong>Settings</strong> row. See <a href="02-PUBLISH.html">Publish</a>.</p>
+
 <h2>Projects and assets</h2>
+
 <h3><code>babylon-project.json</code></h3>
-<p>Optional manifest at <code>apps/&lt;name&gt;/babylon-project.json</code>:</p>
+<p>Required at the project root. Example:</p>
 <pre><code class="language-json">{
-  &quot;name&quot;: &quot;playground&quot;,
-  &quot;title&quot;: &quot;Playground&quot;,
-  &quot;defaultLevel&quot;: &quot;Train Scene&quot;,
-  &quot;assetFolders&quot;: [&quot;gui&quot;, &quot;particles&quot;, &quot;materials&quot;, &quot;geometry&quot;, &quot;filters&quot;, &quot;render-graphs&quot;],
-  &quot;dev&quot;: { &quot;port&quot;: 5173 },
-  &quot;blenderExportPath&quot;: &quot;apps/playground/public/levels/&quot;
+  "name": "playground",
+  "title": "Playground",
+  "defaultLevel": "Train Scene",
+  "assetFolders": ["gui", "particles", "materials", "geometry", "filters", "render-graphs"],
+  "dev": { "port": 5173 },
+  "blenderExportPath": "apps/playground/public/levels/",
+  "levels": {
+    "include": ["Train Scene"],
+    "start": "Train Scene"
+  },
+  "publish": {
+    "productName": "Playground",
+    "identifier": "com.bjs.playground",
+    "version": "0.1.0",
+    "icon": "",
+    "outputDir": "release",
+    "web": { "base": "/" },
+    "desktop": { "targetsPreset": "linux", "targets": "deb,appimage" }
+  }
 }</code></pre>
-<table><thead><tr><th>Field</th><th>Purpose</th></tr></thead><tbody><tr><td><code>name</code></td><td>Canonical app id (defaults to <code>package.json</code> name or folder name)</td></tr><tr><td><code>title</code></td><td>Display name in the hub</td></tr><tr><td><code>defaultLevel</code></td><td>Level pre-selected when it exists under <code>public/levels/</code></td></tr><tr><td><code>assetFolders</code></td><td>Declared in manifest; server uses fixed <code>ASSET_FOLDERS</code> in <code>paths.ts</code></td></tr><tr><td><code>dev.port</code></td><td>Vite port for start/stop/status</td></tr><tr><td><code>blenderExportPath</code></td><td>Shown as the Live Link target path in the hub</td></tr></tbody></table>
-<p>New projects created via <code>create-app.mjs</code> get a manifest with default asset folders and <code>dev.port</code>.</p>
-<h3>Level roots and asset folders</h3>
-<p>Asset paths resolve through <code>WorkspaceAssetRoot()</code> in <code>server/paths.ts</code>:</p>
-<table><thead><tr><th>Level selector</th><th>Filesystem root</th></tr></thead><tbody><tr><td><code>_workspace</code></td><td><code>apps/&lt;app&gt;/public/workspace/</code></td></tr><tr><td><code>&lt;level name&gt;</code></td><td><code>apps/&lt;app&gt;/public/levels/&lt;level&gt;/</code></td></tr></tbody></table>
-<p>Under each root, these subfolders are scanned (constants in <code>ASSET_FOLDERS</code>):</p>
-<table><thead><tr><th>Folder</th><th>Typical content</th></tr></thead><tbody><tr><td><code>gui/</code></td><td>GUI editor JSON</td></tr><tr><td><code>particles/</code></td><td>Node particle system sets (<code>.json</code>; image files such as <code>.png</code> can sit beside them but are not listed in the launcher)</td></tr><tr><td><code>materials/</code></td><td>Node material graphs</td></tr><tr><td><code>geometry/</code></td><td>Node geometry graphs</td></tr><tr><td><code>filters/</code></td><td>Smart filter graphs</td></tr><tr><td><code>render-graphs/</code></td><td>Node render graph JSON</td></tr></tbody></table>
-<p>Only <strong><code>.json</code></strong> files are listed. <code>WriteAsset</code> rejects non-<code>.json</code> names. Filenames and folder segments are sanitized; resolved paths must stay inside the level root (<code>IsPathInside</code>).</p>
-<p>These folders sit <strong>beside</strong> the exported <code>level.glb</code> and <code>level.scene.json</code> for a level — they are not embedded in the glTF export. The runtime loads them when your game code or manifest references them.</p>
+
+<table>
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>name</code> / <code>title</code></td><td>App id and display name</td></tr>
+<tr><td><code>defaultLevel</code></td><td>Fallback start level if <code>levels.start</code> is missing</td></tr>
+<tr><td><code>dev.port</code></td><td>Vite port</td></tr>
+<tr><td><code>blenderExportPath</code></td><td>Live Link path shown in the hub</td></tr>
+<tr><td><code>levels.include</code></td><td>Level folders that ship in builds</td></tr>
+<tr><td><code>levels.start</code></td><td>Boot level folder name</td></tr>
+<tr><td><code>levels.startManifest</code></td><td>Optional manifest filename inside that folder</td></tr>
+<tr><td><code>publish.*</code></td><td>Identity, icon, output, web base, desktop targets — see <a href="02-PUBLISH.html">Publish</a></td></tr>
+</tbody>
+</table>
+
+<h3>Level asset folders</h3>
+<p>Assets for a level live under <code>public/levels/&lt;level&gt;/</code>. The server scans: <code>gui/</code>, <code>particles/</code>, <code>materials/</code>, <code>geometry/</code>, <code>filters/</code>, <code>render-graphs/</code>. Only <code>.json</code> files are listed.</p>
+
 <h2>REST API</h2>
-<p>All routes are under <code>/api</code>. Errors return JSON <code>{ &quot;error&quot;: &quot;message&quot; }</code> with an appropriate status code.</p>
+<p>All routes are under <code>/api</code>. Errors return JSON <code>{ "error": "message" }</code>.</p>
+
 <h3>Health</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Response</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/health</code></td><td><code>{ &quot;ok&quot;: true }</code></td></tr></tbody></table>
-<h3>Projects</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/projects</code></td><td>Array of <code>ProjectSummary</code></td></tr><tr><td><code>GET</code></td><td><code>/api/projects/:app/levels</code></td><td>Level directory names</td></tr><tr><td><code>POST</code></td><td><code>/api/projects</code></td><td>Body: <code>{ name, title?, level?, template? }</code> → <code>201</code> + <code>{ name, path, blenderExportPath }</code></td></tr></tbody></table>
-<p><code>ProjectSummary</code>: <code>name</code>, <code>title</code>, <code>defaultLevel?</code>, <code>devPort</code>, <code>blenderExportPath</code>, <code>hasLevels</code>.</p>
+<table><thead><tr><th>Method</th><th>Path</th><th>Response</th></tr></thead>
+<tbody><tr><td><code>GET</code></td><td><code>/api/health</code></td><td><code>{ "ok": true }</code></td></tr></tbody></table>
+
+<h3>Project</h3>
+<table>
+<thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>GET</code></td><td><code>/api/project</code></td><td><code>ProjectSummary</code> (identity, Tauri flags, publish fields)</td></tr>
+<tr><td><code>GET</code></td><td><code>/api/project/levels</code></td><td>Exported level folder names</td></tr>
+<tr><td><code>PUT</code></td><td><code>/api/project/levels</code></td><td>Body: <code>{ include, start, startManifest? }</code></td></tr>
+</tbody>
+</table>
+
 <h3>Assets</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/projects/:app/assets/:level</code></td><td>All folders → filename arrays</td></tr><tr><td><code>GET</code></td><td><code>/api/projects/:app/assets/:level?folder=gui</code></td><td>Single folder listing</td></tr><tr><td><code>GET</code></td><td><code>/api/projects/:app/assets/:level/:folder/:file</code></td><td>Raw JSON file body</td></tr><tr><td><code>PUT</code></td><td><code>/api/projects/:app/assets/:level/:folder/:file</code></td><td>Write JSON; body string or object → <code>{ path, relative }</code></td></tr></tbody></table>
-<p><code>:level</code> is the level folder name or <code>_workspace</code>.</p>
+<table>
+<thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>GET</code></td><td><code>/api/project/assets/:level</code></td><td>All folders → filenames</td></tr>
+<tr><td><code>GET</code></td><td><code>/api/project/assets/:level?folder=gui</code></td><td>One folder</td></tr>
+<tr><td><code>GET</code> / <code>PUT</code></td><td><code>/api/project/assets/:level/:folder/:file</code></td><td>Read / write JSON</td></tr>
+</tbody>
+</table>
+
 <h3>Dev server</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/dev/:app</code></td><td><code>DevServerStatus</code></td></tr><tr><td><code>POST</code></td><td><code>/api/dev/:app/start</code></td><td>Start Vite if port closed</td></tr><tr><td><code>POST</code></td><td><code>/api/dev/:app/stop</code></td><td>Stop managed process / free port</td></tr></tbody></table>
-<p><code>DevServerStatus</code>: <code>app</code>, <code>port</code>, <code>running</code>, <code>pid?</code>, <code>url?</code>, <code>managed</code>.</p>
-<h3>MCP</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/mcp</code></td><td><code>McpStatus</code> (built, running, pid, paths, <code>cursorConfig</code>)</td></tr><tr><td><code>POST</code></td><td><code>/api/mcp/build</code></td><td><code>npm run mcp:build</code></td></tr><tr><td><code>POST</code></td><td><code>/api/mcp/start</code></td><td>Start MCP server</td></tr><tr><td><code>POST</code></td><td><code>/api/mcp/stop</code></td><td>Stop MCP server</td></tr></tbody></table>
-<h3>Combined services</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/services/:app</code></td><td><code>{ dev, mcp }</code></td></tr><tr><td><code>POST</code></td><td><code>/api/services/:app/start-all</code></td><td>Start dev + MCP</td></tr><tr><td><code>POST</code></td><td><code>/api/services/:app/stop-all</code></td><td>Stop dev + MCP</td></tr></tbody></table>
-<h3>Documentation</h3>
-<table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody><tr><td><code>GET</code></td><td><code>/api/docs</code></td><td><code>DocsStatus</code> (<code>built</code>, <code>indexPath</code>, <code>url</code>)</td></tr><tr><td><code>POST</code></td><td><code>/api/docs/build</code></td><td>Run <code>docs:build</code>; returns updated status</td></tr></tbody></table>
-<p>Built HTML is served at <strong><code>/docs/</code></strong> (e.g. <code>http://localhost:3200/docs/</code>).</p>
+<table>
+<thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>GET</code></td><td><code>/api/dev</code></td><td>Status</td></tr>
+<tr><td><code>POST</code></td><td><code>/api/dev/start</code></td><td>Start Vite</td></tr>
+<tr><td><code>POST</code></td><td><code>/api/dev/stop</code></td><td>Stop Vite</td></tr>
+</tbody>
+</table>
+
+<h3>Services / MCP / docs</h3>
+<p><code>/api/services</code>, <code>/api/mcp</code>, <code>/api/docs</code> — same roles as before, without <code>:app</code> in the path. Built docs are at <strong><code>/docs/</code></strong>.</p>
+
+<h3>Publish</h3>
+<p>See the API table in <a href="02-PUBLISH.html#rest-api">Publish</a>.</p>
+
 <h2>Typical workflow</h2>
 <ol>
-<li><strong>Export from Blender</strong> — point Live Link at</li>
+<li>Export from Blender into <code>public/levels/&lt;level&gt;/</code>.</li>
+<li>Run <code>npm run hub -- --app &lt;name&gt;</code>.</li>
+<li>Open the game from the hub header link.</li>
+<li>Set include/start levels in the Levels panel and save.</li>
+<li>Use Services for MCP when you author behaviors.</li>
+<li>Use Publish for web/desktop/Android artifacts.</li>
 </ol>
-<p>   <code>apps/&lt;project&gt;/public/levels/&lt;level&gt;/</code> (path shown in the hub).</p>
-<ol>
-<li><strong>Start services</strong> — in the launcher, <strong>Start All Services</strong> (or start dev</li>
-</ol>
-<p>   only if you do not need MCP).</p>
-<ol>
-<li><strong>Open runtime preview</strong> — follow the Vite link; Live Link re-exports trigger</li>
-</ol>
-<p>   a full reload via the app's Vite plugin (<a href="../engine/09-WORKFLOW.html#live-link">Workflow</a>).</p>
-<ol>
-<li><strong>Author behaviors</strong> — with MCP running, use Cursor and the <code>bjs-level-kit</code></li>
-</ol>
-<p>   tools; paste MCP config once per machine.</p>
-<ol>
-<li><strong>Drop sidecar JSON</strong> — save editor exports into the matching asset folder</li>
-</ol>
-<p>   under the level (or workspace) and confirm they appear in the Assets panel.</p>
+
 <h2>Commands (repo root)</h2>
-<table><thead><tr><th>Script</th><th>Action</th></tr></thead><tbody><tr><td><code>npm run launcher:dev</code></td><td>Dev server on port 3200 (API + Vite HMR)</td></tr><tr><td><code>npm run launcher:build</code></td><td><code>tsc</code> server + <code>vite build</code> client → <code>dist/</code></td></tr><tr><td><code>npm run launcher:start</code></td><td>Production server (<code>NODE_ENV=production</code>)</td></tr></tbody></table>
-<p>Equivalent from the workspace: <code>npm run dev --workspace @bjs/babylon-launcher</code>, etc.</p>
+<table>
+<thead><tr><th>Script</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><code>npm run hub -- --app &lt;name&gt;</code></td><td>Hub + auto-start game Vite</td></tr>
+<tr><td><code>npm run launcher:dev</code></td><td>Same as hub (still needs <code>--</code> args or cwd resolution)</td></tr>
+<tr><td><code>npm run launcher:build</code></td><td>Build hub server + client</td></tr>
+<tr><td><code>npm run create -- --name my-game</code></td><td>Scaffold a new app</td></tr>
+</tbody>
+</table>
+
 <h2>Environment and troubleshooting</h2>
-<table><thead><tr><th>Variable</th><th>Default</th><th>Effect</th></tr></thead><tbody><tr><td><code>LAUNCHER_PORT</code></td><td><code>3200</code></td><td>Hub listen port</td></tr></tbody></table>
-<p>If port 3200 is in use, the dev server prints a hint to free it (<code>fuser -k 3200/tcp</code> on Linux) or set <code>LAUNCHER_PORT=3201</code>.</p>
-<p>Dev-server stop uses <code>fuser</code> on Linux only; on Windows, stopping relies on process signals to the spawned child.</p>
-<p>The launcher assumes it runs from a full git checkout with <code>apps/</code>, <code>scripts/</code>, and <code>tools/bjs-mcp/</code> present. It is not a standalone npm package outside this monorepo.</p>
+<table>
+<thead><tr><th>Variable</th><th>Default</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td><code>LAUNCHER_PORT</code></td><td><code>3200</code></td><td>Hub listen port</td></tr>
+<tr><td><code>BJS_PROJECT_DIR</code></td><td>—</td><td>Force project root</td></tr>
+</tbody>
+</table>
+<p>If port 3200 is in use: <code>fuser -k 3200/tcp</code> on Linux, or set <code>LAUNCHER_PORT=3201</code>. Free the game port the same way if Vite fails to bind.</p>
+
 <h2>Source layout</h2>
 <pre><code>tools/babylon-launcher/
-  index.html              # SPA shell
-  package.json            # @bjs/babylon-launcher
-  vite.config.ts          # Client build; middlewareMode in dev
-  tsconfig.json           # React client
-  tsconfig.server.json    # Express server → dist/server/
   server/
-    dev.ts                # Dev entry (Vite + API)
-    index.ts              # Production entry (static + API)
+    dev.ts / index.ts     # Entries (auto-start Vite)
     api.ts                # Route table
-    projects.ts           # List projects/levels; dev process management
-    createProject.ts      # create-app.mjs wrapper
-    mcp.ts                # bjs-mcp lifecycle
-    assets.ts             # Asset list/read/write
-    docs.ts               # docs:build + static /docs mount
-    paths.ts              # Repo paths, manifest types, asset folders
-  src/
-    main.tsx              # React mount
-    api/client.ts         # Browser API client
-    hub/
-      App.tsx             # Main hub layout
-      AssetBrowser.tsx    # Asset listing
-      CreateProjectWizard.tsx
-      DocsPanel.tsx       # Build + view documentation
-      ServicesPanel.tsx   # Dev + MCP controls
-    styles/hub.css</code></pre>
+    project.ts            # Single project + levels block
+    publish.ts            # Publish job runner
+    mcp.ts / assets.ts / docs.ts / paths.ts
+  src/hub/
+    App.tsx
+    LevelsPanel.tsx
+    AssetBrowser.tsx
+    PublishPanel.tsx
+    ServicesPanel.tsx
+    ToolsPanel.tsx</code></pre>
 </article>
   <footer>
     Edit <code>scripts/docs/prose/content/launcher/01-LAUNCHER.html</code>, then <code>npm run docs:build</code>.

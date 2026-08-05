@@ -39,6 +39,11 @@ venv/
 # These are produced by zipping the add-on / project; rebuild them, don't commit.
 *.zip
 
+# Per-app publish artifacts and Tauri build output
+apps/*/release/
+apps/*/src-tauri/target/
+apps/*/src-tauri/gen/
+
 # ---- Exported level assets ----
 # Levels are regenerated from Blender (glb + sidecar manifest). Comment these
 # out if you want to commit a sample level under public/levels/.

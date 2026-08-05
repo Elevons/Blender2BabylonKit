@@ -4,50 +4,49 @@ import path from "node:path";
 import {
   ASSET_FOLDERS,
   IsPathInside,
+  LevelAssetRoot,
   SanitizeSegment,
-  WorkspaceAssetRoot,
   type AssetFolder,
 } from "./paths.js";
 
-function AssetDirectory(appName: string, level: string, folder: AssetFolder): string
+function AssetDirectory(level: string, folder: AssetFolder): string
 {
   const safeFolder = SanitizeSegment(folder);
   if (!ASSET_FOLDERS.includes(safeFolder as AssetFolder))
   {
     throw new Error(`Unknown asset folder: ${folder}`);
   }
-  return path.join(WorkspaceAssetRoot(appName, level), safeFolder);
+  return path.join(LevelAssetRoot(level), safeFolder);
 }
 
-function EnsureAssetDirectory(appName: string, level: string, folder: AssetFolder): string
+function EnsureAssetDirectory(level: string, folder: AssetFolder): string
 {
-  const dir = AssetDirectory(appName, level, folder);
+  const dir = AssetDirectory(level, folder);
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-export function ListAssets(appName: string, level: string, folder: AssetFolder): string[]
+export function ListAssets(level: string, folder: AssetFolder): string[]
 {
-  const dir = AssetDirectory(appName, level, folder);
+  const dir = AssetDirectory(level, folder);
   if (!fs.existsSync(dir))
   {
     return [];
   }
   return fs.readdirSync(dir)
     .filter((name) => fs.statSync(path.join(dir, name)).isFile())
-    .sort((a, b) => a.localeCompare(b));
+    .sort((left, right) => left.localeCompare(right));
 }
 
 export function ReadAsset(
-  appName: string,
   level: string,
   folder: AssetFolder,
   filename: string,
 ): string
 {
   const safeName = SanitizeSegment(filename);
-  const filePath = path.join(AssetDirectory(appName, level, folder), safeName);
-  const root = WorkspaceAssetRoot(appName, level);
+  const filePath = path.join(AssetDirectory(level, folder), safeName);
+  const root = LevelAssetRoot(level);
   if (!IsPathInside(filePath, root) || !fs.existsSync(filePath))
   {
     throw new Error(`Asset not found: ${folder}/${safeName}`);
@@ -56,7 +55,6 @@ export function ReadAsset(
 }
 
 export function WriteAsset(
-  appName: string,
   level: string,
   folder: AssetFolder,
   filename: string,
@@ -68,27 +66,26 @@ export function WriteAsset(
   {
     throw new Error("Only .json assets are supported");
   }
-  const dir = EnsureAssetDirectory(appName, level, folder);
+  const dir = EnsureAssetDirectory(level, folder);
   const filePath = path.join(dir, safeName);
-  const root = WorkspaceAssetRoot(appName, level);
+  const root = LevelAssetRoot(level);
   if (!IsPathInside(filePath, root))
   {
     throw new Error("Invalid asset path");
   }
   fs.writeFileSync(filePath, content, "utf8");
-  const relativePrefix = level === "_workspace" ? "workspace" : path.join("levels", level);
   return {
     path: filePath,
-    relative: path.join("public", relativePrefix, folder, safeName).replace(/\\/g, "/"),
+    relative: path.join("public", "levels", SanitizeSegment(level), folder, safeName).replace(/\\/g, "/"),
   };
 }
 
-export function ListAllAssets(appName: string, level: string): Record<AssetFolder, string[]>
+export function ListAllAssets(level: string): Record<AssetFolder, string[]>
 {
   const result = {} as Record<AssetFolder, string[]>;
   for (const folder of ASSET_FOLDERS)
   {
-    result[folder] = ListAssets(appName, level, folder);
+    result[folder] = ListAssets(level, folder);
   }
   return result;
 }

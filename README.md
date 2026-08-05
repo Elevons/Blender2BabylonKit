@@ -147,11 +147,23 @@ instance, and export from the level file. Full workflow:
 ```bash
 npm run create -- --name my-game --title "My Game" --level Arena
 npm install
-npm run dev --workspace apps/my-game
+npm run hub -- --app my-game
 ```
 
 Flags: `--title <text>`, `--level <name>`, `--force` (overwrite). The scaffold
 copies the playground template; the engine stays a workspace dependency.
+
+## Publish
+
+Web zip, desktop installers (Tauri), and Android APK/AAB. Settings live in
+`babylon-project.json` (`levels` + `publish`). Full guide:
+**[Publish](docs/launcher/02-PUBLISH.html)** (after `npm run docs:build`).
+
+```bash
+npm run publish:web -- --app my-game --base /my-game/
+npm run publish:init -- --app my-game
+npm run publish:desktop -- --app my-game
+```
 
 ## Adding a new component (contributors)
 
@@ -195,7 +207,11 @@ packages/engine/        # @bjs/engine — runtime, loader, behaviors
 apps/playground/        # dev app (Vite); npm run create stamps new games
 docs/                   # built HTML docs (sources under scripts/docs/)
 tools/bjs-mcp/          # MCP server for LLM-assisted behavior authoring
+tools/babylon-launcher/ # per-project hub (npm run hub -- --app <name>)
+scripts/publish/        # web / Tauri desktop / Android publish scripts
 ```
 
 Engine internals (load pipeline, manifest schema, subsystems):
 **[Engine documentation](docs/engine/00-INDEX.html)**.
+Launcher and publish:
+**[Launcher](docs/launcher/00-INDEX.html)** · **[Publish](docs/launcher/02-PUBLISH.html)**.

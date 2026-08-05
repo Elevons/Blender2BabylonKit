@@ -14,7 +14,12 @@
     "typecheck": "tsc --noEmit -p packages/engine && tsc --noEmit -p apps/playground && node scripts/check-component-types.mjs",
     "check:components": "node scripts/check-component-types.mjs",
     "create": "node scripts/create-app.mjs",
-    "deploy:playground": "node scripts/build-playground-deploy.mjs",
+    "hub": "npm run dev --workspace @bjs/babylon-launcher --",
+    "publish:web": "node scripts/publish/web.mjs",
+    "publish:init": "node scripts/publish/init.mjs",
+    "publish:icon": "node scripts/publish/icon.mjs",
+    "publish:desktop": "node scripts/publish/desktop.mjs",
+    "publish:android": "node scripts/publish/android.mjs",
     "docs:build": "node scripts/build-docs.mjs",
     "docs:trace": "node scripts/build-trace-docs.mjs",
     "docs:blender": "node scripts/build-blender-docs.mjs",
@@ -31,6 +36,7 @@
     "launcher:start": "npm run start --workspace @bjs/babylon-launcher"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "typescript": "^5.4.0"
   }
 }

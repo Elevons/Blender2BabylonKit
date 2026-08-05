@@ -274,6 +274,7 @@ export const PAGE_TOPICS = {
   // — Launcher prose —
   "launcher/00-INDEX.html": ["start"],
   "launcher/01-LAUNCHER.html": ["start", "export"],
+  "launcher/02-PUBLISH.html": ["start", "export"],
 };
 
 /** Topic ids that do not imply a subsystem ↔ trace pairing. */
