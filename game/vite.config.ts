@@ -103,6 +103,8 @@ export default defineConfig({
     },
   },
   optimizeDeps: { exclude: ["@babylonjs/havok"] },
-  server: { port: 5173 },
+  // strictPort: the panel probes the configured port, so silently moving to the
+  // next free one would leave it reporting a server it cannot see.
+  server: { port: 5173, strictPort: true },
   plugins: [ReloadOnLevelExport(), ExcludeDeveloperTools()],
 });

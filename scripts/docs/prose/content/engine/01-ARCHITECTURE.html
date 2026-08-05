@@ -25,23 +25,25 @@
 
 <h2>Monorepo layout</h2>
 <pre><code>bjs-level-kit/
-  package.json            # npm workspaces root: dev / typecheck / create
-  packages/engine/        # &quot;@bjs/engine&quot; — the runtime, shared by every app
-    src/
-      index.ts            #   public barrel (apps import &quot;@bjs/engine&quot;)
-      core/               #   types.ts (schema) · attachments.ts · ComponentHost.ts · Entity.ts · Level.ts · LevelLoader.ts
-                          #   loader/ (manifest · nodeResolution · entityBuilder · componentRegistry · scripts · sceneSettings)
-      scripting/          #   Behavior.ts · exposed.ts · BehaviorRegistry.ts
-      input/              #   InputManager · maps/actions/bindings · @inputMap
-      subsystems/         #   physics lights cameras/ shadows constraints audio
-                          #   triggers environment fog atmosphere postprocess animation
-                          #   materials (NME overrides)
-  apps/                   # each game is an app; engine reaches it via symlink
-    playground/           #   the dev/test app (Vite); template for 
+  package.json            # npm workspaces root: dev / typecheck / release
+  packages/engine/        # &quot;@bjs/engine&quot; — the runtime and the publishable kit
+    src/                  #   TypeScript sources (dev imports this across the workspace)
+      index.ts            #     public barrel (the game imports &quot;@bjs/engine&quot;)
+      core/               #     types.ts (schema) · attachments.ts · ComponentHost.ts · Entity.ts · Level.ts · LevelLoader.ts
+                          #     loader/ (manifest · nodeResolution · entityBuilder · componentRegistry · scripts · sceneSettings)
+      scripting/          #     Behavior.ts · exposed.ts · BehaviorRegistry.ts
+      input/              #     InputManager · maps/actions/bindings · @inputMap
+      subsystems/         #     physics lights cameras/ shadows constraints audio
+                          #     triggers environment fog atmosphere postprocess animation
+                          #     materials (NME overrides)
+    dist/                 #   compiled output the published package points at
+  game/                   # the single playable example app (Vite + b2bkit-project.json)
+  tools/project-control-panel/  # Project Control Panel hub (@bjs/project-control-panel)
+  tools/bjs-mcp/          # bjs-mcp behavior-authoring server (@bjs/mcp)
   blender_addon/          # the editor half (Python, Blender 4.2+ extension)
-  scripts/create-app.mjs  # scaffolds game
-  docs/                   # this documentation, plans, specs</code></pre>
-<p>Apps declare <code>&quot;@bjs/engine&quot;: &quot;*&quot;</code>. <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code>. There is no publishing and no copying. The engine ships TS source (<code>exports</code> → <code>src/index.ts</code>). Vite compiles it across the link. Vite hot-reloads engine edits into running apps. Engine and Blender add-on versions move in lockstep.</p>
+  scripts/                # release + docs build (assemble-kit-package.mjs, build-docs.mjs, …)
+  docs/                   # built HTML docs (version-controlled, shipped in the package)</code></pre>
+<p><code>game/</code> declares <code>&quot;@bjs/engine&quot;: &quot;*&quot;</code>. <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code>, and the game's Vite config aliases <code>@bjs/engine</code> to <code>src/index.ts</code> so engine edits hot-reload with no build step. The <strong>published</strong> package is different: <code>exports</code> point at <code>dist/</code>, and <code>npm pack</code> assembles the compiled engine, the control panel, a prebuilt <code>bjs-mcp</code> with its search index, the docs site, and the Blender add-on zip into one artifact. Engine, panel, MCP, and Blender add-on versions move in lockstep.</p>
 
 <h2>End-to-end data flow</h2>
 <pre><code>Blender scene (objects + components + GUIDs)

@@ -1,5 +1,6 @@
 <h1>Building the documentation</h1>
 <p>This file describes how the kit's documentation is produced, what to edit, and what is generated. For the product docs themselves, start at <strong><a href="index.html">index.html</a></strong> (searchable landing page) or the <strong><a href="engine/00-INDEX.html">engine</a></strong> / <strong><a href="blender/00-INDEX.html">Blender</a></strong> indexes. Kit version in prose hubs: <strong>__KIT_VERSION__</strong> (from <code>packages/engine/package.json</code> + <code>blender_addon/blender_manifest.toml</code> at build time).</p>
+<p>The generated <code>docs/</code> site ships inside the kit package. Day-to-day edits still go through the sources below; every <code>npm pack</code> / <code>npm run release</code> rebuilds the site and the MCP embedding index via <code>scripts/assemble-kit-package.mjs</code> before copying them into <code>@bjs/engine</code>. Installed projects and the Project Control Panel serve that packaged site — they never rebuild it.</p>
 <hr>
 <h2>Contributor quick start</h2>
 <p>Pick the row that matches what you want to change, edit the <strong>source</strong> file, then run the command. Never hand-edit generated HTML under <code>docs/</code> (except meta <code>.md</code> files).</p>
@@ -44,7 +45,7 @@
 <tr>
   <td><strong>Engine code traces</strong> — step walkthroughs + live TS</td>
   <td><code>docs/engine/trace-*.html</code></td>
-  <td><code>scripts/build-trace-docs.mjs</code> → <code>TRACES</code> · symbols read from <code>packages/engine/</code>, <code>apps/</code></td>
+  <td><code>scripts/build-trace-docs.mjs</code> → <code>TRACES</code> · symbols read from <code>packages/engine/</code>, <code>game/</code></td>
   <td><code>build-trace-docs.mjs</code></td>
 </tr>
 <tr>
@@ -137,7 +138,7 @@
 <li><code>scripts/docs/validate-docs.mjs</code> → fragment registry + topic coverage</li>
 <li><code>scripts/check-doc-links.mjs</code> → internal link validation</li>
 </ol>
-<p>The Project Control Panel can also trigger a build via <code>POST /api/docs/build</code> (see <a href="control-panel/01-CONTROL-PANEL.html">control panel docs</a>).</p>
+<p><code>npm pack</code> / <code>npm run release</code> for <code>@bjs/engine</code> run <code>scripts/assemble-kit-package.mjs</code>, which always runs <code>npm run docs:build</code> (HTML site + <code>mcp:index</code> vector database) before copying <code>docs/</code>, the compiled <code>bjs-mcp</code> plus its <code>data/doc-embeddings.json</code> index and prose sources, and the control panel into the package. The Project Control Panel no longer builds docs — it only serves them.</p>
 <hr>
 <h2>Architecture</h2>
 <pre class="mermaid">flowchart LR
@@ -255,7 +256,7 @@
 <li><strong><code>{ file, symbol, note }</code></strong> — build extracts the function/class from disk</li>
 <li><strong><code>{ title, code, note }</code></strong> — inline snippet (e.g. manifest JSON); no extraction</li>
 </ul>
-<table><thead><tr><th>Side</th><th>Definition</th><th>Source roots</th></tr></thead><tbody><tr><td>Engine</td><td><code>TRACES</code> in <code>scripts/build-trace-docs.mjs</code></td><td><code>packages/engine/</code>, <code>apps/</code> (for examples)</td></tr><tr><td>Blender</td><td><code>TRACES</code> in <code>scripts/build-blender-docs.mjs</code></td><td><code>blender_addon/</code></td></tr></tbody></table>
+<table><thead><tr><th>Side</th><th>Definition</th><th>Source roots</th></tr></thead><tbody><tr><td>Engine</td><td><code>TRACES</code> in <code>scripts/build-trace-docs.mjs</code></td><td><code>packages/engine/</code>, <code>game/</code> (for examples)</td></tr><tr><td>Blender</td><td><code>TRACES</code> in <code>scripts/build-blender-docs.mjs</code></td><td><code>blender_addon/</code></td></tr></tbody></table>
 <p>Output files are named <strong><code>trace-&lt;id&gt;.html</code></strong> (e.g. <code>trace-physics.html</code>).</p>
 <p>Trace pages use a wider code panel (<code>CODE_PANEL_PATCH_*</code> in <code>shared.mjs</code>). Clicking a step shows the extracted source and file:line.</p>
 <hr>
@@ -337,7 +338,7 @@
 <tr><td><strong>Ranking</strong></td><td>Hybrid score</td><td>75% vector similarity + 25% keyword boost (titles and exact API names like <code>disablePreStep</code>)</td></tr>
 </tbody>
 </table>
-<p>No Ollama, no HTTP embedding service, no API keys. Cursor config uses <code>node tools/bjs-mcp/dist/index.js</code>.</p>
+<p>No Ollama, no HTTP embedding service, no API keys. In the kit checkout, Cursor config uses <code>node tools/bjs-mcp/dist/index.js</code>. In an installed project it uses the packaged copy under <code>node_modules/@bjs/engine/mcp/dist/index.js</code> (the Project Control Panel's Copy Cursor Config writes the correct path).</p>
 <h3>What gets indexed</h3>
 <ul>
 <li>Prose fragments under <code>scripts/docs/prose/content/</code> (engine, blender, control-panel, meta) — split on <code>##</code> headings, same chunks <code>get_doc_chapter</code> returns</li>
@@ -416,7 +417,7 @@
 <p><strong>Edit the sources</strong> instead: diagram/trace data in <code>scripts/</code>, prose fragments in <code>scripts/docs/prose/content/</code>. Generated HTML includes a footer pointing at the source fragment.</p>
 <hr>
 <h2>Viewing locally</h2>
-<p>Open <code>docs/index.html</code> in a browser (file:// or via a static server). The playground and Project Control Panel can serve <code>/docs</code> after a build. Diagram pages are self-contained single HTML files — no bundler required.</p>
+<p>Open <code>docs/index.html</code> in a browser (file:// or via a static server). The example game and Project Control Panel serve <code>/docs</code> from the committed site. Diagram pages are self-contained single HTML files — no bundler required.</p>
 <hr>
 <h2>Related docs</h2>
 <ul>

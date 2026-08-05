@@ -267,7 +267,7 @@ export const TRACES = [
     intro: "How rigid-body center of mass is drawn in the 3D view so the preview matches the exported body (export CoM fields apply to Dynamic bodies only).",
     steps: [
       { file: "blender_addon/viewport/cog_preview.py", symbol: "_draw", note: "POST_VIEW draw handler: for each selected object with an enabled RigidBody and Show Preview on, build an amber cross + rings at the CoM. Depth test is off so the marker stays visible inside solid meshes." },
-      { file: "blender_addon/viewport/cog_preview.py", symbol: "_local_cog", note: "Resolves the CoM in object local space — auto-fit uses compute_local_bounds (same owned-mesh rule as collider auto-fit); manual uses cog_center. Gizmo size scales with bounds (~10% of the longest axis). Export converts manual offsets to Babylon Y-up." },
+      { file: "blender_addon/viewport/cog_preview.py", symbol: "_local_geometry", note: "Resolves the CoM in object local space — auto-fit uses compute_local_bounds (same owned-mesh rule as collider auto-fit); manual uses cog_center. Gizmo size scales with bounds (~10% of the longest axis). Export converts manual offsets to Babylon Y-up." },
     ],
   },
   {

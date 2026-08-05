@@ -81,6 +81,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | `animation` | ANIMATOR FSM, clips, armature rule |
 | `gui` | 2D GUI, particles, 3D GUI, MSDF text |
 | `detail-maps` | Detail texture overrides on glTF PBR — **author in Blender** |
+| `sidecar-assets` | Hot-reload GUI / particle / material JSON from the Control Panel with no Blender re-export |
 
 ## Author in Blender vs write in behavior
 
@@ -1202,6 +1203,32 @@ if (label !== undefined)
 
 **MCP:** `get_fragment(name="update-msdf-text")` · recipe `msdf-label-update`.
 
+## Hot-reloading sidecar assets (no re-export)
+
+The JSON a level references — **GUI** (`gui/`), **particles** (`particles/`),
+**node materials** (`materials/`) — ships as plain files **beside** the level
+(`game/public/levels/<level>/<folder>/…`), not baked into the `.glb`. You can
+edit one and update the running level **without re-exporting from Blender**.
+
+- **Two locations.** Authored/staging copies live under **`game/workspace/<folder>/`**
+  (moved out of `public/` so they are not served directly). The **deployed**
+  copies the runtime fetches live under **`game/public/levels/<level>/<folder>/`**.
+  A full Blender export copies workspace → level.
+- **Reload one file.** The **Project Control Panel › Assets** panel lists every
+  asset the selected level's `.scene.json` references and gives each a **Reload**
+  button. Reload recopies the `game/workspace/` source over the deployed level
+  file; Vite's level watcher then triggers a full page reload. It is disabled
+  when no matching workspace source exists ("No workspace source"), so the
+  Blender-authored asset never drifts.
+- **Transparent to behaviors.** Scripts resolve these assets by name
+  (`GetGui("hud")`, `GetParticles("fire")`, node-material name match), so an
+  edited-and-reloaded asset is picked up with **no behavior code change**. When
+  you change the *structure* a behavior depends on (a renamed GUI control, a new
+  particle system), update the lookups accordingly.
+
+Full workflow + REST API (`/assets/:level/references`, `/assets/:level/reload`):
+`get_doc_chapter(chapter="control-panel/01-control-panel")`.
+
 ## Node materials (NME)
 
 Custom shaders are authored per **Blender Material** on **Properties › Material › Babylon**
@@ -1593,6 +1620,7 @@ export default class HoverBob extends Behavior
 | Detail maps (glTF PBR) | `get_scripting_context(section="detail-maps")` · `docs/engine/07-RENDERING.html` |
 | Audio, animation, ANIMATOR FSM, skinned-mesh rule | `docs/engine/08-AUDIO-ANIMATION.html` |
 | 2D GUI, particles, 3D GUI, MSDF | `docs/engine/11-UI.html` |
+| Hot-reload GUI/particle/material JSON (no re-export) | `get_scripting_context(section="sidecar-assets")` · `get_doc_chapter(chapter="control-panel/01-control-panel")` |
 | Example behaviors | `list_behaviors` · `get_behavior` · `find_similar_behavior` |
 | Code style | `docs/STYLE_GUIDE.md` · `get_style_guide` |
 | Prefabs + `this.spawner.Spawn` / `level.Spawn` | `get_scripting_context(section="prefab-spawn")` · `docs/blender/PREFABS.html` |

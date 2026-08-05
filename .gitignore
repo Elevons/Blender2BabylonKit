@@ -39,6 +39,8 @@ venv/
 # These are produced by zipping the add-on / project; rebuild them, don't commit.
 *.zip
 packages/engine/control-panel/
+packages/engine/docs/
+packages/engine/mcp/
 
 # ---- Exported level assets ----
 # Levels are regenerated from Blender (glb + sidecar manifest). Comment these

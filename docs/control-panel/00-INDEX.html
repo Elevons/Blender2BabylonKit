@@ -340,12 +340,14 @@
     <a href="../engine/00-INDEX.html">Engine</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-CONTROL-PANEL.html">Next →</a></p>
   <article><h1>Project Control Panel — Documentation</h1>
-<p>The <strong>Project Control Panel</strong> (<code>tools/project-control-panel/</code>, npm workspace <code>@bjs/project-control-panel</code>) is the self-hosted web hub for one project. Each project runs its own Project Control Panel. It starts and stops the project Vite dev server, manages the <strong>bjs-mcp</strong> behavior-authoring server for Cursor, browses JSON asset folders, and publishes web builds.</p>
+<p>The <strong>Project Control Panel</strong> (<code>tools/project-control-panel/</code>, npm workspace <code>@bjs/project-control-panel</code>) is the self-hosted web hub for one project. Each project runs its own Project Control Panel. It starts and stops the project Vite dev server, runs the packaged <strong>bjs-mcp</strong> behavior-authoring server for Cursor, browses JSON asset folders, serves the bundled documentation, and publishes web builds.</p>
 <p>It does <strong>not</strong> embed Babylon.js editors. Author GUI, materials, particles, and similar assets with the <a href="https://doc.babylonjs.com/">online Babylon editors</a> or your own workflow, then place the exported <code>.json</code> files in the project's asset folders (see <a href="01-CONTROL-PANEL.html#projects-and-assets">Projects &amp; assets</a>).</p>
 <h2>Quick start</h2>
-<p>From the repo root:</p>
+<p>From the kit repo root:</p>
 <pre><code class="language-bash">npm install
-npm start b2bkit</code></pre>
+npm start</code></pre>
+<p>From an installed project (the folder that contains <code>game/</code>):</p>
+<pre><code class="language-bash">npx b2bkit-control-panel</code></pre>
 <p>Open <strong>http://localhost:3200</strong> (override with <code>CONTROL_PANEL_PORT</code>).</p>
 <p>Production build (serves the compiled React client from <code>dist/client/</code>):</p>
 <pre><code class="language-bash">npm run control-panel:build

@@ -15,6 +15,8 @@ export interface DevServerStatus
   app: string;
   port: number;
   running: boolean;
+  /** The listener on `port` answers requests for this project's app shell. */
+  healthy: boolean;
   pid?: number;
   url?: string;
   managed?: boolean;
@@ -23,6 +25,10 @@ export interface DevServerStatus
 
 export interface McpStatus
 {
+  /** False only when the kit installation has no bjs-mcp build. */
+  available: boolean;
+  /** True only in the kit checkout, where MCP sources can be rebuilt. */
+  buildable: boolean;
   built: boolean;
   running: boolean;
   pid?: number;
@@ -47,6 +53,8 @@ export interface ServicesStatus
 
 export interface DocsStatus
 {
+  /** False only when the kit installation has no versioned documentation. */
+  available: boolean;
   built: boolean;
   indexPath: string;
   url: string;
@@ -57,6 +65,15 @@ export interface LevelManifestEntry
   level: string;
   file: string;
   url: string;
+}
+
+export interface ReferencedAsset
+{
+  reference: string;
+  folder: string;
+  file: string;
+  sourceAvailable: boolean;
+  deployedAvailable: boolean;
 }
 
 export interface PublishOptions
@@ -128,6 +145,19 @@ export const api = {
       `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}${query}`,
     );
   },
+  ListReferencedAssets: (app: string, level: string) =>
+    Request<ReferencedAsset[]>(
+      `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}/references`,
+    ),
+  ReloadReferencedAsset: (app: string, level: string, reference: string) =>
+    Request<ReferencedAsset>(
+      `/api/projects/${encodeURIComponent(app)}/assets/${encodeURIComponent(level)}/reload`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference }),
+      },
+    ),
   getDevStatus: (app: string) =>
     Request<DevServerStatus>(`/api/dev/${encodeURIComponent(app)}`),
   startDev: (app: string) =>
@@ -145,7 +175,6 @@ export const api = {
   stopAllServices: (app: string) =>
     Request<ServicesStatus>(`/api/services/${encodeURIComponent(app)}/stop-all`, { method: "POST" }),
   getDocsStatus: () => Request<DocsStatus>("/api/docs"),
-  buildDocs: () => Request<DocsStatus>("/api/docs/build", { method: "POST" }),
   getPublishStatus: (app: string) =>
     Request<PublishStatus>(`/api/publish/${encodeURIComponent(app)}`),
   startPublish: (app: string, body: PublishOptions) =>

@@ -29,6 +29,10 @@ function StatusDot({ on }: { on: boolean }): JSX.Element
 function DevStatusText(dev: ServicesStatus["dev"] | undefined): string
 {
   if (!dev) { return "…"; }
+  if (dev.running && !dev.healthy)
+  {
+    return `port ${dev.port} busy · not this project`;
+  }
   if (dev.running)
   {
     return `port ${dev.port}${dev.pid ? ` · pid ${dev.pid}` : ""}`;
@@ -230,7 +234,7 @@ export function ServicesPanel({
         <div className="service-card">
           <div className="service-top">
             <div className="service-title">
-              <StatusDot on={Boolean(dev?.running)} />
+              <StatusDot on={Boolean(dev?.healthy)} />
               <strong>Vite Dev Server</strong>
             </div>
             <span className="muted service-meta">{DevStatusText(dev)}</span>
@@ -303,7 +307,7 @@ export function ServicesPanel({
               <button
                 type="button"
                 className="secondary"
-                disabled={!dev?.running || !jumpManifest}
+                disabled={!dev?.healthy || !jumpManifest}
                 onClick={OpenLevelJump}
               >
                 Open Level
@@ -312,48 +316,52 @@ export function ServicesPanel({
           )}
         </div>
 
-        <div className="service-card">
-          <div className="service-top">
-            <div className="service-title">
-              <StatusDot on={Boolean(mcp?.running)} />
-              <strong>bjs-mcp</strong>
+        {mcp?.available !== false && (
+          <div className="service-card">
+            <div className="service-top">
+              <div className="service-title">
+                <StatusDot on={Boolean(mcp?.running)} />
+                <strong>bjs-mcp</strong>
+              </div>
+              <span className="muted service-meta">{McpStatusText(mcp)}</span>
             </div>
-            <span className="muted service-meta">{McpStatusText(mcp)}</span>
+            <div className="service-actions">
+              {mcp?.buildable && (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => { Run(() => api.buildMcp()); }}
+                >
+                  Build
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => { Run(() => api.startMcp()); }}
+              >
+                Start
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy || !mcp?.running}
+                onClick={() => { Run(() => api.stopMcp()); }}
+              >
+                Stop
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!mcp?.built}
+                onClick={() => { CopyCursorConfig().catch((e: Error) => onError(e.message)); }}
+              >
+                {copied ? "Copied" : "Cursor Config"}
+              </button>
+            </div>
           </div>
-          <div className="service-actions">
-            <button
-              type="button"
-              className="secondary"
-              disabled={busy}
-              onClick={() => { Run(() => api.buildMcp()); }}
-            >
-              Build
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => { Run(() => api.startMcp()); }}
-            >
-              Start
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={busy || !mcp?.running}
-              onClick={() => { Run(() => api.stopMcp()); }}
-            >
-              Stop
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={!mcp?.built}
-              onClick={() => { CopyCursorConfig().catch((e: Error) => onError(e.message)); }}
-            >
-              {copied ? "Copied" : "Cursor Config"}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </section>
   );

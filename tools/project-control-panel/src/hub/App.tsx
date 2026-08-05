@@ -134,6 +134,7 @@ export function App(): JSX.Element
               <AssetBrowser
                 project={currentProject.name}
                 level={selectedLevel}
+                onError={HandleError}
               />
             )}
           </>

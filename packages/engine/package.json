@@ -17,22 +17,29 @@
     "dist",
     "blender-addon",
     "control-panel",
+    "docs",
+    "mcp",
     "bin",
     "README.md"
   ],
   "bin": {
     "b2bkit-addon-path": "./bin/addon-path.mjs",
-    "b2bkit-control-panel": "./bin/control-panel.mjs"
+    "b2bkit-control-panel": "./bin/control-panel.mjs",
+    "b2bkit-mcp": "./mcp/dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepack": "node ../../scripts/assemble-kit-package.mjs",
     "prepublishOnly": "npm run build"
   },
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "express": "^4.21.2"
+    "@huggingface/transformers": "^3.8.1",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "express": "^4.21.2",
+    "zod": "^3.24.2"
   },
   "peerDependencies": {
     "@babylonjs/addons": "^9.0.0",

@@ -70,6 +70,54 @@ export function ResolveProjectRoot(): string
 /** @deprecated Prefer ResolveProjectRoot — kept for existing imports. */
 export const REPO_ROOT = KIT_REPO_ROOT;
 
+let cachedKitRepoRoot: string | null | undefined = undefined;
+
+/**
+ * Locate the Blender2BabylonKit checkout this panel is running from, or null
+ * when the panel came from an installed kit package. Kit-only tooling (bjs-mcp,
+ * the docs build) exists only in the checkout.
+ */
+export function ResolveKitRepoRoot(): string | null
+{
+  if (cachedKitRepoRoot !== undefined)
+  {
+    return cachedKitRepoRoot;
+  }
+
+  cachedKitRepoRoot = null;
+  let directory = CONTROL_PANEL_DIR;
+
+  while (true)
+  {
+    const packageJsonPath = path.join(directory, "package.json");
+    if (fs.existsSync(packageJsonPath))
+    {
+      try
+      {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as { name?: string };
+        if (packageJson.name === "bjs-level-kit")
+        {
+          cachedKitRepoRoot = directory;
+          break;
+        }
+      }
+      catch
+      {
+        // Unreadable package.json — keep walking up.
+      }
+    }
+
+    const parent = path.dirname(directory);
+    if (parent === directory)
+    {
+      break;
+    }
+    directory = parent;
+  }
+
+  return cachedKitRepoRoot;
+}
+
 export function GameDir(): string
 {
   return path.join(ResolveProjectRoot(), "game");
@@ -110,7 +158,7 @@ export function WorkspaceAssetRoot(appName: string, level?: string): string
   {
     return path.join(appDir, "public", "levels", level);
   }
-  return path.join(appDir, "public", "workspace");
+  return path.join(appDir, "workspace");
 }
 
 export function SanitizeSegment(segment: string): string

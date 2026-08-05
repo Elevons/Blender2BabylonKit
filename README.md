@@ -165,7 +165,7 @@ npx b2bkit-control-panel
 npx b2bkit-addon-path   # Install from Disk in Blender
 ```
 
-Assets (GUI / particles / materials) live under `game/public/workspace/` while
+Assets (GUI / particles / materials) live under `game/workspace/` while
 iterating, and under `game/public/levels/<Level>/` when they ship with a level.
 Do not put those JSONs under `src/`.
 
@@ -207,11 +207,11 @@ and reference it from a Script component in Blender.
 
 ```
 blender_addon/                 # Blender extension (export, components, UI)
-packages/engine/               # @bjs/engine — runtime (+ release embeds panel + add-on zip)
+packages/engine/               # @bjs/engine — runtime (+ release embeds panel, bjs-mcp, docs, add-on zip)
 game/                          # example playable app (Vite + b2bkit-project.json)
 tools/project-control-panel/   # Project Control Panel hub
 tools/bjs-mcp/                 # MCP server for LLM-assisted behavior authoring
-docs/                          # built HTML docs (sources under scripts/docs/)
+docs/                          # built HTML docs, version-controlled + shipped (sources under scripts/docs/)
 ```
 
 Engine internals (load pipeline, manifest schema, subsystems):

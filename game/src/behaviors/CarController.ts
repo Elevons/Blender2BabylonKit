@@ -6,11 +6,13 @@ import {
   Matrix,
   MeshBuilder,
   Physics6DoFConstraint,
+  PhysicsBody,
   PhysicsConstraintAxis,
   PhysicsConstraintMotorType,
   PhysicsMotionType,
   PhysicsRaycastResult,
   Quaternion,
+  TransformNode,
   Vector3,
 } from "@babylonjs/core";
 
@@ -19,6 +21,18 @@ interface WheelDriveBinding
 {
   constraint: Physics6DoFConstraint;
   motorAxis: PhysicsConstraintAxis;
+}
+
+/** One jointed rig part parked for the duration of the recover maneuver. */
+interface FrozenRigBody
+{
+  body: PhysicsBody;
+  node: TransformNode;
+  /** Motion type and pre-step flag as they were before the freeze, restored on thaw. */
+  motionType: PhysicsMotionType;
+  disablePreStep: boolean;
+  /** World transform at freeze time, used to carry the part along with the body. */
+  previousWorld: Matrix;
 }
 
 const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
@@ -164,6 +178,13 @@ export default class CarController extends Behavior
   private rayWorldMatrix = Matrix.Identity();
   /** Reused point array for the CreateLines instance update. */
   private debugPoints: Vector3[] = [new Vector3(), new Vector3()];
+  /** Rig parts (wheels, arms) held kinematic while the recover maneuver runs. */
+  private frozenRigBodies: FrozenRigBody[] = [];
+  /** Scratch matrices/quaternion for repositioning frozen rig parts. */
+  private rigTargetWorld = Matrix.Identity();
+  private rigLocalMatrix = Matrix.Identity();
+  private rigParentInverse = Matrix.Identity();
+  private rigRotation = Quaternion.Identity();
 
   OnStart(): void
   {
@@ -253,6 +274,9 @@ export default class CarController extends Behavior
 
   OnDestroy(): void
   {
+    // Unloading mid-recover would otherwise leave the rig parts kinematic.
+    this.ThawRigBodies();
+
     for (const debugLine of this.debugLines)
     {
       debugLine?.dispose();
@@ -484,6 +508,11 @@ export default class CarController extends Behavior
    * Begin the recover maneuver: switch the body to ANIMATED (kinematic), lift it
    * 10 units, and reset all rotations to zero so it will drop upright. Kinematic
    * bodies ignore gravity, so it holds in place until EndPlacement runs.
+   *
+   * The wheels and suspension arms are separate dynamic bodies joined to the
+   * body, not children of it, so they are frozen and carried along by the same
+   * transform — otherwise the teleport stretches every joint and the solver
+   * flings the parts across the level when they are released.
    */
   private BeginPlacement(): void
   {
@@ -496,7 +525,11 @@ export default class CarController extends Behavior
     this.isPlacing = true;
     this.placeTimer = 0;
 
-    const target = this.body.node.position.add(new Vector3(0, 3, 0));
+    const bodyNode = this.body.node;
+    const previousBodyWorld = bodyNode.computeWorldMatrix(true).clone();
+    const target = bodyNode.position.add(new Vector3(0, 3, 0));
+
+    this.FreezeRigBodies();
 
     body.setMotionType(PhysicsMotionType.ANIMATED);
     // disablePreStep = false lets the next pre-step copy the node transform into the body.
@@ -504,11 +537,130 @@ export default class CarController extends Behavior
 
     // Lift, and zero all rotations (identity quaternion = no rotation).
     // rotationQuaternion overrides Euler rotation for both the renderer and physics.
-    this.body.node.position.copyFrom(target);
-    this.body.node.rotationQuaternion = Quaternion.Identity();
+    bodyNode.position.copyFrom(target);
+    bodyNode.rotationQuaternion = Quaternion.Identity();
 
     body.setLinearVelocity(Vector3.Zero());
     body.setAngularVelocity(Vector3.Zero());
+
+    const recoveryDelta = Matrix.Invert(previousBodyWorld)
+      .multiply(bodyNode.computeWorldMatrix(true));
+    this.MoveFrozenRigBodies(recoveryDelta);
+  }
+
+  /**
+   * Park every jointed rig part: capture its current motion state and world
+   * transform, then hold it kinematic at zero velocity. With both ends of a
+   * joint non-dynamic the solver has nothing to react to while the body moves.
+   */
+  private FreezeRigBodies(): void
+  {
+    this.frozenRigBodies = [];
+
+    for (const rigEntity of this.CollectRigEntities())
+    {
+      const rigBody = rigEntity.body;
+      if (rigBody === undefined || rigBody.isDisposed)
+      {
+        continue;
+      }
+
+      this.frozenRigBodies.push({
+        body: rigBody,
+        node: rigEntity.node,
+        motionType: rigBody.getMotionType(),
+        disablePreStep: rigBody.disablePreStep,
+        previousWorld: rigEntity.node.computeWorldMatrix(true).clone(),
+      });
+
+      rigBody.setMotionType(PhysicsMotionType.ANIMATED);
+      rigBody.disablePreStep = false;
+      rigBody.setLinearVelocity(Vector3.Zero());
+      rigBody.setAngularVelocity(Vector3.Zero());
+    }
+  }
+
+  /**
+   * Every physics part belonging to this vehicle: the assigned wheel slots plus
+   * any other jointed body under the rig root (suspension arms and their
+   * pivots). Requiring a CONSTRAINT keeps unrelated dynamic bodies that happen
+   * to sit under the same root — spawned creatures, loose props — out of it.
+   */
+  private CollectRigEntities(): Entity[]
+  {
+    const candidates: (Entity | null | undefined)[] = [...this.CollectWheelEntities()];
+    const rigRoot = this.body?.node.parent ?? this.body?.node;
+
+    if (rigRoot !== null && rigRoot !== undefined)
+    {
+      for (const descendant of rigRoot.getDescendants(false))
+      {
+        const metadata = descendant.metadata as { bjsEntity?: Entity } | undefined;
+        const descendantEntity = metadata?.bjsEntity;
+        if (descendantEntity !== undefined && descendantEntity.HasAttachment("CONSTRAINT"))
+        {
+          candidates.push(descendantEntity);
+        }
+      }
+    }
+
+    const rigEntities: Entity[] = [];
+    for (const candidate of candidates)
+    {
+      if (candidate === null || candidate === undefined)
+      {
+        continue;
+      }
+
+      if (candidate === this.body || candidate === this.entity || candidate.body === undefined)
+      {
+        continue;
+      }
+
+      if (!rigEntities.includes(candidate))
+      {
+        rigEntities.push(candidate);
+      }
+    }
+
+    return rigEntities;
+  }
+
+  /**
+   * Apply the body's teleport to each frozen rig part so the whole vehicle
+   * arrives in one piece with its joints at rest. The parts are kinematic with
+   * pre-step enabled here, so writing the node transform is what moves them.
+   */
+  private MoveFrozenRigBodies(recoveryDelta: Matrix): void
+  {
+    for (const frozen of this.frozenRigBodies)
+    {
+      frozen.previousWorld.multiplyToRef(recoveryDelta, this.rigTargetWorld);
+
+      let localMatrix = this.rigTargetWorld;
+      const parentNode = frozen.node.parent;
+
+      // Nullable<Node>: Babylon types this as Node | null but it can be undefined.
+      if (parentNode)
+      {
+        parentNode.getWorldMatrix().invertToRef(this.rigParentInverse);
+        this.rigTargetWorld.multiplyToRef(this.rigParentInverse, this.rigLocalMatrix);
+        localMatrix = this.rigLocalMatrix;
+      }
+
+      localMatrix.decompose(frozen.node.scaling, this.rigRotation, frozen.node.position);
+
+      if (frozen.node.rotationQuaternion === null)
+      {
+        frozen.node.rotationQuaternion = this.rigRotation.clone();
+      }
+      else
+      {
+        frozen.node.rotationQuaternion.copyFrom(this.rigRotation);
+      }
+
+      frozen.node.computeWorldMatrix(true);
+    }
   }
 
   /**
@@ -778,5 +930,30 @@ export default class CarController extends Behavior
     body.setMotionType(PhysicsMotionType.DYNAMIC);
     body.setLinearVelocity(Vector3.Zero());
     body.setAngularVelocity(Vector3.Zero());
+
+    this.ThawRigBodies();
+  }
+
+  /**
+   * Hand the rig parts back to physics from rest, in the motion state they had
+   * before the freeze. Same ordering as the body: stop the pre-step deriving a
+   * velocity from the teleport first, then go dynamic, then zero velocity.
+   */
+  private ThawRigBodies(): void
+  {
+    for (const frozen of this.frozenRigBodies)
+    {
+      if (frozen.body.isDisposed)
+      {
+        continue;
+      }
+
+      frozen.body.disablePreStep = frozen.disablePreStep;
+      frozen.body.setMotionType(frozen.motionType);
+      frozen.body.setLinearVelocity(Vector3.Zero());
+      frozen.body.setAngularVelocity(Vector3.Zero());
+    }
+
+    this.frozenRigBodies = [];
   }
 }

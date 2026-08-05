@@ -7,10 +7,29 @@ interface Props
   onError: (message: string) => void;
 }
 
+/**
+ * Describe the versioned documentation shipped with the current kit.
+ */
+function DocsStatusText(docs: DocsStatus | null): string
+{
+  if (docs === null)
+  {
+    return "…";
+  }
+  if (docs.built)
+  {
+    return "Ready to view";
+  }
+  if (!docs.available)
+  {
+    return "Documentation is missing from this kit installation";
+  }
+  return "Unavailable";
+}
+
 export function DocsPanel({ onError }: Props): JSX.Element
 {
   const [docs, setDocs] = useState<DocsStatus | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () =>
   {
@@ -23,27 +42,7 @@ export function DocsPanel({ onError }: Props): JSX.Element
     refresh().catch((e: Error) => onError(e.message));
   }, [refresh, onError]);
 
-  async function Build(): Promise<void>
-  {
-    setBusy(true);
-    try
-    {
-      const next = await api.buildDocs();
-      setDocs(next);
-    }
-    catch (e)
-    {
-      onError((e as Error).message);
-    }
-    finally
-    {
-      setBusy(false);
-    }
-  }
-
-  const statusText = docs?.built
-    ? "Ready to view"
-    : "Not built";
+  const statusText = DocsStatusText(docs);
 
   return (
     <section className="panel panel-compact">
@@ -51,14 +50,6 @@ export function DocsPanel({ onError }: Props): JSX.Element
         <h2>Documentation</h2>
         <span className="muted panel-meta">{statusText}</span>
         <div className="panel-actions">
-          <button
-            type="button"
-            className="secondary"
-            disabled={busy}
-            onClick={() => { Build().catch(() => undefined); }}
-          >
-            {busy ? "Building…" : "Build"}
-          </button>
           {docs?.built && (
             <a className="button-link" href={docs.url} target="_blank" rel="noreferrer">
               View

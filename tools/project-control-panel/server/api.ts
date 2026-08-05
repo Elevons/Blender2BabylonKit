@@ -1,6 +1,13 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 
-import { ListAssets, ListAllAssets, ReadAsset, WriteAsset } from "./assets.js";
+import {
+  ListAssets,
+  ListAllAssets,
+  ListReferencedAssets,
+  ReadAsset,
+  ReloadReferencedAsset,
+  WriteAsset,
+} from "./assets.js";
 import { CreateProject } from "./createProject.js";
 import {
   ASSET_FOLDERS,
@@ -22,7 +29,6 @@ import {
   StopMcp,
 } from "./mcp.js";
 import {
-  BuildDocs,
   GetDocsStatus,
   MountDocsStatic,
 } from "./docs.js";
@@ -121,6 +127,36 @@ export function CreateApiApp(): Express
     res.json(ListAllAssets(req.params.app, req.params.level));
   });
 
+  app.get("/api/projects/:app/assets/:level/references", (req, res) =>
+  {
+    try
+    {
+      res.json(ListReferencedAssets(req.params.app, req.params.level));
+    }
+    catch (error)
+    {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/projects/:app/assets/:level/reload", (req, res) =>
+  {
+    try
+    {
+      const body = req.body as { reference?: string };
+      if (body.reference === undefined || body.reference.length === 0)
+      {
+        res.status(400).json({ error: "Asset reference is required" });
+        return;
+      }
+      res.json(ReloadReferencedAsset(req.params.app, req.params.level, body.reference));
+    }
+    catch (error)
+    {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  });
+
   app.get("/api/projects/:app/assets/:level/:folder/:file", (req, res) =>
   {
     try
@@ -205,9 +241,11 @@ export function CreateApiApp(): Express
 
   app.post("/api/services/:app/start-all", AsyncHandler(async (req, res) =>
   {
+    // bjs-mcp only exists in the kit checkout; outside it, start the dev server alone.
+    const mcpAvailable = (await GetMcpStatus()).available;
     const [dev, mcp] = await Promise.all([
       StartDevServer(req.params.app),
-      StartMcp(),
+      mcpAvailable ? StartMcp() : GetMcpStatus(),
     ]);
     res.json({ dev, mcp });
   }));
@@ -225,11 +263,6 @@ export function CreateApiApp(): Express
   {
     res.json(GetDocsStatus());
   });
-
-  app.post("/api/docs/build", AsyncHandler(async (_req, res) =>
-  {
-    res.json(await BuildDocs());
-  }));
 
   app.get("/api/publish/:app", (req, res) =>
   {

@@ -30,6 +30,11 @@ export interface DevServerStatus
   app: string;
   port: number;
   running: boolean;
+  /**
+   * The listener on `port` answers `GET /` successfully. A stale Vite whose root
+   * folder was renamed, or an unrelated project's server, listens but 404s.
+   */
+  healthy: boolean;
   pid?: number;
   url?: string;
   managed: boolean;
@@ -293,19 +298,98 @@ export async function IsPortOpen(port: number): Promise<boolean>
   });
 }
 
+/**
+ * Ask the listener for the app shell. Vite keeps listening after its root folder
+ * is renamed or deleted, so an open port alone does not mean a usable server.
+ */
+async function ServesAppShell(port: number): Promise<boolean>
+{
+  try
+  {
+    const response = await fetch(`http://127.0.0.1:${port}/`, {
+      signal: AbortSignal.timeout(2000),
+    });
+    return response.status < 400;
+  }
+  catch
+  {
+    return false;
+  }
+}
+
+/**
+ * Describe the process listening on a port so a collision message can name the
+ * culprit. Linux/macOS only; returns an empty description elsewhere.
+ */
+async function DescribePortHolder(port: number): Promise<string>
+{
+  if (process.platform === "win32")
+  {
+    return "";
+  }
+
+  const pid = await new Promise<number | undefined>((resolve) =>
+  {
+    const child = spawn("lsof", ["-tiTCP:" + String(port), "-sTCP:LISTEN"], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let stdout = "";
+    child.stdout?.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+    child.on("close", () =>
+    {
+      const parsed = parseInt(stdout.trim().split("\n")[0] ?? "", 10);
+      resolve(Number.isFinite(parsed) ? parsed : undefined);
+    });
+    child.on("error", () => resolve(undefined));
+  });
+
+  if (pid === undefined)
+  {
+    return "";
+  }
+
+  let workingDirectory = "";
+  try
+  {
+    workingDirectory = fs.readlinkSync(`/proc/${pid}/cwd`);
+  }
+  catch
+  {
+    // Not readable on macOS or across users — the pid alone is still useful.
+  }
+
+  return workingDirectory.length > 0
+    ? ` (pid ${pid}, running in ${workingDirectory})`
+    : ` (pid ${pid})`;
+}
+
 export async function GetDevServerStatus(appName: string): Promise<DevServerStatus>
 {
   const project = ListProjects().find((p) => p.name === appName);
   const port = project?.devPort ?? 5173;
   const running = await IsPortOpen(port);
+  const healthy = running ? await ServesAppShell(port) : false;
   const child = devProcesses.get(appName);
+
+  let error: string | undefined = undefined;
+  if (running && !healthy)
+  {
+    const holder = await DescribePortHolder(port);
+    error =
+      `Port ${port} is held by a server that does not serve this project${holder}. `
+      + "It is most likely a stale dev server from another project or an earlier folder layout. "
+      + `Use Stop to free the port, or change dev.port in ${PROJECT_MANIFEST_FILENAME}.`;
+  }
+
   return {
     app: appName,
     port,
     running,
+    healthy,
     pid: child?.pid,
-    url: running ? `http://localhost:${port}` : undefined,
+    url: healthy ? `http://localhost:${port}` : undefined,
     managed: Boolean(child?.pid),
+    error,
   };
 }
 
@@ -314,6 +398,8 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
   const status = await GetDevServerStatus(appName);
   if (status.running)
   {
+    // Healthy: nothing to do. Unhealthy: starting a second Vite would silently
+    // land on the next free port, so surface the collision instead.
     return status;
   }
 
@@ -340,7 +426,7 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
   {
     await new Promise((r) => setTimeout(r, 250));
     const next = await GetDevServerStatus(appName);
-    if (next.running)
+    if (next.healthy)
     {
       return next;
     }
@@ -354,11 +440,14 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
   }
 
   const failed = await GetDevServerStatus(appName);
+  if (failed.healthy)
+  {
+    return failed;
+  }
   return {
     ...failed,
-    error: failed.running
-      ? undefined
-      : `Dev server did not start on port ${failed.port} within 10s — check Project Control Panel terminal output`,
+    error: failed.error
+      ?? `Dev server did not start on port ${failed.port} within 10s — check Project Control Panel terminal output`,
   };
 }
 

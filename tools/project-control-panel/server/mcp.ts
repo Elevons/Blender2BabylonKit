@@ -1,11 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-import { REPO_ROOT } from "./paths.js";
+import { ResolveKitRepoRoot, ResolveProjectRoot } from "./paths.js";
 
 export interface McpStatus
 {
+  /** False only when neither the package nor kit checkout contains bjs-mcp. */
+  available: boolean;
+  /** True in the kit checkout, where MCP TypeScript sources can be rebuilt. */
+  buildable: boolean;
   built: boolean;
   running: boolean;
   pid?: number;
@@ -22,21 +27,50 @@ export interface McpStatus
   };
 }
 
-const MCP_ENTRY = path.join(REPO_ROOT, "tools", "bjs-mcp", "dist", "index.js");
+const UNAVAILABLE_MESSAGE = "This kit installation does not contain bjs-mcp.";
+
 let mcpProcess: ChildProcess | null = null;
+
+function PackageRoot(): string
+{
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+}
+
+function McpEntry(): string
+{
+  const kitRoot = ResolveKitRepoRoot();
+  if (kitRoot !== null)
+  {
+    return path.join(kitRoot, "tools", "bjs-mcp", "dist", "index.js");
+  }
+
+  return path.join(PackageRoot(), "mcp", "dist", "index.js");
+}
+
+function IsMcpAvailable(): boolean
+{
+  return fs.existsSync(McpEntry());
+}
 
 function IsMcpBuilt(): boolean
 {
-  return fs.existsSync(MCP_ENTRY);
+  const entry = McpEntry();
+  return entry.length > 0 && fs.existsSync(entry);
 }
 
 async function FindMcpPidAsync(): Promise<number | undefined>
 {
+  const entry = McpEntry();
+  if (entry.length === 0)
+  {
+    return undefined;
+  }
+
   return new Promise((resolve) =>
   {
     try
     {
-      const child = spawn("pgrep", ["-f", MCP_ENTRY], { stdio: ["ignore", "pipe", "ignore"] });
+      const child = spawn("pgrep", ["-f", entry], { stdio: ["ignore", "pipe", "ignore"] });
       let stdout = "";
       child.stdout?.on("data", (chunk) => { stdout += chunk.toString(); });
       child.on("close", () =>
@@ -59,8 +93,8 @@ export function GetMcpCursorConfig()
     mcpServers: {
       "bjs-level-kit": {
         command: "node",
-        args: [MCP_ENTRY],
-        cwd: REPO_ROOT,
+        args: [McpEntry()],
+        cwd: ResolveProjectRoot(),
       },
     },
   };
@@ -68,24 +102,45 @@ export function GetMcpCursorConfig()
 
 export async function GetMcpStatus(): Promise<McpStatus>
 {
+  if (!IsMcpAvailable())
+  {
+    return {
+      available: false,
+      buildable: false,
+      built: false,
+      running: false,
+      entryPath: "",
+      repoRoot: ResolveProjectRoot(),
+      cursorConfig: GetMcpCursorConfig(),
+    };
+  }
+
   const pgrepPid = await FindMcpPidAsync();
   const running = Boolean(mcpProcess?.pid && !mcpProcess.killed) || pgrepPid !== undefined;
   return {
+    available: true,
+    buildable: ResolveKitRepoRoot() !== null,
     built: IsMcpBuilt(),
     running,
     pid: mcpProcess?.pid ?? pgrepPid,
-    entryPath: MCP_ENTRY,
-    repoRoot: REPO_ROOT,
+    entryPath: McpEntry(),
+    repoRoot: ResolveProjectRoot(),
     cursorConfig: GetMcpCursorConfig(),
   };
 }
 
 export async function BuildMcp(): Promise<McpStatus>
 {
+  const kitRoot = ResolveKitRepoRoot();
+  if (kitRoot === null)
+  {
+    throw new Error("bjs-mcp is prebuilt in installed kit packages.");
+  }
+
   await new Promise<void>((resolve, reject) =>
   {
     const child = spawn("npm", ["run", "mcp:build"], {
-      cwd: REPO_ROOT,
+      cwd: kitRoot,
       stdio: "inherit",
       shell: process.platform === "win32",
     });
@@ -100,9 +155,21 @@ export async function BuildMcp(): Promise<McpStatus>
 
 export async function StartMcp(): Promise<McpStatus>
 {
+  if (!IsMcpAvailable())
+  {
+    throw new Error(UNAVAILABLE_MESSAGE);
+  }
+
   if (!IsMcpBuilt())
   {
-    await BuildMcp();
+    if (ResolveKitRepoRoot() !== null)
+    {
+      await BuildMcp();
+    }
+    else
+    {
+      throw new Error(UNAVAILABLE_MESSAGE);
+    }
   }
 
   const status = await GetMcpStatus();
@@ -111,8 +178,8 @@ export async function StartMcp(): Promise<McpStatus>
     return status;
   }
 
-  mcpProcess = spawn("node", [MCP_ENTRY], {
-    cwd: REPO_ROOT,
+  mcpProcess = spawn("node", [McpEntry()], {
+    cwd: ResolveProjectRoot(),
     stdio: ["ignore", "ignore", "ignore"],
     detached: true,
   });
@@ -124,6 +191,11 @@ export async function StartMcp(): Promise<McpStatus>
 
 export async function StopMcp(): Promise<McpStatus>
 {
+  if (!IsMcpAvailable())
+  {
+    return GetMcpStatus();
+  }
+
   if (mcpProcess?.pid)
   {
     try

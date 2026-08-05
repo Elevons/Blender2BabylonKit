@@ -1,4 +1,4 @@
-import { TextBlock, Slider, Container, Control } from "@babylonjs/gui";
+import { Rectangle, TextBlock, Slider, Container, Control } from "@babylonjs/gui";
 import { Vector3 } from "@babylonjs/core";
 import { Behavior, exposed } from "@bjs/engine";
 import type { Entity } from "@bjs/engine";
@@ -37,6 +37,7 @@ export default class HUDController extends Behavior
   private currentDepthTag: TextBlock | null = null;
   private timerTag: TextBlock | null = null;
   private depthSlider: Slider | null = null;
+  private depthFill: Rectangle | null = null;
   private surfaceLabel: TextBlock | null = null;
   private floorLabel: TextBlock | null = null;
 
@@ -74,6 +75,7 @@ export default class HUDController extends Behavior
     this.currentDepthTag = this.ResolveControl(texture, "currentDepthTag", TextBlock);
     this.timerTag        = this.ResolveControl(texture, "timer", TextBlock);
     this.depthSlider     = this.ResolveControl(texture, "depthSlider", Slider);
+    this.depthFill       = this.ResolveControl(texture, "depthFill", Rectangle);
     this.surfaceLabel    = this.ResolveControl(texture, "surfaceLabel", TextBlock);
     this.floorLabel      = this.ResolveControl(texture, "floorLabel", TextBlock);
     this.horizonGroup    = this.ResolveControl(texture, "horizonGroup", Container);
@@ -92,11 +94,15 @@ export default class HUDController extends Behavior
       this.depthSlider.maximum = this.maxDepth;
       this.depthSlider.value = this.minDepth;
 
-      // Display-only gauge: keep it enabled so the value bar renders with
-      // live colors (disabled controls draw in gray), but ignore input.
-      this.depthSlider.isEnabled = true;
+      // Display-only: no built-in value bar (it fills bottom-up, wrong
+      // direction for a top-down depth gauge). depthFill handles it.
+      this.depthSlider.displayValueBar = false;
       this.depthSlider.isHitTestVisible = false;
-      this.depthSlider.displayValueBar = true;
+    }
+
+    if (this.depthFill !== null)
+    {
+      this.depthFill.height = "0px";
     }
     if (this.surfaceLabel !== null)
     {
@@ -139,6 +145,8 @@ export default class HUDController extends Behavior
       this.depthSlider.value = depth;
     }
 
+    this.UpdateDepthFill(depth);
+
     if (this.currentDepthTag !== null)
     {
       this.currentDepthTag.text = `\u25C4 ${this.FormatMetres(depth)} M`;
@@ -173,6 +181,39 @@ export default class HUDController extends Behavior
 
     this.currentDepthTag.topInPixels =
       markerY - this.currentDepthTag.heightInPixels / 2;
+  }
+
+  /**
+   * Slave the fill rectangle's full geometry to the slider's live measure:
+   * same column as the track, anchored to the track's top edge, height
+   * grows downward with depth. Overrides authored position, so the fill is
+   * always aligned regardless of how it was placed in the GUI file.
+   */
+  private UpdateDepthFill(depth: number): void
+  {
+    if (this.depthFill === null || this.depthSlider === null)
+    {
+      return;
+    }
+
+    const range = this.maxDepth - this.minDepth;
+    if (range <= 0)
+    {
+      return;
+    }
+
+    const t = (depth - this.minDepth) / range;
+    const trackHeight = this.depthSlider.heightInPixels;
+    const trackWidth = this.depthSlider.widthInPixels;
+    const trackTop = this.depthSlider.centerY - trackHeight / 2;
+    const trackLeft = this.depthSlider.centerX - trackWidth / 2;
+
+    this.depthFill.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.depthFill.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.depthFill.leftInPixels = trackLeft;
+    this.depthFill.topInPixels = trackTop;
+    this.depthFill.widthInPixels = trackWidth;
+    this.depthFill.heightInPixels = t * trackHeight;
   }
 
   /**

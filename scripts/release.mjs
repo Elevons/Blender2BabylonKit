@@ -12,9 +12,9 @@
  *   - game/package.json
  *   - blender_addon/blender_manifest.toml
  *
- * Then: typecheck + component parity, build engine + control panel, pack add-on
- * zip into packages/engine/blender-addon/, copy panel dist into
- * packages/engine/control-panel/.
+ * Then: typecheck + component parity and assemble every versioned package
+ * asset (rebuild docs + MCP embeddings, engine, control panel, MCP binary,
+ * Blender add-on).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -84,24 +84,6 @@ function BumpBlenderManifest(version)
   console.log(`[release] blender_addon/blender_manifest.toml → ${version}`);
 }
 
-function CopyDirectory(sourceDir, destinationDir)
-{
-  fs.mkdirSync(destinationDir, { recursive: true });
-  for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true }))
-  {
-    const sourcePath = path.join(sourceDir, entry.name);
-    const destinationPath = path.join(destinationDir, entry.name);
-    if (entry.isDirectory())
-    {
-      CopyDirectory(sourcePath, destinationPath);
-    }
-    else
-    {
-      fs.copyFileSync(sourcePath, destinationPath);
-    }
-  }
-}
-
 const args = ParseArgs(process.argv.slice(2));
 if (!args.version || !/^\d+\.\d+\.\d+/.test(args.version))
 {
@@ -118,15 +100,7 @@ BumpPackageJson("game/package.json", version);
 BumpBlenderManifest(version);
 
 Run("npm", ["run", "typecheck"]);
-Run("npm", ["run", "build", "--workspace", "@bjs/engine"]);
-Run("npm", ["run", "build", "--workspace", "@bjs/project-control-panel"]);
-Run("node", ["scripts/pack-blender-addon.mjs", "--out", "packages/engine/blender-addon"]);
-
-const panelDist = path.join(ROOT, "tools/project-control-panel/dist");
-const embeddedPanel = path.join(ROOT, "packages/engine/control-panel");
-fs.rmSync(embeddedPanel, { recursive: true, force: true });
-CopyDirectory(panelDist, embeddedPanel);
-console.log(`[release] copied control panel dist → packages/engine/control-panel/`);
+Run("node", ["scripts/assemble-kit-package.mjs"]);
 
 if (args.publish)
 {
@@ -138,5 +112,5 @@ if (args.publish)
 else
 {
   console.log("\n[release] Dry run complete (no npm publish). Re-run with --publish when ready.");
-  console.log(`[release] Kit version ${version} built. Add-on zip + control-panel embedded under packages/engine/.`);
+  console.log(`[release] Kit version ${version} assembled under packages/engine/.`);
 }

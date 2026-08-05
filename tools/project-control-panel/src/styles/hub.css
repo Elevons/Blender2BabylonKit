@@ -279,8 +279,39 @@ a.button-link:hover { border-color: var(--accent); }
   font-size: 0.86rem;
   color: var(--muted);
   border-bottom: 1px solid #22283a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
 }
 .asset-list li:last-child { border-bottom: none; }
+
+.asset-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.asset-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.asset-actions button {
+  padding: 0.18rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.asset-source-status,
+.asset-reloaded-status {
+  font-size: 0.75rem;
+}
+
+.asset-reloaded-status {
+  color: var(--success);
+}
 
 .wizard-grid {
   display: grid;

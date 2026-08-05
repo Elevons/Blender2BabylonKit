@@ -447,7 +447,7 @@ const steer = control.x;     // left / right</code></pre>
     { "device": "GAMEPAD", "control": "stick", "index": 0 }
   ]
 }</code></pre>
-<p>Add a <strong>Reset</strong> button action on the same map if the script needs it. Regenerate constants: <code>npm run input:gen -- --app playground</code>.</p>
+<p>Add a <strong>Reset</strong> button action on the same map if the script needs it. Regenerate constants: <code>npm run input:gen</code> (defaults to <code>game/</code>).</p>
 
 <h3 id="disambiguation">Multiple bindings on one action</h3>
 <p>When an action has several bindings (e.g. WASD plus left stick on <strong>Move</strong>), the runtime picks the <strong>most-actuated</strong> binding. It uses the whole vector or scalar with the largest magnitude. It does <em>not</em> merge axes across bindings.</p>

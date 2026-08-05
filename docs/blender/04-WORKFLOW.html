@@ -368,7 +368,7 @@
 <p>Warnings print to Blender's console on each live save. Trace: <a href="trace-livelink.html">trace-livelink</a> · runtime: <a href="../engine/trace-livelink.html">engine trace-livelink</a>.</p>
 
 <h2>Debug Build</h2>
-<p>When <strong>Debug Build</strong> is enabled, the manifest includes <code>"debug": true</code>. The playground enables:</p>
+<p>When <strong>Debug Build</strong> is enabled, the manifest includes <code>"debug": true</code>. The example game enables:</p>
 <ul>
 <li><strong>C</strong> — physics collider wireframes</li>
 <li><strong>I</strong> — Babylon Inspector (lazy-loaded)</li>
@@ -385,13 +385,13 @@
 
 <h2>Input Actions code gen (optional)</h2>
 <p>After editing the scene Input Actions asset, run from repo root:</p>
-<pre><code>npm run input:gen -- --app playground</code></pre>
+<pre><code>npm run input:gen</code></pre>
 <p>Generates typed constants in <code>game/src/InputActions.ts</code> so action names are compile-time checked. Keep asset at <code>game/input.inputactions.json</code>.</p>
 
 <h2>See also</h2>
 <ul>
 <li><a href="01-EXPORT.html">01 — Export</a> — artifact layout</li>
-<li><a href="../control-panel/01-CONTROL-PANEL.html">Project Control Panel</a> — open scenes without the playground</li>
+<li><a href="../control-panel/01-CONTROL-PANEL.html">Project Control Panel</a> — open scenes without the game app</li>
 <li><a href="PREFABS.html">Prefabs</a> — linked .blend workflow</li>
 </ul>
 </article>
