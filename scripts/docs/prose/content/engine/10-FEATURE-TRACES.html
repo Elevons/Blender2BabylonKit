@@ -140,8 +140,8 @@
 <p class="trace-summary">After the level loads, the browser runs frames forever. Each frame the kit processes input, calls your scripts, steps physics, and draws.</p>
 <p class="trace-interactive">Walk through the code: <a href="trace-runtime-loop.html"><strong>trace-runtime-loop</strong></a> · <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a> · <a href="runtime-loop.html">runtime-loop diagram</a></p>
 <ol class="trace-flow">
-<li><span class="step-stage">Runtime</span><p class="step-what">The app creates the engine and scene. It enables physics and loads the level. Loading ends by calling <code>level.Begin()</code> once.</p><p class="step-code"><code>apps/playground/src/main.ts</code> · <code>Main</code> → <code>LevelLoader.Load</code></p></li>
-<li><span class="step-stage">Runtime</span><p class="step-what">The app starts Babylon&apos;s frame loop. Without this line, nothing animates and <code>OnUpdate</code> never runs.</p><p class="step-code"><code>apps/playground/src/main.ts</code> · <code>engine.runRenderLoop(() =&gt; scene.render())</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">The app creates the engine and scene. It enables physics and loads the level. Loading ends by calling <code>level.Begin()</code> once.</p><p class="step-code"><code>game/src/main.ts</code> · <code>Main</code> → <code>LevelLoader.Load</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">The app starts Babylon&apos;s frame loop. Without this line, nothing animates and <code>OnUpdate</code> never runs.</p><p class="step-code"><code>game/src/main.ts</code> · <code>engine.runRenderLoop(() =&gt; scene.render())</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">At the start of each frame, particle emitters sync. Then the kit runs input and all <code>OnUpdate</code> hooks.</p><p class="step-code"><code>packages/engine/src/core/Level.ts</code> · <code>RunFrame</code> on <code>onBeforeRenderObservable</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">Havok advances physics. Then the GPU draws meshes, shadows, and post effects.</p><p class="step-code">Babylon · physics step inside <code>scene.render()</code></p></li>
 <li><span class="step-stage">Runtime</span><p class="step-what">After drawing, MSDF text labels render if any exist.</p><p class="step-code"><code>packages/engine/src/ui/msdfText.ts</code> · <code>onAfterRenderObservable</code></p></li>
@@ -310,7 +310,7 @@
 <ol class="trace-flow">
 <li><span class="step-stage">Blender</span><p class="step-what">Enable Live Link and set the export folder once. Ctrl+S triggers re-export.</p><p class="step-code"><code>blender_addon/export/live_link.py</code> · <code>_on_save_post</code></p></li>
 <li><span class="step-stage">Export</span><p class="step-what">Export validates and writes the glb, manifest, and side files to stable paths under <code>public/levels/</code>.</p><p class="step-code"><code>blender_addon/export/</code> · <code>export_level</code></p></li>
-<li><span class="step-stage">Runtime</span><p class="step-what">The dev server watches that folder. It reloads the page after a short debounce.</p><p class="step-code"><code>apps/playground/</code> · Vite <code>ReloadOnLevelExport</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">The dev server watches that folder. It reloads the page after a short debounce.</p><p class="step-code"><code>game/</code> · Vite <code>ReloadOnLevelExport</code></p></li>
 </ol>
 </section>
 
@@ -320,7 +320,7 @@
 <ol class="trace-flow">
 <li><span class="step-stage">Blender</span><p class="step-what">Toggle Debug Build in scene settings.</p><p class="step-code"><code>scene.bjs_debug_build</code></p></li>
 <li><span class="step-stage">Manifest</span><p class="step-what">Top-level <code>"debug": true/false</code> in the level JSON. Missing means debug on.</p><p class="step-code">manifest · <code>debug</code></p></li>
-<li><span class="step-stage">Runtime</span><p class="step-what"><code>level.debugEnabled</code> gates the collider overlay (<strong>C</strong>) and related dev features in <code>main.ts</code>.</p><p class="step-code"><code>apps/playground/src/main.ts</code> · debug key handlers</p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what"><code>level.debugEnabled</code> gates the collider overlay (<strong>C</strong>) and related dev features in <code>main.ts</code>.</p><p class="step-code"><code>game/src/main.ts</code> · debug key handlers</p></li>
 </ol>
 </section>
 

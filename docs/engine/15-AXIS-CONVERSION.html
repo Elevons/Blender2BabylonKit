@@ -443,7 +443,7 @@
 <pre><code class="language-ts">import { Space } from "@babylonjs/core";
 
 this.arrow.lookAt(this.target.node.getAbsolutePosition(), 0, 0, 0, Space.WORLD);</code></pre>
-<p>Reference: <code>apps/playground/src/behaviors/ObjectiveArrow.ts</code>.</p>
+<p>Reference: <code>game/src/behaviors/ObjectiveArrow.ts</code>.</p>
 
 <h3>Babylon world helpers vs local axes</h3>
 <table>
@@ -478,9 +478,9 @@ this.arrow.lookAt(this.target.node.getAbsolutePosition(), 0, 0, 0, Space.WORLD);
 <ul>
   <li><code>blender_addon/export/component_serializers.py</code> — <code>_serialize_collider</code>, <code>_serialize_rigidbody</code>, <code>_serialize_vars</code>, <code>_CONSTRAINT_AXIS_TO_BABYLON</code></li>
   <li><code>packages/engine/src/scripting/exposed.ts</code> — <code>ApplyExposedVars</code></li>
-  <li><code>apps/playground/src/behaviors/BoatRocker.ts</code> — local-axis comment</li>
-  <li><code>apps/playground/src/behaviors/ObjectiveArrow.ts</code> — <code>lookAt(..., Space.WORLD)</code></li>
-  <li><code>apps/playground/src/behaviors/Rotator.ts</code>, <code>Patrol.ts</code> — @exposed vector3 in local space</li>
+  <li><code>game/src/behaviors/BoatRocker.ts</code> — local-axis comment</li>
+  <li><code>game/src/behaviors/ObjectiveArrow.ts</code> — <code>lookAt(..., Space.WORLD)</code></li>
+  <li><code>game/src/behaviors/Rotator.ts</code>, <code>Patrol.ts</code> — @exposed vector3 in local space</li>
 </ul>
 </article>
   <footer>

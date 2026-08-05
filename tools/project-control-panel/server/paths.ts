@@ -3,8 +3,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CONTROL_PANEL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const REPO_ROOT = path.resolve(CONTROL_PANEL_DIR, "../..");
-export const APPS_DIR = path.join(REPO_ROOT, "apps");
+
+/**
+ * Kit monorepo root when developing inside Blender2BabylonKit.
+ * Two levels up from tools/project-control-panel.
+ */
+export const KIT_REPO_ROOT = path.resolve(CONTROL_PANEL_DIR, "../..");
+
+export const PROJECT_MANIFEST_FILENAME = "b2bkit-project.json";
 export const CONTROL_PANEL_PORT = Number(process.env.CONTROL_PANEL_PORT ?? 3200);
 
 export const ASSET_FOLDERS = [
@@ -23,7 +29,7 @@ export const DEFAULT_PROJECT_MANIFEST = {
   dev: { port: 5173 },
 };
 
-export interface BabylonProjectManifest
+export interface B2BKitProjectManifest
 {
   name: string;
   title: string;
@@ -34,19 +40,72 @@ export interface BabylonProjectManifest
   blenderExportPath?: string;
 }
 
-export function ReadProjectManifest(appDir: string): BabylonProjectManifest | null
+/**
+ * User project root: folder that contains `game/`.
+ * Prefer cwd when it looks like an outsider project; otherwise the kit monorepo.
+ */
+export function ResolveProjectRoot(): string
 {
-  const manifestPath = path.join(appDir, "babylon-project.json");
+  const fromEnv = process.env.B2BKIT_PROJECT_ROOT;
+  if (fromEnv !== undefined && fromEnv.length > 0)
+  {
+    return path.resolve(fromEnv);
+  }
+
+  const cwdGame = path.join(process.cwd(), "game");
+  if (fs.existsSync(path.join(cwdGame, "package.json")))
+  {
+    return process.cwd();
+  }
+
+  const monorepoGame = path.join(KIT_REPO_ROOT, "game");
+  if (fs.existsSync(path.join(monorepoGame, "package.json")))
+  {
+    return KIT_REPO_ROOT;
+  }
+
+  return process.cwd();
+}
+
+/** @deprecated Prefer ResolveProjectRoot — kept for existing imports. */
+export const REPO_ROOT = KIT_REPO_ROOT;
+
+export function GameDir(): string
+{
+  return path.join(ResolveProjectRoot(), "game");
+}
+
+/** @deprecated Prefer GameDir() — fixed path for monorepo-only callers. */
+export const GAME_DIR = path.join(KIT_REPO_ROOT, "game");
+
+/**
+ * Resolve the single playable project's directory.
+ */
+export function ProjectDir(appName?: string): string
+{
+  void appName;
+  return GameDir();
+}
+
+/**
+ * Read the B2BKit project manifest when one exists.
+ */
+export function ReadProjectManifest(appDir: string): B2BKitProjectManifest | null
+{
+  const manifestPath = path.join(appDir, PROJECT_MANIFEST_FILENAME);
   if (!fs.existsSync(manifestPath))
   {
     return null;
   }
-  return JSON.parse(fs.readFileSync(manifestPath, "utf8")) as BabylonProjectManifest;
+  return JSON.parse(fs.readFileSync(manifestPath, "utf8")) as B2BKitProjectManifest;
 }
 
+/**
+ * Resolve an asset directory within the single game workspace.
+ */
 export function WorkspaceAssetRoot(appName: string, level?: string): string
 {
-  const appDir = path.join(APPS_DIR, appName);
+  const appDir = ProjectDir(appName);
   if (level && level !== "_workspace")
   {
     return path.join(appDir, "public", "levels", level);

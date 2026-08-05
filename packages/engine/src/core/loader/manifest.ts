@@ -51,10 +51,15 @@ export function ValidateManifest(parsed: unknown, sourceLabel = "manifest"): Lev
 
   if (manifest.version !== SUPPORTED_SCHEMA_VERSION)
   {
+    const exporterHint =
+      typeof manifest.exporterVersion === "string" && manifest.exporterVersion.length > 0
+        ? ` This scene was exported with Blender add-on ${manifest.exporterVersion}.`
+        : "";
+
     throw new Error(
       `[bjs] ${sourceLabel} schema version ${String(manifest.version)} is not supported ` +
-      `(expected ${SUPPORTED_SCHEMA_VERSION}). Re-export the level with a matching ` +
-      `Blender add-on, or update the engine.`
+      `(expected ${SUPPORTED_SCHEMA_VERSION}).${exporterHint} ` +
+      `Update the engine to a matching kit release, or re-export the level with a matching Blender add-on.`
     );
   }
 

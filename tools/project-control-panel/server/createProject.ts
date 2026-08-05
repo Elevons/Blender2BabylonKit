@@ -1,7 +1,7 @@
 import path from "node:path";
 import { spawn } from "node:child_process";
 
-import { REPO_ROOT } from "./paths.js";
+import { GAME_DIR, REPO_ROOT } from "./paths.js";
 
 export interface CreateProjectOptions
 {
@@ -17,8 +17,8 @@ export interface CreateProjectResult
 }
 
 /**
- * Create the first app from the repository template and write its
- * babylon-project.json through scripts/create-app.mjs.
+ * Run the retiring create-app script to initialize game/ and its
+ * b2bkit-project.json manifest.
  */
 export function CreateProject(options: CreateProjectOptions): Promise<CreateProjectResult>
 {
@@ -66,7 +66,7 @@ export function CreateProject(options: CreateProjectOptions): Promise<CreateProj
       const safeName = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
       resolve({
         name: safeName,
-        path: path.join(REPO_ROOT, "apps", safeName),
+        path: GAME_DIR,
       });
     });
   });

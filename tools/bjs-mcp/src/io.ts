@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { INPUT_ACTIONS_JSON, INPUT_ACTIONS_TS, PLAYGROUND_BEHAVIORS } from "./paths.js";
+import { GAME_BEHAVIORS, INPUT_ACTIONS_JSON, INPUT_ACTIONS_TS } from "./paths.js";
 
 export interface InputActionInfo
 {
@@ -56,7 +56,7 @@ function ParseInputActionsJson(): InputActionsCatalog
   return {
     source: "json",
     maps,
-    constantsFile: "apps/playground/src/InputActions.ts",
+    constantsFile: "game/src/InputActions.ts",
   };
 }
 
@@ -85,7 +85,7 @@ function ParseInputActionsTypeScript(): InputActionsCatalog
   return {
     source: "typescript",
     maps,
-    constantsFile: "apps/playground/src/InputActions.ts",
+    constantsFile: "game/src/InputActions.ts",
   };
 }
 
@@ -93,7 +93,7 @@ export function FormatInputActions(catalog: InputActionsCatalog): string
 {
   if (catalog.maps.length === 0)
   {
-    return "No input actions found. Run `npm run input:gen` or check apps/playground/input.inputactions.json.";
+    return "No input actions found. Run `npm run input:gen` or check game/input.inputactions.json.";
   }
 
   const lines = [`Source: ${catalog.source}`];
@@ -118,12 +118,12 @@ export function FormatInputActions(catalog: InputActionsCatalog): string
 
 export function ListBehaviorFiles(): string[]
 {
-  if (!existsSync(PLAYGROUND_BEHAVIORS))
+  if (!existsSync(GAME_BEHAVIORS))
   {
     return [];
   }
 
-  return readdirSync(PLAYGROUND_BEHAVIORS)
+  return readdirSync(GAME_BEHAVIORS)
     .filter((file) => file.endsWith(".ts"))
     .sort();
 }
@@ -179,7 +179,7 @@ export function FormatBehaviorCatalog(entries: BehaviorCatalogEntry[]): string
 {
   if (entries.length === 0)
   {
-    return "No behaviors found under apps/playground/src/behaviors/.";
+    return "No behaviors found under game/src/behaviors/.";
   }
 
   return entries
@@ -194,7 +194,7 @@ export function FormatBehaviorCatalog(entries: BehaviorCatalogEntry[]): string
 export function ReadBehaviorFile(name: string): string | undefined
 {
   const stem = name.replace(/\.tsx?$/i, "");
-  const filePath = join(PLAYGROUND_BEHAVIORS, `${stem}.ts`);
+  const filePath = join(GAME_BEHAVIORS, `${stem}.ts`);
 
   if (!existsSync(filePath))
   {

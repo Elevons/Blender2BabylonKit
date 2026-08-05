@@ -13,6 +13,7 @@ export const TOPICS = [
     blurb: "Architecture, workflow, and the big-picture maps — start here if you are new.",
     startHere: [
       "QUICKSTART.html",
+      "CREATE-A-GAME.html",
       "engine/index.html",
       "engine/architecture.html",
       "engine/01-ARCHITECTURE.html",
@@ -180,6 +181,7 @@ export const PAGE_TOPICS = {
   // — Contributor / onboarding —
   "BUILDING-DOCS.html": ["contributor", "start"],
   "QUICKSTART.html": ["start", "export", "blender"],
+  "CREATE-A-GAME.html": ["start", "export", "blender"],
   "STYLE_GUIDE.md": ["contributor", "scripting"],
   "LLM_PLAYBOOK.md": ["scripting", "start"],
   "LLM_SCRIPTING_CONTEXT.md": ["scripting", "start"],

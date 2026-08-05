@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PLAYGROUND_LEVELS } from "./paths.js";
+import { GAME_LEVELS } from "./paths.js";
 
 export interface SceneEntitySummary
 {
@@ -76,15 +76,15 @@ interface PostProcessingJson
   colorCurves?: { enabled?: boolean };
 }
 
-/** List exported level folder names under the playground public levels directory. */
+/** List exported level folder names under the game public levels directory. */
 export function ListLevels(): string[]
 {
-  if (!existsSync(PLAYGROUND_LEVELS))
+  if (!existsSync(GAME_LEVELS))
   {
     return [];
   }
 
-  return readdirSync(PLAYGROUND_LEVELS, { withFileTypes: true })
+  return readdirSync(GAME_LEVELS, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
@@ -92,13 +92,13 @@ export function ListLevels(): string[]
 
 function ResolveSceneJsonPath(level: string): string | undefined
 {
-  const direct = join(PLAYGROUND_LEVELS, level, `${level}.scene.json`);
+  const direct = join(GAME_LEVELS, level, `${level}.scene.json`);
   if (existsSync(direct))
   {
     return direct;
   }
 
-  const levelDirectory = join(PLAYGROUND_LEVELS, level);
+  const levelDirectory = join(GAME_LEVELS, level);
   if (!existsSync(levelDirectory))
   {
     return undefined;

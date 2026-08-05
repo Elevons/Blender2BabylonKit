@@ -388,7 +388,7 @@
   Server -->|yes| NodeServer[server.mjs + package.json]
   NodeServer --> Done
 </pre>
-<p>The job sets <code>VITE_START_LEVEL</code> to the chosen manifest URL while it runs <code>npm run build --workspace apps/&lt;project&gt;</code>. Vite still copies every folder under <code>public/levels/</code>. The job then deletes folders you did not include.</p>
+<p>The job sets <code>VITE_START_LEVEL</code> to the chosen manifest URL while it runs <code>npm run build --workspace game</code>. Vite still copies every folder under <code>public/levels/</code>. The job then deletes folders you did not include.</p>
 <p>Poll status with <code>GET /api/publish/:app</code>. Only one publish job runs per app at a time.</p>
 
 <hr>

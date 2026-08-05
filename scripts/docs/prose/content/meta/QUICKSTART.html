@@ -27,7 +27,7 @@
 <h2>3. Attach a script behavior</h2>
 <ol>
 <li><strong>Babylon Object</strong> → <strong>Add Component</strong> → <strong>Script</strong></li>
-<li>Click <strong>Open Script…</strong> and pick <code>apps/playground/src/behaviors/Rotator.ts</code> from this repo</li>
+<li>Click <strong>Open Script…</strong> and pick <code>game/src/behaviors/Rotator.ts</code> from this repo</li>
 <li>The registry key should read <code>Rotator</code> (filename stem)</li>
 <li>Adjust <strong>Speed</strong> and <strong>Axis</strong> in the exposed fields if you like</li>
 </ol>
@@ -37,7 +37,7 @@
 <ol>
 <li><strong>Babylon Scene</strong> → <strong>Export Level</strong></li>
 <li>Choose a folder under the playground, e.g.<br>
-<code>…/apps/playground/public/levels/Quickstart/Quickstart.glb</code></li>
+<code>…/game/public/levels/Quickstart/Quickstart.glb</code></li>
 <li>Confirm you get <code>Quickstart.glb</code> and <code>Quickstart.scene.json</code> side by side</li>
 </ol>
 <p>Optional: click <strong>Validate</strong> first to catch missing scripts or a missing active camera. See <a href="blender/validation.html">validation diagram</a>.</p>
@@ -46,7 +46,7 @@
 <p>From the repo root:</p>
 <pre><code>npm install
 npm run dev</code></pre>
-<p>Point the playground at your export. Either edit <code>apps/playground/src/main.ts</code> to load <code>/levels/Quickstart/Quickstart.scene.json</code>, or copy your two files over an existing level path the app already loads.</p>
+<p>Point the playground at your export. Either edit <code>game/src/main.ts</code> to load <code>/levels/Quickstart/Quickstart.scene.json</code>, or copy your two files over an existing level path the app already loads.</p>
 <p>Open the dev URL in a browser. You should see your mesh and it should rotate if the Script component is enabled.</p>
 
 <h2>6. Enable Live Link (optional)</h2>

@@ -45,7 +45,7 @@ export function CreateProjectPanel({ onCreated, onError }: Props): JSX.Element
       <div className="panel-head">
         <h2>Create Project</h2>
         <span className="muted panel-meta">
-          Set up the app template and babylon-project.json.
+          Set up the app template and b2bkit-project.json.
         </span>
       </div>
 

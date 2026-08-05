@@ -63,22 +63,30 @@ enable it. In the 3D viewport press **N** and open the **Babylon** tab.
 Targets Blender 4.2+ (incl. 5.x). Uses only stable operator/panel/property
 APIs.
 
-## Run the playground
+## Run the example game
 
 The repo is an **npm workspaces monorepo**: the engine lives once in
-`packages/engine` (`@bjs/engine`) and every app under `apps/` depends on it via
-a workspace symlink.
+`packages/engine` (`@bjs/engine`) and the playable example lives under `game/`
+(self-contained app with its own Vite config and `b2bkit-project.json`).
 
 ```bash
 npm install        # once, at the repo root
-# put exported level files where the playground expects them:
-cp /path/to/level.glb /path/to/level.scene.json apps/playground/public/levels/
-npm run dev        # Vite dev server
-npm run typecheck  # tsc over engine + app
+# put exported level files where the game expects them:
+#   game/public/levels/<LevelName>/
+npm start          # Project Control Panel (starts Vite for game/)
+# or:
+npm run dev        # Vite only
+npm run typecheck  # tsc over engine + game
 ```
 
-Open the dev URL. `apps/playground/src/main.ts` boots an engine, enables Havok
-physics, registers example behaviors, and loads a level manifest.
+Open the control panel or the Vite URL. `game/src/main.ts` boots the engine,
+enables Havok physics, registers example behaviors, and loads a level manifest.
+
+Pack the matching Blender add-on zip:
+
+```bash
+npm run addon:pack   # → packages/engine/blender-addon/babylon_level_kit.zip
+```
 
 > Physics uses Babylon's **V2 / Havok** API. The `@babylonjs/havok` package
 > ships a `.wasm` that must be served — the included `vite.config.ts` handles
@@ -144,14 +152,22 @@ instance, and export from the level file. Full workflow:
 
 ## Creating a new project
 
+This kit monorepo has a **single** playable app at `game/`. To start another
+game outside the monorepo, copy that folder (or follow
+[Create a game with the published kit](docs/CREATE-A-GAME.html) once published):
+
 ```bash
-npm run create -- --name my-game --title "My Game" --level Arena
+# After publishing @bjs/engine:
+mkdir my-project && cd my-project
+# scaffold root + game/ (see docs/CREATE-A-GAME.html)
 npm install
-npm run dev --workspace apps/my-game
+npx b2bkit-control-panel
+npx b2bkit-addon-path   # Install from Disk in Blender
 ```
 
-Flags: `--title <text>`, `--level <name>`, `--force` (overwrite). The scaffold
-copies the playground template; the engine stays a workspace dependency.
+Assets (GUI / particles / materials) live under `game/public/workspace/` while
+iterating, and under `game/public/levels/<Level>/` when they ship with a level.
+Do not put those JSONs under `src/`.
 
 ## Adding a new component (contributors)
 
@@ -190,12 +206,14 @@ and reference it from a Script component in Blender.
 ## Layout
 
 ```
-blender_addon/          # Blender extension (export, components, UI)
-packages/engine/        # @bjs/engine — runtime, loader, behaviors
-apps/playground/        # dev app (Vite); npm run create stamps new games
-docs/                   # built HTML docs (sources under scripts/docs/)
-tools/bjs-mcp/          # MCP server for LLM-assisted behavior authoring
+blender_addon/                 # Blender extension (export, components, UI)
+packages/engine/               # @bjs/engine — runtime (+ release embeds panel + add-on zip)
+game/                          # example playable app (Vite + b2bkit-project.json)
+tools/project-control-panel/   # Project Control Panel hub
+tools/bjs-mcp/                 # MCP server for LLM-assisted behavior authoring
+docs/                          # built HTML docs (sources under scripts/docs/)
 ```
 
 Engine internals (load pipeline, manifest schema, subsystems):
 **[Engine documentation](docs/engine/00-INDEX.html)**.
+See also **[Create a game with the published kit](docs/CREATE-A-GAME.html)**.

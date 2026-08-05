@@ -3,11 +3,11 @@
  * Generate typed input constants from an *.inputactions.json asset (the Unity
  * "generated class" equivalent):
  *
- *   npm run input:gen -- --app playground
- *   npm run input:gen -- --map path/to/input.inputactions.json --app my-game
+ *   npm run input:gen
+ *   npm run input:gen -- --map path/to/input.inputactions.json
  *
- * Reads apps/<app>/input.inputactions.json (or --map) and writes
- * apps/<app>/src/InputActions.ts with a `Maps` constant object plus one
+ * Reads game/input.inputactions.json (or --map) and writes
+ * game/src/InputActions.ts with a `Maps` constant object plus one
  * `<Map>Actions` object per Action Map, so behaviors write
  * map.FindAction(PlayerActions.Jump) instead of a raw string — a typo becomes
  * a compile error instead of a silent runtime warning.
@@ -31,18 +31,13 @@ function ParseArgs(argv)
 }
 
 const args = ParseArgs(process.argv.slice(2));
-if (!args.app)
-{
-  console.error("Usage: npm run input:gen -- --app <name> [--map <path/to/input.inputactions.json>]");
-  process.exit(1);
-}
-
-const appDir = path.join(ROOT, "apps", args.app);
+const appName = args.app ?? "game";
+const appDir = path.join(ROOT, appName);
 const mapPath = args.map !== undefined ? path.resolve(args.map) : path.join(appDir, "input.inputactions.json");
 if (!fs.existsSync(mapPath))
 {
   console.error(`No asset at ${mapPath}`);
-  console.error(`Save one from Blender's Input Actions panel ("Save Asset (.json)") into apps/${args.app}/input.inputactions.json`);
+  console.error(`Save one from Blender's Input Actions panel ("Save Asset (.json)") into ${appName}/input.inputactions.json`);
   process.exit(1);
 }
 
@@ -99,7 +94,7 @@ ${BuildEntries(map.actions ?? [], `action in map "${map.name}"`)}
 }
 
 const generated = `// GENERATED from ${path.relative(ROOT, mapPath)} — do not edit by hand.
-// Regenerate: npm run input:gen -- --app ${args.app}
+// Regenerate: npm run input:gen
 // Usage: import { PlayerActions } from '../InputActions';
 //        this.player.FindAction(PlayerActions.Jump)?.IsPressed();
 

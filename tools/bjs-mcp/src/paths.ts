@@ -48,7 +48,7 @@ export const DOCS = {
 /** Prose chapter HTML fragments — the source the built docs/ pages are generated from. */
 export const PROSE_CONTENT = join(REPO_ROOT, "scripts/docs/prose/content");
 
-export const PLAYGROUND_BEHAVIORS = join(REPO_ROOT, "apps/playground/src/behaviors");
-export const PLAYGROUND_LEVELS = join(REPO_ROOT, "apps/playground/public/levels");
-export const INPUT_ACTIONS_TS = join(REPO_ROOT, "apps/playground/src/InputActions.ts");
-export const INPUT_ACTIONS_JSON = join(REPO_ROOT, "apps/playground/input.inputactions.json");
+export const GAME_BEHAVIORS = join(REPO_ROOT, "game/src/behaviors");
+export const GAME_LEVELS = join(REPO_ROOT, "game/public/levels");
+export const INPUT_ACTIONS_TS = join(REPO_ROOT, "game/src/InputActions.ts");
+export const INPUT_ACTIONS_JSON = join(REPO_ROOT, "game/input.inputactions.json");

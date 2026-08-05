@@ -599,9 +599,9 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Monorepo",
           "sub": "npm workspaces",
-          "desc": "packages/engine = @bjs/engine (symlinked into apps/*). Blender add-on versions lockstep with engine package.json / blender_manifest.toml. Apps own behaviors/ + public/levels/.",
+          "desc": "packages/engine = @bjs/engine (symlinked into game/). Blender add-on versions lockstep with engine package.json / blender_manifest.toml. game/ owns behaviors/ + public/levels/.",
           "meta": [
-            ["Template", "apps/playground"],
+            ["Game", "game"],
             ["Diagram", "workflow.html"]
           ]
         }

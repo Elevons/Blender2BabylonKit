@@ -30,6 +30,13 @@ export const PROSE_CHAPTERS = [
     fragment: "meta/QUICKSTART.html",
     layout: "meta",
   },
+  {
+    href: "CREATE-A-GAME.html",
+    side: "engine",
+    title: "Create a game with the published kit",
+    fragment: "meta/CREATE-A-GAME.html",
+    layout: "meta",
+  },
   // — Engine —
   {
     href: "engine/00-INDEX.html",

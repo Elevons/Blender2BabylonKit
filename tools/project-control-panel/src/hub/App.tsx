@@ -87,8 +87,8 @@ export function App(): JSX.Element
               disabled={createProjectDisabled}
               title={
                 hasProjectManifest
-                  ? "This project already has babylon-project.json"
-                  : "Create the app template and babylon-project.json"
+                  ? "This project already has b2bkit-project.json"
+                  : "Create the app template and b2bkit-project.json"
               }
               onClick={() => setShowCreateProject(true)}
             >

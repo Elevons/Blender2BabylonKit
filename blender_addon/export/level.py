@@ -30,6 +30,19 @@ from .visibility import (
 SCHEMA_VERSION = 5
 
 
+def _addon_version():
+    """Read the add-on semver from blender_manifest.toml (same folder tree)."""
+    import tomllib
+    from pathlib import Path
+
+    manifest_path = Path(__file__).resolve().parents[1] / "blender_manifest.toml"
+    try:
+        data = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        return str(data.get("version", "unknown"))
+    except Exception:
+        return "unknown"
+
+
 def _casts_shadows(obj):
     """Ray Visibility › Shadow (Object Properties › Visibility)."""
     return bool(getattr(obj, "visible_shadow", True))
@@ -131,6 +144,7 @@ def _build_manifest(context, glb_filename, output_dir):
         entities.append(entity)
     manifest = {
         "version": SCHEMA_VERSION,
+        "exporterVersion": _addon_version(),
         "glb": glb_filename,
         "scene": serialize_scene(context, output_dir),
         "entities": entities,

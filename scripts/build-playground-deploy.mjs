@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Deploy-only playground build for a URL subdirectory (e.g. elevons.design/demo/).
+ * Deploy-only game build for a URL subdirectory (e.g. elevons.design/demo/).
  *
  * Leaves dev untouched: npm run dev and npm run build behave exactly as before.
- * This script only writes to apps/playground/dist/.
+ * This script only writes to game/dist/.
  *
  *   node scripts/build-playground-deploy.mjs --base /truck-train/
  *   npm run deploy:playground -- --base /truck-train/
@@ -14,8 +14,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PLAYGROUND = path.join(REPO_ROOT, "apps", "playground");
-const DIST = path.join(PLAYGROUND, "dist");
+const GAME = path.join(REPO_ROOT, "game");
+const DIST = path.join(GAME, "dist");
 
 function ParseArgs(argv)
 {
@@ -103,12 +103,12 @@ function PatchLevelUrls(base)
 
 const { base } = ParseArgs(process.argv.slice(2));
 
-console.log(`[deploy] building playground for subdirectory ${base}`);
+console.log(`[deploy] building game for subdirectory ${base}`);
 
-Run("npx", ["tsc", "--noEmit"], { cwd: PLAYGROUND });
-Run("npx", ["vite", "build", "--base", base], { cwd: PLAYGROUND });
+Run("npx", ["tsc", "--noEmit"], { cwd: GAME });
+Run("npx", ["vite", "build", "--base", base], { cwd: GAME });
 PatchLevelUrls(base);
 
-console.log(`[deploy] done → apps/playground/dist/`);
+console.log(`[deploy] done → game/dist/`);
 console.log(`[deploy] upload dist/* to public_html${base.slice(0, -1)}/ on your host`);
-console.log(`[deploy] test locally: cd apps/playground && npx vite preview --base ${base}`);
+console.log(`[deploy] test locally: cd game && npx vite preview --base ${base}`);

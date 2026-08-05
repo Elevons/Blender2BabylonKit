@@ -5,8 +5,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Babylon Level Kit — 04 — Workflow</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<title>Babylon Level Kit — Create a game with the published kit</title>
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -331,92 +331,84 @@
   footer a:hover { text-decoration: underline; }
 </style>
 </head>
-<body class="has-mermaid">
+<body class="">
 <div class="wrap">
-  <nav id="toolbar"><a href="../index.html" class="site">Docs</a>
+  <nav id="toolbar"><a href="index.html" class="site">Docs</a>
     <span class="sep">/</span>
-    <a href="00-INDEX.html">Blender</a>
+    <a href="engine/00-INDEX.html">Engine</a>
     <span class="sep">/</span>
-    <a href="../engine/00-INDEX.html">Engine</a></nav>
-  <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="03-SCENE-SETTINGS.html">Prev</a> <span class="dim">·</span> <a href="PREFABS.html">Next →</a></p>
-  <article><h1>04 — Workflow</h1>
-<p class="doc-links">Diagrams: <a href="livelink.html">livelink</a> · <a href="validation.html">validation</a> · Runtime: <a href="../engine/09-WORKFLOW.html">09 — Workflow</a></p>
-<p>Day-to-day iteration: validate before export, Live Link for Ctrl+S reload, and debug vs release exports.</p>
+    <a href="blender/00-INDEX.html">Blender</a></nav>
+  
+  <article><h1>Create a game with the published kit</h1>
+<p>Canonical starter for a project that depends on the published Babylon Level Kit (runtime + Project Control Panel CLI + matching Blender add-on zip). Kit version: <strong>engine v0.32.0 · Blender add-on v0.32.0</strong>.</p>
 
-<h2>Validate</h2>
-<p><strong>Babylon Scene → Validate</strong> runs the same checks as export without writing files. Use it when wiring references or scripts.</p>
-<p>Common warnings:</p>
+<h2>1. Prerequisites</h2>
 <ul>
-<li>Missing script file on a SCRIPT component</li>
-<li>Entity / trigger / constraint target missing or render-disabled</li>
-<li>MESH collider on DYNAMIC body, or MESH-shaped trigger (Havok)</li>
-<li>Constraint ends without collider + rigid body</li>
-<li>Components on skinned mesh instead of armature</li>
-<li>AREA lights, duplicate GUIDs, no active camera</li>
-<li>Rendering Group id outside 0–3, or Custom Layer Mask out of 32-bit range</li>
-<li>Input Actions: duplicate names, empty bindings, bad <code>@inputMap</code> refs, missing Scene Default</li>
+<li><strong>Node.js</strong> 18+</li>
+<li><strong>Blender</strong> 4.2 or newer (see the add-on manifest minimum)</li>
+<li>A browser that can run Babylon.js / WebGL</li>
 </ul>
-<p>Trace: <a href="trace-validate.html">trace-validate</a>. Export Level also runs validate and lists warnings in its report.</p>
 
-<h2>Live Link</h2>
+<h2>2. Create the project layout</h2>
+<p>Use one install of the kit package. Scaffolding sits at the project root; the playable app is a self-contained <code>game/</code> folder (same shape as this monorepo's <code>game/</code> example).</p>
+<pre><code>my-project/
+  package.json              # workspaces: ["game"] (optional thin root)
+  game/
+    package.json            # depends on @bjs/engine, @babylonjs/*, vite
+    vite.config.ts          # Live Link reload of public/levels/
+    index.html
+    b2bkit-project.json     # entryLevel, blenderExportPath, dev.port
+    src/main.ts
+    src/behaviors/
+    public/workspace/       # in-progress GUI / particles / materials
+    public/levels/          # Blender exports
+    Blender/                # your .blend files
+</code></pre>
+<p><code>npm install</code> pulls the kit (runtime + panel CLI + add-on zip) and Babylon peers.</p>
+
+<h2>3. Install the Blender add-on</h2>
 <ol>
-<li>Export once manually to set the output path (stored per .blend)</li>
-<li>Tick <strong>Live Link</strong> in Babylon Scene</li>
-<li>Every <strong>Ctrl+S</strong> re-exports to the same paths</li>
-<li>With <code>npm run dev</code>, the Vite plugin watches <code>public/levels/</code> and reloads the browser (debounced; all asset types, not only the manifest)</li>
+<li>From the project root: <code>npx b2bkit-addon-path</code> — prints the zip path inside <code>node_modules</code></li>
+<li>Blender → <strong>Edit → Preferences → Get Extensions</strong> → <strong>Install from Disk…</strong></li>
+<li>Enable the extension; confirm the version matches the kit package</li>
 </ol>
-<p>Warnings print to Blender's console on each live save. Trace: <a href="trace-livelink.html">trace-livelink</a> · runtime: <a href="../engine/trace-livelink.html">engine trace-livelink</a>.</p>
 
-<h2>Debug Build</h2>
-<p>When <strong>Debug Build</strong> is enabled, the manifest includes <code>"debug": true</code>. The playground enables:</p>
+<h2>4. Open the Project Control Panel</h2>
+<p>From the project root (the folder that contains <code>game/</code>):</p>
+<pre><code>npx b2bkit-control-panel
+</code></pre>
+<p>Use <strong>Start All</strong> / Vite to run the game, jump levels, edit workspace assets, and publish.</p>
+
+<h2>5. Author and export</h2>
+<ol>
+<li>Set Blender <strong>Export Level</strong> to <code>game/public/levels/&lt;LevelName&gt;/&lt;LevelName&gt;.glb</code></li>
+<li>Enable <strong>Live Link</strong> after the first export</li>
+<li>The Vite plugin reloads when files under <code>public/levels/</code> change</li>
+</ol>
+
+<h2>6. Wire the app</h2>
+<p><code>game/src/main.ts</code> creates the engine, registers behaviors with <code>AutoRegisterBehaviors</code> over <code>./behaviors/*</code>, and loads a <code>.scene.json</code>. Behavior filenames must match the Blender SCRIPT registry keys.</p>
+
+<h2>7. Assets</h2>
 <ul>
-<li><strong>C</strong> — physics collider wireframes</li>
-<li><strong>I</strong> — Babylon Inspector (lazy-loaded)</li>
+<li><strong>In progress:</strong> <code>game/public/workspace/{gui,particles,materials,…}/</code></li>
+<li><strong>Ship with a level:</strong> copy into <code>game/public/levels/&lt;Level&gt;/</code> (manifest paths are URL-fetched, not JS imports)</li>
+<li>Never put those JSONs under <code>src/</code></li>
 </ul>
-<p>Untick for release builds. Older manifests without the field behave as debug-enabled.</p>
 
-<h2>Recommended loop</h2>
-<pre class="mermaid">flowchart LR
-  A[Author in Blender] --> B{Validate clean?}
-  B -->|fix warnings| A
-  B -->|yes| C[Export or Live Link save]
-  C --> D[Browser reload via Vite]
-  D --> A</pre>
+<h2>8. Run and publish</h2>
+<p>The control panel starts the game Vite loop. Publish copies included <code>public/levels/</code> into <code>dist/</code>; optional encryption packs them into <code>assets.pak</code> (same URLs via a service worker — not folded into <code>main.js</code>).</p>
 
-<h2>Input Actions code gen (optional)</h2>
-<p>After editing the scene Input Actions asset, run from repo root:</p>
-<pre><code>npm run input:gen -- --app playground</code></pre>
-<p>Generates typed constants in <code>game/src/InputActions.ts</code> so action names are compile-time checked. Keep asset at <code>game/input.inputactions.json</code>.</p>
+<h2>9. Version compatibility</h2>
+<p>Runtime, control panel, and Blender add-on ship as one kit version. Exported scenes stamp <code>exporterVersion</code> beside the schema <code>version</code>. If the schema does not match, the engine reports which add-on wrote the scene and asks you to update the kit or re-export.</p>
 
-<h2>See also</h2>
-<ul>
-<li><a href="01-EXPORT.html">01 — Export</a> — artifact layout</li>
-<li><a href="../control-panel/01-CONTROL-PANEL.html">Project Control Panel</a> — open scenes without the playground</li>
-<li><a href="PREFABS.html">Prefabs</a> — linked .blend workflow</li>
-</ul>
+<p>Also see <a href="QUICKSTART.html">Quickstart</a> (in-repo walkthrough) and <a href="control-panel/01-CONTROL-PANEL.html">Project Control Panel</a>.</p>
 </article>
   <footer>
-    Edit <code>scripts/docs/prose/content/blender/04-WORKFLOW.html</code>, then <code>npm run docs:build</code>.
+    Edit <code>scripts/docs/prose/content/meta/CREATE-A-GAME.html</code>, then <code>npm run docs:build</code>.
     · <a href="../index.html">Search all docs</a>
   </footer>
 </div>
-<script>
-mermaid.initialize({
-  startOnLoad: true,
-  theme: "dark",
-  securityLevel: "loose",
-  themeVariables: {
-    fontSize: "16px",
-    fontFamily: "ui-sans-serif, system-ui, sans-serif",
-  },
-  flowchart: {
-    useMaxWidth: false,
-    htmlLabels: true,
-    nodeSpacing: 48,
-    rankSpacing: 56,
-    padding: 18,
-  },
-});
-</script>
+
 </body>
 </html>

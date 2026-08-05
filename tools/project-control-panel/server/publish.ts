@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 
-import { APPS_DIR, IsPathInside, REPO_ROOT } from "./paths.js";
+import { GameDir, IsPathInside, ResolveProjectRoot, KIT_REPO_ROOT } from "./paths.js";
 import { ListLevelManifests, ListLevels } from "./projects.js";
 
 export type PublishPlatform = "web" | "tauri";
@@ -309,8 +309,7 @@ function ValidatePublishOptions(appName: string, options: PublishOptions): void
     throw new Error(`startLevel "${startUrl}" belongs to level "${match.level}", which is not included`);
   }
 
-  const appDir = path.join(APPS_DIR, appName);
-  if (!fs.existsSync(appDir))
+  if (!fs.existsSync(GameDir()))
   {
     throw new Error(`App "${appName}" not found`);
   }
@@ -345,8 +344,7 @@ function PublishedLevelsRequireDeveloperTools(appName: string, includedLevels: s
     }
 
     const manifestPath = path.join(
-      APPS_DIR,
-      appName,
+      GameDir(),
       "public",
       "levels",
       manifestEntry.level,
@@ -368,7 +366,7 @@ async function RunPublishJob(
   status: PublishStatus,
 ): Promise<void>
 {
-  const appDir = path.join(APPS_DIR, appName);
+  const appDir = GameDir();
   const distDir = path.join(appDir, "dist");
   const destination = path.resolve(options.destination);
   const startUrl = NormalizeManifestUrl(options.startLevel);
@@ -438,9 +436,9 @@ function RunNpmBuild(
   {
     const child = spawn(
       "npm",
-      ["run", "build", "--workspace", `apps/${appName}`],
+      ["run", "build", "--workspace", "game"],
       {
-        cwd: REPO_ROOT,
+        cwd: ResolveProjectRoot(),
         env: {
           ...process.env,
           VITE_START_LEVEL: startLevelUrl,
@@ -1002,14 +1000,14 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
 /**
  * Guard used by the API to reject destination paths that would write into the
  * monorepo's source tree by accident. Destination may be anywhere outside
- * apps/<name>/src and the Project Control Panel itself; writing into
- * apps/<name>/dist is fine but the UI defaults to an external folder.
+ * game/src and the Project Control Panel itself; writing into game/dist is
+ * fine but the UI defaults to an external folder.
  */
 export function AssertSafeDestination(appName: string, destination: string): void
 {
   const resolved = path.resolve(destination);
-  const appSrc = path.join(APPS_DIR, appName, "src");
-  const controlPanelRoot = path.join(REPO_ROOT, "tools", "project-control-panel");
+  const appSrc = path.join(GameDir(), "src");
+  const controlPanelRoot = path.join(KIT_REPO_ROOT, "tools", "project-control-panel");
 
   if (IsPathInside(resolved, appSrc) || resolved === appSrc)
   {

@@ -378,9 +378,9 @@
                           #   triggers environment fog atmosphere postprocess animation
                           #   materials (NME overrides)
   apps/                   # each game is an app; engine reaches it via symlink
-    playground/           #   the dev/test app (Vite); template for npm run create
+    playground/           #   the dev/test app (Vite); template for 
   blender_addon/          # the editor half (Python, Blender 4.2+ extension)
-  scripts/create-app.mjs  # scaffolds apps/&lt;name&gt;
+  scripts/create-app.mjs  # scaffolds game
   docs/                   # this documentation, plans, specs</code></pre>
 <p>Apps declare <code>&quot;@bjs/engine&quot;: &quot;*&quot;</code>. <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code>. There is no publishing and no copying. The engine ships TS source (<code>exports</code> → <code>src/index.ts</code>). Vite compiles it across the link. Vite hot-reloads engine edits into running apps. Engine and Blender add-on versions move in lockstep.</p>
 
@@ -389,7 +389,7 @@
    │  Export Level / Live Link            [03-BLENDER-ADDON.html]
    ▼
 level.glb  +  level.scene.json  (+ audio/ files, env textures)
-   │  Vite dev server serves apps/&lt;app&gt;/public/levels/
+   │  Vite dev server serves game/public/levels/
    ▼
 LevelLoader.Load(manifestUrl)             [04-LOAD-PIPELINE.html]
    │  InputManager.LoadAsset → appendSceneAsync (right-handed) → GUID index

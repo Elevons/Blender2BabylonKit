@@ -335,7 +335,7 @@ server.tool(
 
 server.tool(
   "list_levels",
-  "List exported level folder names under apps/playground/public/levels/.",
+  "List exported level folder names under game/public/levels/.",
   {},
   async () =>
   {
@@ -347,7 +347,7 @@ server.tool(
           text:
             levels.length > 0
               ? levels.map((entry) => `- ${entry}`).join("\n")
-              : "No levels found under apps/playground/public/levels/.",
+              : "No levels found under game/public/levels/.",
         },
       ],
     };
@@ -404,7 +404,7 @@ server.tool(
             text:
               levels.length > 0
                 ? `Available levels:\n${levels.map((entry) => `- ${entry}`).join("\n")}\n\nCall again with level="…" for entities.`
-                : "No levels found under apps/playground/public/levels/.",
+                : "No levels found under game/public/levels/.",
           },
         ],
       };

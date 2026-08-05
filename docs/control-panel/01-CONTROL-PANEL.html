@@ -349,7 +349,7 @@
 <li>List JSON files in per-level asset folders (<code>gui/</code>, <code>particles/</code>, …)</li>
 <li>Publish a web build to a destination folder (see <a href="02-PUBLISHING.html">02 — Publishing</a>)</li>
 </ul>
-<p>Nothing in the Project Control Panel runs inside the game runtime. It only orchestrates processes and reads/writes files under <code>apps/&lt;name&gt;/</code>.</p>
+<p>Nothing in the Project Control Panel runs inside the game runtime. It only orchestrates processes and reads/writes files under <code>game/</code>.</p>
 <h2>Architecture</h2>
 <pre><code>┌─────────────────────────────────────────────────────────────┐
 │  Browser  →  http://localhost:3200                          │
@@ -362,27 +362,27 @@
                             │
     dev: Vite middleware (server/dev.ts)  →  React hub (src/hub/)
     prod: express.static(dist/client)     →  prebuilt hub (server/index.ts)</code></pre>
-<table><thead><tr><th>Piece</th><th>Location</th><th>Role</th></tr></thead><tbody><tr><td>Hub UI</td><td><code>src/hub/</code></td><td>React panels: Development / Publish tabs, services, assets</td></tr><tr><td>API client</td><td><code>src/api/client.ts</code></td><td><code>fetch</code> wrappers for <code>/api/*</code></td></tr><tr><td>REST routes</td><td><code>server/api.ts</code></td><td>Express router</td></tr><tr><td>Current project</td><td><code>server/projects.ts</code></td><td>Resolve the current project, levels, manifests, and dev-server process</td></tr><tr><td>Publish</td><td><code>server/publish.ts</code></td><td>Web build job, level filter, optional AES pack</td></tr><tr><td>MCP control</td><td><code>server/mcp.ts</code></td><td>Build/start <code>tools/bjs-mcp</code></td></tr><tr><td>Asset I/O</td><td><code>server/assets.ts</code></td><td>List/read/write JSON under level roots</td></tr><tr><td>Docs</td><td><code>server/docs.ts</code></td><td>Build and serve <code>docs/</code> at <code>/docs</code></td></tr><tr><td>Paths &amp; manifest</td><td><code>server/paths.ts</code></td><td><code>REPO_ROOT</code>, <code>APPS_DIR</code>, <code>babylon-project.json</code></td></tr></tbody></table>
+<table><thead><tr><th>Piece</th><th>Location</th><th>Role</th></tr></thead><tbody><tr><td>Hub UI</td><td><code>src/hub/</code></td><td>React panels: Development / Publish tabs, services, assets</td></tr><tr><td>API client</td><td><code>src/api/client.ts</code></td><td><code>fetch</code> wrappers for <code>/api/*</code></td></tr><tr><td>REST routes</td><td><code>server/api.ts</code></td><td>Express router</td></tr><tr><td>Current project</td><td><code>server/projects.ts</code></td><td>Resolve the current project, levels, manifests, and dev-server process</td></tr><tr><td>Publish</td><td><code>server/publish.ts</code></td><td>Web build job, level filter, optional AES pack</td></tr><tr><td>MCP control</td><td><code>server/mcp.ts</code></td><td>Build/start <code>tools/bjs-mcp</code></td></tr><tr><td>Asset I/O</td><td><code>server/assets.ts</code></td><td>List/read/write JSON under level roots</td></tr><tr><td>Docs</td><td><code>server/docs.ts</code></td><td>Build and serve <code>docs/</code> at <code>/docs</code></td></tr><tr><td>Paths &amp; manifest</td><td><code>server/paths.ts</code></td><td><code>REPO_ROOT</code>, <code>APPS_DIR</code>, <code>b2bkit-project.json</code></td></tr></tbody></table>
 <p><strong>Development</strong> (<code>npm start b2bkit</code> → <code>server/dev.ts</code>): API is mounted first, then Vite runs in middleware mode so the hub hot-reloads.</p>
 <p><strong>Production</strong> (<code>npm run control-panel:start</code> → <code>server/index.ts</code>): API plus static files from <code>dist/client/</code>; unknown paths fall through to <code>index.html</code>.</p>
-<p>Default port: <strong>3200</strong> (<code>CONTROL_PANEL_PORT</code> env var). Each game's Vite port comes from that app's <code>babylon-project.json</code> (<code>dev.port</code>, default <strong>5173</strong>).</p>
+<p>Default port: <strong>3200</strong> (<code>CONTROL_PANEL_PORT</code> env var). Each game's Vite port comes from that app's <code>b2bkit-project.json</code> (<code>dev.port</code>, default <strong>5173</strong>).</p>
 <h2>Hub UI</h2>
 <h3>Documentation panel</h3>
 <p>Repo-wide (not tied to a project). <strong>Build Docs</strong> runs <code>npm run docs:build</code> at the repo root, regenerating the interactive HTML under <code>docs/</code> (engine diagrams, Blender traces, searchable landing page). <strong>View Docs</strong> opens <code>/docs/</code> on the Project Control Panel host — static files are served from <code>docs/</code> by the same Express server.</p>
 <p>Docs are considered built when <code>docs/index.html</code> exists.</p>
 <h3>Current project panel</h3>
-<p>On load, the hub calls <code>GET /api/project</code> and shows the fixed current project. It does not show a project selector. The server uses <code>BABYLON_PROJECT</code> when set. Otherwise, it uses the project launch directory, the only non-template app, or the only app under <code>apps/</code>. The <code>babylon-project.json</code> file supplies the display title, entry level, dev port, and Blender Live Link path.</p>
-<p>When no project exists, the hub shows <strong>Create Project</strong>. The button stays visible after a project exists, but it is disabled when <code>babylon-project.json</code> is already present. Create Project copies the app template, creates <code>public/levels/&lt;level&gt;/</code> and the asset staging folders, and writes <code>babylon-project.json</code>.</p>
+<p>On load, the hub calls <code>GET /api/project</code> and shows the fixed current project. It does not show a project selector. The server uses the single <code>game/</code> workspace (optional <code>B2BKIT_PROJECT=game</code>). The <code>b2bkit-project.json</code> file supplies the display title, entry level, dev port, and Blender Live Link path.</p>
+<p>When <code>game/</code> is missing, the hub can show <strong>Create Project</strong> (disabled once <code>b2bkit-project.json</code> is present). Prefer copying the <code>game/</code> template or following <a href="../CREATE-A-GAME.html">Create a game with the published kit</a> for outsider projects.</p>
 <h3>Services panel</h3>
 <p>Polls <code>GET /api/services/:app</code> every three seconds.</p>
-<p><strong>Game Dev Server (Vite)</strong> — <code>Start</code> runs <code>npm run dev --workspace apps/&lt;app&gt;</code> from the repository root. The Project Control Panel tracks the process and checks the configured port. <code>Stop</code> sends <code>SIGTERM</code> to the process group. On Linux, it also releases the port if necessary. <strong>Preview</strong> opens <code>babylon-project.json.entryLevel</code> through the <code>?manifest=</code> query. Select a manifest and click <strong>Set as Entry</strong> to change this setting. The Publish tab uses the same entry level. The <strong>Open Level</strong> action opens any selected level without a rebuild. The selected manifest also controls the Assets panel.</p>
+<p><strong>Game Dev Server (Vite)</strong> — <code>Start</code> runs <code>npm run dev --workspace game</code> from the repository root. The Project Control Panel tracks the process and checks the configured port. <code>Stop</code> sends <code>SIGTERM</code> to the process group. On Linux, it also releases the port if necessary. <strong>Preview</strong> opens <code>b2bkit-project.json.entryLevel</code> through the <code>?manifest=</code> query. Select a manifest and click <strong>Set as Entry</strong> to change this setting. The Publish tab uses the same entry level. The <strong>Open Level</strong> action opens any selected level without a rebuild. The selected manifest also controls the Assets panel.</p>
 <p><strong>bjs-mcp (Behavior Authoring)</strong> — <strong>Build</strong> runs <code>npm run mcp:build</code> at the repo root. <strong>Start</strong> launches <code>node tools/bjs-mcp/dist/index.js</code> (builds first if needed). <strong>Copy Cursor Config</strong> writes the stdio MCP snippet for <code>bjs-level-kit</code> (command, args, cwd) to the clipboard — paste into <code>~/.cursor/mcp.json</code>.</p>
 <p><strong>Start All Services</strong> / <strong>Stop All Services</strong> call the combined endpoints that run dev + MCP in parallel.</p>
 <h3>Assets panel</h3>
 <p>For the current project, <code>GET /api/projects/:app/assets/:level</code> lists <code>.json</code> files in each known asset folder (see below). The level comes from the manifest selected in the Services panel. The UI is read-only: it shows folder names and filenames. Writes go through the REST API (<code>PUT</code>) if you build tooling on top; the hub does not edit files.</p>
 <h2>Projects and assets</h2>
-<h3><code>babylon-project.json</code></h3>
-<p>Optional manifest at <code>apps/&lt;name&gt;/babylon-project.json</code>:</p>
+<h3><code>b2bkit-project.json</code></h3>
+<p>Optional manifest at <code>game/b2bkit-project.json</code>:</p>
 <pre><code class="language-json">{
   &quot;name&quot;: &quot;playground&quot;,
   &quot;title&quot;: &quot;Playground&quot;,
@@ -390,13 +390,13 @@
   &quot;defaultLevel&quot;: &quot;Train Scene&quot;,
   &quot;assetFolders&quot;: [&quot;gui&quot;, &quot;particles&quot;, &quot;materials&quot;, &quot;geometry&quot;, &quot;filters&quot;, &quot;render-graphs&quot;],
   &quot;dev&quot;: { &quot;port&quot;: 5173 },
-  &quot;blenderExportPath&quot;: &quot;apps/playground/public/levels/&quot;
+  &quot;blenderExportPath&quot;: &quot;game/public/levels/&quot;
 }</code></pre>
 <table><thead><tr><th>Field</th><th>Purpose</th></tr></thead><tbody><tr><td><code>name</code></td><td>Canonical app id (defaults to <code>package.json</code> name or folder name)</td></tr><tr><td><code>title</code></td><td>Display name in the hub</td></tr><tr><td><code>entryLevel</code></td><td>Scene manifest URL used by Preview and Publish</td></tr><tr><td><code>defaultLevel</code></td><td>Legacy entry folder and compatibility fallback</td></tr><tr><td><code>assetFolders</code></td><td>Declared in manifest; server uses fixed <code>ASSET_FOLDERS</code> in <code>paths.ts</code></td></tr><tr><td><code>dev.port</code></td><td>Vite port for start/stop/status</td></tr><tr><td><code>blenderExportPath</code></td><td>Shown as the Live Link target path in the hub</td></tr></tbody></table>
 <p>New projects created via <code>create-app.mjs</code> get a manifest with default asset folders and <code>dev.port</code>.</p>
 <h3>Level roots and asset folders</h3>
 <p>Asset paths resolve through <code>WorkspaceAssetRoot()</code> in <code>server/paths.ts</code>:</p>
-<table><thead><tr><th>Level selector</th><th>Filesystem root</th></tr></thead><tbody><tr><td><code>_workspace</code></td><td><code>apps/&lt;app&gt;/public/workspace/</code></td></tr><tr><td><code>&lt;level name&gt;</code></td><td><code>apps/&lt;app&gt;/public/levels/&lt;level&gt;/</code></td></tr></tbody></table>
+<table><thead><tr><th>Level selector</th><th>Filesystem root</th></tr></thead><tbody><tr><td><code>_workspace</code></td><td><code>game/public/workspace/</code></td></tr><tr><td><code>&lt;level name&gt;</code></td><td><code>game/public/levels/&lt;level&gt;/</code></td></tr></tbody></table>
 <p><strong>Workspace</strong> is a pre-export staging area for sidecar JSON assets that do not yet belong to an exported level. It is not a playable level. The current UI no longer shows Workspace because Services always selects an exported level. The <code>_workspace</code> API value remains for older tools and pre-export workflows.</p>
 <p>Under each root, these subfolders are scanned (constants in <code>ASSET_FOLDERS</code>):</p>
 <table><thead><tr><th>Folder</th><th>Typical content</th></tr></thead><tbody><tr><td><code>gui/</code></td><td>GUI editor JSON</td></tr><tr><td><code>particles/</code></td><td>Node particle system sets (<code>.json</code>; image files such as <code>.png</code> can sit beside them but are not listed in the Project Control Panel)</td></tr><tr><td><code>materials/</code></td><td>Node material graphs</td></tr><tr><td><code>geometry/</code></td><td>Node geometry graphs</td></tr><tr><td><code>filters/</code></td><td>Smart filter graphs</td></tr><tr><td><code>render-graphs/</code></td><td>Node render graph JSON</td></tr></tbody></table>
@@ -429,7 +429,7 @@
 <ol>
 <li><strong>Export from Blender</strong> — point Live Link at</li>
 </ol>
-<p>   <code>apps/&lt;project&gt;/public/levels/&lt;level&gt;/</code> (path shown in the hub).</p>
+<p>   <code>game/public/levels/&lt;level&gt;/</code> (path shown in the hub).</p>
 <ol>
 <li><strong>Start services</strong> — in the Project Control Panel, <strong>Start All Services</strong> (or start dev</li>
 </ol>
@@ -453,7 +453,7 @@
 <table><thead><tr><th>Variable</th><th>Default</th><th>Effect</th></tr></thead><tbody><tr><td><code>CONTROL_PANEL_PORT</code></td><td><code>3200</code></td><td>Hub listen port</td></tr></tbody></table>
 <p>If port 3200 is in use, the dev server prints a hint to free it (<code>fuser -k 3200/tcp</code> on Linux) or set <code>CONTROL_PANEL_PORT=3201</code>.</p>
 <p>Dev-server stop uses <code>fuser</code> on Linux only; on Windows, stopping relies on process signals to the spawned child.</p>
-<p>The Project Control Panel assumes it runs from a full git checkout with <code>apps/</code>, <code>scripts/</code>, and <code>tools/bjs-mcp/</code> present. It is not a standalone npm package outside this monorepo.</p>
+<p>In the kit monorepo the Project Control Panel runs from a full checkout (<code>game/</code>, <code>scripts/</code>, <code>tools/</code>). Published installs expose the same hub via <code>npx b2bkit-control-panel</code> from a project root that contains <code>game/</code>.</p>
 <h2>Source layout</h2>
 <pre><code>tools/project-control-panel/
   index.html              # SPA shell

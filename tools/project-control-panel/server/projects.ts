@@ -4,9 +4,12 @@ import { spawn, type ChildProcess } from "node:child_process";
 import net from "node:net";
 
 import {
-  APPS_DIR,
+  GameDir,
+  PROJECT_MANIFEST_FILENAME,
+  ProjectDir,
+  ResolveProjectRoot,
   ReadProjectManifest,
-  type BabylonProjectManifest,
+  type B2BKitProjectManifest,
 } from "./paths.js";
 
 export interface ProjectSummary
@@ -17,7 +20,7 @@ export interface ProjectSummary
   defaultLevel?: string;
   devPort: number;
   blenderExportPath: string;
-  manifest?: BabylonProjectManifest;
+  manifest?: B2BKitProjectManifest;
   hasManifest: boolean;
   hasLevels: boolean;
 }
@@ -81,17 +84,6 @@ async function KillProcessOnPort(port: number): Promise<void>
   });
 }
 
-function ReadPackageName(appDir: string): string | null
-{
-  const packagePath = path.join(appDir, "package.json");
-  if (!fs.existsSync(packagePath))
-  {
-    return null;
-  }
-  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8")) as { name?: string };
-  return pkg.name ?? path.basename(appDir);
-}
-
 function HasLevels(appDir: string): boolean
 {
   const levelsDir = path.join(appDir, "public", "levels");
@@ -108,104 +100,63 @@ function HasLevels(appDir: string): boolean
 
 export function ListProjects(): ProjectSummary[]
 {
-  if (!fs.existsSync(APPS_DIR))
+  const gameDir = GameDir();
+  if (!fs.existsSync(path.join(gameDir, "package.json")))
   {
     return [];
   }
 
-  return fs.readdirSync(APPS_DIR, { withFileTypes: true })
-    .filter((entry) =>
-    {
-      if (!entry.isDirectory())
-      {
-        return false;
-      }
-      return fs.existsSync(path.join(APPS_DIR, entry.name, "package.json"));
-    })
-    .map((entry) =>
-    {
-      const appDir = path.join(APPS_DIR, entry.name);
-      const manifest = ReadProjectManifest(appDir);
-      const name = manifest?.name ?? ReadPackageName(appDir) ?? entry.name;
-      const devPort = manifest?.dev.port ?? 5173;
-      const entryLevel = manifest !== null
-        ? ResolveConfiguredEntryLevel(name, manifest)
-        : undefined;
-      return {
-        name,
-        title: manifest?.title ?? name,
-        entryLevel,
-        defaultLevel: manifest?.defaultLevel,
-        devPort,
-        blenderExportPath: manifest?.blenderExportPath ?? `apps/${name}/public/levels/`,
-        manifest: manifest ?? undefined,
-        hasManifest: manifest !== null,
-        hasLevels: HasLevels(appDir),
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const manifest = ReadProjectManifest(gameDir);
+  const name = manifest?.name ?? "game";
+  const entryLevel = manifest !== null
+    ? ResolveConfiguredEntryLevel(name, manifest)
+    : undefined;
+
+  return [{
+    name,
+    title: manifest?.title ?? name,
+    entryLevel,
+    defaultLevel: manifest?.defaultLevel,
+    devPort: manifest?.dev.port ?? 5173,
+    blenderExportPath: manifest?.blenderExportPath ?? "game/public/levels/",
+    manifest: manifest ?? undefined,
+    hasManifest: manifest !== null,
+    hasLevels: HasLevels(gameDir),
+  }];
 }
 
 /**
  * Resolve the one project owned by this Project Control Panel session.
  *
- * Launching from an app directory selects that app through npm's INIT_CWD.
- * BABYLON_PROJECT is available for scripts that start at the repo root. A
- * single-app repository needs no configuration.
+ * B2BKIT_PROJECT optionally confirms the single game workspace.
  */
 export function GetCurrentProject(): ProjectSummary
 {
   const projects = ListProjects();
-  const requestedProject = process.env.BABYLON_PROJECT;
-  const initialDirectory = process.env.INIT_CWD;
+  const requestedProject = process.env.B2BKIT_PROJECT;
 
   if (requestedProject !== undefined && requestedProject.length > 0)
   {
-    const project = projects.find((candidate) => candidate.name === requestedProject);
-    if (project === undefined)
+    if (requestedProject !== "game")
     {
-      throw new Error(`Current project "${requestedProject}" was not found under apps/`);
-    }
-    return project;
-  }
-
-  if (initialDirectory !== undefined)
-  {
-    const initialAppDirectory = path.resolve(initialDirectory);
-    const project = projects.find(
-      (candidate) => path.resolve(APPS_DIR, candidate.name) === initialAppDirectory
-    );
-    if (project !== undefined)
-    {
-      return project;
+      throw new Error(
+        `B2BKIT_PROJECT must be "game" for the single game/ workspace, received "${requestedProject}"`
+      );
     }
   }
 
-  if (projects.length === 1)
+  const project = projects[0];
+  if (project === undefined)
   {
-    return projects[0];
+    throw new Error("No project was found under game/");
   }
 
-  const userProjects = projects.filter((project) => project.name !== "playground");
-  if (userProjects.length === 1)
-  {
-    return userProjects[0];
-  }
-
-  if (projects.length === 0)
-  {
-    throw new Error("No project was found under apps/");
-  }
-
-  throw new Error(
-    "This Project Control Panel needs one current project. Start it from the project directory " +
-    "or set BABYLON_PROJECT."
-  );
+  return project;
 }
 
 export function ListLevels(appName: string): string[]
 {
-  const levelsDir = path.join(APPS_DIR, appName, "public", "levels");
+  const levelsDir = path.join(ProjectDir(appName), "public", "levels");
   if (!fs.existsSync(levelsDir))
   {
     return [];
@@ -231,7 +182,7 @@ export interface LevelManifestEntry
  */
 export function ListLevelManifests(appName: string): LevelManifestEntry[]
 {
-  const levelsDir = path.join(APPS_DIR, appName, "public", "levels");
+  const levelsDir = path.join(ProjectDir(appName), "public", "levels");
   if (!fs.existsSync(levelsDir))
   {
     return [];
@@ -269,7 +220,7 @@ export function ListLevelManifests(appName: string): LevelManifestEntry[]
  */
 function ResolveConfiguredEntryLevel(
   appName: string,
-  manifest: BabylonProjectManifest,
+  manifest: B2BKitProjectManifest,
 ): string | undefined
 {
   const manifests = ListLevelManifests(appName);
@@ -310,17 +261,17 @@ export function SetProjectEntryLevel(
     throw new Error(`Unknown entry level "${manifestUrl}"`);
   }
 
-  const appDir = path.join(APPS_DIR, appName);
+  const appDir = ProjectDir(appName);
   const manifest = ReadProjectManifest(appDir);
   if (manifest === null)
   {
-    throw new Error(`Project "${appName}" has no babylon-project.json`);
+    throw new Error(`Project "${appName}" has no ${PROJECT_MANIFEST_FILENAME}`);
   }
 
   manifest.entryLevel = entry.url;
   manifest.defaultLevel = entry.level;
   fs.writeFileSync(
-    path.join(appDir, "babylon-project.json"),
+    path.join(appDir, PROJECT_MANIFEST_FILENAME),
     JSON.stringify(manifest, null, 2) + "\n",
     "utf8"
   );
@@ -373,9 +324,9 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
 
   const child = spawn(
     "npm",
-    ["run", "dev", "--workspace", `apps/${appName}`],
+    ["run", "dev", "--workspace", "game"],
     {
-      cwd: path.resolve(APPS_DIR, ".."),
+      cwd: ResolveProjectRoot(),
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,
       shell: process.platform === "win32",

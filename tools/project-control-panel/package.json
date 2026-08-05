@@ -1,7 +1,7 @@
 {
   "name": "@bjs/project-control-panel",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.32.0",
   "type": "module",
   "description": "Project Control Panel for Blender2BabylonKit apps",
   "scripts": {

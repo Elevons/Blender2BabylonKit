@@ -1,0 +1,64 @@
+<h1>Create a game with the published kit</h1>
+<p>Canonical starter for a project that depends on the published Babylon Level Kit (runtime + Project Control Panel CLI + matching Blender add-on zip). Kit version: <strong>__KIT_VERSION__</strong>.</p>
+
+<h2>1. Prerequisites</h2>
+<ul>
+<li><strong>Node.js</strong> 18+</li>
+<li><strong>Blender</strong> 4.2 or newer (see the add-on manifest minimum)</li>
+<li>A browser that can run Babylon.js / WebGL</li>
+</ul>
+
+<h2>2. Create the project layout</h2>
+<p>Use one install of the kit package. Scaffolding sits at the project root; the playable app is a self-contained <code>game/</code> folder (same shape as this monorepo's <code>game/</code> example).</p>
+<pre><code>my-project/
+  package.json              # workspaces: ["game"] (optional thin root)
+  game/
+    package.json            # depends on @bjs/engine, @babylonjs/*, vite
+    vite.config.ts          # Live Link reload of public/levels/
+    index.html
+    b2bkit-project.json     # entryLevel, blenderExportPath, dev.port
+    src/main.ts
+    src/behaviors/
+    public/workspace/       # in-progress GUI / particles / materials
+    public/levels/          # Blender exports
+    Blender/                # your .blend files
+</code></pre>
+<p><code>npm install</code> pulls the kit (runtime + panel CLI + add-on zip) and Babylon peers.</p>
+
+<h2>3. Install the Blender add-on</h2>
+<ol>
+<li>From the project root: <code>npx b2bkit-addon-path</code> — prints the zip path inside <code>node_modules</code></li>
+<li>Blender → <strong>Edit → Preferences → Get Extensions</strong> → <strong>Install from Disk…</strong></li>
+<li>Enable the extension; confirm the version matches the kit package</li>
+</ol>
+
+<h2>4. Open the Project Control Panel</h2>
+<p>From the project root (the folder that contains <code>game/</code>):</p>
+<pre><code>npx b2bkit-control-panel
+</code></pre>
+<p>Use <strong>Start All</strong> / Vite to run the game, jump levels, edit workspace assets, and publish.</p>
+
+<h2>5. Author and export</h2>
+<ol>
+<li>Set Blender <strong>Export Level</strong> to <code>game/public/levels/&lt;LevelName&gt;/&lt;LevelName&gt;.glb</code></li>
+<li>Enable <strong>Live Link</strong> after the first export</li>
+<li>The Vite plugin reloads when files under <code>public/levels/</code> change</li>
+</ol>
+
+<h2>6. Wire the app</h2>
+<p><code>game/src/main.ts</code> creates the engine, registers behaviors with <code>AutoRegisterBehaviors</code> over <code>./behaviors/*</code>, and loads a <code>.scene.json</code>. Behavior filenames must match the Blender SCRIPT registry keys.</p>
+
+<h2>7. Assets</h2>
+<ul>
+<li><strong>In progress:</strong> <code>game/public/workspace/{gui,particles,materials,…}/</code></li>
+<li><strong>Ship with a level:</strong> copy into <code>game/public/levels/&lt;Level&gt;/</code> (manifest paths are URL-fetched, not JS imports)</li>
+<li>Never put those JSONs under <code>src/</code></li>
+</ul>
+
+<h2>8. Run and publish</h2>
+<p>The control panel starts the game Vite loop. Publish copies included <code>public/levels/</code> into <code>dist/</code>; optional encryption packs them into <code>assets.pak</code> (same URLs via a service worker — not folded into <code>main.js</code>).</p>
+
+<h2>9. Version compatibility</h2>
+<p>Runtime, control panel, and Blender add-on ship as one kit version. Exported scenes stamp <code>exporterVersion</code> beside the schema <code>version</code>. If the schema does not match, the engine reports which add-on wrote the scene and asks you to update the kit or re-export.</p>
+
+<p>Also see <a href="QUICKSTART.html">Quickstart</a> (in-repo walkthrough) and <a href="control-panel/01-CONTROL-PANEL.html">Project Control Panel</a>.</p>

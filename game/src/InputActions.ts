@@ -1,5 +1,5 @@
-// GENERATED from apps/playground/input.inputactions.json — do not edit by hand.
-// Regenerate: npm run input:gen -- --app playground
+// GENERATED from game/input.inputactions.json — do not edit by hand.
+// Regenerate: npm run input:gen
 // Usage: import { PlayerActions } from '../InputActions';
 //        this.player.FindAction(PlayerActions.Jump)?.IsPressed();
 

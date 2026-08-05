@@ -181,7 +181,7 @@ this.arrow.lookAt(
 );
 \`\`\`
 
-Reference: \`apps/playground/src/behaviors/ObjectiveArrow.ts\`
+Reference: \`game/src/behaviors/ObjectiveArrow.ts\`
 
 ## Do not confuse with Babylon world forward
 
