@@ -1,5 +1,8 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+
+const GAME_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * True for any file under public/levels. Vite/chokidar paths may be relative
@@ -92,6 +95,13 @@ function ExcludeDeveloperTools(): Plugin
 // Havok ships a .wasm that must be served. Excluding it from dep-optimization
 // lets Vite resolve the wasm URL correctly in dev and build.
 export default defineConfig({
+  resolve: {
+    // The published package points at dist/. Inside the kit monorepo, use live
+    // engine TypeScript so engine edits still hot-reload without a build step.
+    alias: {
+      "@bjs/engine": path.resolve(GAME_DIR, "../packages/engine/src/index.ts"),
+    },
+  },
   optimizeDeps: { exclude: ["@babylonjs/havok"] },
   server: { port: 5173 },
   plugins: [ReloadOnLevelExport(), ExcludeDeveloperTools()],

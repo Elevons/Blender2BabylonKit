@@ -4,15 +4,17 @@
   "version": "0.32.0",
   "type": "module",
   "description": "Babylon Level Kit — runtime engine, Project Control Panel CLI, and matching Blender add-on zip",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "src",
     "blender-addon",
     "control-panel",
     "bin",
@@ -27,16 +29,10 @@
     "prepublishOnly": "npm run build"
   },
   "publishConfig": {
-    "access": "public",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
+    "access": "public"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
   },
   "peerDependencies": {
     "@babylonjs/addons": "^9.0.0",

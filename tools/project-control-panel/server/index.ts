@@ -5,8 +5,10 @@ import express from "express";
 import { CreateApiApp } from "./api.js";
 import { CONTROL_PANEL_PORT } from "./paths.js";
 
-const controlPanelRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const clientDir = path.join(controlPanelRoot, "dist", "client");
+// Compiled layout is dist/server/index.js beside dist/client/. The release
+// embeds those two folders unchanged under the kit package.
+const serverDir = path.dirname(fileURLToPath(import.meta.url));
+const clientDir = path.resolve(serverDir, "../client");
 
 const app = express();
 app.use(CreateApiApp());
