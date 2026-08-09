@@ -131,6 +131,7 @@ export default class MyBehavior extends Behavior
 OnStart(): void                       // once, after the level + all @exposed refs are resolved
 OnPostReady(): void                   // once, after NME compile + post attach (see load order below)
 OnUpdate(deltaSeconds: number): void  // every frame; seconds since last frame, scaled by this.time.timeScale
+OnFixedUpdate(fixedDeltaSeconds: number): void  // once per physics step, before Havok integrates it — forces/impulses go here
 OnDestroy(): void                     // on level dispose — unsubscribe observers, dispose constraints
 OnEnable(): void                      // when the entity becomes effectively active (SetEntityActive / hierarchy)
 OnDisable(): void                     // when the entity becomes effectively inactive
@@ -273,6 +274,9 @@ this.time.unscaledDeltaSeconds;       // wall-clock delta (hitch-clamped) — me
 this.time.elapsedSeconds;             // scaled game time since the level began
 this.time.unscaledElapsedSeconds;     // wall-clock time since the level began
 this.time.maxFrameDeltaSeconds;       // hitch clamp, default 0.1 (Unity maximumDeltaTime)
+this.time.fixedDeltaSeconds;          // fixed physics step (Unity fixedDeltaTime); 0 = variable stepping
+this.time.physicsStepSeconds;         // scaled seconds the next physics step advances — OnFixedUpdate's delta
+this.time.physicsBlendAlpha;          // [0..1] blend between last two fixed steps (visual interpolation)
 ```
 
 Rules:
@@ -294,6 +298,34 @@ Rules:
   browser tab lands as one ordinary step instead of a physics explosion.
 - Restore `timeScale = 1` in `OnDestroy` if your behavior may leave it
   changed when the level unloads.
+
+### Fixed physics stepping and `OnFixedUpdate`
+
+By default physics steps once per render frame, advancing by that frame's
+scaled delta (variable stepping) — simulation quality then varies with frame
+rate. Setting `fixedDeltaSeconds` (app code, e.g. `level.time.fixedDeltaSeconds
+= 1 / 60` in `main.ts`) switches to Unity-style fixed stepping: the scene
+accumulates wall time and runs 0..N Havok substeps of exactly that size per
+render frame, so constraints and collisions integrate identically at any FPS.
+
+`OnFixedUpdate(fixedDeltaSeconds)` runs once per physics step, immediately
+before Havok integrates it — in both modes:
+
+- **Apply forces and repeated impulses in `OnFixedUpdate`**, not `OnUpdate` —
+  under fixed stepping `OnUpdate` may run several times between steps (high
+  FPS) or several steps may run in one frame (low FPS). One-shot impulses
+  (jump on a button edge) stay in `OnUpdate`.
+- **Never read input edges in `OnFixedUpdate`** — `WasPressedThisFrame` is
+  frame-scoped; a fixed step can run 0 or 2 times during the edge's frame.
+- The delta it receives is scaled game time (`physicsStepSeconds`, 0 while
+  frozen) and it never fires in levels without physics.
+- **Visual interpolation is automatic** under fixed stepping: dynamic bodies
+  render at `lerp(previousStep, currentStep, alpha)` so they stay smooth on
+  displays faster than the step rate (Unity's Rigidbody interpolation).
+  Consequence: a dynamic body's `node.position` is the *visual* pose, up to
+  one step behind the simulation — teleports and origin rebases snap
+  automatically. ANIMATED bodies and `disablePreStep = false` windows are
+  untouched.
 
 ## Blender local axes vs Babylon world space
 

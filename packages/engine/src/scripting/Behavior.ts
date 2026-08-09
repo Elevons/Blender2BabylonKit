@@ -83,6 +83,18 @@ export abstract class Behavior
   /** Run every frame; deltaSeconds is the time since the previous frame. */
   OnUpdate(deltaSeconds: number): void {}
 
+  /**
+   * Run once per physics step, immediately before Havok integrates it —
+   * apply forces and repeated impulses here for frame-rate-independent
+   * physics. With variable stepping (default) this is once per frame; with
+   * fixed stepping (`this.time.fixedDeltaSeconds > 0`) it runs 0..N times
+   * per frame with a constant step. `fixedDeltaSeconds` is the scaled game
+   * time the step advances (0 while frozen). Never fires in levels without
+   * physics. Do not read input edges here — `WasPressedThisFrame` is
+   * frame-scoped and a fixed step can run 0 or 2 times in the edge's frame.
+   */
+  OnFixedUpdate(fixedDeltaSeconds: number): void {}
+
   /** Run when the level is disposed. */
   OnDestroy(): void {}
 

@@ -51,7 +51,7 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["visible", "visibility", "hidden", "hide", "isvisible", "eye icon", "viewport"], section: "visibility" },
   { keywords: ["spawn", "prefab", "scatter", "instance", "populate", "spawner", "duplicate"], section: "prefab-spawn" },
   { keywords: ["pool", "interval", "grow", "shrink", "lifetime", "recycle", "animalspawner"], section: "prefab-spawn" },
-  { keywords: ["timescale", "time scale", "slow motion", "slowmo", "slow-mo", "bullet time", "pause", "freeze time", "unscaled", "gameclock", "game clock"], section: "time" },
+  { keywords: ["timescale", "time scale", "slow motion", "slowmo", "slow-mo", "bullet time", "pause", "freeze time", "unscaled", "gameclock", "game clock", "fixedupdate", "fixed update", "fixed timestep", "fixed step", "determinism"], section: "time" },
 ];
 
 const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [

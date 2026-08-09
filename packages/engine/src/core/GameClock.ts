@@ -1,4 +1,5 @@
-import type { IParticleSystem, Scene } from "@babylonjs/core";
+import { Scene } from "@babylonjs/core";
+import type { IParticleSystem } from "@babylonjs/core";
 
 /**
  * Unified game clock — the engine's single time authority (Unity's `Time`).
@@ -28,6 +29,8 @@ export class GameClock
 
   private currentTimeScale = 1;
 
+  private currentFixedDeltaSeconds = 0;
+
   private wallDeltaSeconds = 0;
 
   private scaledDeltaSeconds = 0;
@@ -42,7 +45,13 @@ export class GameClock
   /** Authored updateSpeed per particle system, captured before the clock scales it. */
   private readonly particleBaseUpdateSpeeds = new WeakMap<IParticleSystem, number>();
 
-  constructor(private scene: Scene) {}
+  constructor(private scene: Scene)
+  {
+    // The scene's own physics accumulator (fixed-mode substepping) clamps its
+    // input with this static — align it with the clock's hitch cap so a
+    // hidden-tab gap can't queue a burst of catch-up substeps.
+    Scene.MaxDeltaTime = this.maxFrameDeltaSeconds * 1000;
+  }
 
   /** Gameplay time multiplier: 1 = real time, 0 = frozen. */
   get timeScale(): number
@@ -59,6 +68,61 @@ export class GameClock
     // immediately — a freeze set during OnUpdate freezes this frame.
     this.scaledDeltaSeconds = this.wallDeltaSeconds * this.currentTimeScale;
     this.ApplyToScene();
+  }
+
+  /**
+   * Fixed physics step size (seconds) — Unity's `fixedDeltaTime`. 0 (default)
+   * keeps variable stepping: one physics step per render frame, advancing by
+   * that frame's scaled delta. Set e.g. `1 / 60` for Unity-style fixed
+   * stepping: the scene accumulates wall time and runs 0..N Havok substeps of
+   * exactly this size per render frame, so the simulation integrates in
+   * identical slices regardless of frame rate. Behaviors hook each substep
+   * with `OnFixedUpdate`.
+   */
+  get fixedDeltaSeconds(): number
+  {
+    return this.currentFixedDeltaSeconds;
+  }
+
+  set fixedDeltaSeconds(value: number)
+  {
+    this.currentFixedDeltaSeconds = Math.max(0, value);
+    this.ApplyToScene();
+  }
+
+  /**
+   * Scaled seconds the next physics step advances the world — the delta
+   * OnFixedUpdate receives. Fixed mode: `fixedDeltaSeconds * timeScale`;
+   * variable mode: this frame's scaled delta.
+   */
+  get physicsStepSeconds(): number
+  {
+    if (this.currentFixedDeltaSeconds > 0)
+    {
+      return this.currentFixedDeltaSeconds * this.currentTimeScale;
+    }
+
+    return this.scaledDeltaSeconds;
+  }
+
+  /**
+   * Fraction [0..1] of the next fixed physics step already accumulated —
+   * the blend factor for rendering between the last two physics poses
+   * (see subsystems/physics/interpolation.ts). Reads the scene's own
+   * substep accumulator so it can never drift from the real step schedule.
+   * Always 1 in variable mode, where visuals match the sim exactly.
+   */
+  get physicsBlendAlpha(): number
+  {
+    if (this.currentFixedDeltaSeconds <= 0)
+    {
+      return 1;
+    }
+
+    const sceneWithAccumulator = this.scene as unknown as { _physicsTimeAccumulator?: number };
+    const accumulatedMs = sceneWithAccumulator._physicsTimeAccumulator ?? 0;
+    const alpha = accumulatedMs / (this.currentFixedDeltaSeconds * 1000);
+    return Math.min(Math.max(alpha, 0), 1);
   }
 
   /** Scaled frame delta (seconds) — what OnUpdate receives. */
@@ -119,9 +183,21 @@ export class GameClock
     }
 
     this.EnsurePhysicsHonorsTimeStep();
-    // Physics steps once per render frame; in fixed-step mode the world
-    // advances by exactly setTimeStep, so scaled wall delta = Unity's
-    // deltaTime * timeScale (0 freezes — BJS-sanctioned slow-mo/pause path).
+
+    if (this.currentFixedDeltaSeconds > 0)
+    {
+      // Fixed mode: the scene's own accumulator (scene._advancePhysicsEngineStep)
+      // runs 0..N substeps of subTimeStep per render frame, and Havok advances
+      // each substep by exactly setTimeStep — identical integration slices at
+      // any frame rate, still scaled by timeScale (0 freezes).
+      physicsEngine.setSubTimeStep(this.currentFixedDeltaSeconds * 1000);
+      physicsEngine.setTimeStep(this.currentFixedDeltaSeconds * this.currentTimeScale);
+      return;
+    }
+
+    // Variable mode: one physics step per render frame, advancing by the
+    // frame's scaled wall delta (Unity's deltaTime * timeScale; 0 freezes).
+    physicsEngine.setSubTimeStep(0);
     physicsEngine.setTimeStep(this.scaledDeltaSeconds);
   }
 

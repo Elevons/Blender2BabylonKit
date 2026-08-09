@@ -262,6 +262,18 @@ export const PITFALLS: PitfallEntry[] = [
     mcpTool: "get_scripting_context(section=\"time\")",
   },
   {
+    mistake: "Forces or repeated impulses applied in OnUpdate",
+    symptom: "Physics strength varies with frame rate (144 Hz players accelerate faster); inconsistent behavior at low FPS",
+    fix: "Apply continuous forces / repeated impulses in OnFixedUpdate (once per physics step). One-shot impulses on input edges stay in OnUpdate — edges must not be read in OnFixedUpdate",
+    mcpTool: "get_scripting_context(section=\"time\")",
+  },
+  {
+    mistake: "Treating a DYNAMIC body's node.position as the authoritative sim pose under fixed stepping",
+    symptom: "Trigger polls / aim rays / follow logic feel one step late; teleports briefly streak",
+    fix: "Under fixed stepping the engine interpolates dynamic-body visuals — node is the visual pose (up to one step behind). Prefer body APIs / OnFixedUpdate for sim-accurate reads; teleports snap past 10 m automatically",
+    mcpTool: "get_scripting_context(section=\"time\")",
+  },
+  {
     mistake: "Ramp that writes timeScale (or a pause-menu timer) advances by OnUpdate deltaSeconds",
     symptom: "Slow-mo ease decelerates itself and never reaches zero; timers freeze while paused",
     fix: "Advance those timers with `this.time.unscaledDeltaSeconds` — OnUpdate's deltaSeconds is scaled game time (0 while frozen); see Endgame.ts",

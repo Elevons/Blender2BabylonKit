@@ -127,6 +127,11 @@ async function Main(): Promise<void>
     onLoaded: ({ scene, level }) =>
     {
       CreateFallbackCameraIfNeeded(scene, canvas);
+
+      // Unity-style fixed physics stepping: identical 1/60s integration
+      // slices at any frame rate (stable constraints at low FPS).
+      level.time.fixedDeltaSeconds = 1 / 60;
+
       console.log("Players:", level.ByTag("Player").map((entity) => entity.name));
     },
   });

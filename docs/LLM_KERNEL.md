@@ -35,6 +35,7 @@ export default class MyBehavior extends Behavior
 | `OnStart(): void` | Once, after level load and `@exposed` refs resolve |
 | `OnPostReady(): void` | Once, after NME compile and post attach (`level.postReady`) |
 | `OnUpdate(deltaSeconds: number): void` | Every frame |
+| `OnFixedUpdate(fixedDeltaSeconds: number): void` | Once per physics step — forces/repeated impulses go here, never input edges |
 | `OnDestroy(): void` | Level dispose — remove observers |
 | `OnMessage(message: string, source: Entity): void` | Event Messages or `SendMessage` |
 | `OnCollisionEnter/Stay/Exit`, `OnTriggerEnter/Exit` | Havok collision/trigger lifecycle (opt-in overrides) |
@@ -62,7 +63,10 @@ deltas, scene animations, particles, and physics together. `OnUpdate`'s `deltaSe
 the **scaled** delta; wall-clock timers (pause menus, slow-mo ramps) use
 `this.time.unscaledDeltaSeconds`. Deltas are hitch-clamped
 (`maxFrameDeltaSeconds`, 0.1 s). Never set `scene.animationTimeScale` or the
-physics timestep by hand.
+physics timestep by hand. When the app enables fixed stepping
+(`time.fixedDeltaSeconds > 0`), physics integrates in constant slices,
+`OnFixedUpdate` runs once per step, and dynamic bodies are visually
+interpolated between steps (node pose may lag the sim by up to one step).
 
 Behaviors do **not** receive a full `Level` handle. Prefer `@exposed({ type: "entity" })`
 for cross-entity refs; same-entity: `entity.GetBehavior(OtherClass)` (first match),

@@ -372,7 +372,7 @@
 </tbody></table>
 <p><code>OnStart</code> is <em>not</em> called from the render loop. It runs once at the end of load (before post). <code>OnPostReady</code> runs once immediately after post attach. Physics bodies, triggers, and constraints exist before <code>OnStart</code> runs.</p>
 <h2>The frame loop (how <code>OnUpdate</code> hooks into Babylon)</h2>
-<p>Each browser frame, the app calls <code>scene.render()</code>. Babylon fires <code>onBeforeRenderObservable</code> callbacks. Then it steps physics. Then it draws. The kit registers <code>Level.RunFrame</code> on that observable in <code>Level.Begin()</code>.</p>
+<p>Each browser frame, the app calls <code>scene.render()</code>. Babylon runs <code>scene.animate()</code> first (animations + Havok physics, including any fixed substeps). Then it fires <code>onBeforeRenderObservable</code> — where the kit ticks <code>GameClock</code>, interpolates dynamic-body visuals, and runs <code>Level.RunFrame</code>. Then it draws.</p>
 <pre class="mermaid">
 sequenceDiagram
   participant App as main.ts
@@ -399,11 +399,11 @@ sequenceDiagram
 <p>Key facts:</p>
 <ul>
 <li><strong><code>deltaSeconds</code></strong> passed to <code>OnUpdate</code> comes from the level&apos;s <code>GameClock</code> (<code>core/GameClock.ts</code>): the raw <code>getDeltaTime() / 1000</code> is clamped to <code>maxFrameDeltaSeconds</code> (0.1&#8202;s, tab-switch hitch guard) and multiplied by <code>timeScale</code>. Behaviors read the clock as <code>this.time</code>.</li>
-<li><strong><code>OnUpdate</code> runs once per <code>scene.render()</code></strong>, on <code>onBeforeRenderObservable</code>. It typically runs <em>before</em> Havok&apos;s step and <em>before</em> the GPU draw for that frame.</li>
+<li><strong><code>OnUpdate</code> runs once per <code>scene.render()</code></strong>, on <code>onBeforeRenderObservable</code> — <em>after</em> that frame&apos;s Havok step(s) and <em>before</em> the GPU draw. <code>OnFixedUpdate</code> runs earlier, once per physics step on <code>onBeforePhysicsObservable</code>.</li>
 <li><strong>Particle empty-emitter tracking</strong> also uses <code>onBeforeRenderObservable</code> with <code>insertFirst=true</code>. It runs before <code>RunFrame</code> (<code>subsystems/particles.ts</code>).</li>
 <li><strong>MSDF text</strong> draws on <code>onAfterRenderObservable</code>. It runs after the main pass (<code>ui/msdfText.ts</code>).</li>
 </ul>
-<p>The observer first ticks <code>level.time</code> (<code>GameClock.Tick</code> — clamp, scale, sync <code>scene.animationTimeScale</code>, particle <code>updateSpeed</code>s, and the Havok timestep), then inside <code>RunFrame</code> order is fixed:</p>
+<p>The observer first ticks <code>level.time</code> (<code>GameClock.Tick</code> — clamp, scale, sync <code>scene.animationTimeScale</code>, particle <code>updateSpeed</code>s, and the Havok timestep for the <em>next</em> frame), then applies visual interpolation for dynamic bodies under fixed stepping, then inside <code>RunFrame</code> order is fixed:</p>
 <ol>
 <li><code>InputManager.Process()</code> — poll gamepad, evaluate actions, fire callbacks</li>
 <li>Every behavior&apos;s <code>OnUpdate(deltaSeconds)</code> (entity iteration order unspecified)</li>
@@ -411,20 +411,23 @@ sequenceDiagram
 <li><code>InputManager.EndFrame()</code> — so <code>WasPressedThisFrame</code> edges last exactly one frame</li>
 </ol>
 <p><strong>Time scale:</strong> <code>this.time.timeScale = 0</code> freezes gameplay (behavior deltas, scene animations, particles, physics) while rendering and input keep running. Wall-clock timers — pause menus, slow-motion ramps that <em>write</em> <code>timeScale</code> — advance by <code>this.time.unscaledDeltaSeconds</code> instead. See <a href="14-API-GUIDE.html#time">API Guide — GameClock</a>.</p>
+<p><strong>Fixed stepping:</strong> by default physics advances by each frame's scaled delta (variable step), so simulation quality varies with frame rate. When the app sets <code>level.time.fixedDeltaSeconds</code> (e.g. <code>1/60</code>), the scene accumulates wall time and runs 0..N Havok substeps of exactly that size per frame — identical integration at any FPS. <code>OnFixedUpdate</code> fires once per step in both modes; apply forces there, never read input edges there. Dynamic bodies are <strong>visually interpolated</strong> between the last two steps (<code>subsystems/physics/interpolation.ts</code>), so they stay smooth on displays faster than the step rate; their node transforms show that visual pose, up to one step behind the sim.</p>
 <p>Interactive trace: <a href="trace-runtime-loop.html">trace-runtime-loop</a> · <a href="trace-lifecycle.html">trace-lifecycle</a>.</p>
 <h2>Behavior lifecycle (summary)</h2>
 <p>Full scripting detail: <a href="05-SCRIPTING.html">05 — Scripting</a>. Input polling: <a href="12-INPUT.html">12 — Input</a>.</p>
 <table><thead><tr><th>Hook</th><th>When</th></tr></thead><tbody>
 <tr><td><code>OnStart()</code></td><td>Once, end of load (<code>Level.Begin</code>), after all entity refs resolve</td></tr>
 <tr><td><code>OnPostReady()</code></td><td>Once, after NME compile + post attach (<code>NotifyPostReady</code>)</td></tr>
-<tr><td><code>OnUpdate(deltaSeconds)</code></td><td>Every frame, inside <code>RunFrame</code> (see above)</td></tr>
+<tr><td><code>OnFixedUpdate(fixedDeltaSeconds)</code></td><td>Once per physics step (<code>onBeforePhysicsObservable</code>) — 0..N&#215; per frame under fixed stepping; runs before that frame&apos;s <code>OnUpdate</code></td></tr>
+<tr><td><code>OnUpdate(deltaSeconds)</code></td><td>Every frame, inside <code>RunFrame</code> (after that frame&apos;s physics — see above)</td></tr>
 <tr><td><code>OnDestroy()</code></td><td><code>Level.Dispose</code> — remove observers you added in <code>OnStart</code></td></tr>
 <tr><td><code>OnMessage(message, source)</code></td><td>Triggers, 3D GUI clicks, or <code>Entity.SendMessage</code> — not tied to the frame loop</td></tr>
 </tbody></table>
 <p>Hooks must be <strong>PascalCase</strong> (<code>OnStart</code>, not <code>onStart</code>). Scale continuous motion by <code>deltaSeconds</code>. Babylon <em>velocities</em> are already per-second. Do not multiply those by <code>deltaSeconds</code>.</p>
 <h2>Other kit systems on the timeline</h2>
 <table><thead><tr><th>System</th><th>Babylon hook</th><th>When</th><th>Kit entry</th></tr></thead><tbody>
-<tr><td>Behaviors</td><td><code>onBeforeRenderObservable</code></td><td>Before physics/draw each frame</td><td><code>Level.RunFrame</code></td></tr>
+<tr><td>Behaviors (<code>OnUpdate</code>)</td><td><code>onBeforeRenderObservable</code></td><td>After that frame&apos;s physics, before draw</td><td><code>Level.RunFrame</code></td></tr>
+<tr><td>Behaviors (<code>OnFixedUpdate</code>)</td><td><code>onBeforePhysicsObservable</code></td><td>Once per Havok step (0..N under fixed stepping)</td><td><code>Level.RunFixedFrame</code></td></tr>
 <tr><td>Input actions</td><td>Same observer + keyboard observable</td><td>Process/EndFrame inside RunFrame</td><td><code>InputManager</code></td></tr>
 <tr><td>Particles (empty emitters)</td><td><code>onBeforeRender</code> (insert first)</td><td>Before RunFrame</td><td><code>WireParticleEmitterTracking</code></td></tr>
 <tr><td>Physics (Havok)</td><td>Internal to <code>scene.render()</code></td><td>After beforeRender callbacks</td><td><code>EnableHavokPhysics</code></td></tr>

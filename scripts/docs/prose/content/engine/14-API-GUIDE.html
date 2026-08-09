@@ -44,7 +44,8 @@ export default class Patrol extends Behavior
 <tr><td><code>OnPostReady(): void</code></td><td>Once, after NME compile and post attach (<code>level.postReady</code>)</td></tr>
 <tr><td><code>OnDisable(): void</code></td><td>When the entity becomes effectively inactive (<code>SetEntityActive</code> / hierarchy)</td></tr>
 <tr><td><code>OnEnable(): void</code></td><td>When the entity becomes effectively active again</td></tr>
-<tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every frame, inside <code>Level.RunFrame</code> (before physics step). Skipped when <code>!IsEntityActive(entity)</code></td></tr>
+<tr><td><code>OnUpdate(deltaSeconds: number): void</code></td><td>Every frame, inside <code>Level.RunFrame</code>. Skipped when <code>!IsEntityActive(entity)</code></td></tr>
+<tr><td><code>OnFixedUpdate(fixedDeltaSeconds: number): void</code></td><td>Once per physics step, before Havok integrates it (0..N&#215; per frame under fixed stepping). Apply forces here; never read input edges. Skipped when <code>!IsEntityActive(entity)</code></td></tr>
 <tr><td><code>OnDestroy(): void</code></td><td>When the level is disposed</td></tr>
 <tr><td><code>OnMessage(message, source): void</code></td><td>When this entity receives a message (Event Messages, 3D GUI, <code>SendMessage</code>)</td></tr>
 <tr><td><code>OnCollisionEnter(other, contact): void</code></td><td>Solid collider first contacts another entity (<code>contact</code> is a <code>CollisionContact</code>: point, normal, impulse, distance)</td></tr>
@@ -146,6 +147,9 @@ export default class Patrol extends Behavior
 <tr><td><code>elapsedSeconds</code></td><td>Scaled game time since the level began</td></tr>
 <tr><td><code>unscaledElapsedSeconds</code></td><td>Wall-clock time since the level began</td></tr>
 <tr><td><code>maxFrameDeltaSeconds</code></td><td>Per-frame delta cap (default 0.1&#8202;s; Unity&apos;s <code>maximumDeltaTime</code>) — absorbs the giant catch-up delta after a hidden browser tab</td></tr>
+<tr><td><code>fixedDeltaSeconds</code></td><td>Fixed physics step size (Unity&apos;s <code>fixedDeltaTime</code>). 0 (default) = variable stepping, one step per frame; e.g. <code>1/60</code> = 0..N identical Havok substeps per frame regardless of frame rate. Set from app code (<code>level.time.fixedDeltaSeconds = 1/60</code>)</td></tr>
+<tr><td><code>physicsStepSeconds</code></td><td>Scaled seconds the next physics step advances — the delta <code>OnFixedUpdate</code> receives</td></tr>
+<tr><td><code>physicsBlendAlpha</code></td><td>Fraction of the next fixed step already accumulated — the factor the engine uses to interpolate dynamic-body visuals between steps (always 1 under variable stepping)</td></tr>
 </tbody></table>
 <p><strong>Rules:</strong> never scale time by hand (<code>scene.animationTimeScale</code>, <code>particleSystem.updateSpeed</code> multipliers, <code>physicsEngine.setTimeStep</code>, raw <code>getDeltaTime</code> multipliers) — write <code>timeScale</code> and everything follows. While <code>timeScale != 1</code> the clock owns each particle system&apos;s <code>updateSpeed</code> (rescaled every frame, restored at 1) — don&apos;t tune it from a behavior during slow motion. A ramp that <em>writes</em> <code>timeScale</code> must advance by <code>unscaledDeltaSeconds</code>, or it slows itself down (see <code>game/src/behaviors/Endgame.ts</code>). Restore <code>timeScale = 1</code> in <code>OnDestroy</code> if your behavior may leave it changed.</p>
 

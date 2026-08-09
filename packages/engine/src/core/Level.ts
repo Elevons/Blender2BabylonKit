@@ -11,6 +11,7 @@ import type { GUI3DManager } from "@babylonjs/gui";
 import type { MsdfTextManager } from "../ui/msdfText";
 import { ClearFontCacheForScene } from "../ui/msdfText";
 import { GameClock } from "./GameClock";
+import { PhysicsBodyInterpolation } from "../subsystems/physics/interpolation";
 import type { ParticleEmitterManager } from "../subsystems/particles";
 import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import type { TransformNode } from "@babylonjs/core";
@@ -127,6 +128,8 @@ export class Level
 
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
+  private physicsStepObserver?: ReturnType<Scene["onBeforePhysicsObservable"]["add"]>;
+  private bodyInterpolation?: PhysicsBodyInterpolation;
   private updaters: ((deltaSeconds: number) => void)[] = [];
   private physicsViewer?: PhysicsViewer;
   /** Meshes queued by spawns that passed `deferShadowRefresh`. */
@@ -376,12 +379,27 @@ export class Level
       this.componentHost.MarkBegun();
     }
 
+    this.bodyInterpolation = new PhysicsBodyInterpolation(this.scene);
+
     this.observer = this.scene.onBeforeRenderObservable.add(() =>
     {
       // The clock clamps hitch deltas, applies timeScale, and syncs scene
-      // animations + the Havok step (physics runs later in scene.render()).
+      // animations + the Havok step.
       const rawDeltaSeconds = this.scene.getEngine().getDeltaTime() / 1000;
-      this.RunFrame(this.time.Tick(rawDeltaSeconds));
+      const scaledDeltaSeconds = this.time.Tick(rawDeltaSeconds);
+
+      // Before behaviors, so camera followers and gameplay reads see the
+      // smooth pose (no-op under variable stepping).
+      this.bodyInterpolation!.ApplyVisuals(this.time.physicsBlendAlpha);
+
+      this.RunFrame(scaledDeltaSeconds);
+    });
+
+    // Fires once per physics step — per render frame with variable stepping,
+    // 0..N times per frame with fixed stepping (GameClock.fixedDeltaSeconds).
+    this.physicsStepObserver = this.scene.onBeforePhysicsObservable.add(() =>
+    {
+      this.RunFixedFrame(this.time.physicsStepSeconds);
     });
   }
 
@@ -480,6 +498,33 @@ export class Level
     InputManager.EndFrame();
   }
 
+  /**
+   * Run every behavior's OnFixedUpdate once per physics step, immediately
+   * before Havok integrates it (scene.onBeforePhysicsObservable).
+   */
+  private RunFixedFrame(stepSeconds: number): void
+  {
+    for (const entity of this.entities.values())
+    {
+      if (!IsEntityActive(entity))
+      {
+        continue;
+      }
+
+      for (const behavior of entity.behaviors)
+      {
+        try
+        {
+          behavior.OnFixedUpdate(stepSeconds);
+        }
+        catch (error)
+        {
+          console.error(`[bjs] OnFixedUpdate "${entity.name}"`, error);
+        }
+      }
+    }
+  }
+
   /** Stop the update loop and run every behavior's OnDestroy. */
   Dispose(): void
   {
@@ -508,6 +553,16 @@ export class Level
     if (this.observer !== undefined)
     {
       this.scene.onBeforeRenderObservable.remove(this.observer);
+    }
+
+    if (this.physicsStepObserver !== undefined)
+    {
+      this.scene.onBeforePhysicsObservable.remove(this.physicsStepObserver);
+    }
+
+    if (this.bodyInterpolation !== undefined)
+    {
+      this.bodyInterpolation.Dispose();
     }
   }
 

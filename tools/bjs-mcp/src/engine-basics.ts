@@ -32,7 +32,7 @@ The kit splits Blender export into **two files**:
   {
     slug: "frame-loop",
     title: "Frame loop and lifecycle",
-    summary: "OnStart once after load; OnPostReady once after post attach; OnUpdate every frame before physics step.",
+    summary: "OnStart once after load; OnFixedUpdate per physics step; OnUpdate every frame after physics.",
     humanDoc: "docs/engine/02-RUNTIME-BASICS.html",
     content: `# Frame loop (behavior author view)
 
@@ -41,26 +41,37 @@ The kit splits Blender export into **two files**:
 call it themselves).
 **Kit** registers \`Level.RunFrame\` on \`onBeforeRenderObservable\`.
 
-Each frame:
-1. \`GameClock.Tick\` (\`level.time\`) — clamp the raw engine delta (hitch cap
-   0.1s), apply \`timeScale\`, sync \`scene.animationTimeScale\`, particle
-   \`updateSpeed\`s + Havok step
-2. \`InputManager.Process()\` — poll input
-3. Every \`OnUpdate(deltaSeconds)\` on every behavior — **scaled** delta
-4. Camera updater callbacks
-5. \`InputManager.EndFrame()\` — edge buttons last one frame
-6. Then Havok physics step, then GPU draw
+Each \`scene.render()\` (order matters — physics runs *before* \`OnUpdate\`):
+1. Scene animate → Havok: 0..N substeps when \`fixedDeltaSeconds > 0\`
+   (else one variable step). Per substep: \`OnFixedUpdate\` → integrate →
+   pose capture for visual interpolation
+2. \`onBeforeRender\` → \`GameClock.Tick\` (hitch clamp + \`timeScale\`, sync
+   animations / particles / Havok step for the *next* frame) → interpolate
+   dynamic-body visuals (\`physicsBlendAlpha\`) → \`RunFrame\`:
+   - \`InputManager.Process()\`
+   - every \`OnUpdate(deltaSeconds)\` — **scaled** delta
+   - camera updaters
+   - \`InputManager.EndFrame()\`
+3. GPU draw
 
 | Hook | When |
 |------|------|
 | \`OnStart\` | **Once**, end of \`LevelLoader.Load\`, after all @exposed entity refs resolve |
 | \`OnPostReady\` | **Once**, after NME compile + \`ApplyPostProcessing\` (\`level.postReady\`) |
-| \`OnUpdate\` | Every \`scene.render()\` |
+| \`OnFixedUpdate\` | Once per physics step (\`onBeforePhysics\`) — 0..N×/frame under fixed stepping |
+| \`OnUpdate\` | Every \`scene.render()\`, after that frame's physics |
 | \`OnDestroy\` | \`Level.Dispose\` |
 | \`OnMessage\` | Trigger enter, GUI click, \`SendMessage\` — not tied to frame order |
 
 \`deltaSeconds\` = seconds (not ms). Multiply **position changes** by it.
 **Do not** multiply Babylon **velocity** by \`deltaSeconds\`.
+
+**OnFixedUpdate(fixedDeltaSeconds):** once per physics step, before Havok
+integrates it. Forces and repeated impulses belong here (frame-rate
+independent); never read input edges here. With fixed stepping
+(\`time.fixedDeltaSeconds > 0\`, app-enabled) it runs 0..N times per frame.
+Dynamic bodies are visually interpolated between steps — \`node.position\`
+is the visual pose (up to one step behind the sim).
 
 **Time scale (\`this.time\`, a GameClock):** the single time authority.
 \`this.time.timeScale = 0\` freezes gameplay (OnUpdate deltas, animations,
