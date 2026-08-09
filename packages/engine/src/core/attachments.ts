@@ -14,6 +14,7 @@ import type {
   TagComponent,
   RenderingGroupComponent,
   LayerMaskComponent,
+  MeshShadowsComponent,
   CollisionLayerComponent,
   ColliderComponent,
   RigidBodyComponent,
@@ -35,6 +36,7 @@ export type EntityAttachment =
   | { type: "TAG"; data: TagComponent }
   | { type: "RENDERING_GROUP"; data: RenderingGroupComponent }
   | { type: "LAYER_MASK"; data: LayerMaskComponent }
+  | { type: "MESH_SHADOWS"; data: MeshShadowsComponent }
   | { type: "COLLISION_LAYER"; data: CollisionLayerComponent }
   | { type: "COLLIDER"; data: ColliderComponent; body: PhysicsBody }
   | { type: "RIGIDBODY"; data: RigidBodyComponent; body: PhysicsBody }

@@ -3,6 +3,7 @@ import type { LevelManifest } from "../types";
 import type { Level } from "../Level";
 import type { LevelLoaderOptions } from "../LevelLoader";
 import { SetupShadows } from "../../subsystems/shadows";
+import { ApplyMeshShadows } from "../../subsystems/shadows/meshShadows";
 import {
   BuildClusterableLightNames,
   ClusterPunctualLightsIfNeeded,
@@ -89,6 +90,7 @@ function ApplyShadows(
     freeze,
     debug: context.level.debugEnabled,
   });
+  ApplyMeshShadows(manifest, context.level, context.level.shadowGenerators);
 }
 
 /** Log shadow-casting light counts when debug export is enabled. */

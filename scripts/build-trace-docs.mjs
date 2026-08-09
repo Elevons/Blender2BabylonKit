@@ -109,7 +109,9 @@ export const TRACES = [
     intro: "How the app render loop connects to Babylon observables and the kit's Level.RunFrame — including particle and MSDF hooks on the same frame.",
     steps: [
       { file: "game/src/main.ts", symbol: "Main",
-        note: "APP BOOT — after Load returns, engine.runRenderLoop(() => scene.render()) starts the browser frame loop. The kit never calls runRenderLoop; without this, OnUpdate never runs." },
+        note: "APP BOOT — constructs LevelDirector and awaits director.Load(manifestUrl). The director creates the engine, enables Havok, loads the level, and starts the browser frame loop." },
+      { file: "packages/engine/src/core/LevelDirector.ts", symbol: "EnsureRenderLoop",
+        note: "FRAME LOOP OWNER — engine.runRenderLoop(() => scene.render()) started once on first load; renders whichever scene is current across Restart/Load. Manual bootstraps (no director) must call runRenderLoop themselves or OnUpdate never runs." },
       { file: "packages/engine/src/core/Level.ts", symbol: "Begin",
         note: "END OF LOAD — InputManager.Attach, every OnStart once, then subscribe RunFrame on scene.onBeforeRenderObservable (registered during FinalizeLevel → level.Begin)." },
       { file: "packages/engine/src/subsystems/particles.ts", symbol: "WireParticleEmitterTracking",

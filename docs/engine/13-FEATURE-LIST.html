@@ -376,6 +376,7 @@
 <tr><td><strong>PARTICLE</strong></td><td>Particle or Node Particle system JSON</td><td><code>IParticleSystem</code> on entity</td><td><a href="10-FEATURE-TRACES.html#particles">feature trace</a> · <a href="trace-particles.html">trace-particles</a></td></tr>
 <tr><td><strong>MSDF_TEXT</strong></td><td>Crisp 3D labels (bmfont JSON + atlas PNG)</td><td><code>TextRenderer</code>; draws after main pass</td><td><a href="trace-msdfText.html">trace-msdfText</a> · <a href="11-UI.html">11 — UI</a></td></tr>
 <tr><td><strong>RENDERING_GROUP</strong></td><td>Babylon draw-order group (0–3); optional propagation to owned meshes / child entities</td><td><code>mesh.renderingGroupId</code> (+ particle systems on entity)</td><td><a href="10-FEATURE-TRACES.html#render-layers">feature trace</a> · <a href="07-RENDERING.html#render-layers">07 — Rendering</a></td></tr>
+<tr><td><strong>MESH_SHADOWS</strong></td><td>Cast/receive shadow modes; overrides ray visibility when enabled</td><td><code>mesh.receiveShadows</code> + <code>ShadowGenerator</code> casters</td><td><a href="07-RENDERING.html">07 — Rendering › Shadows</a></td></tr>
 <tr><td><strong>LAYER_MASK</strong></td><td>Babylon visibility bitmask for multi-camera / light filtering</td><td><code>mesh.layerMask</code> on owned meshes</td><td><a href="10-FEATURE-TRACES.html#render-layers">feature trace</a> · <a href="07-RENDERING.html#render-layers">07 — Rendering</a></td></tr>
 <tr><td><strong>COLLISION_LAYER</strong></td><td>Named Havok collision layer; optional propagation to owned colliders / child entities</td><td><code>PhysicsShape.filterMembershipMask</code> / <code>filterCollideMask</code></td><td><a href="10-FEATURE-TRACES.html#collision-layers">feature trace</a> · <a href="06-PHYSICS.html#collision-layers">06 — Physics</a></td></tr>
 <tr><td><strong>REFLECTION_PROBE</strong></td><td>Local cubemap for nearby geometry inside an influence volume (not a sky replacement)</td><td><code>ReflectionProbe</code> on entity; skybox keeps IBL</td><td><a href="07-RENDERING.html#reflection-probes">07 — Rendering</a></td></tr>
@@ -444,6 +445,7 @@
 <tr><td><strong>Behavior</strong></td><td>Your TypeScript class from a SCRIPT component</td><td><a href="14-API-GUIDE.html#behavior">API Guide — Behavior</a></td></tr>
 <tr><td><strong>Attachment</strong></td><td>One applied component row (data + runtime object)</td><td><a href="14-API-GUIDE.html#attachments">API Guide — Attachments</a></td></tr>
 <tr><td><strong>Level</strong></td><td>Container for all entities, scene subsystems, frame loop</td><td><a href="14-API-GUIDE.html#level">API Guide — Level</a></td></tr>
+<tr><td><strong>GameClock</strong></td><td>Unified time authority — <code>timeScale</code> (slow-mo / pause), scaled + unscaled deltas, hitch clamp</td><td><a href="14-API-GUIDE.html#time">API Guide — GameClock</a></td></tr>
 <tr><td><strong>OnMessage</strong></td><td>String messages from Event Messages, GUI, or <code>SendMessage</code></td><td><a href="10-FEATURE-TRACES.html#trigger">trigger trace</a></td></tr>
 </tbody></table>
 

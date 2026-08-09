@@ -6,19 +6,15 @@ import {
 
 import {
   BehaviorRegistry,
-  LevelLoader,
-  EnableHavokPhysics,
+  LevelDirector,
   AutoRegisterBehaviors,
-  FetchAndValidateManifest,
-  CreateLevelEngine,
-  ResolveHavokPhysicsOptions,
   type Level,
 } from "@bjs/engine";
 
 /**
- * App bootstrap: create the engine, enable physics, register behaviors, load a
- * level, wire dev tooling, and start the render loop. Everything level-related
- * lives in the engine — this file is only the wiring.
+ * App bootstrap: register behaviors, own level load/restart via LevelDirector,
+ * wire dev tooling, and start the render loop. Behaviors reach load/restart as
+ * `this.session`.
  */
 
 const DEFAULT_MANIFEST_URL = "/levels/Train Scene/Train Scene.scene.json";
@@ -73,12 +69,16 @@ function CreateFallbackCameraIfNeeded(scene: Scene, canvas: HTMLCanvasElement): 
  * Bind the dev debug keys — Shift+C for collider wireframes, Shift+I for the
  * Babylon Inspector — gated by the Blender export's "Debug Build" flag. The
  * inspector is dynamically imported so it stays out of production bundles.
+ * Uses a mutable level slot so soft restarts keep working without rebinding.
  */
-function BindDebugKeys(scene: Scene, level: Level): void
+function BindDebugKeys(
+  getScene: () => Scene | null,
+  getLevel: () => Level | null
+): void
 {
   let inspectorVisible = false;
 
-  async function ToggleInspector(): Promise<void>
+  async function ToggleInspector(scene: Scene): Promise<void>
   {
     const { Inspector } = await import("@babylonjs/inspector");
 
@@ -96,7 +96,9 @@ function BindDebugKeys(scene: Scene, level: Level): void
 
   window.addEventListener("keydown", (keyboardEvent) =>
   {
-    if (!level.debugEnabled || !keyboardEvent.shiftKey)
+    const level = getLevel();
+    const scene = getScene();
+    if (level === null || scene === null || !level.debugEnabled || !keyboardEvent.shiftKey)
     {
       return;
     }
@@ -109,41 +111,32 @@ function BindDebugKeys(scene: Scene, level: Level): void
     }
     else if (key === "i")
     {
-      void ToggleInspector();
+      void ToggleInspector(scene);
     }
   });
 }
 
-/** Boot the engine, enable physics, load a level, and start the render loop. */
+/** Boot LevelDirector, load the start level, and wire per-load app hooks. */
 async function Main(): Promise<void>
 {
   const canvas = document.getElementById("app") as HTMLCanvasElement;
-
-  // Large-world rendering is an engine option — read the manifest before
-  // creating the Engine/Scene (Blender Scene › Rendering › Large World Rendering).
-  const manifestUrl = ResolveManifestUrl();
-  const manifest = await FetchAndValidateManifest(manifestUrl);
-  const engine = CreateLevelEngine(canvas, true, manifest);
-  const scene = new Scene(engine);
-
-  // Physics must be enabled before loading anything with colliders/bodies.
-  await EnableHavokPhysics(scene, ResolveHavokPhysicsOptions(manifest));
-
   const registry = RegisterBehaviors();
-  const loader = new LevelLoader(scene, registry);
-  const level = await loader.Load(manifestUrl, manifest);
+  const director = new LevelDirector({
+    canvas,
+    registry,
+    onLoaded: ({ scene, level }) =>
+    {
+      CreateFallbackCameraIfNeeded(scene, canvas);
+      console.log("Players:", level.ByTag("Player").map((entity) => entity.name));
+    },
+  });
 
-  CreateFallbackCameraIfNeeded(scene, canvas);
   if (INCLUDE_DEVELOPER_TOOLS)
   {
-    BindDebugKeys(scene, level);
+    BindDebugKeys(() => director.GetScene(), () => director.GetLevel());
   }
 
-  // Example: query by tag set in Blender.
-  console.log("Players:", level.ByTag("Player").map((entity) => entity.name));
-
-  engine.runRenderLoop(() => scene.render());
-  window.addEventListener("resize", () => engine.resize());
+  await director.Load(ResolveManifestUrl());
 }
 
 Main().catch(console.error);

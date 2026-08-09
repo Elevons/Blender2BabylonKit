@@ -85,6 +85,8 @@ export function InstantiateScripts(
     behavior.entity = entity;
     behavior.scene = scene;
     behavior.spawner = level;
+    behavior.session = level.session;
+    behavior.time = level.time;
     behavior.byTag = (tag: string) => level.ByTag(tag);
     pendingReferences.push(...ApplyExposedVars(behavior, scriptComponent.vars));
     InjectInputMaps(behavior, scriptComponent.script, sceneDefaultMap);

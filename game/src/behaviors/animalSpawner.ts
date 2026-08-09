@@ -1,6 +1,8 @@
 import {
   Behavior,
   exposed,
+  IsEntityInsideColliderVolume,
+  IsPointInsideColliderVolume,
   type AttachmentOfType,
   type Entity,
 } from "@bjs/engine";
@@ -28,7 +30,8 @@ interface PhysicsBodyQueryEngine
  * instances, disposes them, and spawns replacements to keep the count steady.
  *
  * Spawn positions are sampled in world space from the volume collider, outside a
- * optional inner exclusion radius and outside the active camera frustum. Instances
+ * optional inner exclusion radius, outside an optional exclusion volume collider,
+ * and outside the active camera frustum. Instances
  * are parented to the scene root so they do not follow the spawner or train.
  */
 export default class animalSpawner extends Behavior
@@ -38,6 +41,9 @@ export default class animalSpawner extends Behavior
 
   @exposed({ type: "entity", label: "Spawn volume (collider)" })
   spawnVolume: Entity | null = null;
+
+  @exposed({ type: "entity", label: "Exclusion volume (collider)" })
+  exclusionVolume: Entity | null = null;
 
   @exposed({ type: "entity", label: "Train Collider" })
   trainCollider: Entity | null = null;
@@ -87,6 +93,7 @@ export default class animalSpawner extends Behavior
   private trainInsideWater = false;
   private spawnDelayRemaining: number | null = null;
   private triggerObserver: Observer<IBasePhysicsCollisionEvent> | null = null;
+  private exclusionVolumeAttachment: AttachmentOfType<"COLLIDER"> | undefined;
   private readonly clearanceRayResult = new PhysicsRaycastResult();
   private readonly clearanceRayEnd = new Vector3();
   private readonly interiorRayResult = new PhysicsRaycastResult();
@@ -177,6 +184,25 @@ export default class animalSpawner extends Behavior
       return;
     }
 
+    if (this.exclusionVolume !== null)
+    {
+      this.exclusionVolumeAttachment = this.exclusionVolume.GetAttachment("COLLIDER");
+
+      if (this.exclusionVolumeAttachment === undefined)
+      {
+        console.warn(
+          `[animalSpawner] exclusion volume "${this.exclusionVolume.name}" has no collider`
+        );
+      }
+      else if (!this.exclusionVolumeAttachment.data.isTrigger)
+      {
+        console.warn(
+          `[animalSpawner] exclusion volume "${this.exclusionVolume.name}" is not a trigger — `
+          + "use a BOX or SPHERE trigger with auto-fit or manual size for reliable polling"
+        );
+      }
+    }
+
     this.setupComplete = true;
     this.WireWaterTriggerTracking();
   }
@@ -218,6 +244,21 @@ export default class animalSpawner extends Behavior
       if (tracked.entity.node.isDisposed())
       {
         this.trackedFish.splice(index, 1);
+        continue;
+      }
+
+      if (this.IsEntityInsideExclusionVolume(tracked.entity))
+      {
+        tracked.entity.node.dispose();
+        this.trackedFish.splice(index, 1);
+
+        if (this.CanSpawn())
+        {
+          void this.SpawnOne().catch((error) =>
+          {
+            console.error("[animalSpawner] replacement spawn after exclusion failed", error);
+          });
+        }
         continue;
       }
 
@@ -309,6 +350,11 @@ export default class animalSpawner extends Behavior
 
     const worldPosition = this.SampleSpawnPosition(bounds);
     if (worldPosition === null)
+    {
+      return false;
+    }
+
+    if (this.IsPointInsideExclusionVolume(worldPosition))
     {
       return false;
     }
@@ -484,8 +530,9 @@ export default class animalSpawner extends Behavior
 
   /**
    * Sample a random point inside the spawn bounds, excluding a spherical region
-   * around the volume center, points visible to the active camera, and points
-   * overlapping any solid Havok collider (the spawn volume and triggers are ignored).
+   * around the volume center, points inside the exclusion volume, points visible
+   * to the active camera, and points overlapping any solid Havok collider (the
+   * spawn volume and triggers are ignored).
    */
   private SampleSpawnPosition(bounds: WorldBounds): Vector3 | null
   {
@@ -514,6 +561,11 @@ export default class animalSpawner extends Behavior
       }
 
       if (this.IsPointVisibleToCamera(candidate))
+      {
+        return false;
+      }
+
+      if (this.IsPointInsideExclusionVolume(candidate))
       {
         return false;
       }
@@ -737,10 +789,64 @@ export default class animalSpawner extends Behavior
     return false;
   }
 
+  /** Whether a tracked entity's world position lies inside the exclusion volume. */
+  private IsEntityInsideExclusionVolume(entity: Entity): boolean
+  {
+    if (this.exclusionVolume === null)
+    {
+      return false;
+    }
+
+    const collider = this.exclusionVolumeAttachment;
+    if (collider === undefined)
+    {
+      return false;
+    }
+
+    if (collider.data.isTrigger)
+    {
+      return IsEntityInsideColliderVolume(entity, this.exclusionVolume, collider);
+    }
+
+    entity.node.computeWorldMatrix(true);
+    return IsPointInsideManualCollider(
+      collider,
+      this.exclusionVolume.node,
+      entity.node.getAbsolutePosition()
+    );
+  }
+
+  /** Whether a world point lies inside the optional exclusion volume collider. */
+  private IsPointInsideExclusionVolume(worldPoint: Vector3): boolean
+  {
+    if (this.exclusionVolume === null)
+    {
+      return false;
+    }
+
+    const collider = this.exclusionVolumeAttachment;
+    if (collider === undefined)
+    {
+      return false;
+    }
+
+    if (collider.data.isTrigger)
+    {
+      return IsPointInsideColliderVolume(worldPoint, this.exclusionVolume, collider);
+    }
+
+    return IsPointInsideManualCollider(collider, this.exclusionVolume.node, worldPoint);
+  }
+
   /** Entities whose colliders should not block spawn sampling. */
   private ShouldIgnoreOverlapEntity(entity: Entity): boolean
   {
     if (entity === this.spawnVolume)
+    {
+      return true;
+    }
+
+    if (this.exclusionVolume !== null && entity === this.exclusionVolume)
     {
       return true;
     }
@@ -871,6 +977,63 @@ function ComputeWorldBounds(
   }
 
   return ExpandToWorld(localMin, localMax, node);
+}
+
+/** Whether a world-space point lies inside a manual (non-trigger) collider shape. */
+function IsPointInsideManualCollider(
+  collider: AttachmentOfType<"COLLIDER">,
+  node: TransformNode,
+  worldPoint: Vector3
+): boolean
+{
+  const { shape, size, radius, height, center } = collider.data;
+  const localCenter = new Vector3(center[0], center[1], center[2]);
+
+  node.computeWorldMatrix(true);
+  const inverseWorldMatrix = Matrix.Invert(node.getWorldMatrix());
+  const localPoint = Vector3.TransformCoordinates(worldPoint, inverseWorldMatrix);
+  const offset = localPoint.subtract(localCenter);
+
+  switch (shape)
+  {
+    case "BOX":
+    {
+      const halfSize = new Vector3(size[0], size[1], size[2]).scale(0.5);
+      return Math.abs(offset.x) <= halfSize.x
+        && Math.abs(offset.y) <= halfSize.y
+        && Math.abs(offset.z) <= halfSize.z;
+    }
+
+    case "SPHERE":
+    {
+      return offset.length() <= radius;
+    }
+
+    case "CAPSULE":
+    {
+      const halfHeight = height * 0.5;
+      const xzDistance = Math.sqrt(offset.x * offset.x + offset.z * offset.z);
+
+      if (Math.abs(offset.y) <= halfHeight)
+      {
+        return xzDistance <= radius;
+      }
+
+      const capCenterY = offset.y > 0 ? halfHeight : -halfHeight;
+      const capOffset = new Vector3(offset.x, offset.y - capCenterY, offset.z);
+      return capOffset.length() <= radius;
+    }
+
+    case "CYLINDER":
+    {
+      const halfHeight = height * 0.5;
+      const xzDistance = Math.sqrt(offset.x * offset.x + offset.z * offset.z);
+      return xzDistance <= radius && Math.abs(offset.y) <= halfHeight;
+    }
+
+    default:
+      return false;
+  }
 }
 
 /** Resolve a physics body back to its owning entity. */

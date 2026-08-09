@@ -26,6 +26,7 @@ import { ProcessEntity, ResolveObjectReferences } from "./loader/entityBuilder";
 import { ApplyNodeMaterials, ApplyDetailMaps } from "../subsystems/materials/index";
 import { FinalizeLevel } from "./loader/finalizeLevel";
 import { RegisterExtraVertexColorsExtension } from "./loader/gltfExtraVertexColors";
+import type { LevelSession } from "./levelSession";
 
 // Preserve glTF COLOR_1+ (Blender paint maps) — stock Babylon only loads COLOR_0.
 RegisterExtraVertexColorsExtension();
@@ -54,6 +55,11 @@ export interface LevelLoaderOptions {
   clusterPunctualLights?: boolean;
   /** Max forward scene lights before clustering / UBO fallback. Default 8. */
   lightBudget?: number;
+  /**
+   * Load/restart/unload surface injected onto behaviors as `this.session`.
+   * Prefer {@link LevelDirector}, which sets this automatically.
+   */
+  session?: LevelSession;
 }
 
 /**
@@ -124,7 +130,13 @@ export class LevelLoader
     await ApplyNodeMaterials(this.scene, manifest.materials, baseUrl);
     ApplyDetailMaps(this.scene, manifest.detailMaps, baseUrl);
 
-    const context = CreateLoadContext(this.scene, baseUrl, this.registry, defaultInputMap);
+    const context = CreateLoadContext(
+      this.scene,
+      baseUrl,
+      this.registry,
+      defaultInputMap,
+      this.options.session
+    );
 
     context.level.debugEnabled = manifest.debug !== false;
     context.level.collisionLayers = manifest.scene?.collisionLayers;

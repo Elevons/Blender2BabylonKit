@@ -31,7 +31,7 @@ from .constants import (
     CAMERA_TYPES, CAMERA_KEY_SCHEMES, FOLLOW_MODES,
     REFLECTION_PROBE_CUBE_SIZES, REFLECTION_PROBE_REFRESH_RATES,
     REFLECTION_PROBE_INFLUENCE_SHAPES, REFLECTION_PROBE_FILTER_QUALITY,
-    LAYER_MASK_PRESETS, EVENT_MESSAGE_WHEN,
+    LAYER_MASK_PRESETS, EVENT_MESSAGE_WHEN, MESH_SHADOW_MODES,
 )
 from .exposed_vars import BJSExposedVar
 from ..animator.params import BJSAnimatorParam
@@ -269,6 +269,14 @@ class BJSComponent(PropertyGroup):
         name="Apply to Child Entities",
         description="Propagate to child entities until one defines its own layer component",
         default=False,
+    )
+
+    # --- MESH_SHADOWS (reuses render_layer_apply_* for propagation) ---
+    mesh_shadow_mode: EnumProperty(
+        name="Mode",
+        items=MESH_SHADOW_MODES,
+        default='CAST_AND_RECEIVE',
+        description="Overrides Ray Visibility › Shadow and all other shadow settings on owned meshes",
     )
 
     # --- COLLISION_LAYER ---

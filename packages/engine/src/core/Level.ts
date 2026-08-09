@@ -10,6 +10,7 @@ import { DisposeCollisionEvents } from "../subsystems/collisions";
 import type { GUI3DManager } from "@babylonjs/gui";
 import type { MsdfTextManager } from "../ui/msdfText";
 import { ClearFontCacheForScene } from "../ui/msdfText";
+import { GameClock } from "./GameClock";
 import type { ParticleEmitterManager } from "../subsystems/particles";
 import type { ReflectionProbe } from "@babylonjs/core/Probes/reflectionProbe";
 import type { TransformNode } from "@babylonjs/core";
@@ -32,6 +33,10 @@ import { DisposeDirectionalShadowMaintenance, RegisterSpawnedShadowMeshes } from
 import type { ComponentHost } from "./ComponentHost";
 import type { ComponentType } from "./attachments";
 import { GetRuntimePolicy } from "./loader/componentRegistry";
+import {
+  CreateStubLevelSession,
+  type LevelSession,
+} from "./levelSession";
 
 /**
  * Removable attachments are torn down in this order when hiding a template:
@@ -103,6 +108,23 @@ export class Level
   /** Runtime component add/remove; set by LevelLoader during load. */
   componentHost!: ComponentHost;
 
+  /**
+   * Load/restart/unload surface injected onto behaviors as `this.session`.
+   * Set by LevelLoader from {@link LevelLoaderOptions.session} (LevelDirector
+   * wires this automatically).
+   */
+  session: LevelSession = CreateStubLevelSession(
+    "pass LevelLoaderOptions.session (use LevelDirector)"
+  );
+
+  /**
+   * Unified game clock (Unity's `Time`): `timeScale`, scaled/unscaled frame
+   * deltas, and elapsed time. Ticked once per frame before behaviors run;
+   * syncs scene animations and the Havok step. Behaviors reach it as
+   * `this.time`.
+   */
+  readonly time: GameClock;
+
   private disposed = false;
   private observer?: ReturnType<Scene["onBeforeRenderObservable"]["add"]>;
   private updaters: ((deltaSeconds: number) => void)[] = [];
@@ -112,7 +134,10 @@ export class Level
   /** Templates already hidden — HideTemplate and post-spawn hide are idempotent. */
   private hiddenTemplateIds = new Set<string>();
 
-  constructor(private scene: Scene) {}
+  constructor(private scene: Scene)
+  {
+    this.time = new GameClock(scene);
+  }
 
   /**
    * Toggle wireframe debug rendering of every collider/body in the level
@@ -353,7 +378,10 @@ export class Level
 
     this.observer = this.scene.onBeforeRenderObservable.add(() =>
     {
-      this.RunFrame(this.scene.getEngine().getDeltaTime() / 1000);
+      // The clock clamps hitch deltas, applies timeScale, and syncs scene
+      // animations + the Havok step (physics runs later in scene.render()).
+      const rawDeltaSeconds = this.scene.getEngine().getDeltaTime() / 1000;
+      this.RunFrame(this.time.Tick(rawDeltaSeconds));
     });
   }
 

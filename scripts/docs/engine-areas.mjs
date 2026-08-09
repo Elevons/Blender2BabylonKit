@@ -1196,7 +1196,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "FinalizeLevel",
           "sub": "step 7",
-          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplySceneSettings (clear/ambient, env, fog) → BuildNodeMaterials (single NME compile after IBL) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireCollisionEvents → BuildConstraints → BuildGui3DControls → BuildReflectionProbes + AssignProbeMaterials → ApplyRenderLayers (RENDERING_GROUP / LAYER_MASK on owned meshes) → Level.Begin (OnStart, runtime cameras) → ApplyLateRendering (NME + ApplyPostProcessing on active camera) → NotifyPostReady (OnPostReady) → debugColliders (gated by Debug Build).",
+          "desc": "ClusterPunctualLightsIfNeeded (when over light budget) → SetupShadows → ApplyMeshShadows (MESH_SHADOWS overrides) → ApplySceneSettings (clear/ambient, env, fog) → BuildNodeMaterials (single NME compile after IBL) → ApplyAtmosphere (when scene.atmosphere set; SUN → @babylonjs/addons/atmosphere → level.atmosphere) → ApplyAutoPlayAnimations → settle audio/GUI/particle/MSDF promises (allSettled) → WireParticleEmitterTracking + WireMsdfTextRendering → WireCollisionEvents → BuildConstraints → BuildGui3DControls → BuildReflectionProbes + AssignProbeMaterials → ApplyRenderLayers (RENDERING_GROUP / LAYER_MASK on owned meshes) → Level.Begin (OnStart, runtime cameras) → ApplyLateRendering (NME + ApplyPostProcessing on active camera) → NotifyPostReady (OnPostReady) → debugColliders (gated by Debug Build).",
           "meta": [
             [
               "Order matters",
@@ -1382,9 +1382,9 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Level.RunFrame",
           "sub": "core/Level.ts",
-          "desc": "onBeforeRenderObservable — InputManager.Process → all behavior.OnUpdate(deltaSeconds) → AddUpdater callbacks → InputManager.EndFrame.",
+          "desc": "onBeforeRenderObservable — GameClock.Tick (clamp + timeScale, syncs animationTimeScale/Havok step) → InputManager.Process → all behavior.OnUpdate(deltaSeconds) → AddUpdater callbacks → InputManager.EndFrame.",
           "meta": [
-            ["deltaSeconds", "getDeltaTime()/1000"],
+            ["deltaSeconds", "this.time.deltaSeconds (scaled, hitch-clamped)"],
             ["Trace", "trace-lifecycle.html"]
           ]
         },
@@ -2107,7 +2107,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Shadows",
           "sub": "subsystems/shadows/",
-          "desc": "FinalizeLevel (SetupShadows): one ShadowGenerator per casting lamp; all meshes receive; casters respect bjs_cast_shadows (ray-visibility Shadow off → receive-only) and outlier-size heuristics. Directional suns: AnchorDirectionalShadowOrigin on caster bounds + autoCalcShadowZBounds when clip planes are auto. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1). Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
+          "desc": "FinalizeLevel (SetupShadows + ApplyMeshShadows): one ShadowGenerator per casting lamp; default cast/receive from glTF ray visibility; MESH_SHADOWS component overrides on owned meshes. Casters respect bjs_cast_shadows and outlier-size heuristics. Directional suns: AnchorDirectionalShadowOrigin on caster bounds + autoCalcShadowZBounds when clip planes are auto. Per-light filter, bias, normalBias, darkness, mapSize, frustum tuning. SUN sunAngle → PCSS contactHardeningLightSizeUVRatio (0–45° → 0–1). Static-world freeze (scene flag / freezeShadows) bakes maps once; level.RefreshShadows() re-arms.",
           "meta": [
             [
               "Options",

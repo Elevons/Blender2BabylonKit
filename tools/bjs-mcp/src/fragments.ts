@@ -322,6 +322,25 @@ private ApplyTargets(active: boolean): void
 // Zone toggle example: edge-detect inside in OnUpdate, then ApplyTargets(inside)`,
   },
   {
+    name: "restart-level",
+    description:
+      "Soft-restart (or change) the current level from a behavior via this.session — a narrow LevelSession, not the full Level. LevelDirector shows Babylon's default spinner (displayLoadingUI) during Load/Restart; customize with engine.loadingScreen = your ILoadingScreen in app code. Never window.location.reload().",
+    code: `// GUI click → soft restart (calls are deferred + serialized, safe mid-frame)
+// LevelDirector shows the Babylon loading spinner until the new level is ready.
+this.restartClickObserver = this.restartButton.onPointerClickObservable.add(() =>
+{
+  void this.session.Restart();
+});
+
+// Change levels / query state:
+// await this.session.Load("/levels/Other/Other.scene.json");
+// this.session.manifestUrl;   // current manifest URL
+// this.session.isLoading;     // true while a Load/Restart is in flight
+//
+// Custom overlay (app/main.ts, not in a behavior):
+// director.GetEngine()!.loadingScreen = myILoadingScreen;`,
+  },
+  {
     name: "play-sound",
     description: "Play an AUDIO component sound by file stem.",
     code: `this.entity.GetSound("door")?.play();`,

@@ -22,9 +22,13 @@ export async function EnableHavokPhysics(
 
   const gravity = options.gravity ?? new Vector3(0, -9.81, 0);
   const havokInstance = await HavokPhysics();
+  // Fixed timestep mode (first arg false): setTimeStep drives World_Step.
+  // Required for Level.SetTimeScale — with useDeltaForWorldStep=true, setTimeStep
+  // is ignored and physics always advances at wall-clock rate (BJS Cedric:
+  // setTimeStep(0) freezes only in fixed mode).
   scene.enablePhysics(
     gravity,
-    new HavokPlugin(true, havokInstance, {
+    new HavokPlugin(false, havokInstance, {
       floatingOriginWorldRadius: options.floatingOriginWorldRadius ?? 100_000,
     })
   );

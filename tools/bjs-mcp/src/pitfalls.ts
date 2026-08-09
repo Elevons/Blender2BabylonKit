@@ -93,6 +93,12 @@ export const PITFALLS: PitfallEntry[] = [
     mcpTool: "get_scripting_context(section=\"physics\")",
   },
   {
+    mistake: "Treating far-away CONVEX/MESH hulls on duplicated prefabs as a Blender origin bug",
+    symptom: "First copy's collider matches the mesh; later copies' physics shapes float far away (often near 2× world position)",
+    fix: "Shared glTF mesh data loads as InstancedMesh. Hull verts must be in the body local frame — baking the instance world matrix double-applies pose. Current engines fix this in ResolvePhysicsMesh (geometry.ts). On older kits: update the engine, or make mesh data single-user in Blender",
+    mcpTool: "get_scripting_context(section=\"physics\")",
+  },
+  {
     mistake: "scene.pickWithRay for obstacle / ground / line-of-sight checks",
     symptom: "Rays miss terrain and colliders; avoidance or grounding never triggers",
     fix: "pickWithRay only hits pickable render meshes, not Havok colliders. Terrain and obstacles are physics bodies, so rays often miss them. Use scene.getPhysicsEngine()?.raycastToRef(start, end, PhysicsRaycastResult) instead — same as TrainCamera.ts, CarController.ts, fishNavigator.ts",
@@ -166,9 +172,15 @@ export const PITFALLS: PitfallEntry[] = [
   },
   {
     mistake: "Expecting `level` or `Level` on Behavior",
-    symptom: "Does not exist",
-    fix: "Use @exposed entity refs; for tag queries use this.byTag(\"Enemy\"); for runtime prefab instances use this.spawner.Spawn — app code uses level.ByTag / level.Spawn, not in behaviors as a Level field",
-    mcpTool: "get_scripting_context(section=\"reaching-other-objects\")",
+    symptom: "Does not exist / wrong surface for reload",
+    fix: "Use @exposed entity refs; for tag queries use this.byTag(\"Enemy\"); for prefabs use this.spawner.Spawn; for soft restart/load use await this.session.Restart() / Load(url). App code still owns the full Level via LevelDirector.GetLevel()",
+    mcpTool: "get_scripting_context(section=\"level-session\")",
+  },
+  {
+    mistake: "window.location.reload() to restart a level from a behavior",
+    symptom: "Works but drops soft-restart (full page flash); unnecessary when LevelDirector is wired",
+    fix: "await this.session.Restart() — app main should construct LevelDirector and pass it as LevelLoaderOptions.session",
+    mcpTool: "get_scripting_context(section=\"level-session\")",
   },
   {
     mistake: "Calling level.componentHost or entity.AddComponent from a behavior",
@@ -242,6 +254,18 @@ export const PITFALLS: PitfallEntry[] = [
     symptom: "Mesh hides but Havok still collides; behaviors keep running OnUpdate",
     fix: "Use `SetEntityActive(entity, active)` from `@bjs/engine` — not `isVisible` alone (physics and OnUpdate keep running)",
     mcpTool: "get_fragment(name=\"set-entity-active\")",
+  },
+  {
+    mistake: "Slow motion / pause via scene.animationTimeScale, physicsEngine.setTimeStep, or a hand-rolled multiplier",
+    symptom: "Some systems keep real-time speed (spawner timers, physics, or animations drift apart); tab-switch hitch launches bodies",
+    fix: "Write `this.time.timeScale` (GameClock is the single time authority) — it scales OnUpdate deltas, scene animations, and the Havok step together, with hitch clamping built in",
+    mcpTool: "get_scripting_context(section=\"time\")",
+  },
+  {
+    mistake: "Ramp that writes timeScale (or a pause-menu timer) advances by OnUpdate deltaSeconds",
+    symptom: "Slow-mo ease decelerates itself and never reaches zero; timers freeze while paused",
+    fix: "Advance those timers with `this.time.unscaledDeltaSeconds` — OnUpdate's deltaSeconds is scaled game time (0 while frozen); see Endgame.ts",
+    mcpTool: "get_scripting_context(section=\"time\")",
   },
   {
     mistake: "Zone behavior relies on Havok OnTriggerEnter/Exit only (FogChanger, ToggleInWater, etc.)",

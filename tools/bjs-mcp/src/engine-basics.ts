@@ -36,15 +36,20 @@ The kit splits Blender export into **two files**:
     humanDoc: "docs/engine/02-RUNTIME-BASICS.html",
     content: `# Frame loop (behavior author view)
 
-**App** owns \`engine.runRenderLoop(() => scene.render())\`.
+**App layer** owns the render loop — \`LevelDirector\` starts
+\`engine.runRenderLoop(() => scene.render())\` on first load (manual bootstraps
+call it themselves).
 **Kit** registers \`Level.RunFrame\` on \`onBeforeRenderObservable\`.
 
-Each frame (inside \`RunFrame\`):
-1. \`InputManager.Process()\` — poll input
-2. Every \`OnUpdate(deltaSeconds)\` on every behavior
-3. Camera updater callbacks
-4. \`InputManager.EndFrame()\` — edge buttons last one frame
-5. Then Havok physics step, then GPU draw
+Each frame:
+1. \`GameClock.Tick\` (\`level.time\`) — clamp the raw engine delta (hitch cap
+   0.1s), apply \`timeScale\`, sync \`scene.animationTimeScale\`, particle
+   \`updateSpeed\`s + Havok step
+2. \`InputManager.Process()\` — poll input
+3. Every \`OnUpdate(deltaSeconds)\` on every behavior — **scaled** delta
+4. Camera updater callbacks
+5. \`InputManager.EndFrame()\` — edge buttons last one frame
+6. Then Havok physics step, then GPU draw
 
 | Hook | When |
 |------|------|
@@ -55,7 +60,15 @@ Each frame (inside \`RunFrame\`):
 | \`OnMessage\` | Trigger enter, GUI click, \`SendMessage\` — not tied to frame order |
 
 \`deltaSeconds\` = seconds (not ms). Multiply **position changes** by it.
-**Do not** multiply Babylon **velocity** by \`deltaSeconds\`.`,
+**Do not** multiply Babylon **velocity** by \`deltaSeconds\`.
+
+**Time scale (\`this.time\`, a GameClock):** the single time authority.
+\`this.time.timeScale = 0\` freezes gameplay (OnUpdate deltas, animations,
+particles, physics); rendering + input keep running. \`OnUpdate\` receives the scaled
+delta; wall-clock timers (pause menus, slow-mo ramps) read
+\`this.time.unscaledDeltaSeconds\`. Never set \`scene.animationTimeScale\` or
+the physics timestep directly. Full rules:
+\`get_scripting_context(section="time")\`.`,
   },
   {
     slug: "components-vs-behaviors",

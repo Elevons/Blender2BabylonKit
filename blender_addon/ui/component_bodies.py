@@ -192,6 +192,14 @@ def _draw_layer_mask(body, obj, comp, index):
     body.prop(comp, "render_layer_apply_children")
 
 
+def _draw_mesh_shadows(body, obj, comp, index):
+    body.prop(comp, "mesh_shadow_mode")
+    body.prop(comp, "render_layer_apply_owned")
+    body.prop(comp, "render_layer_apply_children")
+    info = body.box()
+    info.label(text="Overrides Ray Visibility › Shadow when enabled", icon='INFO')
+
+
 def _draw_collision_layer(body, obj, comp, index):
     body.prop(comp, "collision_layer_select")
     body.prop(comp, "collision_layer_apply_owned")
@@ -626,6 +634,7 @@ BODY_DRAWERS = {
     'TAG': _draw_tag,
     'RENDERING_GROUP': _draw_rendering_group,
     'LAYER_MASK': _draw_layer_mask,
+    'MESH_SHADOWS': _draw_mesh_shadows,
     'COLLIDER': _draw_collider,
     'RIGIDBODY': _draw_rigidbody,
     'SCRIPT': _draw_script,

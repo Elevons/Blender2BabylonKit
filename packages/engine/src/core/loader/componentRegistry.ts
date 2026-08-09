@@ -11,6 +11,7 @@ import type {
   Gui3DComponent,
   RenderingGroupComponent,
   LayerMaskComponent,
+  MeshShadowsComponent,
   CollisionLayerComponent,
 } from "../types";
 import type { BehaviorRegistry } from "../../scripting/BehaviorRegistry";
@@ -103,6 +104,25 @@ const LayerMaskHandler: ComponentHandler = {
         RegisterAttachment(entity, {
           type: "LAYER_MASK",
           data: component as LayerMaskComponent,
+        });
+      }
+    }
+    return [];
+  },
+};
+
+/** MESH_SHADOWS: attachment only; mesh flags applied after SetupShadows. */
+const MeshShadowsHandler: ComponentHandler = {
+  types: ["MESH_SHADOWS"],
+  Apply(components, { entity }): PendingRef[]
+  {
+    for (const component of components)
+    {
+      if (component.type === "MESH_SHADOWS")
+      {
+        RegisterAttachment(entity, {
+          type: "MESH_SHADOWS",
+          data: component as MeshShadowsComponent,
         });
       }
     }
@@ -226,6 +246,8 @@ const AnimatorHandler: ComponentHandler = {
       controller.entity = entity;
       controller.scene = scene;
       controller.spawner = context.level;
+      controller.session = context.level.session;
+      controller.time = context.level.time;
       controller.byTag = (tag: string) => context.level.ByTag(tag);
       RegisterAttachment(entity, {
         type: "ANIMATOR",
@@ -399,6 +421,7 @@ const COMPONENT_HANDLERS: readonly ComponentHandler[] = [
   TagHandler,
   RenderingGroupHandler,
   LayerMaskHandler,
+  MeshShadowsHandler,
   CollisionLayerHandler,
   PhysicsHandler,
   ScriptHandler,
@@ -525,6 +548,7 @@ const RUNTIME_POLICIES = new Map<Component["type"], ComponentRuntimePolicy>([
   ["GUI3D_SCATTER", RUNTIME_ALLOWED],
   ["RENDERING_GROUP", RUNTIME_BLOCKED],
   ["LAYER_MASK", RUNTIME_BLOCKED],
+  ["MESH_SHADOWS", RUNTIME_BLOCKED],
   ["COLLISION_LAYER", RUNTIME_BLOCKED],
   ["REFLECTION_PROBE", RUNTIME_BLOCKED],
   ["LOD", RUNTIME_BLOCKED],

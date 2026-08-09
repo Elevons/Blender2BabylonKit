@@ -350,11 +350,12 @@
 <li><strong>Body</strong> — type-specific fields (collider shape, script path, audio file, …)</li>
 <li><strong>Pin</strong> (header) — lock the inspector to this object while you pick targets in the viewport</li>
 </ul>
-<p>Cut/paste moves a component to another object; copy/paste duplicates it (including the instance name). Clipboard is session-scoped.</p>
+<p>Cut/paste moves a component to another object; copy/paste duplicates it (including the instance name). Clipboard is session-scoped. On library overrides, paste and duplicate also assign a fresh PropertyGroup <code>name</code> so the insert survives reload — see <a href="PREFABS.html#local-component-rows-need-propertygroup-names">Prefabs</a>.</p>
 
 <h2>Component instance names</h2>
 <p>Each row's header <strong>Name</strong> field is stored as <code>display_name</code> on <code>BJSComponent</code>. When non-empty, export writes optional <code>&quot;name&quot;</code> on that manifest component row. This is separate from the Blender object name, a TAG string, or the script registry key (<code>script</code> = filename stem).</p>
 <p>Use distinct names when one entity has multiple rows of the same kind — two SCRIPT components, several Colliders, etc. At runtime: <code>entity.GetScript(&quot;Fish Spawner&quot;)</code> or <code>entity.GetNamedAttachment(&quot;COLLIDER&quot;, &quot;Hitbox&quot;)</code> (exact match, then contains; case-insensitive). See <a href="../engine/14-API-GUIDE.html#entity">14 — API Guide › Entity</a>. <strong>Validate</strong> warns when two enabled components on the same object share the same name.</p>
+<p>Do not confuse <code>display_name</code> with the PropertyGroup <code>name</code> Blender uses for library-override insert ops. Add / paste / duplicate / move assign a unique hex <code>name</code> via <code>components/clipboard.py</code> so local rows on a prefab override survive reload and keep order. See <a href="PREFABS.html#local-component-rows-need-propertygroup-names">Prefabs › Local component rows</a>.</p>
 
 <h2>GUID identity</h2>
 <p>Adding a component (or <strong>Assign GUID</strong>) stamps <code>bjs_id</code> on the object. That id rides in glTF node extras and manifest <code>entities[].id</code> — renaming the object in Blender does not break links.</p>

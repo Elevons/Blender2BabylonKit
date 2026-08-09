@@ -57,6 +57,7 @@ Call `list_playbooks()` for this table. Call `get_playbook(name="player-mover")`
 | Body drifts forever | `setTargetTransform` once | `get_physics_movement(mode="animated-continuous")` |
 | Trigger never fires | MESH trigger shape | `get_scripting_context(section="physics")` |
 | Trigger log silent | `getCollisionObservable()` used for triggers | `get_do_not_list` · recipe `trigger-logger` |
+| Duplicate prefab collider floats far from mesh | Shared glTF mesh → InstancedMesh; old hull bake used world matrix | `get_do_not_list` · `get_scripting_context(section="physics")` |
 | Script camera wrong FOV | Forgot `CopyLens` after `new` camera | `get_fragment(name="copy-lens-from-authored-camera")` |
 | Animation ignored | Script/Animator on mesh not armature | `get_playbook(name="animator-fsm")` |
 | HUD arrow never rotates / mesh points sideways | `lookAt` without `Space.WORLD` on parented node, or assumed +Z not +Y | `get_axis_conversion(topic="look-at")` · `get_do_not_list` |

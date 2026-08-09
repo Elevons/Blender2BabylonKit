@@ -18,13 +18,13 @@ interface PhysicsRaycastEngine
 }
 
 /** Max radians of alpha/beta change per collision sample — limits fast-orbit tunneling. */
-const MAX_ORBIT_STEP_RADIANS = 0.05;
+const MAX_ORBIT_STEP_RADIANS = 0.025;
 
 /** Max zoom delta (meters) per collision sample — limits scroll/inertia tunneling. */
-const MAX_RADIUS_STEP_METERS = 0.5;
+const MAX_RADIUS_STEP_METERS = 0.25;
 
 /** Max world-space camera travel (meters) per collision sample — limits arc tunneling. */
-const MAX_CAMERA_STEP_METERS = 0.5;
+const MAX_CAMERA_STEP_METERS = 0.25;
 
 /** Absolute floor for collision pull-in (minRadius only limits free zoom). */
 const COLLISION_RADIUS_FLOOR = 0.1;
@@ -33,10 +33,13 @@ const COLLISION_RADIUS_FLOOR = 0.1;
 const LATERAL_PROBE_DIRECTIONS = 16;
 
 /** Parallel rays on a ring perpendicular to motion — approximates a sphere sweep. */
-const SHAPE_SWEEP_RING_SAMPLES = 8;
+const SHAPE_SWEEP_RING_SAMPLES = 16;
 
 /** Outward rays when the lens may already be inside solid geometry. */
 const PENETRATION_RECOVERY_DIRECTIONS = 16;
+
+/** Push-out passes per sub-step — corners need more than a single deepest hit. */
+const PENETRATION_RECOVERY_PASSES = 3;
 
 /**
  * Manual orbit camera around a target with collision via proximity raycasts.
@@ -44,9 +47,12 @@ const PENETRATION_RECOVERY_DIRECTIONS = 16;
  * Drag to orbit, scroll to zoom. Obstacles between the lens and target do not
  * pull the orbit inward — you can orbit behind cover without the view snapping
  * toward the target. Rays from the camera only push it out when it is flush
- * against or inside solid geometry. A ring of lateral probes blocks orbit rotation
- * that would swing the lens into a nearby wall. Motion between frames uses a shape
- * sweep (parallel rays offset by standoff) so tangential approaches cannot tunnel.
+ * against or inside solid geometry. A ring of lateral probes rejects orbit steps
+ * that *worsen* clearance (so you can still slide along or pull away from a wall
+ * once flush — isotropic "too close" checks freeze the lens inside the standoff
+ * bubble). Motion between frames uses a shape sweep (parallel rays offset by
+ * standoff) so tangential approaches cannot tunnel. Approach Slowdown brakes
+ * orbit/zoom before hard contact.
  *
  * Blender setup:
  * - Attach this script to an empty (the camera pivot).
@@ -60,6 +66,9 @@ const PENETRATION_RECOVERY_DIRECTIONS = 16;
  * - **Collision Offset** is standoff from surfaces (plus near-plane padding). A
  *   downward probe keeps the camera above ground even when the target→camera
  *   ray misses the floor (common when the target is elevated).
+ * - **Approach Slowdown** is how far ahead of that standoff orbit/zoom begins
+ *   braking. Motion eases to a stop instead of hard-clamping on contact; set
+ *   to 0 for the old immediate stop.
  * - FOV / clip planes come from the Blender camera on this entity — copied with
  *   `FindCameraForNode` + `CopyLens` (do not re-author FOV in the script).
  */
@@ -88,6 +97,9 @@ export default class TrainCamera extends Behavior
 
   @exposed({ min: 0, max: 100, label: "Collision Offset" })
   collisionOffset = 0.5;
+
+  @exposed({ min: 0, max: 100, label: "Approach Slowdown" })
+  approachSlowdown = 4;
 
   private camera: ArcRotateCamera | null = null;
   private preferredRadius = 10;
@@ -183,6 +195,8 @@ export default class TrainCamera extends Behavior
   /**
    * Follow the target, step large orbit deltas so rays cannot skip walls, push
    * the camera out when it touches geometry, and sync the optional probe.
+   * Approaching solids scales this frame's orbit/zoom so motion brakes gradually
+   * instead of stopping hard at contact.
    */
   private ApplyCameraFrame(): void
   {
@@ -195,11 +209,9 @@ export default class TrainCamera extends Behavior
     this.camera.upperRadiusLimit = this.GetMaxDistance();
     this.RefreshPreferredRadiusFromUserZoom();
 
+    // Pointer + inertia already wrote alpha/beta/radius for this frame.
     const desiredAlpha = this.camera.alpha;
     const desiredBeta = this.camera.beta;
-    const alphaDelta = desiredAlpha - this.lastOrbitAlpha;
-    const betaDelta = desiredBeta - this.lastOrbitBeta;
-    const radiusDelta = this.preferredRadius - this.lastAppliedRadius;
 
     this.camera.alpha = desiredAlpha;
     this.camera.beta = desiredBeta;
@@ -208,21 +220,43 @@ export default class TrainCamera extends Behavior
     this.travelEstimateEnd.copyFrom(this.camera.position);
     const travelDistance = Vector3.Distance(this.lastCameraWorldPosition, this.travelEstimateEnd);
 
+    // Restore last accepted pose and push out if we ended inside/flush with solids.
     this.camera.alpha = this.lastOrbitAlpha;
     this.camera.beta = this.lastOrbitBeta;
     this.camera.radius = this.lastAppliedRadius;
+    this.camera.getViewMatrix();
+    this.RecoverCameraFromPenetration();
+    this.ClampCameraGroundStandoff();
+    this.camera.getViewMatrix();
+    this.lastOrbitAlpha = this.camera.alpha;
+    this.lastOrbitBeta = this.camera.beta;
+    this.lastAppliedRadius = this.camera.radius;
+    this.lastCameraWorldPosition.copyFrom(this.camera.position);
+    this.sweepSafePosition.copyFrom(this.camera.position);
+
+    let alphaDelta = desiredAlpha - this.lastOrbitAlpha;
+    let betaDelta = desiredBeta - this.lastOrbitBeta;
+    let radiusDelta = this.preferredRadius - this.lastAppliedRadius;
+
+    const approachScale = this.ComputeApproachSpeedScale(travelDistance);
+    alphaDelta *= approachScale;
+    betaDelta *= approachScale;
+    radiusDelta *= approachScale;
 
     const stepCount = Math.max(
       1,
       Math.ceil(Math.max(Math.abs(alphaDelta), Math.abs(betaDelta)) / MAX_ORBIT_STEP_RADIANS),
       Math.ceil(Math.abs(radiusDelta) / MAX_RADIUS_STEP_METERS),
-      Math.ceil(travelDistance / MAX_CAMERA_STEP_METERS),
+      Math.ceil(travelDistance * approachScale / MAX_CAMERA_STEP_METERS),
+      Math.ceil(this.lastAppliedRadius * Math.hypot(alphaDelta, betaDelta) / MAX_CAMERA_STEP_METERS),
     );
 
     for (let stepIndex = 1; stepIndex <= stepCount; stepIndex++)
     {
       const blend = stepIndex / stepCount;
-      this.stepStartPosition.copyFrom(this.camera.position);
+      this.stepStartPosition.copyFrom(this.sweepSafePosition);
+      const startClearance = this.MeasureMinLateralClearance(this.stepStartPosition);
+
       this.camera.alpha = this.lastOrbitAlpha + alphaDelta * blend;
       this.camera.beta = this.lastOrbitBeta + betaDelta * blend;
       this.camera.radius = this.lastAppliedRadius + radiusDelta * blend;
@@ -230,25 +264,81 @@ export default class TrainCamera extends Behavior
       this.camera.getViewMatrix();
       this.stepEndPosition.copyFrom(this.camera.position);
 
-      if (this.IsCameraTooCloseLaterally())
+      if (this.DidLateralClearanceWorsen(this.stepEndPosition, startClearance))
       {
-        this.camera.setPosition(this.stepStartPosition);
-      }
-      else
-      {
-        this.ClampCameraSweep(this.stepStartPosition, this.stepEndPosition);
+        break;
       }
 
+      this.ClampCameraSweep(this.stepStartPosition, this.stepEndPosition);
       this.ClampCameraGroundStandoff();
       this.RecoverCameraFromPenetration();
+      this.camera.getViewMatrix();
+
+      if (this.DidLateralClearanceWorsen(this.camera.position, startClearance))
+      {
+        break;
+      }
+
+      this.sweepSafePosition.copyFrom(this.camera.position);
     }
 
+    this.camera.setPosition(this.sweepSafePosition);
     this.lastOrbitAlpha = this.camera.alpha;
     this.lastOrbitBeta = this.camera.beta;
     this.lastAppliedRadius = this.camera.radius;
     this.camera.getViewMatrix();
     this.lastCameraWorldPosition.copyFrom(this.camera.position);
     this.SyncProbeToCamera();
+  }
+
+  /**
+   * 0..1 multiplier for this frame's orbit/zoom based on how soon the intended
+   * path meets solid geometry. Uses the center travel ray only — shape-sweep
+   * ring samples graze a wall you are already flush with and would freeze
+   * slide-away motion. Returns 1 when clear or when Approach Slowdown is 0.
+   */
+  private ComputeApproachSpeedScale(travelDistance: number): number
+  {
+    if (this.camera === null || this.approachSlowdown <= 0.001 || travelDistance <= 0.0001)
+    {
+      return 1;
+    }
+
+    const pathHit = this.FindClosestBlockingHit(
+      this.lastCameraWorldPosition,
+      this.travelEstimateEnd,
+    );
+    if (pathHit === null)
+    {
+      return 1;
+    }
+
+    const pathStandoff = this.GetStandoffDistance();
+    return this.SmoothApproachScale(pathHit, pathStandoff, pathStandoff + this.approachSlowdown);
+  }
+
+  /**
+   * Smoothstep from 1 (at slowStartDistance) down to 0 (at stopDistance). Full
+   * stop at or inside standoff; no damping beyond the slowdown zone.
+   */
+  private SmoothApproachScale(
+    distance: number,
+    stopDistance: number,
+    slowStartDistance: number,
+  ): number
+  {
+    if (distance <= stopDistance)
+    {
+      return 0;
+    }
+
+    if (distance >= slowStartDistance)
+    {
+      return 1;
+    }
+
+    const normalized = (distance - stopDistance) / (slowStartDistance - stopDistance);
+    return normalized * normalized * (3 - 2 * normalized);
   }
 
   /**
@@ -326,30 +416,55 @@ export default class TrainCamera extends Behavior
   }
 
   /**
-   * Horizontal ring of rays from the lens. Returns true when any direction hits
-   * solid geometry within lateral standoff — the current orbit step should revert.
+   * True when origin is inside the lateral standoff bubble and closer to a
+   * blocker than previousClearance, or deeper than a hard penetration floor.
+   * Outside the bubble this never rejects — otherwise open-space "Infinity"
+   * clearance would treat any distant wall as a worsening and freeze approach.
    */
-  private IsCameraTooCloseLaterally(): boolean
+  private DidLateralClearanceWorsen(origin: Vector3, previousClearance: number): boolean
   {
-    if (this.camera === null)
+    const clearance = this.MeasureMinLateralClearance(origin);
+    const standoff = this.GetLateralStandoffDistance();
+    const penetrationFloor = Math.min(standoff * 0.25, Math.max(0.05, this.collisionOffset * 0.5));
+
+    if (clearance < penetrationFloor)
+    {
+      return true;
+    }
+
+    if (clearance >= standoff)
     {
       return false;
     }
 
-    this.camera.getViewMatrix();
+    return clearance < previousClearance - 0.001;
+  }
+
+  /**
+   * Closest blocking hit on the horizontal probe ring around origin, or Infinity
+   * when no blocker is within the probe length.
+   */
+  private MeasureMinLateralClearance(origin: Vector3): number
+  {
     const standoff = this.GetLateralStandoffDistance();
     const probeLength = standoff + Math.max(this.preferredRadius * 0.5, 2);
+    let minClearance = Infinity;
 
     for (let directionIndex = 0; directionIndex < LATERAL_PROBE_DIRECTIONS; directionIndex++)
     {
       this.GetLateralProbeDirection(directionIndex, this.lateralDirectionScratch);
-      if (this.IsLateralRayBlocked(this.lateralDirectionScratch, probeLength, standoff))
+      this.rayStart.copyFrom(origin);
+      this.lateralDirectionScratch.scaleToRef(probeLength, this.lateralOffsetScratch);
+      this.rayEnd.copyFrom(this.rayStart).addInPlace(this.lateralOffsetScratch);
+
+      const hitDistance = this.FindClosestBlockingHit(this.rayStart, this.rayEnd);
+      if (hitDistance !== null && hitDistance < minClearance)
       {
-        return true;
+        minClearance = hitDistance;
       }
     }
 
-    return false;
+    return minClearance;
   }
 
   /**
@@ -384,22 +499,6 @@ export default class TrainCamera extends Behavior
     out.y = 0;
     out.z = referenceX * sine + referenceZ * cosine;
     out.normalize();
-  }
-
-  /** Whether a lateral probe from the lens hits blocking geometry within standoff. */
-  private IsLateralRayBlocked(direction: Vector3, probeLength: number, standoff: number): boolean
-  {
-    if (this.camera === null)
-    {
-      return false;
-    }
-
-    this.rayStart.copyFrom(this.camera.position);
-    direction.scaleToRef(probeLength, this.lateralOffsetScratch);
-    this.rayEnd.copyFrom(this.rayStart).addInPlace(this.lateralOffsetScratch);
-
-    const hitDistance = this.FindClosestBlockingHit(this.rayStart, this.rayEnd);
-    return hitDistance !== null && hitDistance < standoff;
   }
 
   /**
@@ -533,8 +632,9 @@ export default class TrainCamera extends Behavior
   }
 
   /**
-   * When the lens is already inside or flush with geometry, cast outward in many
-   * directions and push along the deepest penetrating surface normal.
+   * When the lens is already inside or flush with geometry, cast outward (and
+   * inward from outside) and push along the deepest penetrating surface normal.
+   * Multiple passes clear tight corners where one push reveals another surface.
    */
   private RecoverCameraFromPenetration(): void
   {
@@ -543,40 +643,92 @@ export default class TrainCamera extends Behavior
       return;
     }
 
+    for (let passIndex = 0; passIndex < PENETRATION_RECOVERY_PASSES; passIndex++)
+    {
+      if (!this.TryPenetrationPushOut())
+      {
+        return;
+      }
+    }
+  }
+
+  /**
+   * Single deepest-hit push. Returns true when the camera moved (caller may
+   * iterate). Outward rays catch flush contact; inward rays run only when the
+   * outward cast misses — the usual signal that the lens started inside a solid
+   * (Havok often reports no hit for inside→out rays).
+   */
+  private TryPenetrationPushOut(): boolean
+  {
+    if (this.camera === null)
+    {
+      return false;
+    }
+
     const standoff = this.GetStandoffDistance();
     const probeLength = standoff * 3 + Math.max(this.preferredRadius * 0.25, 1);
     let deepestPenetration = 0;
 
+    this.camera.getViewMatrix();
     this.rayStart.copyFrom(this.camera.position);
 
     for (let directionIndex = 0; directionIndex < PENETRATION_RECOVERY_DIRECTIONS; directionIndex++)
     {
       this.GetPenetrationRecoveryDirection(directionIndex, this.penetrationDirectionScratch);
+
       this.penetrationDirectionScratch.scaleToRef(probeLength, this.rayEnd);
       this.rayEnd.addInPlace(this.rayStart);
+      const outwardHit = this.FindClosestBlockingHit(this.rayStart, this.rayEnd);
+      if (outwardHit !== null)
+      {
+        if (outwardHit < standoff)
+        {
+          const penetration = standoff - outwardHit;
+          if (penetration > deepestPenetration)
+          {
+            deepestPenetration = penetration;
+            this.penetrationPushScratch.copyFrom(this.lastBlockingHitNormal);
+          }
+        }
+        continue;
+      }
 
-      const hitDistance = this.FindClosestBlockingHit(this.rayStart, this.rayEnd);
-      if (hitDistance === null || hitDistance >= standoff)
+      // No outward hit — cast from outside toward the lens to find an enclosing face.
+      this.penetrationDirectionScratch.scaleToRef(probeLength, this.shapeSweepStartScratch);
+      this.shapeSweepStartScratch.addInPlace(this.rayStart);
+      this.shapeSweepEndScratch.copyFrom(this.rayStart);
+      const inwardHit = this.FindClosestBlockingHit(this.shapeSweepStartScratch, this.shapeSweepEndScratch);
+      if (inwardHit === null)
       {
         continue;
       }
 
-      const penetration = standoff - hitDistance;
-      if (penetration > deepestPenetration)
+      const remainingToCamera = probeLength - inwardHit;
+      if (remainingToCamera <= 0.001)
       {
-        deepestPenetration = penetration;
+        continue;
+      }
+
+      const embedPenetration = remainingToCamera + standoff;
+      if (embedPenetration > deepestPenetration)
+      {
+        deepestPenetration = embedPenetration;
         this.penetrationPushScratch.copyFrom(this.lastBlockingHitNormal);
       }
     }
 
     if (deepestPenetration <= 0.0001)
     {
-      return;
+      return false;
     }
 
-    this.penetrationPushScratch.scaleInPlace(deepestPenetration);
+    // Cap a single pass so a bad inward normal cannot fling the camera across the level.
+    const maxPush = standoff * 4 + Math.max(this.preferredRadius * 0.5, 2);
+    const pushDistance = Math.min(deepestPenetration, maxPush);
+    this.penetrationPushScratch.scaleInPlace(pushDistance);
     this.sweepSafePosition.copyFrom(this.camera.position).addInPlace(this.penetrationPushScratch);
     this.camera.setPosition(this.sweepSafePosition);
+    return true;
   }
 
   /**

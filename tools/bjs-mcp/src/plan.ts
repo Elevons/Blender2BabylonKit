@@ -42,6 +42,7 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["hover", "bob", "float", "levitate"], section: "lifecycle" },
   { keywords: ["reveal", "show", "hidden"], section: "visibility" },
   { keywords: ["setactive", "set active", "enable object", "disable object", "toggle entity"], section: "visibility" },
+  { keywords: ["restart", "reload level", "next level", "change level", "load level", "game over", "retry"], section: "level-session" },
   { keywords: ["attachment", "getbehavior", "entity api", "component"], section: "entity" },
   { keywords: ["camera", "geospatial", "globe", "planet", "map", "orbit", "follow"], section: "cameras" },
   { keywords: ["atmosphere", "physical sky", "aerial perspective", "rayleigh", "mie", "skybox", "sky"], section: "scene-look" },
@@ -50,6 +51,7 @@ const SECTION_RULES: SectionRule[] = [
   { keywords: ["visible", "visibility", "hidden", "hide", "isvisible", "eye icon", "viewport"], section: "visibility" },
   { keywords: ["spawn", "prefab", "scatter", "instance", "populate", "spawner", "duplicate"], section: "prefab-spawn" },
   { keywords: ["pool", "interval", "grow", "shrink", "lifetime", "recycle", "animalspawner"], section: "prefab-spawn" },
+  { keywords: ["timescale", "time scale", "slow motion", "slowmo", "slow-mo", "bullet time", "pause", "freeze time", "unscaled", "gameclock", "game clock"], section: "time" },
 ];
 
 const FRAGMENT_RULES: Array<{ keywords: string[]; fragment: string }> = [

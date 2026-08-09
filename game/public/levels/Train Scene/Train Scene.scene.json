@@ -1,5 +1,6 @@
 {
   "version": 5,
+  "exporterVersion": "0.32.0",
   "glb": "Train Scene.glb",
   "scene": {
     "clearColor": [
@@ -331,7 +332,7 @@
     {
       "id": "822d77a3cdc1455bbf92a6869804df71",
       "name": "Camera",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": null,
       "components": [
         {
           "type": "SCRIPT",
@@ -363,7 +364,7 @@
               "52fc5ee512a04668bb44ac7535c7db23",
               "8459be8129c1471f8ec3e255791c8f19",
               "bc2042e80fcf404e988e0c9160a85b94",
-              "f1deede51313401e92d731dda7d6d2a5",
+              null,
               "be878f72778147ce8c5cd1db3cd25b63",
               "79a416ea33bd45e489655a198e56b140",
               "4ade37a3acd04fa6891348b5ccae8fba",
@@ -375,9 +376,10 @@
               "09cecd459b6f40649df0b8da4f5aefd2",
               "ed66c5632aca44809bfa173a0233826c",
               "34dec634d34d4c109ffae912ecd1d73d",
-              "f25de546ba78408c858169b3348be62e"
+              "579fdf38421249b88eecb770540b0bb8"
             ],
-            "maxDistance": 550.0
+            "maxDistance": 550.0,
+            "approachSlowdown": 12.0
           }
         },
         {
@@ -461,7 +463,7 @@
             "maxDepth": 18000.0,
             "surfaceHeight": 0.0,
             "invertPitch": false,
-            "invertRoll": false
+            "invertRoll": true
           },
           "name": "Script"
         },
@@ -538,7 +540,18 @@
               2000.0
             ],
             "outsideToneMap": "ACES",
-            "zoneLut": "post/Videofullness_FREE_Underwater_LUT_05.cube"
+            "zoneLut": "post/Videofullness_FREE_Underwater_LUT_05.cube",
+            "secondTrigger": "5137a45ddb294b6a928606c0852e6657",
+            "fogCColor": [
+              0.9912567734718323,
+              0.9550626277923584,
+              1.0
+            ],
+            "fogCRange": [
+              100000.0,
+              100000.0
+            ],
+            "zone2Lut": "post/Presetpro_-_Palm_Springs.cube"
           }
         },
         {
@@ -651,6 +664,23 @@
           "name": "Collider"
         }
       ]
+    },
+    {
+      "id": "d14c5528d1ae4f3888ba4ad96ca5c160",
+      "name": "WhaleBoneLight",
+      "parent": null,
+      "components": [],
+      "light": {
+        "type": "POINT",
+        "color": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "energy": 3000000.0,
+        "castShadows": false,
+        "range": 2500.0
+      }
     },
     {
       "id": "f3b92914d6fa4c519227294efe99aec7",
@@ -792,6 +822,13 @@
           "linearDamping": 0.0,
           "angularDamping": 0.0,
           "startAsleep": false
+        },
+        {
+          "type": "MESH_SHADOWS",
+          "mode": "RECEIVE_ONLY",
+          "applyOwnedMeshes": true,
+          "applyChildEntities": false,
+          "name": "Mesh Shadows"
         }
       ]
     },
@@ -838,6 +875,47 @@
             1.0
           ],
           "name": "Collider"
+        }
+      ]
+    },
+    {
+      "id": "5137a45ddb294b6a928606c0852e6657",
+      "name": "Sphere",
+      "parent": null,
+      "components": [
+        {
+          "type": "COLLIDER",
+          "shape": "SPHERE",
+          "isTrigger": true,
+          "makeInvisible": false,
+          "autoFit": true,
+          "applyObjectScale": true,
+          "size": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "radius": 0.5,
+          "height": 2.0,
+          "center": [
+            0.0,
+            0.0,
+            -0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            -0.0,
+            1.0
+          ],
+          "name": "Collider"
+        },
+        {
+          "type": "MESH_SHADOWS",
+          "mode": "NONE",
+          "applyOwnedMeshes": true,
+          "applyChildEntities": false,
+          "name": "Mesh Shadows"
         }
       ]
     },
@@ -5719,7 +5797,8 @@
             "waterEntryDelay": 10.0,
             "minSpawnDistance": 250.0,
             "minimumDepth": -1500.0,
-            "spawnClearanceRadius": 100.0
+            "spawnClearanceRadius": 100.0,
+            "exclusionVolume": "5137a45ddb294b6a928606c0852e6657"
           },
           "name": "Shark Spawner"
         },
@@ -5744,7 +5823,8 @@
             "waterEntryDelay": 10.0,
             "minSpawnDistance": 250.0,
             "minimumDepth": -2000.0,
-            "spawnClearanceRadius": 100.0
+            "spawnClearanceRadius": 100.0,
+            "exclusionVolume": "5137a45ddb294b6a928606c0852e6657"
           },
           "name": "Squid Spawner"
         },
@@ -5769,7 +5849,8 @@
             "waterEntryDelay": 10.0,
             "minSpawnDistance": 250.0,
             "minimumDepth": -2000.0,
-            "spawnClearanceRadius": 350.0
+            "spawnClearanceRadius": 350.0,
+            "exclusionVolume": "5137a45ddb294b6a928606c0852e6657"
           },
           "name": "Whale Spawner"
         },
@@ -5794,7 +5875,8 @@
             "waterEntryDelay": 10.0,
             "minSpawnDistance": 250.0,
             "minimumDepth": -1000.0,
-            "spawnClearanceRadius": 100.0
+            "spawnClearanceRadius": 100.0,
+            "exclusionVolume": "5137a45ddb294b6a928606c0852e6657"
           },
           "name": "Turtle Spawner"
         }
@@ -5981,9 +6063,16 @@
       ]
     },
     {
+      "id": "daae868ccb7f4c36a18a91597b1ad015",
+      "name": "Cube.001",
+      "parent": null,
+      "components": [],
+      "visible": false
+    },
+    {
       "id": "98cdbaac898a4428951c085bdb580291",
       "name": "Small Rover.001",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "COLLIDER",
@@ -6132,7 +6221,7 @@
     {
       "id": "db6cb4486ffa4e919d18b29591a7a8f5",
       "name": "RR.Wheel.003",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6251,7 +6340,7 @@
     {
       "id": "0332176751b245cb96e3a62c435eb86a",
       "name": "RR.Arm.002",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6370,7 +6459,7 @@
     {
       "id": "1d75e5fe6da64bd8a2b7063f72a527fe",
       "name": "RL.Wheel.003",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6489,7 +6578,7 @@
     {
       "id": "4a05031988a94a0db73214c59cfb3bde",
       "name": "RL.Arm.002",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6608,7 +6697,7 @@
     {
       "id": "7a469b672ec345f1a763d2ff69134b66",
       "name": "FR.Wheel.003",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6727,7 +6816,7 @@
     {
       "id": "1db93a1512b84263aa45fd2016367dc6",
       "name": "FR.Arm.002",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6846,7 +6935,7 @@
     {
       "id": "5ba48d0c2c784c7d93a482971c210da4",
       "name": "FL.Wheel.003",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -6965,7 +7054,7 @@
     {
       "id": "6d31008f7a0a408b8d306ce9e3f301a1",
       "name": "Fl.Arm.002",
-      "parent": null,
+      "parent": "63383d3e33bf4647abc65cb6cccc602c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -7080,12 +7169,6 @@
           ]
         }
       ]
-    },
-    {
-      "id": "fefee1c4e0f1463cbac14f892675a1c4",
-      "name": "Diaper.001",
-      "parent": "98cdbaac898a4428951c085bdb580291",
-      "components": []
     },
     {
       "id": "b125f6eb881b492f94d1ba2ed6652439",
@@ -7237,9 +7320,15 @@
       }
     },
     {
-      "id": "075d0e521e6549a580395de172bf4f6d",
-      "name": "Small Rover.004",
+      "id": "63383d3e33bf4647abc65cb6cccc602c",
+      "name": "Small Rover Root",
       "parent": null,
+      "components": []
+    },
+    {
+      "id": "4714cc8cb48f4cca8146347c5f26012e",
+      "name": "Small Rover.004",
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "COLLIDER",
@@ -7296,7 +7385,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "9d211b90817849eea30fd7bbd7d61e03",
+          "target": "1042acaf66474d3f912211057d4abd45",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7374,8 +7463,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "4a5ef3ed79e4489c8277cc7ab8d919e0",
-              "7870137a27af4dc7badd6c8af4cc1fa9"
+              "6cb70cdce18d4486bc3b53fe3772fda1",
+              "4ddbcb3ff7bd48ccbf1277e2fdd7aba9"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -7386,9 +7475,9 @@
       ]
     },
     {
-      "id": "d9f391a20fc74e848b67a681f3a1adcb",
+      "id": "027f52ec44834544a1c984e4dc73045b",
       "name": "RR.Wheel.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -7404,7 +7493,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "bae33411e22744888dfee11865e0cd1d",
+          "target": "de1946b5f4f54677a9fb49a8d7dcf848",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7505,9 +7594,9 @@
       ]
     },
     {
-      "id": "bae33411e22744888dfee11865e0cd1d",
+      "id": "de1946b5f4f54677a9fb49a8d7dcf848",
       "name": "RR.Arm.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -7549,7 +7638,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "075d0e521e6549a580395de172bf4f6d",
+          "target": "4714cc8cb48f4cca8146347c5f26012e",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7624,9 +7713,9 @@
       ]
     },
     {
-      "id": "6fc7a7bb626a4824ba58fdca9f1f365a",
+      "id": "f58f9d7affbb4390bbb7b9a67548b22a",
       "name": "RL.Wheel.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -7642,7 +7731,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c1775578651e4c24ab9e112cf956da98",
+          "target": "0ad8608ea6854755b3d177fcf8e6e5c3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7743,9 +7832,9 @@
       ]
     },
     {
-      "id": "c1775578651e4c24ab9e112cf956da98",
+      "id": "0ad8608ea6854755b3d177fcf8e6e5c3",
       "name": "RL.Arm.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -7787,7 +7876,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "075d0e521e6549a580395de172bf4f6d",
+          "target": "4714cc8cb48f4cca8146347c5f26012e",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7862,9 +7951,9 @@
       ]
     },
     {
-      "id": "79d231027b3541c18790bf827b4333a4",
+      "id": "c8316665668f4d708444d91e3586fc1f",
       "name": "FR.Wheel.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -7880,7 +7969,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "31608cac0bfe46fe9767a7d01a85b55a",
+          "target": "4c0c2b127b414d2fa7709ac67214a00b",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7981,9 +8070,9 @@
       ]
     },
     {
-      "id": "31608cac0bfe46fe9767a7d01a85b55a",
+      "id": "4c0c2b127b414d2fa7709ac67214a00b",
       "name": "FR.Arm.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -8025,7 +8114,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "075d0e521e6549a580395de172bf4f6d",
+          "target": "4714cc8cb48f4cca8146347c5f26012e",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8100,9 +8189,9 @@
       ]
     },
     {
-      "id": "53239a6155e347468aecb3e677788464",
+      "id": "1487d820568e46b981e4977d8a50e246",
       "name": "FL.Wheel.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -8144,7 +8233,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "c3baa7f6ad054ff38819f969efec226c",
+          "target": "5f66dd3f2a554d8c8de3dfb13b2fcdbb",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8219,9 +8308,9 @@
       ]
     },
     {
-      "id": "c3baa7f6ad054ff38819f969efec226c",
+      "id": "5f66dd3f2a554d8c8de3dfb13b2fcdbb",
       "name": "Fl.Arm.001",
-      "parent": null,
+      "parent": "1f219ce1662b49f4a50be1ed9f1ea1d1",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -8263,7 +8352,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "075d0e521e6549a580395de172bf4f6d",
+          "target": "4714cc8cb48f4cca8146347c5f26012e",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8338,15 +8427,9 @@
       ]
     },
     {
-      "id": "fb3f2b1009004f2d95eef1c9bcce18b3",
-      "name": "Diaper.002",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
-      "components": []
-    },
-    {
-      "id": "93cab470dcac4c77bc3957c15491df09",
+      "id": "f1f1c47184004a6787953c5f3bd5104d",
       "name": "Bubbles.012",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
+      "parent": "4714cc8cb48f4cca8146347c5f26012e",
       "components": [
         {
           "type": "PARTICLE",
@@ -8359,9 +8442,9 @@
       ]
     },
     {
-      "id": "241848b5443b4c3297ab22aedbddec36",
+      "id": "bb5c537cfbd54002999d33692c8d2bea",
       "name": "Bubbles.013",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
+      "parent": "4714cc8cb48f4cca8146347c5f26012e",
       "components": [
         {
           "type": "PARTICLE",
@@ -8374,9 +8457,9 @@
       ]
     },
     {
-      "id": "a7cb91427534488db11836a0affd61b3",
+      "id": "f980e4a282b44c42ad4dd21c4d6282e6",
       "name": "Bubbles.014",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
+      "parent": "4714cc8cb48f4cca8146347c5f26012e",
       "components": [
         {
           "type": "PARTICLE",
@@ -8389,9 +8472,9 @@
       ]
     },
     {
-      "id": "0ebb97e3fadc4dbb90b1ac63bb6c1c83",
+      "id": "362c6bb2dd8447c7a45e0478f255c7a7",
       "name": "Bubbles.015",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
+      "parent": "4714cc8cb48f4cca8146347c5f26012e",
       "components": [
         {
           "type": "PARTICLE",
@@ -8404,9 +8487,9 @@
       ]
     },
     {
-      "id": "740f8c0d47554de7813d3f9eba2d0c3a",
+      "id": "d16d5998277d488f9b70d4d4dad70242",
       "name": "Bubbles.016",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
+      "parent": "4714cc8cb48f4cca8146347c5f26012e",
       "components": [
         {
           "type": "PARTICLE",
@@ -8419,9 +8502,9 @@
       ]
     },
     {
-      "id": "abfad89c4fd44da5b028ea9a743da956",
+      "id": "1ec7b9eb383e4f709a929e5d7b849270",
       "name": "Bubbles.017",
-      "parent": "075d0e521e6549a580395de172bf4f6d",
+      "parent": "4714cc8cb48f4cca8146347c5f26012e",
       "components": [
         {
           "type": "PARTICLE",
@@ -8434,7 +8517,7 @@
       ]
     },
     {
-      "id": "4a5ef3ed79e4489c8277cc7ab8d919e0",
+      "id": "6cb70cdce18d4486bc3b53fe3772fda1",
       "name": "Spot.001",
       "parent": null,
       "components": [],
@@ -8464,7 +8547,7 @@
       }
     },
     {
-      "id": "7870137a27af4dc7badd6c8af4cc1fa9",
+      "id": "4ddbcb3ff7bd48ccbf1277e2fdd7aba9",
       "name": "Spot.002",
       "parent": null,
       "components": [],
@@ -8493,9 +8576,15 @@
       }
     },
     {
-      "id": "9d211b90817849eea30fd7bbd7d61e03",
-      "name": "Small Rover.005",
+      "id": "1f219ce1662b49f4a50be1ed9f1ea1d1",
+      "name": "Small Rover Root.003",
       "parent": null,
+      "components": []
+    },
+    {
+      "id": "1042acaf66474d3f912211057d4abd45",
+      "name": "Small Rover.005",
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "COLLIDER",
@@ -8630,8 +8719,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "5a37abe8f1554a0fa1ab70a6a91e31f4",
-              "bde84550b0a44f17ae9da8cf019b19d0"
+              "c25c3e9f8b6343cd9f24c046b2036724",
+              "e352bf46485d44b1a6d90b0aac624ac9"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -8642,9 +8731,9 @@
       ]
     },
     {
-      "id": "fa9870f29f424f6a99f21c3486fe1092",
+      "id": "46cfb1c4bc7b4ac1a4590bce6fa1089e",
       "name": "RR.Wheel.002",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -8660,7 +8749,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "f006461c31b841d9acdb834987b03adc",
+          "target": "01c408d59ff94aa9bda5ea5cc534be3e",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8761,9 +8850,9 @@
       ]
     },
     {
-      "id": "f006461c31b841d9acdb834987b03adc",
+      "id": "01c408d59ff94aa9bda5ea5cc534be3e",
       "name": "RR.Arm.003",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -8805,7 +8894,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "9d211b90817849eea30fd7bbd7d61e03",
+          "target": "1042acaf66474d3f912211057d4abd45",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8880,9 +8969,9 @@
       ]
     },
     {
-      "id": "4bdfdb6d2f424af89b586149a659a34d",
+      "id": "08eb73a9cedc41c3b4623e01b184116c",
       "name": "RL.Wheel.005",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -8898,7 +8987,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "7bb7b2bf1a314e9895aca7a09d66a795",
+          "target": "eaf5766cce724082b5aa3d6d7596fbd1",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8999,9 +9088,9 @@
       ]
     },
     {
-      "id": "7bb7b2bf1a314e9895aca7a09d66a795",
+      "id": "eaf5766cce724082b5aa3d6d7596fbd1",
       "name": "RL.Arm.003",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9043,7 +9132,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "9d211b90817849eea30fd7bbd7d61e03",
+          "target": "1042acaf66474d3f912211057d4abd45",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9118,9 +9207,9 @@
       ]
     },
     {
-      "id": "2ac37e66cff24eb699dee5c65963683b",
+      "id": "ecd5fe6e99ed4bd191171c5e47b03237",
       "name": "FR.Wheel.002",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9136,7 +9225,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "36f768d7195f4ea3830292b40cb249b0",
+          "target": "e04e7aaaf9e84f858fd66e9f41e80e84",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9237,9 +9326,9 @@
       ]
     },
     {
-      "id": "36f768d7195f4ea3830292b40cb249b0",
+      "id": "e04e7aaaf9e84f858fd66e9f41e80e84",
       "name": "FR.Arm.003",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9281,7 +9370,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "9d211b90817849eea30fd7bbd7d61e03",
+          "target": "1042acaf66474d3f912211057d4abd45",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9356,9 +9445,9 @@
       ]
     },
     {
-      "id": "55712a81bd014a5abe899799001e7334",
+      "id": "9f07c9153930436484c02e6f7c0fa313",
       "name": "FL.Wheel.005",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9400,7 +9489,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "101ef2c1c54b4ccf9e3f0cd2ee93657a",
+          "target": "87a4359af0ba4215afa4fd49e2e4fa68",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9475,9 +9564,9 @@
       ]
     },
     {
-      "id": "101ef2c1c54b4ccf9e3f0cd2ee93657a",
+      "id": "87a4359af0ba4215afa4fd49e2e4fa68",
       "name": "Fl.Arm.003",
-      "parent": null,
+      "parent": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9519,7 +9608,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "9d211b90817849eea30fd7bbd7d61e03",
+          "target": "1042acaf66474d3f912211057d4abd45",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9594,15 +9683,9 @@
       ]
     },
     {
-      "id": "8991dfa9e51f46ac8ba08012586df8a6",
-      "name": "Diaper.003",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
-      "components": []
-    },
-    {
-      "id": "2f757b29c9fc47f09b57171b23d21ffb",
+      "id": "9dc9776674aa45318e37c7bc13f628ec",
       "name": "Bubbles.018",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
+      "parent": "1042acaf66474d3f912211057d4abd45",
       "components": [
         {
           "type": "PARTICLE",
@@ -9615,9 +9698,9 @@
       ]
     },
     {
-      "id": "996ff0e9b01046f68eb2a7566c246ebe",
+      "id": "7188455a1b8a48bf817b8c5ed0c91873",
       "name": "Bubbles.019",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
+      "parent": "1042acaf66474d3f912211057d4abd45",
       "components": [
         {
           "type": "PARTICLE",
@@ -9630,9 +9713,9 @@
       ]
     },
     {
-      "id": "6b5b7c180fdb4d2890cd83e6214f7365",
+      "id": "ad9e904bcf0647209591f88b1bbe4b9a",
       "name": "Bubbles.020",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
+      "parent": "1042acaf66474d3f912211057d4abd45",
       "components": [
         {
           "type": "PARTICLE",
@@ -9645,9 +9728,9 @@
       ]
     },
     {
-      "id": "b2870878f17d47d3a964912d4fcb0a27",
+      "id": "d17ee1406d284a7ab12b1db077e5a641",
       "name": "Bubbles.021",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
+      "parent": "1042acaf66474d3f912211057d4abd45",
       "components": [
         {
           "type": "PARTICLE",
@@ -9660,9 +9743,9 @@
       ]
     },
     {
-      "id": "eb95fbc3f4b641f782a736bd0bd50fc5",
+      "id": "4b580d703e9a49ee8a8113f4d3e2bc4a",
       "name": "Bubbles.022",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
+      "parent": "1042acaf66474d3f912211057d4abd45",
       "components": [
         {
           "type": "PARTICLE",
@@ -9675,9 +9758,9 @@
       ]
     },
     {
-      "id": "2ea0314bed814412a2f79dd1978a3354",
+      "id": "75017342eedb4a46962cbda68b8d0d2c",
       "name": "Bubbles.023",
-      "parent": "9d211b90817849eea30fd7bbd7d61e03",
+      "parent": "1042acaf66474d3f912211057d4abd45",
       "components": [
         {
           "type": "PARTICLE",
@@ -9690,7 +9773,7 @@
       ]
     },
     {
-      "id": "5a37abe8f1554a0fa1ab70a6a91e31f4",
+      "id": "c25c3e9f8b6343cd9f24c046b2036724",
       "name": "Spot.006",
       "parent": null,
       "components": [],
@@ -9720,7 +9803,7 @@
       }
     },
     {
-      "id": "bde84550b0a44f17ae9da8cf019b19d0",
+      "id": "e352bf46485d44b1a6d90b0aac624ac9",
       "name": "Spot.007",
       "parent": null,
       "components": [],
@@ -9749,9 +9832,15 @@
       }
     },
     {
+      "id": "9f8f56203fac4ebd9af3fbe0a2c3f69e",
+      "name": "Small Rover Root.004",
+      "parent": null,
+      "components": []
+    },
+    {
       "id": "f4af1a53adc841d399dfe48ba660f955",
       "name": "RR.Wheel",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9820,7 +9909,7 @@
     {
       "id": "39d031ebb7734eb5808ab2c3f175bdee",
       "name": "RR.ArmCenter",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9939,7 +10028,7 @@
     {
       "id": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
       "name": "RR.Arm",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10058,7 +10147,7 @@
     {
       "id": "5289be0774ba4b21a0e1e8835de946fe",
       "name": "RL.Wheel.004",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10127,7 +10216,7 @@
     {
       "id": "49d565ba2c3b4efe911c2528098aba83",
       "name": "RL.Wheel.002",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10196,7 +10285,7 @@
     {
       "id": "da55807f3f654ff08426862b1e8a5cd3",
       "name": "RL.Wheel",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10265,7 +10354,7 @@
     {
       "id": "ed4d3659c1e3460db74090ce02467f66",
       "name": "RL.ArmCenter",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10384,7 +10473,7 @@
     {
       "id": "06e674c66e85489ba3970b4ff2766f6d",
       "name": "RL.Arm",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10503,7 +10592,7 @@
     {
       "id": "861a855d6d164e1f968eeb03b58e337b",
       "name": "FRArmCenter",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10622,7 +10711,7 @@
     {
       "id": "a4d8494367754a15b4fe2aaf4b7fdaa8",
       "name": "FR.Wheel",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10691,7 +10780,7 @@
     {
       "id": "d98484a8b72b42079248fdcd49588429",
       "name": "FR.Arm",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10810,7 +10899,7 @@
     {
       "id": "0806f0e60b8f4c26a3fd0902e6b7e203",
       "name": "FL.Wheel.004",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10879,7 +10968,7 @@
     {
       "id": "7dd53a6e90a641e3991c48255b3209ae",
       "name": "FL.Wheel.002",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10948,7 +11037,7 @@
     {
       "id": "f77c4c18494849acb4f70461ec2fe694",
       "name": "FL.Wheel",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11017,7 +11106,7 @@
     {
       "id": "52fc5ee512a04668bb44ac7535c7db23",
       "name": "Fl.ArmCenter",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11136,7 +11225,7 @@
     {
       "id": "8459be8129c1471f8ec3e255791c8f19",
       "name": "Fl.Arm",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11255,7 +11344,7 @@
     {
       "id": "bc2042e80fcf404e988e0c9160a85b94",
       "name": "Engine Rover.003",
-      "parent": "f25de546ba78408c858169b3348be62e",
+      "parent": "579fdf38421249b88eecb770540b0bb8",
       "components": [
         {
           "type": "COLLIDER",
@@ -11310,7 +11399,12 @@
             "angularAssist": 10.0,
             "playerEntity": "bc2042e80fcf404e988e0c9160a85b94",
             "groundRaycastDistance": 13.0,
-            "debugGroundRay": true
+            "debugGroundRay": false,
+            "otherCars": [
+              "63383d3e33bf4647abc65cb6cccc602c",
+              "1f219ce1662b49f4a50be1ed9f1ea1d1",
+              "9f8f56203fac4ebd9af3fbe0a2c3f69e"
+            ]
           }
         },
         {
@@ -11577,7 +11671,7 @@
       }
     },
     {
-      "id": "f25de546ba78408c858169b3348be62e",
+      "id": "579fdf38421249b88eecb770540b0bb8",
       "name": "Engine Rover Parent",
       "parent": null,
       "components": []

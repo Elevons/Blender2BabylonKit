@@ -11,6 +11,8 @@ import type { ShadowSettings } from "../../core/types";
 import { CAST_SHADOWS_KEY } from "../../core/types";
 import { ConfigureDirectionalShadow } from "./directional";
 
+export { ApplyMeshShadows, ApplyMeshShadowFlagsToMeshes, MeshShadowModeToFlags } from "./meshShadows";
+export type { MeshShadowFlags } from "./meshShadows";
 export { DisposeDirectionalShadowMaintenance } from "./directional";
 
 export interface ShadowOptions {

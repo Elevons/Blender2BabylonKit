@@ -12,7 +12,11 @@ from ..core.inspector import inspector_object
 from ..core.prop_copy import remove_collection_item
 from ..components.constants import ADD_COMPONENT_MENU, component_type_label
 from ..components.exposed_vars import add_list_item
-from ..components.clipboard import copy_component
+from ..components.clipboard import (
+    assign_component_row_name,
+    copy_component,
+    ensure_component_collection_names,
+)
 from ..components.particle_scan import sync_component_particle_textures
 
 
@@ -48,7 +52,11 @@ class BJS_OT_add_component(Operator):
             self.report({'WARNING'}, "No active object")
             return {'CANCELLED'}
         ensure_object_id(obj)  # entity gets a stable GUID as soon as it has a component
+        # Name any legacy unnamed rows first so a new named insert does not
+        # reshuffle the stack when Blender re-diffs override ops on save.
+        ensure_component_collection_names(obj.bjs_components)
         comp = obj.bjs_components.add()
+        assign_component_row_name(comp)  # required for library-override insert persistence
         comp.comp_type = self.comp_type
         comp.display_name = component_type_label(self.comp_type)
         obj.bjs_components_index = len(obj.bjs_components) - 1
@@ -87,6 +95,7 @@ class BJS_OT_duplicate_component(Operator):
         obj = inspector_object(context)
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
+        ensure_component_collection_names(obj.bjs_components)
         new = obj.bjs_components.add()                 # appended at the end
         copy_component(obj.bjs_components[self.index], new)
         obj.bjs_components.move(len(obj.bjs_components) - 1, self.index + 1)
@@ -107,6 +116,7 @@ class BJS_OT_move_component(Operator):
         if not obj:
             return {'CANCELLED'}
         comps = obj.bjs_components
+        ensure_component_collection_names(comps)
         j = self.index - 1 if self.direction == 'UP' else self.index + 1
         if 0 <= self.index < len(comps) and 0 <= j < len(comps):
             comps.move(self.index, j)
@@ -168,6 +178,7 @@ class BJS_OT_paste_component(Operator):
         if not (obj and len(clip) > 0):
             return {'CANCELLED'}
         ensure_object_id(obj)  # it's now an entity
+        ensure_component_collection_names(obj.bjs_components)
         copy_component(clip[0], obj.bjs_components.add())
         obj.bjs_components_index = len(obj.bjs_components) - 1
         return {'FINISHED'}

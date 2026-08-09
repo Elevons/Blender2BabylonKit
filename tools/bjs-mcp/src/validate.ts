@@ -123,6 +123,7 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   CheckBraceStyle(source, issues);
   CheckKeyboardObserverCleanup(source, issues);
   CheckScenePostProcessInBehavior(source, issues);
+  CheckPageReloadForRestart(source, issues);
     CheckTargetTransformLoop(source, issues);
   CheckManualPrefabClone(source, issues);
 
@@ -390,6 +391,25 @@ function CheckKeyboardObserverCleanup(source: string, issues: ValidationIssue[])
   }
 }
 
+/**
+ * Behaviors get a narrow LevelSession as this.session — a page reload throws
+ * away the soft-restart path (LevelDirector) for a full browser refresh.
+ */
+function CheckPageReloadForRestart(source: string, issues: ValidationIssue[]): void
+{
+  if (!source.includes("location.reload"))
+  {
+    return;
+  }
+
+  issues.push({
+    code: "page-reload-for-restart",
+    message:
+      'window.location.reload() in a behavior — use await this.session.Restart() (or this.session.Load(url)) instead. See get_scripting_context(section="level-session").',
+    severity: "warning",
+  });
+}
+
 function CheckScenePostProcessInBehavior(source: string, issues: ValidationIssue[]): void
 {
   if (!SCENE_POST_PROCESS_PATTERN.test(source))
@@ -408,7 +428,7 @@ function CheckScenePostProcessInBehavior(source: string, issues: ValidationIssue
 /**
  * node.clone() alone skips physics, scripts, and GUID remapping. Prefer
  * this.spawner.Spawn for prefab instances — that is the legal spawn surface
- * (behaviors never get a Level handle, but spawner is injected).
+ * (behaviors get narrow spawner + session surfaces, not a full Level handle).
  */
 function CheckManualPrefabClone(source: string, issues: ValidationIssue[]): void
 {

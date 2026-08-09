@@ -1,5 +1,14 @@
-import { Rectangle, TextBlock, Slider, Container, Control } from "@babylonjs/gui";
+import {
+  Button,
+  Rectangle,
+  TextBlock,
+  Slider,
+  Container,
+  Control,
+} from "@babylonjs/gui";
+import type { Vector2WithInfo } from "@babylonjs/gui";
 import { Vector3 } from "@babylonjs/core";
+import type { Observer } from "@babylonjs/core";
 import { Behavior, exposed } from "@bjs/engine";
 import type { Entity } from "@bjs/engine";
 
@@ -46,6 +55,9 @@ export default class HUDController extends Behavior
   private ahPitchValue: TextBlock | null = null;
   private ahRollValue: TextBlock | null = null;
 
+  private restartLevelBtn: Button | null = null;
+  private restartClickObserver: Observer<Vector2WithInfo> | null = null;
+
   private elapsedSeconds = 0;
 
   /**
@@ -55,10 +67,12 @@ export default class HUDController extends Behavior
    */
   private static readonly LOCAL_FORWARD = new Vector3(0, 0, 1);
   private static readonly LOCAL_UP = new Vector3(0, 1, 0);
-  private static readonly LOCAL_RIGHT = new Vector3(1, 0, 0);
+  private static readonly WORLD_UP = new Vector3(0, 1, 0);
   private readonly worldForward = new Vector3();
   private readonly worldUp = new Vector3();
-  private readonly worldRight = new Vector3();
+  private readonly projectedWorldUp = new Vector3();
+  private readonly projectedVehicleUp = new Vector3();
+  private readonly rollCross = new Vector3();
 
   /** Resolve HUD controls from this entity's authored GUI component. */
   OnStart(): void
@@ -81,6 +95,9 @@ export default class HUDController extends Behavior
     this.horizonGroup    = this.ResolveControl(texture, "horizonGroup", Container);
     this.ahPitchValue    = this.ResolveControl(texture, "ahPitchValue", TextBlock);
     this.ahRollValue     = this.ResolveControl(texture, "ahRollValue", TextBlock);
+    this.restartLevelBtn = this.ResolveControl(texture, "restartLevelBtn", Button);
+
+    this.WireRestartLevelButton();
 
     if (this.timerTag !== null)
     {
@@ -126,6 +143,32 @@ export default class HUDController extends Behavior
     this.UpdateDepth();
     this.UpdateAttitude();
     this.UpdateTimerTag(deltaSeconds);
+  }
+
+  /** Drop the restart-button click observer when the level unloads. */
+  OnDestroy(): void
+  {
+    if (this.restartLevelBtn !== null && this.restartClickObserver !== null)
+    {
+      this.restartLevelBtn.onPointerClickObservable.remove(this.restartClickObserver);
+    }
+
+    this.restartClickObserver = null;
+    this.restartLevelBtn = null;
+  }
+
+  /** Soft-restart the level when the authored restart button is clicked. */
+  private WireRestartLevelButton(): void
+  {
+    if (this.restartLevelBtn === null)
+    {
+      return;
+    }
+
+    this.restartClickObserver = this.restartLevelBtn.onPointerClickObservable.add(() =>
+    {
+      void this.session.Restart();
+    });
   }
 
   /** Depth readout, slider value, and tag position along the slider track. */
@@ -220,7 +263,8 @@ export default class HUDController extends Behavior
    * Derive pitch and roll from the Train Engine's transform in *world*
    * coordinates (Babylon Y-up):
    *   pitch = elevation of the world forward axis above the horizontal,
-   *   roll  = bank of the world right axis, measured about forward.
+   *   roll  = signed bank about forward (world-up → vehicle-up in the
+   *           plane perpendicular to forward; stable when inverted).
    * A level vehicle (worldUp.y = 1) reads 0deg / 0deg.
    *
    * Roll rotates the horizon linework only; pitch and roll are also
@@ -236,11 +280,10 @@ export default class HUDController extends Behavior
     const node = this.trainEngine.node;
     node.getDirectionToRef(HUDController.LOCAL_FORWARD, this.worldForward);
     node.getDirectionToRef(HUDController.LOCAL_UP, this.worldUp);
-    node.getDirectionToRef(HUDController.LOCAL_RIGHT, this.worldRight);
 
     const forwardY = Math.min(Math.max(this.worldForward.y, -1), 1);
     let pitchDeg = Math.asin(forwardY) * (180 / Math.PI);
-    let rollDeg = Math.atan2(this.worldRight.y, this.worldUp.y) * (180 / Math.PI);
+    let rollDeg = this.ComputeRollDegrees(this.worldForward, this.worldUp);
 
     if (this.invertPitch)
     {
@@ -266,6 +309,38 @@ export default class HUDController extends Behavior
     {
       this.ahRollValue.text = this.FormatDegrees(rollDeg);
     }
+  }
+
+  /**
+   * Signed bank about forward: angle from world-up to vehicle-up in the
+   * plane perpendicular to forward. Unlike atan2(right.y, up.y), this
+   * does not flip sign when the vehicle is inverted.
+   */
+  private ComputeRollDegrees(forward: Vector3, vehicleUp: Vector3): number
+  {
+    const worldUpDotForward = Vector3.Dot(HUDController.WORLD_UP, forward);
+    this.projectedWorldUp.copyFrom(HUDController.WORLD_UP);
+    this.projectedWorldUp.subtractInPlace(forward.scale(worldUpDotForward));
+
+    const vehicleUpDotForward = Vector3.Dot(vehicleUp, forward);
+    this.projectedVehicleUp.copyFrom(vehicleUp);
+    this.projectedVehicleUp.subtractInPlace(forward.scale(vehicleUpDotForward));
+
+    const projectedWorldUpLength = this.projectedWorldUp.length();
+    const projectedVehicleUpLength = this.projectedVehicleUp.length();
+    if (projectedWorldUpLength < 1e-6 || projectedVehicleUpLength < 1e-6)
+    {
+      return 0;
+    }
+
+    this.projectedWorldUp.scaleInPlace(1 / projectedWorldUpLength);
+    this.projectedVehicleUp.scaleInPlace(1 / projectedVehicleUpLength);
+
+    Vector3.CrossToRef(this.projectedWorldUp, this.projectedVehicleUp, this.rollCross);
+    const sinRoll = Vector3.Dot(this.rollCross, forward);
+    const cosRoll = Vector3.Dot(this.projectedWorldUp, this.projectedVehicleUp);
+
+    return Math.atan2(sinRoll, cosRoll) * (180 / Math.PI);
   }
 
   /** Advance and format the mission timer as T+ HH:MM:SS. */

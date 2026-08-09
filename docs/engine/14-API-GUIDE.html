@@ -401,8 +401,9 @@ export default class Patrol extends Behavior
 <tr><td><code>scene</code></td><td>Babylon <code>Scene</code></td><td>Before <code>OnStart</code></td></tr>
 <tr><td><code>node</code></td><td><code>TransformNode</code> (getter)</td><td>Same as <code>entity.node</code></td></tr>
 <tr><td><code>input?</code></td><td><code>InputActionMap</code></td><td>Scene default map when the script has no <code>@inputMap</code> fields</td></tr>
+<tr><td><code>time</code></td><td><a href="#time"><code>GameClock</code></a></td><td>Before <code>OnStart</code> — the level&apos;s unified clock (<code>timeScale</code>, un/scaled deltas)</td></tr>
 </tbody></table>
-<p>Scale continuous motion by <code>deltaSeconds</code>. Babylon <em>velocities</em> are already per-second. Do not multiply those values by <code>deltaSeconds</code>.</p>
+<p>Scale continuous motion by <code>deltaSeconds</code> (scaled game time — see <a href="#time">GameClock</a>). Babylon <em>velocities</em> are already per-second. Do not multiply those values by <code>deltaSeconds</code>.</p>
 
 <h2 id="entity">Entity</h2>
 <p>An entity is one Blender object that exported successfully. File: <code>packages/engine/src/core/Entity.ts</code>.</p>
@@ -464,6 +465,7 @@ export default class Patrol extends Behavior
 <tr><td><code>msdfTextManager?</code></td><td>MSDF text render-pass handle</td></tr>
 <tr><td><code>reflectionProbes</code></td><td>All built reflection probes (dispose with level)</td></tr>
 <tr><td><code>componentHost</code></td><td>Runtime component add/remove (<a href="#component-host">ComponentHost</a>)</td></tr>
+<tr><td><code>time</code></td><td>Unified <a href="#time"><code>GameClock</code></a> — <code>timeScale</code>, scaled/unscaled deltas and elapsed time</td></tr>
 </tbody></table>
 <h3>Methods</h3>
 <table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody>
@@ -476,11 +478,24 @@ export default class Patrol extends Behavior
 </tbody></table>
 <p>The loader calls <code>Begin()</code> and <code>RunFrame()</code>. Behaviors do not call them.</p>
 
+<h2 id="time">GameClock (<code>this.time</code> / <code>level.time</code>)</h2>
+<p>The engine&apos;s single time authority — the equivalent of Unity&apos;s <code>Time</code>. File: <code>packages/engine/src/core/GameClock.ts</code>. <code>Level</code> ticks it once per frame before behaviors run; the clock clamps hitch deltas, applies <code>timeScale</code>, and syncs <code>scene.animationTimeScale</code>, every particle system&apos;s <code>updateSpeed</code> (Babylon particles ignore <code>animationTimeScale</code>), and the Havok timestep. Behaviors receive it injected as <code>this.time</code>.</p>
+<table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>timeScale</code></td><td>Gameplay multiplier — 1 real time, 0 frozen. Writing it scales behavior deltas, scene animations, particles, and physics together; takes effect the same frame. Rendering and input keep running.</td></tr>
+<tr><td><code>deltaSeconds</code></td><td>Scaled frame delta — the value <code>OnUpdate</code> receives</td></tr>
+<tr><td><code>unscaledDeltaSeconds</code></td><td>Wall-clock frame delta (hitch-clamped) — pause menus, slow-motion ramps</td></tr>
+<tr><td><code>elapsedSeconds</code></td><td>Scaled game time since the level began</td></tr>
+<tr><td><code>unscaledElapsedSeconds</code></td><td>Wall-clock time since the level began</td></tr>
+<tr><td><code>maxFrameDeltaSeconds</code></td><td>Per-frame delta cap (default 0.1&#8202;s; Unity&apos;s <code>maximumDeltaTime</code>) — absorbs the giant catch-up delta after a hidden browser tab</td></tr>
+</tbody></table>
+<p><strong>Rules:</strong> never scale time by hand (<code>scene.animationTimeScale</code>, <code>particleSystem.updateSpeed</code> multipliers, <code>physicsEngine.setTimeStep</code>, raw <code>getDeltaTime</code> multipliers) — write <code>timeScale</code> and everything follows. While <code>timeScale != 1</code> the clock owns each particle system&apos;s <code>updateSpeed</code> (rescaled every frame, restored at 1) — don&apos;t tune it from a behavior during slow motion. A ramp that <em>writes</em> <code>timeScale</code> must advance by <code>unscaledDeltaSeconds</code>, or it slows itself down (see <code>game/src/behaviors/Endgame.ts</code>). Restore <code>timeScale = 1</code> in <code>OnDestroy</code> if your behavior may leave it changed.</p>
+
 <h2 id="attachments">Attachments</h2>
 <p>Each component that applies successfully becomes one row on <code>entity.attachments</code>. Types match manifest component types and GUI3D variants. Manifest rows can have an optional <code>name</code> (Blender header <strong>Name</strong> / <code>display_name</code>). Use <code>GetNamedAttachment</code> or <code>GetScript</code> for instance lookup.</p>
 <table><thead><tr><th><code>type</code></th><th><code>data</code></th><th>Runtime object on row</th></tr></thead><tbody>
 <tr><td><code>TAG</code></td><td>tag string (+ optional <code>name</code>)</td><td>—</td></tr>
 <tr><td><code>RENDERING_GROUP</code></td><td>group id + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
+<tr><td><code>MESH_SHADOWS</code></td><td>mode + propagation flags</td><td>— (cast/receive applied after <code>SetupShadows</code> in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>LAYER_MASK</code></td><td>mask + propagation flags</td><td>— (values applied to owned meshes in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>COLLISION_LAYER</code></td><td>layer name + propagation flags</td><td>— (Havok filter masks applied in <code>FinalizeLevel</code>)</td></tr>
 <tr><td><code>COLLIDER</code></td><td>collider manifest</td><td><code>body</code> (shared per entity)</td></tr>
@@ -512,7 +527,7 @@ await level.componentHost.RemoveComponent(enemy, "SCRIPT", 0);</code></pre>
 </tbody></table>
 <h3>Runtime support by type</h3>
 <table><thead><tr><th>Supported at runtime</th><th>Load-only (policy error)</th></tr></thead><tbody>
-<tr><td><code>TAG</code>, <code>SCRIPT</code>, <code>AUDIO</code>, <code>GUI</code>, <code>PARTICLE</code>, <code>MSDF_TEXT</code>, <code>COLLIDER</code>, <code>RIGIDBODY</code>, <code>CONSTRAINT</code>, <code>GUI3D_*</code></td><td><code>CAMERA</code>, <code>REFLECTION_PROBE</code>, <code>RENDERING_GROUP</code>, <code>LAYER_MASK</code>, <code>COLLISION_LAYER</code></td></tr>
+<tr><td><code>TAG</code>, <code>SCRIPT</code>, <code>AUDIO</code>, <code>GUI</code>, <code>PARTICLE</code>, <code>MSDF_TEXT</code>, <code>COLLIDER</code>, <code>RIGIDBODY</code>, <code>CONSTRAINT</code>, <code>GUI3D_*</code></td><td><code>CAMERA</code>, <code>REFLECTION_PROBE</code>, <code>RENDERING_GROUP</code>, <code>LAYER_MASK</code>, <code>MESH_SHADOWS</code>, <code>COLLISION_LAYER</code></td></tr>
 </tbody></table>
 <p>Mutations are <strong>ephemeral</strong>. They are not written back to <code>.scene.json</code>. A SCRIPT added after <code>level.Begin()</code> runs <code>OnStart</code> immediately (and <code>OnPostReady</code> when <code>level.postReady</code> is already true). COLLIDER or RIGIDBODY changes rebuild the entity&apos;s single Havok body from all remaining attachment data.</p>
 
@@ -569,15 +584,38 @@ const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></
 <p>The loader calls <code>registry.Create("Patrol")</code> internally for each SCRIPT row.</p>
 
 <h2 id="app">App bootstrap (not in behaviors)</h2>
-<p>A typical <code>main.ts</code> handles these tasks. See <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>:</p>
-<ol>
-<li><code>FetchAndValidateManifest(url)</code> — optional; required before <code>CreateLevelEngine</code> when using large-world rendering</li>
-<li><code>CreateLevelEngine(canvas, antialias, manifest)</code></li>
-<li><code>new Scene(engine)</code></li>
-<li><code>await EnableHavokPhysics(scene, …)</code> — before <code>Load</code></li>
-<li><code>LevelLoader.Load(manifestUrl, manifest?, options?)</code></li>
-<li><code>engine.runRenderLoop(() =&gt; scene.render())</code></li>
-</ol>
+<p>The recommended bootstrap is <code>LevelDirector</code> — it owns the engine, the render loop, and scene recreation across level loads, and it injects itself onto behaviors as <code>this.session</code>. See <code>game/src/main.ts</code> and <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>:</p>
+<pre><code class="language-typescript">const director = new LevelDirector({
+  canvas,
+  registry,
+  onLoaded: ({ scene, level }) =&gt; { /* fallback camera, debug keys, … */ },
+});
+await director.Load(manifestUrl);
+// later: director.Restart(), director.Load(otherUrl), director.Unload()</code></pre>
+<h3>LevelDirector</h3>
+<table><thead><tr><th>Member</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>Load(manifestUrl)</code></td><td>Dispose the current level + scene, recreate scene + Havok, load the manifest. Queued and serialized</td></tr>
+<tr><td><code>Restart()</code></td><td><code>Load</code> of the current manifest — a soft level restart</td></tr>
+<tr><td><code>Unload()</code></td><td>Tear down the current level without loading another</td></tr>
+<tr><td><code>Dispose()</code></td><td>Unload plus stop the render loop and dispose the engine</td></tr>
+<tr><td><code>GetEngine()</code> / <code>GetScene()</code> / <code>GetLevel()</code></td><td>Current handles (null when unloaded); use in app code, not behaviors</td></tr>
+<tr><td><code>onLoaded</code> (option)</td><td>Hook after every successful Load/Restart — fallback cameras, logging, …</td></tr>
+</tbody></table>
+<p>During every Load/Restart the director shows Babylon&apos;s default loading overlay (<code>engine.displayLoadingUI()</code>, the spinning logo) and hides it when the level is ready. Behaviors do not drive this UI.</p>
+<p>To replace the spinner, assign a custom Babylon <code>ILoadingScreen</code> after the engine exists (after the first successful <code>Load</code>, or from <code>onLoaded</code> — the engine is reused across restarts):</p>
+<pre><code class="language-typescript">import type { ILoadingScreen } from "@babylonjs/core";
+
+const customLoadingScreen: ILoadingScreen = {
+  loadingUIBackgroundColor: "#000000",
+  loadingUIText: "Loading…",
+  displayLoadingUI() { /* show your overlay */ },
+  hideLoadingUI() { /* hide it */ },
+};
+
+director.GetEngine()!.loadingScreen = customLoadingScreen;</code></pre>
+<p>Behavior contract + same example: <code>get_scripting_context(section="level-session")</code>.</p>
+<p>Behaviors see the director only as the narrow <code>LevelSession</code> (<code>this.session</code>): <code>Restart()</code>, <code>Load(url)</code>, <code>Unload()</code>, <code>manifestUrl</code>, <code>isLoading</code>.</p>
+<p>Manual (low-level) bootstrap, for harnesses that drive their own frame loop: <code>FetchAndValidateManifest</code> → <code>CreateLevelEngine</code> → <code>new Scene(engine)</code> → <code>await EnableHavokPhysics(scene, …)</code> → <code>LevelLoader.Load(manifestUrl, manifest?, options?)</code> → <code>engine.runRenderLoop(() =&gt; scene.render())</code>. Without a session in the loader options, <code>this.session</code> is a warn-and-no-op stub.</p>
 <h3>LevelLoaderOptions</h3>
 <table><thead><tr><th>Option</th><th>Default</th><th>Effect</th></tr></thead><tbody>
 <tr><td><code>shadows</code></td><td><code>true</code></td><td>Create shadow generators</td></tr>
@@ -587,6 +625,7 @@ const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></
 <tr><td><code>debugColliders</code></td><td><code>false</code></td><td>Wireframes on load (also gated by debug flag)</td></tr>
 <tr><td><code>clusterPunctualLights</code></td><td>from manifest</td><td>Light clustering policy</td></tr>
 <tr><td><code>lightBudget</code></td><td><code>8</code></td><td>Max forward punctual lights</td></tr>
+<tr><td><code>session</code></td><td>warn stub</td><td><code>LevelSession</code> injected onto behaviors as <code>this.session</code> (<code>LevelDirector</code> sets this automatically)</td></tr>
 </tbody></table>
 
 <h2 id="physics">Physics (from behaviors)</h2>

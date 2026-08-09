@@ -6,8 +6,11 @@ export * from "./core/attachments";
 export * from "./core/ComponentHost";
 export * from "./core/Entity";
 export { SetEntityActive, IsEntityActive } from "./core/entityActive";
+export * from "./core/GameClock";
 export * from "./core/Level";
 export * from "./core/LevelLoader";
+export * from "./core/levelSession";
+export * from "./core/LevelDirector";
 export * from "./core/bootstrap";
 
 // Scripting: the Behavior system and its Blender-facing @exposed decorator.

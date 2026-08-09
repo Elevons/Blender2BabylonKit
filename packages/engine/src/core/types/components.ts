@@ -29,6 +29,21 @@ export interface LayerMaskComponent extends ComponentInstanceName {
   applyChildEntities?: boolean;
 }
 
+export type MeshShadowMode =
+  | "CAST_AND_RECEIVE"
+  | "RECEIVE_ONLY"
+  | "CAST_ONLY"
+  | "NONE";
+
+export interface MeshShadowsComponent extends ComponentInstanceName {
+  type: "MESH_SHADOWS";
+  mode: MeshShadowMode;
+  /** When false, this entity's own meshes keep prior shadow settings. Default true. */
+  applyOwnedMeshes?: boolean;
+  /** When true, child entities inherit until one defines its own mesh-shadow component. */
+  applyChildEntities?: boolean;
+}
+
 export interface CollisionLayerComponent extends ComponentInstanceName {
   type: "COLLISION_LAYER";
   /** Named layer from scene.collisionLayers.layers. */
@@ -455,6 +470,7 @@ export type Component =
   | TagComponent
   | RenderingGroupComponent
   | LayerMaskComponent
+  | MeshShadowsComponent
   | CollisionLayerComponent
   | ColliderComponent
   | RigidBodyComponent

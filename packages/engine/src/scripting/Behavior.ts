@@ -1,6 +1,8 @@
 import type { Scene, TransformNode } from "@babylonjs/core";
 import { Entity } from "../core/Entity";
 import type { CollisionContact } from "../core/types";
+import type { GameClock } from "../core/GameClock";
+import type { LevelSession } from "../core/levelSession";
 import type { PrefabSpawner } from "../core/spawnTypes";
 import type { InputActionMap } from "../input/InputActionMap";
 
@@ -22,10 +24,25 @@ export abstract class Behavior
    * `FlushSpawnShadowRefresh()` after batched loops). Spawn hides the template
    * when the call starts unless `keepTemplate: true`; mark `@exposed`
    * entity fields with `spawnTemplate: true` to hide at level load (deferred
-   * spawners). The narrow PrefabSpawner surface —
-   * receive the full Level.
+   * spawners). Narrow {@link PrefabSpawner} surface — not the full Level.
    */
   spawner!: PrefabSpawner;
+
+  /**
+   * Load / restart / unload the current level (`await this.session.Restart()`,
+   * `await this.session.Load(url)`). Narrow {@link LevelSession} surface —
+   * apps wire a LevelDirector (or another LevelSession) via LevelLoaderOptions.
+   */
+  session!: LevelSession;
+
+  /**
+   * Unified game clock (Unity's `Time`). `this.time.timeScale = 0` freezes
+   * gameplay (behavior deltas, scene animations, physics); `deltaSeconds` /
+   * `elapsedSeconds` are scaled, `unscaledDeltaSeconds` /
+   * `unscaledElapsedSeconds` follow the wall clock (hitch-clamped) — use the
+   * unscaled variants for menus and slow-motion ramps.
+   */
+  time!: GameClock;
 
   /**
    * Find every entity in the level that carries the given tag

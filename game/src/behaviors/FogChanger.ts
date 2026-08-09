@@ -19,26 +19,37 @@ const TONE_MAPPING_TYPES = {
   KHR_PBR_NEUTRAL: ImageProcessingConfiguration.TONEMAPPING_KHR_PBR_NEUTRAL,
 } as const;
 
+type FogZone = "outside" | "zone1" | "zone2";
+
 /**
- * Lives on a trigger volume. Outside the collider: linear fog A + ACES tone mapping.
- * Inside: fog B + a manifest-relative color-grading LUT (tone mapping off).
+ * Lives on the first trigger volume. Outside both colliders: linear fog A + tone mapping.
+ * Inside this entity's trigger: fog B + zone LUT. Inside the second trigger: fog C + zone 2 LUT.
  */
 export default class FogChanger extends Behavior
 {
   @exposed({ type: "entity", label: "Moving object" })
   movingObject: Entity | null = null;
 
-  @exposed({ type: "color", label: "Fog A color" })
+  @exposed({ type: "entity", label: "Second trigger" })
+  secondTrigger: Entity | null = null;
+
+  @exposed({ type: "color", label: "Fog A color (outside)" })
   fogAColor: [number, number, number] = [0.75, 0.8, 0.85];
 
   @exposed({ type: "vector2", label: "Fog A start / end" })
   fogARange: [number, number] = [10, 100];
 
-  @exposed({ type: "color", label: "Fog B color" })
+  @exposed({ type: "color", label: "Fog B color (zone 1)" })
   fogBColor: [number, number, number] = [0.4, 0.45, 0.5];
 
   @exposed({ type: "vector2", label: "Fog B start / end" })
   fogBRange: [number, number] = [5, 50];
+
+  @exposed({ type: "color", label: "Fog C color (zone 2)" })
+  fogCColor: [number, number, number] = [0.25, 0.3, 0.35];
+
+  @exposed({ type: "vector2", label: "Fog C start / end" })
+  fogCRange: [number, number] = [5, 50];
 
   @exposed({
     type: "enum",
@@ -49,14 +60,22 @@ export default class FogChanger extends Behavior
 
   @exposed({
     type: "file",
-    label: "LUT (inside)",
+    label: "LUT (zone 1)",
   })
   zoneLut = "";
 
+  @exposed({
+    type: "file",
+    label: "LUT (zone 2)",
+  })
+  zone2Lut = "";
+
   private colliderAttachment: AttachmentOfType<"COLLIDER"> | undefined;
 
-  /** Whether the assigned moving object is currently inside this trigger volume. */
-  private movingObjectInside = false;
+  private secondTriggerAttachment: AttachmentOfType<"COLLIDER"> | undefined;
+
+  /** Active fog/LUT preset from the probe position. */
+  private activeZone: FogZone = "outside";
 
   /** Runtime LUT loaded for the inside zone (disposed when leaving). */
   private activeGradingTexture: BaseTexture | null = null;
@@ -82,7 +101,29 @@ export default class FogChanger extends Behavior
       console.warn(`[FogChanger:${this.entity.name}] No moving object assigned`);
     }
 
-    this.movingObjectInside = this.IsProbeInsideVolume();
+    if (this.secondTrigger === null)
+    {
+      console.warn(`[FogChanger:${this.entity.name}] No second trigger assigned`);
+    }
+    else
+    {
+      this.secondTriggerAttachment = this.secondTrigger.GetAttachment("COLLIDER");
+
+      if (this.secondTriggerAttachment === undefined)
+      {
+        console.warn(
+          `[FogChanger:${this.entity.name}] Second trigger "${this.secondTrigger.name}" has no COLLIDER`
+        );
+      }
+      else if (!this.secondTriggerAttachment.data.isTrigger)
+      {
+        console.warn(
+          `[FogChanger:${this.entity.name}] Second trigger "${this.secondTrigger.name}" is not a trigger volume`
+        );
+      }
+    }
+
+    this.activeZone = this.ResolveActiveZone();
   }
 
   /** Apply the initial fog/LUT preset once post-processing is attached. */
@@ -94,29 +135,50 @@ export default class FogChanger extends Behavior
   /** Keep fog in sync with the probe position each frame. */
   OnUpdate(_deltaSeconds: number): void
   {
-    const inside = this.IsProbeInsideVolume();
-    if (inside === this.movingObjectInside)
+    const zone = this.ResolveActiveZone();
+    if (zone === this.activeZone)
     {
       return;
     }
 
-    this.movingObjectInside = inside;
+    this.activeZone = zone;
     this.ApplyActiveFog();
   }
 
-  /** Apply fog A/B and outside tone map or inside LUT from probe position. */
+  /** Apply fog A/B/C and outside tone map or zone LUT from probe position. */
   private ApplyActiveFog(): void
   {
-    if (this.movingObjectInside)
+    if (this.activeZone === "zone2")
+    {
+      this.ApplyLinearFog(this.fogCColor, this.fogCRange);
+      this.ApplyZoneLut(this.zone2Lut, "zone 2");
+    }
+    else if (this.activeZone === "zone1")
     {
       this.ApplyLinearFog(this.fogBColor, this.fogBRange);
-      this.ApplyZoneLut();
+      this.ApplyZoneLut(this.zoneLut, "zone 1");
     }
     else
     {
       this.ApplyLinearFog(this.fogAColor, this.fogARange);
       this.ApplyOutsideToneMap();
     }
+  }
+
+  /** Which fog/LUT preset applies from the probe position (zone 2 wins over zone 1). */
+  private ResolveActiveZone(): FogZone
+  {
+    if (this.IsProbeInsideSecondVolume())
+    {
+      return "zone2";
+    }
+
+    if (this.IsProbeInsideVolume())
+    {
+      return "zone1";
+    }
+
+    return "outside";
   }
 
   /** ACES (or another preset) with color grading off. */
@@ -134,8 +196,8 @@ export default class FogChanger extends Behavior
     imageProcessing._updateParameters();
   }
 
-  /** LUT-only look for the inside zone (tone mapping off). */
-  private ApplyZoneLut(): void
+  /** LUT-only look for a zone trigger (tone mapping off). */
+  private ApplyZoneLut(lutPath: string, zoneLabel: string): void
   {
     const imageProcessing = this.TryGetImageProcessing();
     if (imageProcessing === undefined)
@@ -143,10 +205,12 @@ export default class FogChanger extends Behavior
       return;
     }
 
-    const trimmedPath = this.zoneLut.trim();
+    const trimmedPath = lutPath.trim();
     if (trimmedPath.length === 0)
     {
-      console.warn(`[FogChanger:${this.entity.name}] Zone LUT path is empty — keeping outside tone map`);
+      console.warn(
+        `[FogChanger:${this.entity.name}] ${zoneLabel} LUT path is empty — keeping outside tone map`
+      );
       this.ApplyOutsideToneMap();
       return;
     }
@@ -240,6 +304,21 @@ export default class FogChanger extends Behavior
       this.movingObject,
       this.entity,
       this.colliderAttachment
+    );
+  }
+
+  /** Whether the assigned moving object is inside the second trigger collider. */
+  private IsProbeInsideSecondVolume(): boolean
+  {
+    if (this.movingObject === null || this.secondTrigger === null)
+    {
+      return false;
+    }
+
+    return IsEntityInsideColliderVolume(
+      this.movingObject,
+      this.secondTrigger,
+      this.secondTriggerAttachment
     );
   }
 

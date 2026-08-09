@@ -6,14 +6,14 @@ import {
   Matrix,
   MeshBuilder,
   Physics6DoFConstraint,
-  PhysicsBody,
   PhysicsConstraintAxis,
   PhysicsConstraintMotorType,
   PhysicsMotionType,
   PhysicsRaycastResult,
   Quaternion,
-  TransformNode,
   Vector3,
+  type Node,
+  type PhysicsBody,
 } from "@babylonjs/core";
 
 /** Runtime handle for one wheel's driven 6DoF joint (HINGE or CUSTOM). */
@@ -21,18 +21,6 @@ interface WheelDriveBinding
 {
   constraint: Physics6DoFConstraint;
   motorAxis: PhysicsConstraintAxis;
-}
-
-/** One jointed rig part parked for the duration of the recover maneuver. */
-interface FrozenRigBody
-{
-  body: PhysicsBody;
-  node: TransformNode;
-  /** Motion type and pre-step flag as they were before the freeze, restored on thaw. */
-  motionType: PhysicsMotionType;
-  disablePreStep: boolean;
-  /** World transform at freeze time, used to carry the part along with the body. */
-  previousWorld: Matrix;
 }
 
 const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
@@ -47,9 +35,14 @@ const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
 /**
  * CarController drives up to eight wheel motors on HINGE or CUSTOM 6DoF joints
  * (outer + inner per corner) from input, and provides a one-shot "recover"
- * maneuver on the Reset action: it lifts the body, straightens it to zero
- * rotation, holds briefly, then automatically hands control back to physics so
- * the car drops upright from rest.
+ * maneuver on the Reset action: it rebuilds the ENTIRE constraint island
+ * (body, arms, wheels, and any towed trailers) in its authored formation at
+ * the body's current position and heading — lifted, pitch/roll zeroed, yaw
+ * preserved — holds briefly, then hands control back to physics so everything
+ * drops upright from rest. Each car is placed individually from a load-time
+ * snapshot, so a jack-knifed train straightens out, and because the authored
+ * poses are the ones the constraints were built in, the solver never fires
+ * the huge corrective impulses that used to send wheels and trailers flying.
  */
 export default class CarController extends Behavior
 {
@@ -157,9 +150,36 @@ export default class CarController extends Behavior
   private static readonly throttleDeadzone = 0.15;
   /** Steer is already deadzoned in bindings; keep a tiny epsilon only. */
   private static readonly steerEpsilon = 0.01;
+  /** How high the recover maneuver lifts the assembly before dropping it. */
+  private static readonly resetLiftMeters = 3;
+  /** Ground probe span around a car's reset spot (up to catch uphill terrain). */
+  private static readonly groundProbeUpMeters = 15;
+  private static readonly groundProbeDownMeters = 60;
+  /** Max own-body/player/boundary hits the ground probe steps through. */
+  private static readonly groundProbeMaxSkips = 8;
 
   private isPlacing = false;
   private placeTimer = 0;
+  /**
+   * Every dynamic entity joined to the chassis through the constraint graph
+   * (chassis included) — wheels, suspension arms, and towed trailers with
+   * their own wheel stacks. Discovered once in OnStart; the recover maneuver
+   * teleports and freezes all of them together.
+   */
+  private resetGroup: Entity[] = [];
+  /**
+   * Each reset-group node's authored (level-load) world pose expressed
+   * relative to the chassis. Reset rebuilds this formation at the chassis's
+   * current position and heading, so a jack-knifed train straightens out
+   * instead of being carried over in its tangled world arrangement.
+   */
+  private resetFormation = new Map<Entity, Matrix>();
+  /**
+   * Which car each reset-group entity belongs to: the chassis or a towed
+   * trailer body. Reset raises each car individually to its local ground
+   * height, and a car's arms/wheels ride along with their own car.
+   */
+  private carRootByEntity = new Map<Entity, Entity>();
   /** One entry per wheel slot (see CollectWheelEntities); undefined when unassigned or undrivable. */
   private wheelDrives: (WheelDriveBinding | undefined)[] = [];
   private debounceTime = Date.now();
@@ -178,13 +198,6 @@ export default class CarController extends Behavior
   private rayWorldMatrix = Matrix.Identity();
   /** Reused point array for the CreateLines instance update. */
   private debugPoints: Vector3[] = [new Vector3(), new Vector3()];
-  /** Rig parts (wheels, arms) held kinematic while the recover maneuver runs. */
-  private frozenRigBodies: FrozenRigBody[] = [];
-  /** Scratch matrices/quaternion for repositioning frozen rig parts. */
-  private rigTargetWorld = Matrix.Identity();
-  private rigLocalMatrix = Matrix.Identity();
-  private rigParentInverse = Matrix.Identity();
-  private rigRotation = Quaternion.Identity();
 
   OnStart(): void
   {
@@ -194,6 +207,9 @@ export default class CarController extends Behavior
     );
     this.wheelGrounded = wheelEntities.map(() => false);
     this.debugLines = wheelEntities.map(() => null);
+    this.resetGroup = this.DiscoverResetGroup();
+    this.CaptureResetFormation();
+    this.ComputeCarPartition();
 
     if (this.debugGroundRay)
     {
@@ -274,9 +290,6 @@ export default class CarController extends Behavior
 
   OnDestroy(): void
   {
-    // Unloading mid-recover would otherwise leave the rig parts kinematic.
-    this.ThawRigBodies();
-
     for (const debugLine of this.debugLines)
     {
       debugLine?.dispose();
@@ -505,19 +518,19 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Begin the recover maneuver: switch the body to ANIMATED (kinematic), lift it
-   * 10 units, and reset all rotations to zero so it will drop upright. Kinematic
-   * bodies ignore gravity, so it holds in place until EndPlacement runs.
-   *
-   * The wheels and suspension arms are separate dynamic bodies joined to the
-   * body, not children of it, so they are frozen and carried along by the same
-   * transform — otherwise the teleport stretches every joint and the solver
-   * flings the parts across the level when they are released.
+   * Begin the recover maneuver: freeze the whole constraint island as ANIMATED
+   * (kinematic) bodies, then rebuild the authored formation at the chassis's
+   * current position and heading — every trailer, arm, and wheel gets its own
+   * individual target pose from the load-time snapshot, so a tangled train
+   * straightens out instead of teleporting in its current world arrangement.
+   * The authored poses are the ones the constraints were built in, so they
+   * see ~zero error and never fire corrective impulses. Kinematic bodies
+   * ignore gravity, so the island holds until EndPlacement.
    */
   private BeginPlacement(): void
   {
-    const body = this.body?.body;
-    if (body === undefined || this.body === null)
+    const chassisEntity = this.body;
+    if (chassisEntity === null || chassisEntity.body === undefined)
     {
       return;
     }
@@ -525,142 +538,227 @@ export default class CarController extends Behavior
     this.isPlacing = true;
     this.placeTimer = 0;
 
-    const bodyNode = this.body.node;
-    const previousBodyWorld = bodyNode.computeWorldMatrix(true).clone();
-    const target = bodyNode.position.add(new Vector3(0, 3, 0));
+    const placementGroup = this.resetGroup.length > 0 ? this.resetGroup : [chassisEntity];
+    const chassisTargetWorld = this.ComputeChassisTargetWorld(chassisEntity);
 
-    this.FreezeRigBodies();
-
-    body.setMotionType(PhysicsMotionType.ANIMATED);
-    // disablePreStep = false lets the next pre-step copy the node transform into the body.
-    body.disablePreStep = false;
-
-    // Lift, and zero all rotations (identity quaternion = no rotation).
-    // rotationQuaternion overrides Euler rotation for both the renderer and physics.
-    bodyNode.position.copyFrom(target);
-    bodyNode.rotationQuaternion = Quaternion.Identity();
-
-    body.setLinearVelocity(Vector3.Zero());
-    body.setAngularVelocity(Vector3.Zero());
-
-    const recoveryDelta = Matrix.Invert(previousBodyWorld)
-      .multiply(bodyNode.computeWorldMatrix(true));
-    this.MoveFrozenRigBodies(recoveryDelta);
-  }
-
-  /**
-   * Park every jointed rig part: capture its current motion state and world
-   * transform, then hold it kinematic at zero velocity. With both ends of a
-   * joint non-dynamic the solver has nothing to react to while the body moves.
-   */
-  private FreezeRigBodies(): void
-  {
-    this.frozenRigBodies = [];
-
-    for (const rigEntity of this.CollectRigEntities())
+    for (const groupEntity of placementGroup)
     {
-      const rigBody = rigEntity.body;
-      if (rigBody === undefined || rigBody.isDisposed)
+      const groupBody = groupEntity.body;
+      if (groupBody === undefined)
       {
         continue;
       }
 
-      this.frozenRigBodies.push({
-        body: rigBody,
-        node: rigEntity.node,
-        motionType: rigBody.getMotionType(),
-        disablePreStep: rigBody.disablePreStep,
-        previousWorld: rigEntity.node.computeWorldMatrix(true).clone(),
-      });
+      groupBody.setMotionType(PhysicsMotionType.ANIMATED);
+      // disablePreStep = false lets the next pre-step copy each node transform into its body.
+      groupBody.disablePreStep = false;
+      groupBody.setLinearVelocity(Vector3.Zero());
+      groupBody.setAngularVelocity(Vector3.Zero());
+    }
 
-      rigBody.setMotionType(PhysicsMotionType.ANIMATED);
-      rigBody.disablePreStep = false;
-      rigBody.setLinearVelocity(Vector3.Zero());
-      rigBody.setAngularVelocity(Vector3.Zero());
+    this.ApplyResetFormation(placementGroup, chassisTargetWorld);
+  }
+
+  /**
+   * Snapshot every reset-group node's world pose relative to the chassis at
+   * level load, when the train sits in its authored (untangled) formation.
+   */
+  private CaptureResetFormation(): void
+  {
+    const chassisEntity = this.body;
+    if (chassisEntity === null || this.resetGroup.length === 0)
+    {
+      return;
+    }
+
+    const chassisWorldInverse = new Matrix();
+    chassisEntity.node.computeWorldMatrix(true).invertToRef(chassisWorldInverse);
+
+    this.resetFormation.clear();
+    for (const groupEntity of this.resetGroup)
+    {
+      this.resetFormation.set(
+        groupEntity,
+        groupEntity.node.computeWorldMatrix(true).multiply(chassisWorldInverse)
+      );
     }
   }
 
   /**
-   * Every physics part belonging to this vehicle: the assigned wheel slots plus
-   * any other jointed body under the rig root (suspension arms and their
-   * pivots). Requiring a CONSTRAINT keeps unrelated dynamic bodies that happen
-   * to sit under the same root — spawned creatures, loose props — out of it.
+   * The chassis's reset pose: lifted resetLiftMeters straight up from its
+   * current position, pitch/roll zeroed, yaw preserved so the car keeps its
+   * heading. The captured formation is rebuilt around this pose.
    */
-  private CollectRigEntities(): Entity[]
+  private ComputeChassisTargetWorld(chassisEntity: Entity): Matrix
   {
-    const candidates: (Entity | null | undefined)[] = [...this.CollectWheelEntities()];
-    const rigRoot = this.body?.node.parent ?? this.body?.node;
+    const chassisWorld = chassisEntity.node.computeWorldMatrix(true);
 
-    if (rigRoot !== null && rigRoot !== undefined)
+    const worldScale = new Vector3();
+    const worldRotation = new Quaternion();
+    const worldPosition = new Vector3();
+    chassisWorld.decompose(worldScale, worldRotation, worldPosition);
+
+    // This car model uses +Z as forward (see ApplyVelocityAssist). Flatten the
+    // forward vector onto the ground plane to keep only the heading; when the
+    // car points straight up/down the heading is undefined — fall back to identity.
+    const forward = Vector3.TransformNormal(new Vector3(0, 0, 1), chassisWorld);
+    forward.y = 0;
+    const yawRotation = forward.lengthSquared() > 1e-6
+      ? Quaternion.RotationAxis(Vector3.Up(), Math.atan2(forward.x, forward.z))
+      : Quaternion.Identity();
+
+    const targetPosition = worldPosition.add(
+      new Vector3(0, CarController.resetLiftMeters, 0)
+    );
+    return Matrix.Compose(worldScale, yawRotation, targetPosition);
+  }
+
+  /**
+   * Place every group node at its authored chassis-relative pose, re-rooted on
+   * the chassis target, in two phases: compute all target world matrices
+   * first, then write them back as local transforms against each parent's
+   * predicted (or unchanged) world matrix. Nodes missing from the formation
+   * snapshot fall back to riding along rigidly at the chassis target.
+   */
+  private ApplyResetFormation(placementGroup: Entity[], chassisTargetWorld: Matrix): void
+  {
+    const newWorldByNode = new Map<Node, Matrix>();
+    for (const groupEntity of placementGroup)
     {
-      for (const descendant of rigRoot.getDescendants(false))
+      const relativeToChassis = this.resetFormation.get(groupEntity) ?? Matrix.Identity();
+      newWorldByNode.set(
+        groupEntity.node,
+        relativeToChassis.multiply(chassisTargetWorld)
+      );
+    }
+
+    const localScale = new Vector3();
+    const localPosition = new Vector3();
+
+    for (const groupEntity of placementGroup)
+    {
+      const groupNode = groupEntity.node;
+      const newWorld = newWorldByNode.get(groupNode) as Matrix;
+
+      const parentNode = groupNode.parent;
+      if (parentNode !== null)
       {
-        const metadata = descendant.metadata as { bjsEntity?: Entity } | undefined;
-        const descendantEntity = metadata?.bjsEntity;
-        if (descendantEntity !== undefined && descendantEntity.HasAttachment("CONSTRAINT"))
+        const parentWorld = newWorldByNode.get(parentNode) ?? parentNode.getWorldMatrix();
+        const parentInverse = new Matrix();
+        parentWorld.invertToRef(parentInverse);
+        newWorld.multiplyToRef(parentInverse, newWorld);
+      }
+
+      // Fresh quaternion per node — the node keeps the reference we hand it.
+      // rotationQuaternion overrides Euler rotation for both the renderer and physics.
+      const localRotation = new Quaternion();
+      newWorld.decompose(localScale, localRotation, localPosition);
+      groupNode.position.copyFrom(localPosition);
+      groupNode.rotationQuaternion = localRotation;
+    }
+  }
+
+  /**
+   * Flood-fill the constraint graph outward from the chassis to find every
+   * dynamic body transitively joined to it. Constraint rows live on their
+   * owner entity with the target stored as an entity id, so edges are walked
+   * in both directions. Non-dynamic bodies (static anchors) are never entered
+   * or crossed — teleporting those would move world geometry.
+   */
+  private DiscoverResetGroup(): Entity[]
+  {
+    const chassisEntity = this.body;
+    if (chassisEntity === null || chassisEntity.body === undefined)
+    {
+      return [];
+    }
+
+    const entitiesById = this.CollectPhysicsEntities();
+    const neighborsById = this.BuildConstraintAdjacency(entitiesById);
+
+    const visitedIds = new Set<string>([chassisEntity.id]);
+    const group: Entity[] = [chassisEntity];
+    const frontier: string[] = [chassisEntity.id];
+
+    while (frontier.length > 0)
+    {
+      const currentId = frontier.pop() as string;
+      for (const neighborId of neighborsById.get(currentId) ?? [])
+      {
+        if (visitedIds.has(neighborId))
         {
-          candidates.push(descendantEntity);
+          continue;
         }
+        visitedIds.add(neighborId);
+
+        const neighborEntity = entitiesById.get(neighborId);
+        if (neighborEntity === undefined || neighborEntity.body === undefined)
+        {
+          continue;
+        }
+        if (neighborEntity.body.getMotionType() !== PhysicsMotionType.DYNAMIC)
+        {
+          continue;
+        }
+
+        group.push(neighborEntity);
+        frontier.push(neighborId);
       }
     }
 
-    const rigEntities: Entity[] = [];
-    for (const candidate of candidates)
-    {
-      if (candidate === null || candidate === undefined)
-      {
-        continue;
-      }
-
-      if (candidate === this.body || candidate === this.entity || candidate.body === undefined)
-      {
-        continue;
-      }
-
-      if (!rigEntities.includes(candidate))
-      {
-        rigEntities.push(candidate);
-      }
-    }
-
-    return rigEntities;
+    return group;
   }
 
-  /**
-   * Apply the body's teleport to each frozen rig part so the whole vehicle
-   * arrives in one piece with its joints at rest. The parts are kinematic with
-   * pre-step enabled here, so writing the node transform is what moves them.
-   */
-  private MoveFrozenRigBodies(recoveryDelta: Matrix): void
+  /** Every entity in the scene that owns a physics body, keyed by entity id. */
+  private CollectPhysicsEntities(): Map<string, Entity>
   {
-    for (const frozen of this.frozenRigBodies)
+    const entitiesById = new Map<string, Entity>();
+    const sceneNodes = [...this.scene.transformNodes, ...this.scene.meshes];
+
+    for (const sceneNode of sceneNodes)
     {
-      frozen.previousWorld.multiplyToRef(recoveryDelta, this.rigTargetWorld);
-
-      let localMatrix = this.rigTargetWorld;
-      const parentNode = frozen.node.parent;
-
-      // Nullable<Node>: Babylon types this as Node | null but it can be undefined.
-      if (parentNode)
+      const metadata = sceneNode.metadata as { bjsEntity?: Entity } | null | undefined;
+      const nodeEntity = metadata?.bjsEntity;
+      if (nodeEntity !== undefined && nodeEntity !== null && nodeEntity.body !== undefined)
       {
-        parentNode.getWorldMatrix().invertToRef(this.rigParentInverse);
-        this.rigTargetWorld.multiplyToRef(this.rigParentInverse, this.rigLocalMatrix);
-        localMatrix = this.rigLocalMatrix;
+        entitiesById.set(nodeEntity.id, nodeEntity);
       }
+    }
 
-      localMatrix.decompose(frozen.node.scaling, this.rigRotation, frozen.node.position);
+    return entitiesById;
+  }
 
-      if (frozen.node.rotationQuaternion === null)
+  /** Undirected adjacency (entity id → neighbor ids) built from CONSTRAINT attachments. */
+  private BuildConstraintAdjacency(entitiesById: Map<string, Entity>): Map<string, string[]>
+  {
+    const neighborsById = new Map<string, string[]>();
+    const addEdge = (fromId: string, toId: string): void => {
+      const neighbors = neighborsById.get(fromId);
+      if (neighbors !== undefined)
       {
-        frozen.node.rotationQuaternion = this.rigRotation.clone();
+        neighbors.push(toId);
       }
       else
       {
-        frozen.node.rotationQuaternion.copyFrom(this.rigRotation);
+        neighborsById.set(fromId, [toId]);
       }
+    };
 
-      frozen.node.computeWorldMatrix(true);
+    for (const physicsEntity of entitiesById.values())
+    {
+      for (const constraintRow of physicsEntity.GetAttachmentsOfType("CONSTRAINT"))
+      {
+        const targetId = constraintRow.data.target;
+        if (targetId === null || targetId === undefined)
+        {
+          continue;
+        }
+        addEdge(physicsEntity.id, targetId);
+        addEdge(targetId, physicsEntity.id);
+      }
     }
+
+    return neighborsById;
   }
 
   /**
@@ -911,49 +1009,36 @@ export default class CarController extends Behavior
   }
 
   /**
-   * End the recover maneuver: hand control back to physics from rest. The order
-   * matters — re-enable disablePreStep FIRST so the pre-step stops deriving a
-   * velocity from the teleport, then switch to DYNAMIC, then zero velocity last
-   * so the car falls from rest instead of slamming.
+   * End the recover maneuver: hand the whole island back to physics from rest.
+   * The per-body order matters — re-enable disablePreStep FIRST so the
+   * pre-step stops deriving a velocity from the teleport, then switch to
+   * DYNAMIC, then zero velocity last so everything falls from rest in
+   * formation instead of slamming.
    */
   private EndPlacement(): void
   {
-    const body = this.body?.body;
-    if (body === undefined || this.body === null)
+    const chassisEntity = this.body;
+    if (chassisEntity === null || chassisEntity.body === undefined)
     {
       return;
     }
 
     this.isPlacing = false;
 
-    body.disablePreStep = true;
-    body.setMotionType(PhysicsMotionType.DYNAMIC);
-    body.setLinearVelocity(Vector3.Zero());
-    body.setAngularVelocity(Vector3.Zero());
+    const placementGroup = this.resetGroup.length > 0 ? this.resetGroup : [chassisEntity];
 
-    this.ThawRigBodies();
-  }
-
-  /**
-   * Hand the rig parts back to physics from rest, in the motion state they had
-   * before the freeze. Same ordering as the body: stop the pre-step deriving a
-   * velocity from the teleport first, then go dynamic, then zero velocity.
-   */
-  private ThawRigBodies(): void
-  {
-    for (const frozen of this.frozenRigBodies)
+    for (const groupEntity of placementGroup)
     {
-      if (frozen.body.isDisposed)
+      const groupBody = groupEntity.body;
+      if (groupBody === undefined)
       {
         continue;
       }
 
-      frozen.body.disablePreStep = frozen.disablePreStep;
-      frozen.body.setMotionType(frozen.motionType);
-      frozen.body.setLinearVelocity(Vector3.Zero());
-      frozen.body.setAngularVelocity(Vector3.Zero());
+      groupBody.disablePreStep = true;
+      groupBody.setMotionType(PhysicsMotionType.DYNAMIC);
+      groupBody.setLinearVelocity(Vector3.Zero());
+      groupBody.setAngularVelocity(Vector3.Zero());
     }
-
-    this.frozenRigBodies = [];
   }
 }

@@ -340,7 +340,7 @@
     <a href="../blender/00-INDEX.html">Blender</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="03-BLENDER-ADDON.html">Prev</a> <span class="dim">·</span> <a href="05-SCRIPTING.html">Next →</a></p>
   <article><h1>04 — The Load Pipeline</h1>
-<p><strong>Load vs run:</strong> everything in this chapter happens once inside <code>LevelLoader.Load()</code> until it returns. Per-frame behavior hooks (<code>OnUpdate</code>, input polling) start only after the app calls <code>engine.runRenderLoop(() =&gt; scene.render())</code>. See <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>.</p>
+<p><strong>Load vs run:</strong> everything in this chapter happens once inside <code>LevelLoader.Load()</code> until it returns. Per-frame behavior hooks (<code>OnUpdate</code>, input polling) start only after the render loop starts — <code>LevelDirector</code> starts it automatically; manual bootstraps call <code>engine.runRenderLoop(() =&gt; scene.render())</code> themselves. See <a href="02-RUNTIME-BASICS.html">02 — Runtime Basics</a>.</p>
 
 <h2>At a glance</h2>
 <ol>
@@ -376,7 +376,8 @@
 <li><p><strong><code>FinalizeLevel</code></strong> (in code order) —</p>
 <ul>
 <li><strong><code>ClusterPunctualLightsIfNeeded</code></strong> (when enabled lights exceed the budget: cluster eligible point/spot lamps — <code>entities[].light.cluster !== false</code> — or disable light UBOs — sets <code>level.punctualLightingMode</code> / <code>level.clusteredLights</code>; skipped when clustering already ran during glb import, see step 3);</li>
-<li><strong><code>SetupShadows</code></strong> (one generator per casting lamp; all meshes receive; casters respect <code>bjs_cast_shadows</code> and outlier-size heuristics; a caster/receiver summary logs only when the export&apos;s Debug Build flag is on);</li>
+<li><strong><code>SetupShadows</code></strong> (one generator per casting lamp; all meshes receive by default; casters respect <code>bjs_cast_shadows</code> and outlier-size heuristics; a caster/receiver summary logs only when the export&apos;s Debug Build flag is on);</li>
+<li><strong><code>ApplyMeshShadows</code></strong> (<code>subsystems/shadows/meshShadows.ts</code>) — applies <code>MESH_SHADOWS</code> component overrides immediately after setup (cast/receive modes on owned meshes; optional child propagation);</li>
 <li><code>await ApplySceneSettings</code> → clear/ambient, async <code>ApplyEnvironment</code> + fog;</li>
 <li><strong><code>ApplyAtmosphere</code></strong> when the manifest includes <code>scene.atmosphere</code> (SUN lamp → <code>@babylonjs/addons/atmosphere</code>; sets <code>level.atmosphere</code>);</li>
 <li><strong><code>BuildNodeMaterials</code></strong> — single shader compile for every scene <code>NodeMaterial</code> (<code>whenTexturesReadyAsync</code> then <code>build()</code>). Runs after environment IBL exists when the manifest declares one, and after manifest texture/input/gradient overrides are bound;</li>
@@ -388,7 +389,7 @@
 <li>build constraints (<code>BuildConstraints</code> → <code>level.constraints</code> + CONSTRAINT rows on owner entities);</li>
 <li>build 3D GUI (<code>BuildGui3DControls</code> → <code>level.gui3DManager</code> + GUI3D_* rows on owning entities);</li>
 <li>build reflection probes (<code>BuildReflectionProbes</code> → <code>AssignProbeMaterials</code> → <code>level.reflectionProbes</code> + REFLECTION_PROBE rows on owner entities — after IBL and the NME compile so probe cubemaps override <code>material.reflectionTexture</code> last);</li>
-<li>apply render layers (<code>ApplyRenderLayers</code> — <code>RENDERING_GROUP</code> / <code>LAYER_MASK</code> on owned meshes with optional child propagation);</li>
+<li>apply render layers (<code>ApplyRenderLayers</code> — <code>RENDERING_GROUP</code> / <code>LAYER_MASK</code> on owned meshes with optional child propagation); prefab spawns also run <code>ApplyMeshShadows</code> for the spawned batch;</li>
 <li>apply collision layers (<code>ApplyCollisionLayers</code> — <code>COLLISION_LAYER</code> + <code>scene.collisionLayers</code> matrix → Havok filter masks on registered physics shapes);</li>
 <li>then <strong><code>level.Begin()</code></strong> (behaviors&apos; <code>OnStart</code>, including any runtime camera creation);</li>
 <li>then <strong><code>ApplyLateRendering</code></strong> (<code>BuildNodeMaterials</code> + <code>ApplyPostProcessing</code> on <code>scene.activeCamera</code> → <code>level.post</code>);</li>

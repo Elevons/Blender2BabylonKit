@@ -472,7 +472,7 @@ server.tool(
       .string()
       .optional()
       .describe(
-        'Optional section slug, e.g. "exposed", "input", "physics", "cameras", "scene-look", "prefab-spawn". Use section="list" to see all. Omit for the full doc.'
+        'Optional section slug, e.g. "exposed", "input", "physics", "cameras", "scene-look", "prefab-spawn", "level-session". Use section="list" to see all. Omit for the full doc.'
       ),
   },
   async ({ section }) =>

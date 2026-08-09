@@ -14,6 +14,10 @@ import { CreateCameraTargetSets, type CameraTargetSets } from "../../subsystems/
 import { BuildIdIndex } from "./nodeResolution";
 import { ComponentHost } from "../ComponentHost";
 import { BindLevelToScene } from "../entityActive";
+import {
+  CreateStubLevelSession,
+  type LevelSession,
+} from "../levelSession";
 
 /**
  * The mutable state threaded through one load pass: the Level under
@@ -49,10 +53,14 @@ export function CreateLoadContext(
   scene: Scene,
   baseUrl: string,
   registry: BehaviorRegistry,
-  defaultInputMap = "Player"
+  defaultInputMap = "Player",
+  session?: LevelSession
 ): LoadContext
 {
   const level = new Level(scene);
+  level.session = session ?? CreateStubLevelSession(
+    "pass LevelLoaderOptions.session (use LevelDirector)"
+  );
   const componentHost = new ComponentHost(level, scene, registry, baseUrl, defaultInputMap);
   level.componentHost = componentHost;
   BindLevelToScene(scene, level);

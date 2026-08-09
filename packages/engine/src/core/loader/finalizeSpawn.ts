@@ -9,6 +9,7 @@ import { ResolveCameraTargets } from "../../subsystems/cameras";
 import { BuildConstraints } from "../../subsystems/constraints";
 import { BuildLodLevels } from "../../subsystems/lod";
 import { RegisterSpawnedShadowMeshes } from "../../subsystems/shadows";
+import { ApplyMeshShadows } from "../../subsystems/shadows/meshShadows";
 import { ApplyRenderLayers } from "../../subsystems/renderLayers";
 import { ApplyCollisionLayers } from "../../subsystems/collisions";
 import { ApplyGui3DRegistration } from "../../ui/gui3d/builder";
@@ -177,6 +178,7 @@ export async function FinalizeSpawn(
 
   // Layer walks over just this batch's manifest rows.
   ApplyRenderLayers({ entities: spawnedRows }, level);
+  ApplyMeshShadows({ entities: spawnedRows }, level, level.shadowGenerators);
   if (level.collisionLayers !== undefined)
   {
     ApplyCollisionLayers(

@@ -53,9 +53,18 @@ this.scene  : Scene
 this.node   : TransformNode   // === this.entity.node
 this.input? : InputActionMap  // scene default when no @inputMap fields
 this.spawner: PrefabSpawner   // Spawn, HideTemplate, FlushSpawnShadowRefresh
+this.session: LevelSession    // Restart / Load / Unload (LevelDirector)
+this.time   : GameClock       // timeScale (0 freezes gameplay) + un/scaled deltas/elapsed
 ```
 
-Behaviors do **not** receive a `Level` handle. Prefer `@exposed({ type: "entity" })`
+`this.time` is the single time authority: writing `timeScale` scales OnUpdate
+deltas, scene animations, particles, and physics together. `OnUpdate`'s `deltaSeconds` is
+the **scaled** delta; wall-clock timers (pause menus, slow-mo ramps) use
+`this.time.unscaledDeltaSeconds`. Deltas are hitch-clamped
+(`maxFrameDeltaSeconds`, 0.1 s). Never set `scene.animationTimeScale` or the
+physics timestep by hand.
+
+Behaviors do **not** receive a full `Level` handle. Prefer `@exposed({ type: "entity" })`
 for cross-entity refs; same-entity: `entity.GetBehavior(OtherClass)` (first match),
 `entity.GetScript("Instance Name")` when multiple SCRIPT rows share a class, or
 `entity.GetAttachment("SCRIPT")?.behavior`. To **duplicate** a loaded subtree
@@ -66,7 +75,9 @@ level load for deferred spawners. Animated templates get independent skeleton +
 AnimationGroups per instance. Multi-spawn loops:
 `deferShadowRefresh: true` + `FlushSpawnShadowRefresh()` once. Paint-scatter:
 `get_scripting_context(section="prefab-spawn")` / `populateprefabs.ts`
-(auto `COLOR_n`, luminance threshold — not Blender attribute names).
+(auto `COLOR_n`, luminance threshold — not Blender attribute names). Soft restart
+or change levels with `await this.session.Restart()` / `Load(url)` (app wires
+`LevelDirector`).
 
 ## Decorators (literal tokens — never rename)
 

@@ -99,6 +99,12 @@ def _serialize_layer_mask(comp, out, output_dir):
     out["applyChildEntities"] = bool(comp.render_layer_apply_children)
 
 
+def _serialize_mesh_shadows(comp, out, output_dir):
+    out["mode"] = comp.mesh_shadow_mode
+    out["applyOwnedMeshes"] = bool(comp.render_layer_apply_owned)
+    out["applyChildEntities"] = bool(comp.render_layer_apply_children)
+
+
 def _serialize_collision_layer(comp, out, output_dir):
     out["layer"] = comp.collision_layer
     out["applyOwnedColliders"] = bool(comp.collision_layer_apply_owned)
@@ -395,6 +401,7 @@ SERIALIZERS = {
     'TAG': _serialize_tag,
     'RENDERING_GROUP': _serialize_rendering_group,
     'LAYER_MASK': _serialize_layer_mask,
+    'MESH_SHADOWS': _serialize_mesh_shadows,
     'COLLISION_LAYER': _serialize_collision_layer,
     'COLLIDER': _serialize_collider,
     'RIGIDBODY': _serialize_rigidbody,

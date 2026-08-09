@@ -41,11 +41,13 @@ COMPONENT_TYPES = [
     ('GUI3D_PLANE',    "3D Plane Panel",    "Arrange child 3D buttons on a plane"),
     ('GUI3D_SCATTER',  "3D Scatter Panel",  "Scatter child 3D buttons with randomized placement"),
 
-    # APPEND ONLY — comp_type is EnumProperty; Blender persists indices in .blend files.
     ('COLLISION_LAYER', "Collision Layer",
      "Named Havok collision layer from the scene matrix"),
     ('ANIMATOR', "Animator",
      "NLA clip state machine (node graph) — attach to the armature"),
+    # APPEND ONLY — comp_type is EnumProperty; Blender persists indices in .blend files.
+    ('MESH_SHADOWS', "Mesh Shadows",
+     "Override shadow casting and receiving on owned meshes"),
 ]
 
 # Add Component menu — section order for artists. May differ from COMPONENT_TYPES
@@ -77,6 +79,8 @@ ADD_COMPONENT_MENU = [
     ('REFLECTION_PROBE', "Reflection Probe",
      "Realtime cubemap reflections for nearby PBR materials"),
     ('LOD', "LOD", "Distance-based mesh level-of-detail swapping"),
+    ('MESH_SHADOWS', "Mesh Shadows",
+     "Override shadow casting and receiving on owned meshes"),
 
     ("", "3D GUI — Controls", ""),
     ('GUI3D_BUTTON',     "3D Button",                   "A 3D button plate rendering text or an image (Button3D)"),
@@ -210,6 +214,19 @@ SHADOW_FILTERS = [
     ('NONE',     "Hard",           "No filtering — hard, aliased edges"),
 ]
 
+SHADOW_MAP_SIZE_PRESETS = [
+    ('DEFAULT', "Default (1024)", "Use the loader default (1024)"),
+    ('256', "256", "Low resolution"),
+    ('512', "512", "Medium-low resolution"),
+    ('1024', "1024", "Medium resolution"),
+    ('2048', "2048", "High resolution"),
+    ('4096', "4096", "Very high resolution"),
+    ('8192', "8192", "Maximum resolution (expensive)"),
+    ('CUSTOM', "Custom", "Enter any value from 256 to 8192"),
+]
+
+SHADOW_MAP_SIZE_PRESET_VALUES = {256, 512, 1024, 2048, 4096, 8192}
+
 # UI labels for @exposed var kinds. vtype is stored as a string id (see exposed_vars.py),
 # so this list can be reordered freely — it is not persisted by index.
 VAR_TYPES = [
@@ -253,6 +270,17 @@ LAYER_MASK_PRESET_VALUES = {
     'SLOT_2': 0x40000000,
     'SLOT_3': 0x80000000,
 }
+
+MESH_SHADOW_MODES = [
+    ('CAST_AND_RECEIVE', "Cast & Receive",
+     "Cast shadows onto other meshes and receive shadows from lights"),
+    ('RECEIVE_ONLY', "Receive Only",
+     "Receive shadows but do not cast (typical for large ground planes)"),
+    ('CAST_ONLY', "Cast Only",
+     "Cast shadows but do not show shadows from other objects"),
+    ('NONE', "None",
+     "No shadow casting or receiving"),
+]
 
 REFLECTION_PROBE_CUBE_SIZES = [
     ('256', "256", "Low resolution (faster)"),

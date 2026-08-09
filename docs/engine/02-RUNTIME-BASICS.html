@@ -343,17 +343,19 @@
 <p class="doc-links">Subsystem diagram: <a href="runtime-loop.html">runtime-loop.html</a> · Code traces: <a href="trace-runtime-loop.html">runtime loop</a> · <a href="trace-lifecycle.html">lifecycle</a> · <a href="trace-load.html">load</a></p>
 <p><strong>Behavior authors:</strong> this is usually your first engine chapter. It explains <strong>what runs when</strong> and how the kit hooks into Babylon.js. Skim <a href="01-ARCHITECTURE.html">01 — Architecture</a> first only if you need the two-file export model (glb + manifest).</p>
 <h2>App vs kit</h2>
-<p>Your game app (e.g. <code>game/src/main.ts</code>) owns the Babylon <strong>Engine</strong>, the <strong>Scene</strong>, and the browser render loop. The kit (<code>@bjs/engine</code>) owns loading a level into that scene. It also drives gameplay scripts.</p>
+<p>Your game app (e.g. <code>game/src/main.ts</code>) owns the level lifecycle — normally through a <code>LevelDirector</code>, which creates the Babylon <strong>Engine</strong>, a fresh <strong>Scene</strong> per load, and the browser render loop. The kit (<code>@bjs/engine</code>) owns loading a level into that scene. It also drives gameplay scripts.</p>
 <table><thead><tr><th>Layer</th><th>Typical owner</th><th>Role</th></tr></thead><tbody>
-<tr><td><code>Engine</code></td><td>App</td><td>WebGL/WebGPU context, <code>runRenderLoop</code>, <code>getDeltaTime()</code></td></tr>
-<tr><td><code>Scene</code></td><td>App</td><td>Babylon scene graph — meshes, lights, cameras, physics plugin</td></tr>
+<tr><td><code>LevelDirector</code></td><td>App (kit-provided)</td><td>Engine + render loop + scene recreation across <code>Load</code>/<code>Restart</code>/<code>Unload</code>; injected onto behaviors as <code>this.session</code></td></tr>
+<tr><td><code>Engine</code></td><td>Director (or app)</td><td>WebGL/WebGPU context, <code>runRenderLoop</code>, <code>getDeltaTime()</code></td></tr>
+<tr><td><code>Scene</code></td><td>Director (or app)</td><td>Babylon scene graph — meshes, lights, cameras, physics plugin</td></tr>
 <tr><td><code>LevelLoader</code> / <code>Level</code></td><td>Kit</td><td>Load manifest + glb. Container for entities, subsystems, update loop</td></tr>
 <tr><td><code>Entity</code> / <code>Behavior</code></td><td>Kit</td><td>One Blender object + its SCRIPT instances and component attachments</td></tr>
 <tr><td><code>TransformNode</code> / <code>PhysicsBody</code></td><td>Babylon</td><td>Actual nodes and Havok bodies the kit creates from manifest data</td></tr>
 </tbody></table>
-<p>The kit never calls <code>engine.runRenderLoop</code>. That is always the app. Without it, <code>OnUpdate</code> never runs.</p>
+<p><code>LevelLoader</code> itself never calls <code>engine.runRenderLoop</code> — the render loop belongs to the app layer. <code>LevelDirector</code> starts it for you; if you bootstrap manually, you must call it yourself or <code>OnUpdate</code> never runs.</p>
 <h2>App bootstrap (once, at startup)</h2>
-<p>Typical order in <code>main.ts</code>:</p>
+<p>Recommended <code>main.ts</code> (see <code>game/src/main.ts</code>): construct a <code>LevelDirector</code> with your canvas + <code>BehaviorRegistry</code>, then <code>await director.Load(manifestUrl)</code>. The director fetches the manifest, creates the engine (honouring Large World Rendering), enables Havok, loads the level, and starts the render loop. Per-load app hooks (fallback camera, logging) go in <code>onLoaded</code>. Behaviors can then soft-restart via <code>this.session.Restart()</code>.</p>
+<p>Manual (low-level) order, for custom harnesses that drive their own frame loop:</p>
 <ol>
 <li><strong>Fetch manifest</strong> (optional but required for large-world rendering) — <code>FetchAndValidateManifest</code> then <code>CreateLevelEngine(canvas, antialias, manifest)</code> from <code>core/bootstrap.ts</code> when the Blender scene enables Large World Rendering.</li>
 <li><code>const scene = new Scene(engine)</code></li>
@@ -362,7 +364,7 @@
 <li><code>const level = await loader.Load(manifestUrl, manifest)</code> — async. It builds everything and calls <code>level.Begin()</code> inside <code>FinalizeLevel</code> (see <a href="04-LOAD-PIPELINE.html">04 — Load Pipeline</a>).</li>
 <li><code>engine.runRenderLoop(() =&gt; scene.render())</code> — starts the per-frame loop.</li>
 </ol>
-<p>Debug keys (C/I), fallback cameras, and resize handlers are app concerns. See <a href="09-WORKFLOW.html">09 — Workflow</a>.</p>
+<p>On the manual path there is no <code>LevelDirector</code>, so <code>this.session</code> on behaviors is a warn-and-no-op stub (pass your own <code>LevelSession</code> via <code>LevelLoaderOptions.session</code> to change that). Debug keys (C/I), fallback cameras, and resize handlers are app concerns. See <a href="09-WORKFLOW.html">09 — Workflow</a>.</p>
 <h2>Load time vs run time</h2>
 <table><thead><tr><th>Phase</th><th>When</th><th>What happens</th></tr></thead><tbody>
 <tr><td><strong>Load</strong></td><td><code>LevelLoader.Load()</code> until it returns</td><td>Append glb, build entities, <code>ApplyEntityComponents</code> (the component registry), <code>InstantiateScripts</code> (no lifecycle hooks yet), second pass for entity refs, <code>FinalizeLevel</code>, then <code>Begin()</code> → every <code>OnStart</code> <strong>once</strong>, late rendering + post, then <code>NotifyPostReady()</code> → every <code>OnPostReady</code> <strong>once</strong>.</td></tr>
@@ -396,18 +398,19 @@ sequenceDiagram
 </pre>
 <p>Key facts:</p>
 <ul>
-<li><strong><code>deltaSeconds</code></strong> passed to <code>OnUpdate</code> is <code>scene.getEngine().getDeltaTime() / 1000</code> (seconds, not milliseconds). Read it inside the observer registered in <code>Level.Begin</code> (<code>core/Level.ts</code>).</li>
+<li><strong><code>deltaSeconds</code></strong> passed to <code>OnUpdate</code> comes from the level&apos;s <code>GameClock</code> (<code>core/GameClock.ts</code>): the raw <code>getDeltaTime() / 1000</code> is clamped to <code>maxFrameDeltaSeconds</code> (0.1&#8202;s, tab-switch hitch guard) and multiplied by <code>timeScale</code>. Behaviors read the clock as <code>this.time</code>.</li>
 <li><strong><code>OnUpdate</code> runs once per <code>scene.render()</code></strong>, on <code>onBeforeRenderObservable</code>. It typically runs <em>before</em> Havok&apos;s step and <em>before</em> the GPU draw for that frame.</li>
 <li><strong>Particle empty-emitter tracking</strong> also uses <code>onBeforeRenderObservable</code> with <code>insertFirst=true</code>. It runs before <code>RunFrame</code> (<code>subsystems/particles.ts</code>).</li>
 <li><strong>MSDF text</strong> draws on <code>onAfterRenderObservable</code>. It runs after the main pass (<code>ui/msdfText.ts</code>).</li>
 </ul>
-<p>Inside <code>RunFrame</code>, order is fixed:</p>
+<p>The observer first ticks <code>level.time</code> (<code>GameClock.Tick</code> — clamp, scale, sync <code>scene.animationTimeScale</code>, particle <code>updateSpeed</code>s, and the Havok timestep), then inside <code>RunFrame</code> order is fixed:</p>
 <ol>
 <li><code>InputManager.Process()</code> — poll gamepad, evaluate actions, fire callbacks</li>
 <li>Every behavior&apos;s <code>OnUpdate(deltaSeconds)</code> (entity iteration order unspecified)</li>
 <li>Registered <code>Level.AddUpdater</code> callbacks (offset/follow cameras)</li>
 <li><code>InputManager.EndFrame()</code> — so <code>WasPressedThisFrame</code> edges last exactly one frame</li>
 </ol>
+<p><strong>Time scale:</strong> <code>this.time.timeScale = 0</code> freezes gameplay (behavior deltas, scene animations, particles, physics) while rendering and input keep running. Wall-clock timers — pause menus, slow-motion ramps that <em>write</em> <code>timeScale</code> — advance by <code>this.time.unscaledDeltaSeconds</code> instead. See <a href="14-API-GUIDE.html#time">API Guide — GameClock</a>.</p>
 <p>Interactive trace: <a href="trace-runtime-loop.html">trace-runtime-loop</a> · <a href="trace-lifecycle.html">trace-lifecycle</a>.</p>
 <h2>Behavior lifecycle (summary)</h2>
 <p>Full scripting detail: <a href="05-SCRIPTING.html">05 — Scripting</a>. Input polling: <a href="12-INPUT.html">12 — Input</a>.</p>

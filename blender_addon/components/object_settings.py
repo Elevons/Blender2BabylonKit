@@ -7,7 +7,25 @@ from ..core.props import (
     StringProperty, EnumProperty, FloatProperty, BoolProperty, IntProperty,
 )
 
-from .constants import SHADOW_FILTERS
+from .constants import SHADOW_FILTERS, SHADOW_MAP_SIZE_PRESETS, SHADOW_MAP_SIZE_PRESET_VALUES
+
+
+def _map_size_preset_get(shadow):
+    if shadow.map_size == 0:
+        return 'DEFAULT'
+    if shadow.map_size in SHADOW_MAP_SIZE_PRESET_VALUES:
+        return str(shadow.map_size)
+    return 'CUSTOM'
+
+
+def _map_size_preset_set(shadow, value):
+    if value == 'DEFAULT':
+        shadow.map_size = 0
+    elif value == 'CUSTOM':
+        if shadow.map_size == 0:
+            shadow.map_size = 1024
+    else:
+        shadow.map_size = int(value)
 
 
 class BJSLightSettings(PropertyGroup):
@@ -24,8 +42,16 @@ class BJSLightShadow(PropertyGroup):
     don't map onto Blender's renderer-specific shadow settings), so they live in
     the Babylon panel and are applied to the ShadowGenerator / light at load."""
     map_size: IntProperty(
-        name="Map Size", default=0, min=0, max=8192,
-        description="Shadow map resolution for this light. 0 = use the loader default (1024)")
+        name="Custom Map Size", default=0, min=0, max=8192,
+        description="Shadow map resolution when Map Size preset is Custom (256–8192). "
+                    "Runtime clamps to the nearest power of two")
+    map_size_preset: EnumProperty(
+        name="Map Size",
+        items=SHADOW_MAP_SIZE_PRESETS,
+        get=_map_size_preset_get,
+        set=_map_size_preset_set,
+        overridable=False,
+    )
     bias: FloatProperty(
         name="Bias", default=0.00005, min=0.0, soft_max=0.01, precision=5,
         description="Depth bias to fight shadow acne (self-shadowing artifacts)")

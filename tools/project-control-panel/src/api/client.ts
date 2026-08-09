@@ -70,8 +70,8 @@ export interface LevelManifestEntry
 export interface ReferencedAsset
 {
   reference: string;
-  folder: string;
-  file: string;
+  workspaceFolder: string | null;
+  workspaceFile: string | null;
   sourceAvailable: boolean;
   deployedAvailable: boolean;
 }

@@ -68,6 +68,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | Section slug | Topic |
 |--------------|-------|
 | `lifecycle` | OnStart / OnPostReady / OnUpdate / OnDestroy / OnEnable / OnDisable / OnMessage / collision & trigger hooks |
+| `level-session` | `this.session` — soft restart / load / unload the level (`LevelDirector`) |
 | `entity` | Entity API, attachments |
 | `exposed` | `@exposed` types and Blender parse rules |
 | `input` | Input Actions, `@inputMap` |
@@ -129,7 +130,7 @@ export default class MyBehavior extends Behavior
 ```ts
 OnStart(): void                       // once, after the level + all @exposed refs are resolved
 OnPostReady(): void                   // once, after NME compile + post attach (see load order below)
-OnUpdate(deltaSeconds: number): void  // every frame; deltaSeconds = seconds since last frame
+OnUpdate(deltaSeconds: number): void  // every frame; seconds since last frame, scaled by this.time.timeScale
 OnDestroy(): void                     // on level dispose — unsubscribe observers, dispose constraints
 OnEnable(): void                      // when the entity becomes effectively active (SetEntityActive / hierarchy)
 OnDisable(): void                     // when the entity becomes effectively inactive
@@ -148,6 +149,9 @@ OnTriggerExit(other: Entity): void   // no OnTriggerStay — track overlap state
 - `@exposed` values and entity references are applied **before** `OnStart`.
 - Scale continuous motion by `deltaSeconds`. (Setting a Babylon *velocity* is
   already per-second — don't multiply those by `deltaSeconds`.)
+- `deltaSeconds` is **scaled game time** (`this.time.deltaSeconds`) — it shrinks
+  under slow motion and is 0 while frozen. Wall-clock timers use
+  `this.time.unscaledDeltaSeconds` (see [Time and time scale](#time-and-time-scale)).
 - Cross-entity `OnStart` order is unspecified; guard references for `null`.
 - **`OnPostReady`** runs once after `ApplyPostProcessing` (when the manifest has
   `scene.postProcessing`) and `BuildNodeMaterials`. Use it for
@@ -169,21 +173,127 @@ this.scene  : Scene           // the Babylon scene
 this.node   : TransformNode   // shortcut === this.entity.node
 this.input? : InputActionMap  // scene default map — injected when you have no @inputMap fields
 this.spawner: PrefabSpawner   // runtime prefab spawn — Spawn, HideTemplate, FlushSpawnShadowRefresh
+this.session: LevelSession    // load / restart / unload — see "Level session" below
+this.time   : GameClock       // unified game clock — see "Time and time scale" below
 this.byTag  : (tag: string) => Entity[]  // find every entity carrying the given tag
 ```
 
-Behaviors do **not** receive a `Level` handle. Look up other objects via
+Behaviors do **not** receive a full `Level` handle. Look up other objects via
 `@exposed({ type: "entity" })` fields (preferred), `this.byTag("Enemy")` for
 tag-based grouping, `entity.GetAttachment("SCRIPT")` / `entity.GetBehavior` on
 the same entity, or `node.metadata.bjsEntity` from a Babylon node. For
 **duplicating** a loaded entity subtree at runtime, use `this.spawner.Spawn`
 (see [Prefab spawn](#prefab-spawn)) — never `node.clone()` plus manual
-attachment copying.
+attachment copying. For **restarting or changing levels**, use `this.session`
+(see [Level session](#level-session)).
 
 **Runtime component add/remove** is app-code only: `level.componentHost.AddComponent`
 / `RemoveComponent` after load (mutations are not written back to the manifest).
 Behaviors cannot call `componentHost` — orchestrate from your app layer or use
 messages.
+
+## Level session
+
+`this.session` is a narrow `LevelSession` for load / restart / unload — not a
+full `Level` handle. The app wires a `LevelDirector` (see `game/src/main.ts`)
+so these methods recreate the Scene + Havok world and reload the manifest.
+
+```ts
+await this.session.Restart();                 // soft-reload the current level
+await this.session.Load("/levels/Other/Other.scene.json");
+this.session.Unload();                        // tear down without loading
+this.session.manifestUrl;                     // current (or last) manifest URL
+this.session.isLoading;                       // true while Load/Restart is in flight
+```
+
+Rules:
+
+- Prefer `Restart()` / `Load(url)` over `window.location.reload()`.
+- Calls are deferred past the current stack and serialized — safe from GUI
+  clicks and `OnUpdate`.
+- Without a `LevelDirector` (or another `LevelSession` passed as
+  `LevelLoaderOptions.session`), methods warn and no-op.
+- Still not a full `Level`: use `this.spawner` for prefabs, `this.byTag` for
+  queries, and app code for `componentHost`.
+
+### Loading UI (Babylon spinner)
+
+`LevelDirector` shows Babylon's default loading overlay (spinning logo) for
+every `Load` / `Restart` via `engine.displayLoadingUI()`, and hides it with
+`engine.hideLoadingUI()` when the level is ready (or the load fails). Behaviors
+do **not** call those APIs — the director owns the overlay so the canvas never
+freezes on a stale last frame while the new scene is built.
+
+To customize the overlay, assign a Babylon `ILoadingScreen` on the **engine**
+from app code (`main.ts`), after the first load has created the engine (or from
+`onLoaded` on subsequent loads — the same engine is reused across restarts):
+
+```ts
+import type { ILoadingScreen } from "@babylonjs/core";
+
+const customLoadingScreen: ILoadingScreen = {
+  loadingUIBackgroundColor: "#000000",
+  loadingUIText: "Loading…",
+  displayLoadingUI()
+  {
+    // show your DOM / brand overlay
+  },
+  hideLoadingUI()
+  {
+    // hide it
+  },
+};
+
+// After director.Load(...) has created the engine at least once:
+director.GetEngine()!.loadingScreen = customLoadingScreen;
+```
+
+`DefaultLoadingScreen` is registered by the director (`@babylonjs/core/Loading/loadingScreen`).
+Replace `loadingScreen` before the next `Restart` / `Load` for the custom UI to
+appear. Full director API: `docs/engine/14-API-GUIDE.html`.
+
+Fragment: `get_fragment(name="restart-level")`. App-side API (`LevelDirector`,
+`GetLevel()` / `GetScene()`, `onLoaded`): `docs/engine/14-API-GUIDE.html`.
+
+## Time and time scale
+
+`this.time` (a `GameClock`) is the engine's **single time authority** — the
+equivalent of Unity's `Time`. `Level` ticks it once per frame before behaviors
+run; the clock clamps hitch deltas, applies `timeScale`, and syncs
+`scene.animationTimeScale`, every particle system's `updateSpeed`, and the
+Havok physics step. Never scale time by hand (`engine.getDeltaTime()`,
+`scene.animationTimeScale`, `particleSystem.updateSpeed` multipliers,
+`physicsEngine.setTimeStep`) — write `this.time.timeScale` and everything
+follows.
+
+```ts
+this.time.timeScale = 0.5;            // slow motion; 0 freezes gameplay, 1 = real time
+this.time.deltaSeconds;               // scaled frame delta — same value OnUpdate receives
+this.time.unscaledDeltaSeconds;       // wall-clock delta (hitch-clamped) — menus, slow-mo ramps
+this.time.elapsedSeconds;             // scaled game time since the level began
+this.time.unscaledElapsedSeconds;     // wall-clock time since the level began
+this.time.maxFrameDeltaSeconds;       // hitch clamp, default 0.1 (Unity maximumDeltaTime)
+```
+
+Rules:
+
+- **`timeScale = 0` freezes gameplay** — behavior `OnUpdate` deltas, scene
+  animations, particles (simulation + emission; frozen particles stay
+  visible), and physics all stop; rendering and input keep running (so a
+  pause menu still works). Setting it mid-frame takes effect the same frame.
+- While `timeScale != 1` the clock owns `particleSystem.updateSpeed` (it
+  rescales the authored value every frame and restores it at 1) — don't tune
+  `updateSpeed` from a behavior during slow motion.
+- **Ramps that write `timeScale` must read the unscaled clock.** A slow-motion
+  ease driven by `deltaSeconds` slows itself down and never finishes — advance
+  it with `unscaledDeltaSeconds` (see `game/src/behaviors/Endgame.ts`).
+- **Timers that must run while paused** (menus, fades) also use
+  `unscaledDeltaSeconds` / `unscaledElapsedSeconds`.
+- **Deltas are hitch-clamped.** Both clocks cap each frame at
+  `maxFrameDeltaSeconds` (0.1 s), so the giant catch-up delta after a hidden
+  browser tab lands as one ordinary step instead of a physics explosion.
+- Restore `timeScale = 1` in `OnDestroy` if your behavior may leave it
+  changed when the level unloads.
 
 ## Blender local axes vs Babylon world space
 
@@ -314,10 +424,11 @@ at runtime, create a real transition: `SetEntityActive(this.entity, false)` in
 `OnStart`, then `SetEntityActive(this.entity, true)` later — the enable re-shows
 the subtree even when the mesh loaded hidden.
 **Ray Visibility → Shadow**
-(`visible_shadow`) controls **shadow casting** only: when off, export stamps
+(`visible_shadow`) controls **shadow casting** only when no **Mesh Shadows** component is enabled: when off, export stamps
 `bjs_cast_shadows: 0` and the mesh still renders and **receives** shadows but is omitted
 from `ShadowGenerator` casters (useful for huge ground planes that would blow up the sun
-frustum). **Render-disabled**
+frustum). Add **Mesh Shadows** (Rendering) for explicit modes: Cast & Receive, Receive Only, Cast Only, or None — the component **overrides** ray visibility when present.
+**Render-disabled**
 objects (camera icon / `hide_render`) are **not exported at all** — they won't exist in
 the level.
 
@@ -357,6 +468,7 @@ for (const row of entity.GetAttachmentsOfType("AUDIO"))
 |---|---|
 | `"TAG"` | `data` only |
 | `"RENDERING_GROUP"` | `data` only (mesh `renderingGroupId` set in `FinalizeLevel`) |
+| `"MESH_SHADOWS"` | `data` only (cast/receive applied after `SetupShadows` in `FinalizeLevel`) |
 | `"LAYER_MASK"` | `data` only (mesh `layerMask` set in `FinalizeLevel`) |
 | `"COLLISION_LAYER"` | `data` only (Havok filter masks set in `FinalizeLevel`) |
 | `"COLLIDER"` / `"RIGIDBODY"` | `data` + `body` |
@@ -424,7 +536,8 @@ Blender has three ways to control what ships visible at runtime:
 |---|---|---|
 | **Eye** (viewport) | `hide_viewport` | Exported; loads with `entity.node.isVisible = false` |
 | **Collider › Make Invisible** | `collider_make_invisible` | Exported; mesh loads invisible when any enabled collider has `makeInvisible: true` (physics unchanged) |
-| **Ray Visibility → Shadow** | `visible_shadow` | Exported; visible and receives shadows; does **not** cast when off (`bjs_cast_shadows: 0`) |
+| **Ray Visibility → Shadow** | `visible_shadow` | Exported; visible and receives shadows; does **not** cast when off (`bjs_cast_shadows: 0`). Overridden by **Mesh Shadows** component when enabled. |
+| **Mesh Shadows** component | `mesh_shadow_mode` | Manifest `MESH_SHADOWS`: Cast & Receive, Receive Only, Cast Only, or None on owned meshes |
 | **Camera** (render) | `hide_render` | Omitted from the `.glb` and manifest entirely |
 
 Viewport-hidden objects still exist as entities (physics, scripts, references resolve).
@@ -911,6 +1024,16 @@ listeners on the volume entity when events are enough. **`animalSpawner`** uses
   chassis for stable tipping without resizing the collider.
 - MESH-shaped colliders can't be DYNAMIC (Havok limitation) — author CONVEX for
   moving bodies.
+- **Duplicated / shared glTF meshes → `InstancedMesh`.** Linked prefab copies and
+  duplicated objects often share one mesh buffer. Babylon keeps the first as a
+  normal `Mesh` and later copies as `InstancedMesh`. CONVEX / MESH hulls clone
+  from `sourceMesh` and bake verts into the **physics body's local frame**
+  (`ResolvePhysicsMesh` in `geometry.ts`) — the same local-frame rule as
+  `CloneChildIntoLocalFrame`. An older bake used the instance **world** matrix,
+  so Havok applied the node pose twice: the visual stayed put, the collider sat
+  far away (often near 2× world position) on every duplicate after the first.
+  Current kits are fixed. If you still see that on an old engine build, update
+  the kit (or make the mesh data single-user in Blender as a workaround).
 - **Make Invisible** on a Collider (`makeInvisible` in the manifest) hides the
   entity mesh at load via `HideEntityNode`; Havok and behaviors are unaffected.
   **`SetEntityActive`** is the runtime SetActive path (with OnEnable/OnDisable).
@@ -1624,3 +1747,4 @@ export default class HoverBob extends Behavior
 | Example behaviors | `list_behaviors` · `get_behavior` · `find_similar_behavior` |
 | Code style | `docs/STYLE_GUIDE.md` · `get_style_guide` |
 | Prefabs + `this.spawner.Spawn` / `level.Spawn` | `get_scripting_context(section="prefab-spawn")` · `docs/blender/PREFABS.html` |
+| Level restart / load / unload (`this.session`, `LevelDirector`) | `get_scripting_context(section="level-session")` · `docs/engine/14-API-GUIDE.html` |

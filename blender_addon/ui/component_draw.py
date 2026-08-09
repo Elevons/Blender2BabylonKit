@@ -21,6 +21,9 @@ def _component_subtitle(comp, obj=None, index=None):
         label = f"Rendering Group: {comp.rendering_group_id}"
     elif comp.comp_type == 'LAYER_MASK':
         label = f"Layer Mask: {comp.layer_mask_preset.replace('_', ' ').title()}"
+    elif comp.comp_type == 'MESH_SHADOWS':
+        mode_label = comp.mesh_shadow_mode.replace('_', ' ').title()
+        label = f"Mesh Shadows: {mode_label}"
     elif comp.comp_type == 'COLLISION_LAYER' and comp.collision_layer:
         label = f"Collision Layer: {comp.collision_layer}"
     elif comp.comp_type == 'CONSTRAINT':

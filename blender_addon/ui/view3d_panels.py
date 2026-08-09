@@ -135,7 +135,9 @@ class BJS_PT_light_info(Panel):
             sc = sbox.column()
             sc.use_property_split = True
             sc.prop(sh, "filter")
-            sc.prop(sh, "map_size")
+            sc.prop(sh, "map_size_preset")
+            if sh.map_size_preset == 'CUSTOM':
+                sc.prop(sh, "map_size")
             sc.prop(sh, "bias")
             sc.prop(sh, "normal_bias")
             sc.prop(sh, "darkness")

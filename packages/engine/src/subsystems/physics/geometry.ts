@@ -152,13 +152,15 @@ export function MergeChildrenIntoLocalMesh(node: TransformNode): Mesh | undefine
 }
 
 /**
- * Build a real CONVEX_HULL or MESH shape from a node's geometry. A single mesh
- * feeds its own geometry directly; a multi-material wrapper is merged first.
- * When applyObjectScale is on, local scale is baked into vertices (same rule as
- * manual primitives). Returns undefined if there is no usable geometry.
+ * Resolve Mesh or InstancedMesh into a standalone Mesh for Havok shape builders.
+ * Shared glTF meshes import as InstancedMesh; verts must stay in the physics
+ * body's local frame — baking the instance world matrix would double-apply pose
+ * once Havok attaches the shape to that same node.
  */
-/** Resolve Mesh or InstancedMesh into a standalone Mesh for Havok shape builders. */
-function ResolvePhysicsMesh(source: AbstractMesh): { mesh: Mesh; disposeSource: boolean }
+function ResolvePhysicsMesh(
+  source: AbstractMesh,
+  bodyNode: TransformNode
+): { mesh: Mesh; disposeSource: boolean }
 {
   if (source instanceof Mesh)
   {
@@ -167,7 +169,7 @@ function ResolvePhysicsMesh(source: AbstractMesh): { mesh: Mesh; disposeSource: 
 
   if (source instanceof InstancedMesh)
   {
-    const clone = source.sourceMesh.clone(`${source.name}__colliderSource`, null);
+    const clone = CloneMeshGeometry(source, `${source.name}__colliderSource`);
     if (clone === null)
     {
       throw new Error(`[bjs] "${source.name}" has no cloneable mesh geometry for a collider.`);
@@ -177,7 +179,13 @@ function ResolvePhysicsMesh(source: AbstractMesh): { mesh: Mesh; disposeSource: 
     clone.position = Vector3.Zero();
     clone.rotationQuaternion = Quaternion.Identity();
     clone.scaling = Vector3.One();
-    clone.bakeTransformIntoVertices(source.computeWorldMatrix(true));
+
+    // Same local-frame bake as CloneChildIntoLocalFrame: world → body local.
+    const inverseBodyWorld = Matrix.Invert(bodyNode.computeWorldMatrix(true));
+    clone.bakeTransformIntoVertices(
+      source.computeWorldMatrix(true).multiply(inverseBodyWorld)
+    );
+
     return { mesh: clone, disposeSource: true };
   }
 
@@ -190,7 +198,7 @@ export function BakeColliderScaleIntoMesh(
   collider: ColliderComponent | undefined
 ): { mesh: Mesh; disposeSource: boolean }
 {
-  const { mesh: resolvedMesh, disposeSource: disposeResolved } = ResolvePhysicsMesh(mesh);
+  const { mesh: resolvedMesh, disposeSource: disposeResolved } = ResolvePhysicsMesh(mesh, node);
 
   if (!ApplyObjectScaleEnabled(collider?.applyObjectScale))
   {

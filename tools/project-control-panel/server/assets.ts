@@ -12,10 +12,56 @@ import {
 export interface ReferencedAsset
 {
   reference: string;
-  folder: AssetFolder;
-  file: string;
+  workspaceFolder: string | null;
+  workspaceFile: string | null;
   sourceAvailable: boolean;
   deployedAvailable: boolean;
+}
+
+/**
+ * Normalize a manifest-relative asset path for comparison.
+ */
+function NormalizeAssetReference(reference: string): string
+{
+  return reference.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+/**
+ * Match Blender export filename sanitization so workspace files can differ in spacing.
+ */
+function SanitizeAssetBasename(filename: string): string
+{
+  const extension = path.extname(filename);
+  const stem = path.basename(filename, extension);
+  let safeStem = stem.replace(/[^\w.\-]+/g, "_");
+  safeStem = safeStem.replace(/^[._]+|[._]+$/g, "") || "asset";
+  return safeStem + extension.toLowerCase();
+}
+
+/**
+ * True when a manifest string looks like a level-relative sidecar file path.
+ */
+function IsManifestAssetReference(reference: string): boolean
+{
+  const normalized = NormalizeAssetReference(reference);
+  if (normalized.startsWith("//") || normalized.includes(".."))
+  {
+    return false;
+  }
+  if (/^https?:\/\//i.test(normalized))
+  {
+    return false;
+  }
+
+  const pathParts = normalized.split("/");
+  if (pathParts.length < 2)
+  {
+    return false;
+  }
+
+  const fileName = pathParts[pathParts.length - 1];
+  const dotIndex = fileName.lastIndexOf(".");
+  return dotIndex > 0 && dotIndex < fileName.length - 1;
 }
 
 /**
@@ -25,10 +71,8 @@ function CollectAssetReferences(value: unknown, references: Set<string>): void
 {
   if (typeof value === "string")
   {
-    const normalized = value.replace(/\\/g, "/").replace(/^\.\//, "");
-    const pathParts = normalized.split("/");
-    const folder = pathParts[0] as AssetFolder;
-    if (ASSET_FOLDERS.includes(folder) && pathParts.length > 1)
+    const normalized = NormalizeAssetReference(value);
+    if (IsManifestAssetReference(normalized))
     {
       references.add(normalized);
     }
@@ -85,24 +129,146 @@ function ReadManifestReferences(appName: string, level: string): Set<string>
 }
 
 /**
- * Resolve a validated manifest-relative path below an asset root.
+ * Resolve a validated manifest-relative path below a level or workspace root.
  */
-function ResolveReferencedAssetPath(root: string, reference: string): string
+function ResolveDeployedAssetPath(root: string, reference: string): string
 {
-  const normalized = reference.replace(/\\/g, "/").replace(/^\.\//, "");
-  const pathParts = normalized.split("/");
-  const folder = pathParts[0] as AssetFolder;
-  if (!ASSET_FOLDERS.includes(folder) || pathParts.length < 2 || pathParts.includes(".."))
+  const normalized = NormalizeAssetReference(reference);
+  if (!IsManifestAssetReference(normalized))
   {
     throw new Error(`Invalid asset reference: ${reference}`);
   }
 
+  const pathParts = normalized.split("/");
   const resolved = path.join(root, ...pathParts);
   if (!IsPathInside(resolved, root))
   {
     throw new Error(`Invalid asset reference: ${reference}`);
   }
   return resolved;
+}
+
+interface WorkspaceAssetMatch
+{
+  absolutePath: string;
+  folder: string;
+  file: string;
+}
+
+/**
+ * Split a workspace-relative path into a top-level folder and the file path beneath it.
+ */
+function ParseWorkspaceRelativePath(relativePath: string): { folder: string; file: string }
+{
+  const pathParts = relativePath.split("/");
+  if (pathParts.length === 1)
+  {
+    return { folder: "", file: pathParts[0] };
+  }
+
+  return {
+    folder: pathParts[0],
+    file: pathParts.slice(1).join("/"),
+  };
+}
+
+/**
+ * Build a referenced-asset row from a manifest path and on-disk copies.
+ */
+function BuildReferencedAsset(
+  reference: string,
+  workspaceRoot: string,
+  levelRoot: string,
+): ReferencedAsset
+{
+  const workspaceMatch = FindWorkspaceAssetSource(workspaceRoot, reference);
+  const deployedPath = ResolveDeployedAssetPath(levelRoot, reference);
+
+  return {
+    reference,
+    workspaceFolder: workspaceMatch?.folder ?? null,
+    workspaceFile: workspaceMatch?.file ?? null,
+    sourceAvailable: workspaceMatch !== null,
+    deployedAvailable: fs.existsSync(deployedPath) && fs.statSync(deployedPath).isFile(),
+  };
+}
+
+/**
+ * Find a workspace source for a manifest reference, searching every workspace folder.
+ */
+function FindWorkspaceAssetSource(workspaceRoot: string, reference: string): WorkspaceAssetMatch | null
+{
+  const normalized = NormalizeAssetReference(reference);
+  const pathParts = normalized.split("/");
+  const exactPath = path.join(workspaceRoot, ...pathParts);
+  if (fs.existsSync(exactPath) && fs.statSync(exactPath).isFile())
+  {
+    const relativePath = path.relative(workspaceRoot, exactPath).replace(/\\/g, "/");
+    const location = ParseWorkspaceRelativePath(relativePath);
+    return { absolutePath: exactPath, ...location };
+  }
+
+  const targetBasename = pathParts[pathParts.length - 1];
+  const targetSanitized = SanitizeAssetBasename(targetBasename);
+  const manifestFolder = pathParts[0];
+  let folderBasenameMatch: WorkspaceAssetMatch | null = null;
+  let basenameMatch: WorkspaceAssetMatch | null = null;
+  let sanitizedMatch: WorkspaceAssetMatch | null = null;
+
+  function ToMatch(entryPath: string): WorkspaceAssetMatch
+  {
+    const relativePath = path.relative(workspaceRoot, entryPath).replace(/\\/g, "/");
+    const location = ParseWorkspaceRelativePath(relativePath);
+    return { absolutePath: entryPath, ...location };
+  }
+
+  function WalkDirectory(directory: string): void
+  {
+    if (!fs.existsSync(directory))
+    {
+      return;
+    }
+
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true }))
+    {
+      const entryPath = path.join(directory, entry.name);
+      if (!IsPathInside(entryPath, workspaceRoot))
+      {
+        continue;
+      }
+
+      if (entry.isDirectory())
+      {
+        WalkDirectory(entryPath);
+        continue;
+      }
+
+      if (!entry.isFile())
+      {
+        continue;
+      }
+
+      const relative = path.relative(workspaceRoot, entryPath).replace(/\\/g, "/");
+      const relativeParts = relative.split("/");
+      if (relativeParts[0] === manifestFolder && entry.name === targetBasename)
+      {
+        folderBasenameMatch ??= ToMatch(entryPath);
+      }
+
+      if (entry.name === targetBasename)
+      {
+        basenameMatch ??= ToMatch(entryPath);
+      }
+
+      if (SanitizeAssetBasename(entry.name) === targetSanitized)
+      {
+        sanitizedMatch ??= ToMatch(entryPath);
+      }
+    }
+  }
+
+  WalkDirectory(workspaceRoot);
+  return folderBasenameMatch ?? basenameMatch ?? sanitizedMatch;
 }
 
 function AssetDirectory(appName: string, level: string, folder: AssetFolder): string
@@ -201,19 +367,7 @@ export function ListReferencedAssets(appName: string, level: string): Referenced
 
   return [...ReadManifestReferences(appName, level)]
     .sort((left, right) => left.localeCompare(right))
-    .map((reference) =>
-    {
-      const [folder, ...fileParts] = reference.split("/");
-      const sourcePath = ResolveReferencedAssetPath(workspaceRoot, reference);
-      const deployedPath = ResolveReferencedAssetPath(levelRoot, reference);
-      return {
-        reference,
-        folder: folder as AssetFolder,
-        file: fileParts.join("/"),
-        sourceAvailable: fs.existsSync(sourcePath) && fs.statSync(sourcePath).isFile(),
-        deployedAvailable: fs.existsSync(deployedPath) && fs.statSync(deployedPath).isFile(),
-      };
-    });
+    .map((reference) => BuildReferencedAsset(reference, workspaceRoot, levelRoot));
 }
 
 /**
@@ -234,22 +388,15 @@ export function ReloadReferencedAsset(
 
   const workspaceRoot = WorkspaceAssetRoot(appName, "_workspace");
   const levelRoot = WorkspaceAssetRoot(appName, level);
-  const sourcePath = ResolveReferencedAssetPath(workspaceRoot, normalized);
-  const deployedPath = ResolveReferencedAssetPath(levelRoot, normalized);
-  if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile())
+  const workspaceMatch = FindWorkspaceAssetSource(workspaceRoot, normalized);
+  const deployedPath = ResolveDeployedAssetPath(levelRoot, normalized);
+  if (workspaceMatch === null)
   {
-    throw new Error(`Workspace source not found: workspace/${normalized}`);
+    throw new Error(`Workspace source not found for manifest reference: ${normalized}`);
   }
 
   fs.mkdirSync(path.dirname(deployedPath), { recursive: true });
-  fs.copyFileSync(sourcePath, deployedPath);
+  fs.copyFileSync(workspaceMatch.absolutePath, deployedPath);
 
-  const [folder, ...fileParts] = normalized.split("/");
-  return {
-    reference: normalized,
-    folder: folder as AssetFolder,
-    file: fileParts.join("/"),
-    sourceAvailable: true,
-    deployedAvailable: true,
-  };
+  return BuildReferencedAsset(normalized, workspaceRoot, levelRoot);
 }

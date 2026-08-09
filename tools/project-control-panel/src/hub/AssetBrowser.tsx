@@ -9,6 +9,47 @@ interface Props
   onError: (message: string) => void;
 }
 
+const NOT_IN_WORKSPACE = "(not in workspace)";
+
+/**
+ * Group referenced assets by their workspace folder, with unmatched items last.
+ */
+function WorkspaceGroupKey(asset: ReferencedAsset): string
+{
+  if (asset.workspaceFolder === null)
+  {
+    return NOT_IN_WORKSPACE;
+  }
+
+  return asset.workspaceFolder.length > 0 ? asset.workspaceFolder : "(workspace root)";
+}
+
+function SortWorkspaceGroups(left: string, right: string): number
+{
+  if (left === NOT_IN_WORKSPACE)
+  {
+    return 1;
+  }
+
+  if (right === NOT_IN_WORKSPACE)
+  {
+    return -1;
+  }
+
+  return left.localeCompare(right);
+}
+
+function DisplayAssetName(asset: ReferencedAsset): string
+{
+  if (asset.workspaceFile !== null)
+  {
+    return asset.workspaceFile;
+  }
+
+  const slashIndex = asset.reference.lastIndexOf("/");
+  return slashIndex >= 0 ? asset.reference.slice(slashIndex + 1) : asset.reference;
+}
+
 /**
  * Show only assets referenced by the deployed scene manifest and reload their workspace copies.
  */
@@ -41,7 +82,7 @@ export function AssetBrowser({ project, level, onError }: Props): JSX.Element
     return () => window.clearTimeout(timer);
   }, [reloaded]);
 
-  const folders = [...new Set(assets.map((asset) => asset.folder))];
+  const folders = [...new Set(assets.map(WorkspaceGroupKey))].sort(SortWorkspaceGroups);
 
   /**
    * Copy the workspace source over the deployed file referenced by the manifest.
@@ -82,14 +123,17 @@ export function AssetBrowser({ project, level, onError }: Props): JSX.Element
         <div className="asset-groups">
           {folders.map((folder) => (
             <div key={folder} className="asset-group">
-              <h3>{folder}/</h3>
+              <h3>{folder === NOT_IN_WORKSPACE || folder === "(workspace root)" ? folder : `${folder}/`}</h3>
               <ul className="asset-list">
-                {assets.filter((asset) => asset.folder === folder).map((asset) => (
+                {assets.filter((asset) => WorkspaceGroupKey(asset) === folder).map((asset) => (
                   <li key={asset.reference}>
-                    <span className="asset-name">{asset.file}</span>
+                    <span className="asset-name">{DisplayAssetName(asset)}</span>
                     <span className="asset-actions">
                       {!asset.sourceAvailable && (
                         <span className="muted asset-source-status">No workspace source</span>
+                      )}
+                      {asset.sourceAvailable && asset.reference !== `${asset.workspaceFolder}/${asset.workspaceFile}` && (
+                        <span className="muted asset-source-status">→ {asset.reference}</span>
                       )}
                       {reloaded === asset.reference && (
                         <span className="asset-reloaded-status">Reloaded</span>
@@ -98,7 +142,7 @@ export function AssetBrowser({ project, level, onError }: Props): JSX.Element
                         type="button"
                         className="secondary"
                         disabled={!asset.sourceAvailable || reloading !== null}
-                        title={`Copy workspace/${asset.reference} to this level`}
+                        title={`Copy workspace source to the level as ${asset.reference}`}
                         onClick={() => void ReloadAsset(asset)}
                       >
                         {reloading === asset.reference ? "Reloading…" : "Reload"}
@@ -111,6 +155,11 @@ export function AssetBrowser({ project, level, onError }: Props): JSX.Element
           ))}
         </div>
       )}
+      <p className="asset-panel-note">
+        Read from a level&apos;s exported JSON and grouped by <code>game/workspace/</code>. The original
+        Blender file is not referenced — files must live in <code>game/workspace/</code> in order to be
+        traced properly.
+      </p>
     </section>
   );
 }
