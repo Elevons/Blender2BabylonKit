@@ -12,7 +12,6 @@ import {
   PhysicsRaycastResult,
   Quaternion,
   Vector3,
-  type Node,
   type PhysicsBody,
 } from "@babylonjs/core";
 
@@ -21,6 +20,14 @@ interface WheelDriveBinding
 {
   constraint: Physics6DoFConstraint;
   motorAxis: PhysicsConstraintAxis;
+}
+
+/** Ground under one car from a world-down Havok ray. */
+interface CarGroundHit
+{
+  car: Entity;
+  point: Vector3;
+  normal: Vector3;
 }
 
 const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
@@ -34,17 +41,10 @@ const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
 
 /**
  * CarController drives up to eight wheel motors on HINGE or CUSTOM 6DoF joints
- * (outer + inner per corner) from input, and provides a one-shot "recover"
- * maneuver on the Reset action: it rebuilds the ENTIRE constraint island
- * (body, arms, wheels, and any towed trailers) in its authored formation at
- * the body's current position and heading, holds briefly, then hands control
- * back to physics so everything drops from rest. Each car (Train Cars picks,
- * or auto-detected from the constraint graph) is placed individually: a
- * ground ray under its spot sets its height and tilts it to the local surface
- * normal, so a jack-knifed train straightens out and conforms to the terrain
- * instead of materializing inside it. The authored relative poses are the
- * ones the constraints were built in, so the solver never fires the huge
- * corrective impulses that used to send wheels and trailers flying.
+ * (outer + inner per corner) from input, with optional velocity/angular assists
+ * and per-wheel ground raycasts that gate motors when airborne. Reset freezes
+ * the host and Other Cars bodies, aligns each to its world-down ground normal,
+ * lifts them along that normal, holds for Place Hold, then releases to DYNAMIC.
  */
 export default class CarController extends Behavior
 {
@@ -80,6 +80,13 @@ export default class CarController extends Behavior
 
   @exposed({ min: 0, max: 5, label: "Place Hold (s)" })
   holdSeconds = 0.5;
+
+  /**
+   * How far to lift each car along its ground-hit normal during Reset, after
+   * aligning the body to that surface.
+   */
+  @exposed({ min: 0, max: 20, label: "Reset Lift (m)" })
+  resetLiftMeters = 3;
 
   @exposed({ min: 0, max: 1, label: "Turn Ratio" })
   turnRatio = 0.5;
@@ -125,13 +132,10 @@ export default class CarController extends Behavior
   body: Entity | null = null;
 
   /**
-   * Main body of each towed car. On reset, a ground ray is cast at each of
-   * these bodies' target spots (the engine Body is included automatically)
-   * and every car gets its own height plus a tilt matching the surface normal
-   * under it. Leave empty to auto-detect car bodies from the constraint graph
-   * (entities with 3+ anchored constraints).
+   * Main body of each towed / companion car. Pick the rigid-body entities in
+   * Blender; their PhysicsBody is available at runtime via `entity.body`.
    */
-  @exposed({ type: "list", of: "entity", label: "Train Cars" })
+  @exposed({ type: "list", of: "entity", label: "Other Cars" })
   otherCars: (Entity | null)[] = [];
 
   /**
@@ -157,53 +161,35 @@ export default class CarController extends Behavior
   @exposed({ label: "Debug Ground Ray" })
   debugGroundRay = false;
 
+  /**
+   * How far (meters) below each car body to search for ground with a
+   * world-down ray. Used for the Body + Other Cars probes, not the wheels.
+   */
+  @exposed({ min: 1, max: 200, label: "Car Ground Probe Distance (m)" })
+  carGroundProbeDistance = 50;
+
   @inputMap("Vehicle") vehicle!: InputActionMap;
 
   private static readonly throttleDeadzone = 0.15;
   /** Steer is already deadzoned in bindings; keep a tiny epsilon only. */
   private static readonly steerEpsilon = 0.01;
-  /** How high the recover maneuver lifts the assembly before dropping it. */
-  private static readonly resetLiftMeters = 3;
-  /** Ground probe span around a car's reset spot (up to catch uphill terrain). */
-  private static readonly groundProbeUpMeters = 15;
-  private static readonly groundProbeDownMeters = 60;
-  /** Max own-body/player/boundary hits the ground probe steps through. */
-  private static readonly groundProbeMaxSkips = 8;
+  /** Max own-body / player / boundary hits the car ground probe steps through. */
+  private static readonly carGroundProbeMaxSkips = 8;
 
   private isPlacing = false;
   private placeTimer = 0;
-  /**
-   * Every dynamic entity joined to the chassis through the constraint graph
-   * (chassis included) — wheels, suspension arms, and towed trailers with
-   * their own wheel stacks. Discovered once in OnStart; the recover maneuver
-   * teleports and freezes all of them together.
-   */
-  private resetGroup: Entity[] = [];
-  /**
-   * Each reset-group node's authored (level-load) world pose expressed
-   * relative to its own car body, so arms and wheels ride rigidly with the
-   * car they are mounted on when cars are placed individually.
-   */
-  private formationRelativeToCar = new Map<Entity, Matrix>();
-  /**
-   * Each car body's authored world pose relative to the chassis — the train's
-   * untangled formation. Reset rebuilds it at the chassis's current position
-   * and heading, then conforms each car to its local ground.
-   */
-  private carFormationRelativeToChassis = new Map<Entity, Matrix>();
-  /**
-   * Which car each reset-group entity belongs to: the chassis or a towed
-   * trailer body. Reset raises each car individually to its local ground
-   * height, and a car's arms/wheels ride along with their own car.
-   */
-  private carRootByEntity = new Map<Entity, Entity>();
+  private debounceTime = Date.now();
   /** One entry per wheel slot (see CollectWheelEntities); undefined when unassigned or undrivable. */
   private wheelDrives: (WheelDriveBinding | undefined)[] = [];
-  private debounceTime = Date.now();
   /** Current ramped forward speed used by the velocity assist so it doesn't snap. */
   private rampedSpeed = 0;
   /** Per-wheel grounded state aligned with CollectWheelEntities() slot order. */
   private wheelGrounded: boolean[] = [];
+  /**
+   * Latest world-down ground hit per car (Body + Other Cars), same order as
+   * CollectCarEntities(). Undefined when that car's probe misses.
+   */
+  private carGroundHits: (CarGroundHit | undefined)[] = [];
   /** Reusable raycast result — must be pooled between calls (BJS V2 physics). */
   private raycastResult = new PhysicsRaycastResult();
   /** Debug line per wheel slot; null entries when debug is off or unassigned. */
@@ -224,9 +210,7 @@ export default class CarController extends Behavior
     );
     this.wheelGrounded = wheelEntities.map(() => false);
     this.debugLines = wheelEntities.map(() => null);
-    this.resetGroup = this.DiscoverResetGroup();
-    this.ComputeCarPartition();
-    this.CaptureResetFormation();
+    this.carGroundHits = this.CollectCarEntities().map(() => undefined);
 
     if (this.debugGroundRay)
     {
@@ -236,6 +220,8 @@ export default class CarController extends Behavior
 
   OnUpdate(deltaSeconds: number): void
   {
+    this.UpdateCarGroundHits();
+
     const reset = this.vehicle.FindAction("Reset")?.IsPressed() === true;
 
     // Reset starts the recover sequence (debounced, and ignored while already placing).
@@ -283,7 +269,6 @@ export default class CarController extends Behavior
       ? this.CollectWheelEntities().map(() => 0)
       : this.ComputeWheelSpeeds(throttle, steer);
 
-    // Per-wheel ground rays update debug lines and wheelGrounded[] even while placing.
     const anyWheelGrounded = this.UpdateWheelGroundStates();
 
     for (let slotIndex = 0; slotIndex < this.wheelDrives.length; slotIndex++)
@@ -327,6 +312,303 @@ export default class CarController extends Behavior
       this.rearLeftInner,
       this.rearRightInner,
     ];
+  }
+
+  /**
+   * Car bodies to probe: this entity (the script host), then every non-null
+   * Other Cars pick. Duplicates of the host are skipped.
+   */
+  private CollectCarEntities(): Entity[]
+  {
+    const cars: Entity[] = [this.entity];
+    const seenIds = new Set<string>([this.entity.id]);
+
+    for (const otherCar of this.otherCars)
+    {
+      if (otherCar === null || seenIds.has(otherCar.id))
+      {
+        continue;
+      }
+      seenIds.add(otherCar.id);
+      cars.push(otherCar);
+    }
+
+    return cars;
+  }
+
+  /**
+   * World-down ground probe for every car in CollectCarEntities(). Writes
+   * carGroundHits in the same order — undefined when that car has no ground.
+   */
+  private UpdateCarGroundHits(): void
+  {
+    const carEntities = this.CollectCarEntities();
+    if (this.carGroundHits.length !== carEntities.length)
+    {
+      this.carGroundHits = carEntities.map(() => undefined);
+    }
+
+    const ignoredBodies = new Set<PhysicsBody>();
+    for (const carEntity of carEntities)
+    {
+      if (carEntity.body !== undefined)
+      {
+        ignoredBodies.add(carEntity.body);
+      }
+    }
+
+    for (let carIndex = 0; carIndex < carEntities.length; carIndex++)
+    {
+      this.carGroundHits[carIndex] = this.ProbeCarGround(
+        carEntities[carIndex],
+        ignoredBodies
+      );
+    }
+  }
+
+  /**
+   * Cast straight down in world space from the car's world position and return
+   * the first real ground hit. The physics ray API reports only the closest
+   * hit, so car bodies, the player, and level-boundary walls are stepped
+   * through by re-casting from just below each ignored hit.
+   */
+  private ProbeCarGround(
+    carEntity: Entity,
+    ignoredBodies: Set<PhysicsBody>
+  ): CarGroundHit | undefined
+  {
+    // getPhysicsEngine() is typed as IPhysicsEngine, which omits raycastToRef
+    // even though the Havok-backed engine implements it at runtime.
+    const physicsEngine = this.scene.getPhysicsEngine() as
+      | { raycastToRef: (from: Vector3, to: Vector3, result: PhysicsRaycastResult) => void }
+      | null
+      | undefined;
+    // Babylon Nullable: can be undefined at runtime, so test truthiness.
+    if (!physicsEngine)
+    {
+      return undefined;
+    }
+
+    const carWorld = carEntity.node.getWorldMatrix();
+    const originX = carWorld.m[12];
+    const originY = carWorld.m[13];
+    const originZ = carWorld.m[14];
+
+    this.rayStart.set(originX, originY, originZ);
+    this.rayEnd.set(originX, originY - this.carGroundProbeDistance, originZ);
+
+    for (let skipCount = 0; skipCount <= CarController.carGroundProbeMaxSkips; skipCount++)
+    {
+      physicsEngine.raycastToRef(this.rayStart, this.rayEnd, this.raycastResult);
+      if (!this.raycastResult.hasHit)
+      {
+        return undefined;
+      }
+
+      const hitBody = this.raycastResult.body;
+      const hitPoint = this.raycastResult.hitPointWorld;
+      const hitNormal = this.raycastResult.hitNormalWorld;
+
+      const isOwnBody =
+        hitBody !== null && hitBody !== undefined && ignoredBodies.has(hitBody);
+      const isPlayer =
+        this.playerEntity?.body !== undefined && hitBody === this.playerEntity.body;
+      const hitMetadata = hitBody?.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
+      const isBoundary = hitMetadata?.bjsEntity?.tag === "levelboundary";
+
+      if (!isOwnBody && !isPlayer && !isBoundary)
+      {
+        return {
+          car: carEntity,
+          point: new Vector3(hitPoint.x, hitPoint.y, hitPoint.z),
+          normal: new Vector3(hitNormal.x, hitNormal.y, hitNormal.z),
+        };
+      }
+
+      this.rayStart.set(hitPoint.x, hitPoint.y - 0.05, hitPoint.z);
+      if (this.rayStart.y <= this.rayEnd.y)
+      {
+        return undefined;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Begin recover: freeze car bodies, align each to its ground-hit normal, and
+   * lift them along that normal. Bodies stay kinematic until EndPlacement.
+   */
+  private BeginPlacement(): void
+  {
+    this.isPlacing = true;
+    this.placeTimer = 0;
+    this.DisableCarRigidBodies();
+    this.AlignAndLiftCarsAlongGroundNormals();
+  }
+
+  /**
+   * End the recover hold: hand every car body back to physics from rest.
+   * Order matters — re-enable disablePreStep first so the pre-step stops
+   * deriving velocity from any teleport, then DYNAMIC, then zero velocity.
+   */
+  private EndPlacement(): void
+  {
+    this.isPlacing = false;
+    this.EnableCarRigidBodies();
+  }
+
+  /**
+   * Freeze each car body (host + Other Cars) as ANIMATED with
+   * disablePreStep = false so later node teleports copy into Havok, and
+   * clear linear/angular velocity so nothing keeps drifting.
+   */
+  private DisableCarRigidBodies(): void
+  {
+    for (const carEntity of this.CollectCarEntities())
+    {
+      const physicsBody = carEntity.body;
+      if (physicsBody === undefined)
+      {
+        continue;
+      }
+
+      physicsBody.setMotionType(PhysicsMotionType.ANIMATED);
+      // disablePreStep = false lets the next pre-step copy the node transform into the body.
+      physicsBody.disablePreStep = false;
+      physicsBody.setLinearVelocity(Vector3.Zero());
+      physicsBody.setAngularVelocity(Vector3.Zero());
+    }
+  }
+
+  /**
+   * Restore each car body to DYNAMIC from rest. disablePreStep is re-enabled
+   * first so a prior teleport cannot inject a derived velocity on the next step.
+   */
+  private EnableCarRigidBodies(): void
+  {
+    for (const carEntity of this.CollectCarEntities())
+    {
+      const physicsBody = carEntity.body;
+      if (physicsBody === undefined)
+      {
+        continue;
+      }
+
+      physicsBody.disablePreStep = true;
+      physicsBody.setMotionType(PhysicsMotionType.DYNAMIC);
+      physicsBody.setLinearVelocity(Vector3.Zero());
+      physicsBody.setAngularVelocity(Vector3.Zero());
+    }
+  }
+
+  /**
+   * For each car with a ground hit: align its up axis to the surface normal
+   * (heading preserved), then translate resetLiftMeters along that normal.
+   * Cars with no hit are left where they were when frozen.
+   */
+  private AlignAndLiftCarsAlongGroundNormals(): void
+  {
+    const carEntities = this.CollectCarEntities();
+
+    for (let carIndex = 0; carIndex < carEntities.length; carIndex++)
+    {
+      const groundHit = this.carGroundHits[carIndex];
+      if (groundHit === undefined)
+      {
+        continue;
+      }
+
+      const carEntity = carEntities[carIndex];
+      const carWorld = carEntity.node.computeWorldMatrix(true);
+
+      const worldScale = new Vector3();
+      const worldRotation = new Quaternion();
+      const worldPosition = new Vector3();
+      carWorld.decompose(worldScale, worldRotation, worldPosition);
+
+      const surfaceNormal = groundHit.normal.normalizeToNew();
+      const alignedRotation = this.ComputeSurfaceAlignedRotation(
+        carWorld,
+        surfaceNormal,
+        worldRotation
+      );
+
+      worldPosition.addInPlace(surfaceNormal.scale(this.resetLiftMeters));
+      this.SetCarWorldPose(carEntity, worldScale, alignedRotation, worldPosition);
+    }
+  }
+
+  /**
+   * Rotation whose up axis matches the ground normal while the car keeps its
+   * heading: forward is projected onto the surface plane and a right-handed
+   * basis is rebuilt around the normal. Falls back to the current rotation
+   * for walls/overhangs or when heading is parallel to the normal.
+   */
+  private ComputeSurfaceAlignedRotation(
+    carWorld: Matrix,
+    groundNormal: Vector3,
+    fallbackRotation: Quaternion
+  ): Quaternion
+  {
+    if (groundNormal.lengthSquared() < 1e-6)
+    {
+      return fallbackRotation;
+    }
+
+    const upAxis = groundNormal.normalizeToNew();
+    if (upAxis.y < 0.2)
+    {
+      return fallbackRotation;
+    }
+
+    // This car model uses +Z as forward (see ApplyVelocityAssist).
+    const forwardHeading = Vector3.TransformNormal(new Vector3(0, 0, 1), carWorld);
+    const projectedForward = forwardHeading.subtract(
+      upAxis.scale(Vector3.Dot(forwardHeading, upAxis))
+    );
+    if (projectedForward.lengthSquared() < 1e-6)
+    {
+      return fallbackRotation;
+    }
+    projectedForward.normalize();
+
+    const rightAxis = Vector3.Cross(upAxis, projectedForward);
+    rightAxis.normalize();
+
+    return Quaternion.RotationQuaternionFromAxis(rightAxis, upAxis, projectedForward);
+  }
+
+  /**
+   * Write a world pose onto a car node as a local transform, accounting for
+   * a parent when present so nested nodes are not double-transformed.
+   */
+  private SetCarWorldPose(
+    carEntity: Entity,
+    worldScale: Vector3,
+    worldRotation: Quaternion,
+    worldPosition: Vector3
+  ): void
+  {
+    const carNode = carEntity.node;
+    let localMatrix = Matrix.Compose(worldScale, worldRotation, worldPosition);
+
+    const parentNode = carNode.parent;
+    if (parentNode !== null)
+    {
+      const parentInverse = new Matrix();
+      parentNode.computeWorldMatrix(true).invertToRef(parentInverse);
+      localMatrix = localMatrix.multiply(parentInverse);
+    }
+
+    const localScale = new Vector3();
+    const localRotation = new Quaternion();
+    const localPosition = new Vector3();
+    localMatrix.decompose(localScale, localRotation, localPosition);
+
+    carNode.position.copyFrom(localPosition);
+    // rotationQuaternion overrides Euler rotation for both the renderer and physics.
+    carNode.rotationQuaternion = localRotation;
   }
 
   /**
@@ -532,541 +814,6 @@ export default class CarController extends Behavior
     constraint.setAxisMotorType(motorAxis, PhysicsConstraintMotorType.VELOCITY);
     constraint.setAxisMotorTarget(motorAxis, speedDegreesPerSecond * (Math.PI / 180));
     constraint.setAxisMotorMaxForce(motorAxis, this.force);
-  }
-
-  /**
-   * Begin the recover maneuver: freeze the whole constraint island as ANIMATED
-   * (kinematic) bodies, then rebuild the authored formation at the chassis's
-   * current position and heading. Every car body is placed individually —
-   * ground-probed for height and aligned to its local surface normal — and
-   * its arms/wheels ride along rigidly, so a tangled train straightens out
-   * and conforms to the terrain instead of teleporting in its current world
-   * arrangement. Kinematic bodies ignore gravity, so the island holds until
-   * EndPlacement.
-   */
-  private BeginPlacement(): void
-  {
-    const chassisEntity = this.body;
-    if (chassisEntity === null || chassisEntity.body === undefined)
-    {
-      return;
-    }
-
-    this.isPlacing = true;
-    this.placeTimer = 0;
-
-    const placementGroup = this.resetGroup.length > 0 ? this.resetGroup : [chassisEntity];
-    const chassisTargetWorld = this.ComputeChassisTargetWorld(chassisEntity);
-
-    for (const groupEntity of placementGroup)
-    {
-      const groupBody = groupEntity.body;
-      if (groupBody === undefined)
-      {
-        continue;
-      }
-
-      groupBody.setMotionType(PhysicsMotionType.ANIMATED);
-      // disablePreStep = false lets the next pre-step copy each node transform into its body.
-      groupBody.disablePreStep = false;
-      groupBody.setLinearVelocity(Vector3.Zero());
-      groupBody.setAngularVelocity(Vector3.Zero());
-    }
-
-    this.ApplyResetFormation(placementGroup, chassisTargetWorld);
-  }
-
-  /**
-   * Snapshot the authored formation at level load, when the train sits
-   * untangled: every node's pose relative to its own car body, and every car
-   * body's pose relative to the chassis. Requires the car partition, so it
-   * must run after ComputeCarPartition.
-   */
-  private CaptureResetFormation(): void
-  {
-    const chassisEntity = this.body;
-    if (chassisEntity === null || this.resetGroup.length === 0)
-    {
-      return;
-    }
-
-    const chassisWorldInverse = new Matrix();
-    chassisEntity.node.computeWorldMatrix(true).invertToRef(chassisWorldInverse);
-
-    this.formationRelativeToCar.clear();
-    this.carFormationRelativeToChassis.clear();
-
-    for (const groupEntity of this.resetGroup)
-    {
-      const carRoot = this.carRootByEntity.get(groupEntity) ?? chassisEntity;
-
-      const carWorldInverse = new Matrix();
-      carRoot.node.computeWorldMatrix(true).invertToRef(carWorldInverse);
-      this.formationRelativeToCar.set(
-        groupEntity,
-        groupEntity.node.computeWorldMatrix(true).multiply(carWorldInverse)
-      );
-
-      if (!this.carFormationRelativeToChassis.has(carRoot))
-      {
-        this.carFormationRelativeToChassis.set(
-          carRoot,
-          carRoot.node.computeWorldMatrix(true).multiply(chassisWorldInverse)
-        );
-      }
-    }
-  }
-
-  /**
-   * Partition the island into cars. Car roots come from the Train Cars picks
-   * (plus the chassis, always); when the list is empty they fall back to the
-   * constraint-graph heuristic — any entity with three or more constraints
-   * anchored to it, since wheels bolt onto arms one or two at a time but
-   * every car body anchors several suspension arms plus a tow link. Every
-   * other entity follows its constraint-target chain to the first car root
-   * (wheel → arm → car), so each car's wheel stack is grouped with the car
-   * it is mounted on.
-   */
-  private ComputeCarPartition(): void
-  {
-    this.carRootByEntity.clear();
-
-    const chassisEntity = this.body;
-    if (chassisEntity === null || this.resetGroup.length === 0)
-    {
-      return;
-    }
-
-    const islandById = new Map<string, Entity>();
-    for (const groupEntity of this.resetGroup)
-    {
-      islandById.set(groupEntity.id, groupEntity);
-    }
-
-    // Count constraints anchored to each island entity (owner → target edges).
-    const anchorCountById = new Map<string, number>();
-    for (const groupEntity of this.resetGroup)
-    {
-      for (const constraintRow of groupEntity.GetAttachmentsOfType("CONSTRAINT"))
-      {
-        const targetId = constraintRow.data.target;
-        if (targetId !== null && targetId !== undefined && islandById.has(targetId))
-        {
-          anchorCountById.set(targetId, (anchorCountById.get(targetId) ?? 0) + 1);
-        }
-      }
-    }
-
-    // Authored Train Cars picks win; the anchor-count heuristic is the fallback.
-    const configuredRoots = new Set<Entity>([chassisEntity]);
-    for (const pickedCar of this.otherCars)
-    {
-      if (pickedCar === null)
-      {
-        continue;
-      }
-      if (islandById.has(pickedCar.id))
-      {
-        configuredRoots.add(pickedCar);
-      }
-      else
-      {
-        console.warn(
-          `[${this.entity.name}] Train Cars pick "${pickedCar.name}" is not `
-          + `constrained to the Body — ignoring it for reset placement`
-        );
-      }
-    }
-
-    const isCarRoot = (candidate: Entity): boolean => {
-      if (configuredRoots.size > 1)
-      {
-        return configuredRoots.has(candidate);
-      }
-      return candidate === chassisEntity || (anchorCountById.get(candidate.id) ?? 0) >= 3;
-    };
-
-    for (const groupEntity of this.resetGroup)
-    {
-      let current = groupEntity;
-
-      for (let depth = 0; depth < 10 && !isCarRoot(current); depth++)
-      {
-        const towardRoot = current.GetAttachmentsOfType("CONSTRAINT").find(
-          (constraintRow) =>
-            constraintRow.data.target !== null
-            && constraintRow.data.target !== undefined
-            && islandById.has(constraintRow.data.target)
-        );
-        const nextEntity = towardRoot !== undefined
-          ? islandById.get(towardRoot.data.target as string)
-          : undefined;
-
-        if (nextEntity === undefined)
-        {
-          break;
-        }
-        current = nextEntity;
-      }
-
-      this.carRootByEntity.set(groupEntity, isCarRoot(current) ? current : chassisEntity);
-    }
-  }
-
-  /**
-   * The chassis's reset pose: lifted resetLiftMeters straight up from its
-   * current position, pitch/roll zeroed, yaw preserved so the car keeps its
-   * heading. The captured formation is rebuilt around this pose.
-   */
-  private ComputeChassisTargetWorld(chassisEntity: Entity): Matrix
-  {
-    const chassisWorld = chassisEntity.node.computeWorldMatrix(true);
-
-    const worldScale = new Vector3();
-    const worldRotation = new Quaternion();
-    const worldPosition = new Vector3();
-    chassisWorld.decompose(worldScale, worldRotation, worldPosition);
-
-    // This car model uses +Z as forward (see ApplyVelocityAssist). Flatten the
-    // forward vector onto the ground plane to keep only the heading; when the
-    // car points straight up/down the heading is undefined — fall back to identity.
-    const forward = Vector3.TransformNormal(new Vector3(0, 0, 1), chassisWorld);
-    forward.y = 0;
-    const yawRotation = forward.lengthSquared() > 1e-6
-      ? Quaternion.RotationAxis(Vector3.Up(), Math.atan2(forward.x, forward.z))
-      : Quaternion.Identity();
-
-    const targetPosition = worldPosition.add(
-      new Vector3(0, CarController.resetLiftMeters, 0)
-    );
-    return Matrix.Compose(worldScale, yawRotation, targetPosition);
-  }
-
-  /**
-   * Place every group node at its authored pose relative to its own car, with
-   * each car re-rooted on an individually ground-probed, surface-aligned
-   * target. Two phases: compute all target world matrices first, then write
-   * them back as local transforms against each parent's predicted (or
-   * unchanged) world matrix. Nodes without a resolved car ride along rigidly
-   * at the chassis target.
-   */
-  private ApplyResetFormation(placementGroup: Entity[], chassisTargetWorld: Matrix): void
-  {
-    const carTargetWorlds = this.ComputeCarTargetWorlds(placementGroup, chassisTargetWorld);
-
-    const newWorldByNode = new Map<Node, Matrix>();
-    for (const groupEntity of placementGroup)
-    {
-      const carRoot = this.carRootByEntity.get(groupEntity);
-      const carTargetWorld = carRoot !== undefined ? carTargetWorlds.get(carRoot) : undefined;
-      const relativeToCar = this.formationRelativeToCar.get(groupEntity) ?? Matrix.Identity();
-
-      newWorldByNode.set(
-        groupEntity.node,
-        relativeToCar.multiply(carTargetWorld ?? chassisTargetWorld)
-      );
-    }
-
-    const localScale = new Vector3();
-    const localPosition = new Vector3();
-
-    for (const groupEntity of placementGroup)
-    {
-      const groupNode = groupEntity.node;
-      const newWorld = newWorldByNode.get(groupNode) as Matrix;
-
-      const parentNode = groupNode.parent;
-      if (parentNode !== null)
-      {
-        const parentWorld = newWorldByNode.get(parentNode) ?? parentNode.getWorldMatrix();
-        const parentInverse = new Matrix();
-        parentWorld.invertToRef(parentInverse);
-        newWorld.multiplyToRef(parentInverse, newWorld);
-      }
-
-      // Fresh quaternion per node — the node keeps the reference we hand it.
-      // rotationQuaternion overrides Euler rotation for both the renderer and physics.
-      const localRotation = new Quaternion();
-      newWorld.decompose(localScale, localRotation, localPosition);
-      groupNode.position.copyFrom(localPosition);
-      groupNode.rotationQuaternion = localRotation;
-    }
-  }
-
-  /**
-   * Individual reset pose for every car body: its authored offset from the
-   * chassis target, ground-probed for height, and tilted so the car's up axis
-   * matches the surface normal under its spot (heading preserved). Cars are
-   * only ever raised toward resetLiftMeters above ground, never lowered, so a
-   * probe that hits overhead geometry cannot pull a car up onto it and cars
-   * over dips simply drop a little farther.
-   */
-  private ComputeCarTargetWorlds(
-    placementGroup: Entity[],
-    chassisTargetWorld: Matrix
-  ): Map<Entity, Matrix>
-  {
-    const groupBodies = new Set<PhysicsBody>();
-    for (const groupEntity of placementGroup)
-    {
-      if (groupEntity.body !== undefined)
-      {
-        groupBodies.add(groupEntity.body);
-      }
-    }
-
-    const carScale = new Vector3();
-    const carRotation = new Quaternion();
-    const carPosition = new Vector3();
-
-    const carTargetWorlds = new Map<Entity, Matrix>();
-    for (const carRoot of new Set(this.carRootByEntity.values()))
-    {
-      const relativeToChassis =
-        this.carFormationRelativeToChassis.get(carRoot) ?? Matrix.Identity();
-      const formationWorld = relativeToChassis.multiply(chassisTargetWorld);
-      formationWorld.decompose(carScale, carRotation, carPosition);
-
-      let targetRotation = carRotation;
-      const groundProbe = this.ProbeGround(carPosition, groupBodies);
-      if (groundProbe !== undefined)
-      {
-        const minimumHeight = groundProbe.groundHeight + CarController.resetLiftMeters;
-        if (carPosition.y < minimumHeight)
-        {
-          carPosition.y = minimumHeight;
-        }
-
-        targetRotation = this.ComputeSurfaceAlignedRotation(
-          formationWorld,
-          groundProbe.groundNormal,
-          carRotation
-        );
-      }
-
-      carTargetWorlds.set(
-        carRoot,
-        Matrix.Compose(carScale, targetRotation, carPosition)
-      );
-    }
-
-    return carTargetWorlds;
-  }
-
-  /**
-   * Rotation whose up axis matches the ground normal while the car keeps its
-   * heading: the formation forward is projected onto the surface plane and a
-   * right-handed basis is rebuilt around the normal. Falls back to the
-   * formation rotation for walls/overhangs (normal too horizontal or
-   * inverted) or when the heading is parallel to the normal.
-   */
-  private ComputeSurfaceAlignedRotation(
-    formationWorld: Matrix,
-    groundNormal: Vector3,
-    fallbackRotation: Quaternion
-  ): Quaternion
-  {
-    if (groundNormal.lengthSquared() < 1e-6)
-    {
-      return fallbackRotation;
-    }
-
-    const upAxis = groundNormal.normalizeToNew();
-    if (upAxis.y < 0.2)
-    {
-      return fallbackRotation;
-    }
-
-    // This car model uses +Z as forward (see ApplyVelocityAssist).
-    const forwardHeading = Vector3.TransformNormal(new Vector3(0, 0, 1), formationWorld);
-    const projectedForward = forwardHeading.subtract(
-      upAxis.scale(Vector3.Dot(forwardHeading, upAxis))
-    );
-    if (projectedForward.lengthSquared() < 1e-6)
-    {
-      return fallbackRotation;
-    }
-    projectedForward.normalize();
-
-    const rightAxis = Vector3.Cross(upAxis, projectedForward);
-    rightAxis.normalize();
-
-    return Quaternion.RotationQuaternionFromAxis(rightAxis, upAxis, projectedForward);
-  }
-
-  /**
-   * Downward Havok ray at a car's reset spot. The physics ray API reports
-   * only the closest hit, so hits on the vehicle's own bodies, the player,
-   * and invisible level-boundary walls are stepped through by re-casting
-   * from just below each ignored hit. Returns the ground height and surface
-   * normal, or undefined when nothing solid is below (e.g. over a chasm).
-   */
-  private ProbeGround(
-    targetPosition: Vector3,
-    groupBodies: Set<PhysicsBody>
-  ): { groundHeight: number; groundNormal: Vector3 } | undefined
-  {
-    // getPhysicsEngine() is typed as IPhysicsEngine, which omits raycastToRef
-    // even though the Havok-backed engine implements it at runtime.
-    const physicsEngine = this.scene.getPhysicsEngine() as
-      | { raycastToRef: (from: Vector3, to: Vector3, result: PhysicsRaycastResult) => void }
-      | null
-      | undefined;
-    // Babylon Nullable: can be undefined at runtime, so test truthiness.
-    if (!physicsEngine)
-    {
-      return undefined;
-    }
-
-    const probeStart = new Vector3(
-      targetPosition.x,
-      targetPosition.y + CarController.groundProbeUpMeters,
-      targetPosition.z
-    );
-    const probeEnd = new Vector3(
-      targetPosition.x,
-      targetPosition.y - CarController.groundProbeDownMeters,
-      targetPosition.z
-    );
-
-    for (let skipCount = 0; skipCount <= CarController.groundProbeMaxSkips; skipCount++)
-    {
-      physicsEngine.raycastToRef(probeStart, probeEnd, this.raycastResult);
-      if (!this.raycastResult.hasHit)
-      {
-        return undefined;
-      }
-
-      const hitBody = this.raycastResult.body;
-      const hitHeight = this.raycastResult.hitPointWorld.y;
-
-      const isOwnBody =
-        hitBody !== null && hitBody !== undefined && groupBodies.has(hitBody);
-      const isPlayer =
-        this.playerEntity?.body !== undefined && hitBody === this.playerEntity.body;
-      const hitMetadata = hitBody?.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
-      const isBoundary = hitMetadata?.bjsEntity?.tag === "levelboundary";
-
-      if (!isOwnBody && !isPlayer && !isBoundary)
-      {
-        const hitNormal = this.raycastResult.hitNormalWorld;
-        return {
-          groundHeight: hitHeight,
-          groundNormal: new Vector3(hitNormal.x, hitNormal.y, hitNormal.z),
-        };
-      }
-
-      probeStart.y = hitHeight - 0.05;
-      if (probeStart.y <= probeEnd.y)
-      {
-        return undefined;
-      }
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Flood-fill the constraint graph outward from the chassis to find every
-   * dynamic body transitively joined to it. Constraint rows live on their
-   * owner entity with the target stored as an entity id, so edges are walked
-   * in both directions. Non-dynamic bodies (static anchors) are never entered
-   * or crossed — teleporting those would move world geometry.
-   */
-  private DiscoverResetGroup(): Entity[]
-  {
-    const chassisEntity = this.body;
-    if (chassisEntity === null || chassisEntity.body === undefined)
-    {
-      return [];
-    }
-
-    const entitiesById = this.CollectPhysicsEntities();
-    const neighborsById = this.BuildConstraintAdjacency(entitiesById);
-
-    const visitedIds = new Set<string>([chassisEntity.id]);
-    const group: Entity[] = [chassisEntity];
-    const frontier: string[] = [chassisEntity.id];
-
-    while (frontier.length > 0)
-    {
-      const currentId = frontier.pop() as string;
-      for (const neighborId of neighborsById.get(currentId) ?? [])
-      {
-        if (visitedIds.has(neighborId))
-        {
-          continue;
-        }
-        visitedIds.add(neighborId);
-
-        const neighborEntity = entitiesById.get(neighborId);
-        if (neighborEntity === undefined || neighborEntity.body === undefined)
-        {
-          continue;
-        }
-        if (neighborEntity.body.getMotionType() !== PhysicsMotionType.DYNAMIC)
-        {
-          continue;
-        }
-
-        group.push(neighborEntity);
-        frontier.push(neighborId);
-      }
-    }
-
-    return group;
-  }
-
-  /** Every entity in the scene that owns a physics body, keyed by entity id. */
-  private CollectPhysicsEntities(): Map<string, Entity>
-  {
-    const entitiesById = new Map<string, Entity>();
-    const sceneNodes = [...this.scene.transformNodes, ...this.scene.meshes];
-
-    for (const sceneNode of sceneNodes)
-    {
-      const metadata = sceneNode.metadata as { bjsEntity?: Entity } | null | undefined;
-      const nodeEntity = metadata?.bjsEntity;
-      if (nodeEntity !== undefined && nodeEntity !== null && nodeEntity.body !== undefined)
-      {
-        entitiesById.set(nodeEntity.id, nodeEntity);
-      }
-    }
-
-    return entitiesById;
-  }
-
-  /** Undirected adjacency (entity id → neighbor ids) built from CONSTRAINT attachments. */
-  private BuildConstraintAdjacency(entitiesById: Map<string, Entity>): Map<string, string[]>
-  {
-    const neighborsById = new Map<string, string[]>();
-    const addEdge = (fromId: string, toId: string): void => {
-      const neighbors = neighborsById.get(fromId);
-      if (neighbors !== undefined)
-      {
-        neighbors.push(toId);
-      }
-      else
-      {
-        neighborsById.set(fromId, [toId]);
-      }
-    };
-
-    for (const physicsEntity of entitiesById.values())
-    {
-      for (const constraintRow of physicsEntity.GetAttachmentsOfType("CONSTRAINT"))
-      {
-        const targetId = constraintRow.data.target;
-        if (targetId === null || targetId === undefined)
-        {
-          continue;
-        }
-        addEdge(physicsEntity.id, targetId);
-        addEdge(targetId, physicsEntity.id);
-      }
-    }
-
-    return neighborsById;
   }
 
   /**
@@ -1314,39 +1061,5 @@ export default class CarController extends Behavior
 
     debugLine.color = grounded ? Color3.Green() : Color3.Red();
     this.debugLines[slotIndex] = debugLine;
-  }
-
-  /**
-   * End the recover maneuver: hand the whole island back to physics from rest.
-   * The per-body order matters — re-enable disablePreStep FIRST so the
-   * pre-step stops deriving a velocity from the teleport, then switch to
-   * DYNAMIC, then zero velocity last so everything falls from rest in
-   * formation instead of slamming.
-   */
-  private EndPlacement(): void
-  {
-    const chassisEntity = this.body;
-    if (chassisEntity === null || chassisEntity.body === undefined)
-    {
-      return;
-    }
-
-    this.isPlacing = false;
-
-    const placementGroup = this.resetGroup.length > 0 ? this.resetGroup : [chassisEntity];
-
-    for (const groupEntity of placementGroup)
-    {
-      const groupBody = groupEntity.body;
-      if (groupBody === undefined)
-      {
-        continue;
-      }
-
-      groupBody.disablePreStep = true;
-      groupBody.setMotionType(PhysicsMotionType.DYNAMIC);
-      groupBody.setLinearVelocity(Vector3.Zero());
-      groupBody.setAngularVelocity(Vector3.Zero());
-    }
   }
 }
