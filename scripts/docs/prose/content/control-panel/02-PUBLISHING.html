@@ -47,17 +47,18 @@
   Server -->|yes| NodeServer[server.mjs + package.json]
   NodeServer --> Done
 </pre>
-<p>The job sets <code>VITE_START_LEVEL</code> to the chosen manifest URL while it runs <code>npm run build --workspace game</code>. Vite still copies every folder under <code>public/levels/</code>. The job then deletes folders you did not include.</p>
+<p>The job normalizes the chosen entry level to a portable <code>./levels/…</code> URL and sets <code>VITE_START_LEVEL</code> to that value while it runs <code>npm run build --workspace game</code>. The Publish UI and <code>b2bkit-project.json</code> still list manifests as root-absolute <code>/levels/…</code> (that matches Vite <code>base: '/'</code> in dev). Validation accepts either form by comparing after normalization. Vite still copies every folder under <code>public/levels/</code>. The job then deletes folders you did not include.</p>
 <p>Poll status with <code>GET /api/publish/:app</code>. Only one publish job runs per app at a time.</p>
 
 <hr>
 
 <h2>Encrypted asset pack</h2>
 <p>When encryption is on, every file under the output <code>levels/</code> tree is packed into one <code>assets.pak</code> file (AES-256-GCM per file). Loose level files are removed. The build writes <code>pak-sw.js</code> and rewrites <code>index.html</code> so a small bootstrap registers the service worker before it loads the app module.</p>
-<p>The service worker intercepts requests under <code>/levels/</code>, decrypts the matching pak entry, and returns the plain bytes. Engine <code>fetch</code> calls and Babylon loaders keep the same URLs. You do not change app or engine code for this mode.</p>
+<p>The service worker intercepts requests whose path contains <code>levels/</code> (root <code>/levels/…</code> or subdirectory <code>/truck-train/levels/…</code>), decrypts the matching pak entry, and returns the plain bytes. Engine <code>fetch</code> calls and Babylon loaders keep the same relative URLs. You do not change app or engine code for this mode.</p>
 <p>The pak index stores filesystem paths (decoded). The service worker decodes the request path before lookup, so level folder names with spaces (for example <code>Train Scene</code>) match <code>Train%20Scene</code> in the browser URL.</p>
-<p>The bootstrap registers <code>pak-sw.js?v=…</code> (version from the pack key), always calls <code>registration.update()</code>, waits until a worker controls the page, then loads the app module. On the first visit it may reload once. A republish installs a new worker instead of keeping a stale <code>pak-sw.js</code> that cannot decrypt or match paths.</p>
-<p>If the loader reports HTTP 404 for a <code>.scene.json</code> under <code>/levels/</code>, the loose files are gone by design. Confirm the page runs under <code>http://</code> or <code>https://</code>, the service worker is active for this origin, and <code>assets.pak</code> is present next to <code>index.html</code>. Do not open the folder as <code>file://</code>.</p>
+<p>The bootstrap registers <code>pak-sw.js?v=…</code> (version from the pack key), always calls <code>registration.update()</code>, waits until a worker controls the page, <strong>prefetches</strong> <code>assets.pak</code> with download progress on the default loading bar, then loads the app module. On the first visit it may reload once. A republish installs a new worker instead of keeping a stale <code>pak-sw.js</code> that cannot decrypt or match paths.</p>
+<p>Every build ships a default <code>#bjs-loading</code> progress bar in <code>index.html</code>. Encrypted publishes drive it from the pak download; then <code>LevelDirector</code> continues it through physics setup and GLB load. Plain (non-encrypted) publishes still show the same bar for level load.</p>
+<p>If the loader reports HTTP 404 for a <code>.scene.json</code> under a <code>levels/</code> URL, the loose files are gone by design. Confirm the page runs under <code>http://</code> or <code>https://</code>, the service worker is active for this origin, and <code>assets.pak</code> is present next to <code>index.html</code>. Do not open the folder as <code>file://</code>.</p>
 <p><strong>Limits:</strong> the AES key ships inside the bundle. This slows casual asset ripping. It is not strong DRM. Encrypted builds need <code>http://</code> or <code>https://</code>. Service workers do not run from <code>file://</code>.</p>
 
 <hr>
@@ -71,15 +72,16 @@ npm start</code></pre>
 <hr>
 
 <h2>How to host the output</h2>
-<p>Serve the destination folder as static files. Open the site root. Publish writes the entry level into the bundle through <code>VITE_START_LEVEL</code>.</p>
-<p>For a URL subdirectory deploy (for example <code>/demo/</code>), the existing <code>npm run deploy:playground -- --base /demo/</code> script still patches level URL prefixes. Prefer that path when you need a non-root base. The Publish tab targets a plain root-hosted folder in v1.</p>
+<p>Serve the destination folder as static files. Publish writes the entry level into the bundle through <code>VITE_START_LEVEL</code> as <code>./levels/…</code> (portable under Vite <code>base: './'</code>). Asset and level URLs resolve relative to the folder you upload.</p>
+<p>Copy the whole destination folder to any host path (site root or a subdirectory such as <code>/truck-train/</code>). Open the directory URL with a trailing slash. Hosts usually add that slash for real folders. You do not need to set a deploy base in Publish.</p>
+<p><code>npm run deploy:playground</code> runs the same portable build. An optional <code>--base /demo/</code> escape hatch still forces absolute URLs when a host requires them.</p>
 
 <hr>
 
 <h2>REST API</h2>
 <table><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>GET</code></td><td><code>/api/projects/:app/manifests</code></td><td>List <code>{ level, file, url }</code> for every <code>.scene.json</code></td></tr>
-<tr><td><code>POST</code></td><td><code>/api/publish/:app</code></td><td>Start a publish job. Body: <code>platform</code>, <code>destination</code>, <code>levels</code>, <code>startLevel</code>, <code>encryptAssets</code>, <code>includeServer</code>, optional <code>title</code>/<code>version</code>. Returns <code>202</code> + status.</td></tr>
+<tr><td><code>GET</code></td><td><code>/api/projects/:app/manifests</code></td><td>List <code>{ level, file, url }</code> for every <code>.scene.json</code> (<code>url</code> is root-absolute <code>/levels/…</code> for Vite dev)</td></tr>
+<tr><td><code>POST</code></td><td><code>/api/publish/:app</code></td><td>Start a publish job. Body: <code>platform</code>, <code>destination</code>, <code>levels</code>, <code>startLevel</code> (<code>/levels/…</code> or <code>./levels/…</code>), <code>encryptAssets</code>, <code>includeServer</code>, optional <code>title</code>/<code>version</code>. Returns <code>202</code> + status.</td></tr>
 <tr><td><code>POST</code></td><td><code>/api/publish/:app/cancel</code></td><td>Cancel the running publish job and kill its build process.</td></tr>
 <tr><td><code>GET</code></td><td><code>/api/publish/:app</code></td><td>Current job status: <code>phase</code>, <code>log</code>, <code>error?</code>, <code>destination?</code>, <code>progress?</code></td></tr>
 </tbody></table>

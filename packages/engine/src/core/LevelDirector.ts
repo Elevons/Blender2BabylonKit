@@ -1,6 +1,4 @@
 import { Color4, Scene, type Engine } from "@babylonjs/core";
-// Registers DefaultLoadingScreen (Babylon spinner) for engine.displayLoadingUI.
-import "@babylonjs/core/Loading/loadingScreen";
 
 import type { BehaviorRegistry } from "../scripting/BehaviorRegistry";
 import { EnableHavokPhysics } from "../subsystems/physics/index";
@@ -12,6 +10,12 @@ import {
 import { Level } from "./Level";
 import { LevelLoader, type LevelLoaderOptions } from "./LevelLoader";
 import type { LevelSession } from "./levelSession";
+import {
+  CreateKitLoadingScreen,
+  HideLoadingOverlay,
+  SetLoadingProgress,
+  ShowLoadingOverlay,
+} from "./loadingOverlay";
 
 /** App hooks after each successful load (fallback camera, debug keys, …). */
 export interface LevelDirectorLoadedContext
@@ -131,6 +135,7 @@ export class LevelDirector implements LevelSession
     this._manifestUrl = "";
     this._isLoading = false;
     this.engine?.hideLoadingUI();
+    HideLoadingOverlay();
   }
 
   /** Unload, stop the render loop, and dispose the engine. */
@@ -160,9 +165,8 @@ export class LevelDirector implements LevelSession
     const generation = ++this.generation;
     this._isLoading = true;
 
-    // Babylon's loading overlay (spinning logo) covers the whole load,
-    // including the frozen-canvas gap between scene teardown and first render.
-    // Customize via engine.loadingScreen (ILoadingScreen).
+    ShowLoadingOverlay("Loading level…");
+    SetLoadingProgress(null, "Loading level…");
     this.engine?.displayLoadingUI();
 
     try
@@ -182,11 +186,13 @@ export class LevelDirector implements LevelSession
           this.options.antialias ?? true,
           manifest
         );
+        this.engine.loadingScreen = CreateKitLoadingScreen("Loading level…");
         this.EnsureRenderLoop();
         this.BindResize();
         this.engine.displayLoadingUI();
       }
 
+      SetLoadingProgress(null, "Starting physics…");
       const scene = new Scene(this.engine);
       await EnableHavokPhysics(scene, ResolveHavokPhysicsOptions(manifest));
       if (generation !== this.generation)
@@ -198,8 +204,13 @@ export class LevelDirector implements LevelSession
       const loaderOptions: LevelLoaderOptions = {
         ...this.options.loaderOptions,
         session: this,
+        onProgress: (ratio, status) =>
+        {
+          SetLoadingProgress(ratio, status);
+        },
       };
       const loader = new LevelLoader(scene, this.options.registry, loaderOptions);
+      SetLoadingProgress(null, "Loading scene…");
       const level = await loader.Load(manifestUrl, manifest);
       if (generation !== this.generation)
       {
@@ -226,6 +237,7 @@ export class LevelDirector implements LevelSession
       {
         this._isLoading = false;
         this.engine?.hideLoadingUI();
+        HideLoadingOverlay();
       }
     }
   }

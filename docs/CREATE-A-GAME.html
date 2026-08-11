@@ -398,7 +398,7 @@
 </ul>
 
 <h2>8. Run and publish</h2>
-<p>The control panel starts the game Vite loop. Publish copies included <code>public/levels/</code> into <code>dist/</code>. Optional encryption packs them into <code>assets.pak</code>. The same <code>/levels/…</code> URLs still work through a service worker (not folded into <code>main.js</code>). See <a href="control-panel/02-PUBLISHING.html">02 — Publishing</a> for path matching, first-load reload, and 404 checks.</p>
+<p>The control panel starts the game Vite loop. Publish copies included <code>public/levels/</code> into <code>dist/</code>. Optional encryption packs them into <code>assets.pak</code>. Published builds use portable <code>./levels/…</code> URLs (Vite <code>base: './'</code>); the service worker still serves encrypted level paths. See <a href="control-panel/02-PUBLISHING.html">02 — Publishing</a> for path matching, first-load reload, and 404 checks.</p>
 
 <h2>9. Version compatibility</h2>
 <p>Runtime, control panel, and Blender add-on ship as one kit version. Exported scenes stamp <code>exporterVersion</code> beside the schema <code>version</code>. If the schema does not match, the engine reports which add-on wrote the scene and asks you to update the kit or re-export.</p>

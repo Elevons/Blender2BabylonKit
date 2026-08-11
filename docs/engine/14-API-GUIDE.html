@@ -605,8 +605,9 @@ await director.Load(manifestUrl);
 <tr><td><code>GetEngine()</code> / <code>GetScene()</code> / <code>GetLevel()</code></td><td>Current handles (null when unloaded); use in app code, not behaviors</td></tr>
 <tr><td><code>onLoaded</code> (option)</td><td>Hook after every successful Load/Restart — fallback cameras, logging, …</td></tr>
 </tbody></table>
-<p>During every Load/Restart the director shows Babylon&apos;s default loading overlay (<code>engine.displayLoadingUI()</code>, the spinning logo) and hides it when the level is ready. Behaviors do not drive this UI.</p>
-<p>To replace the spinner, assign a custom Babylon <code>ILoadingScreen</code> after the engine exists (after the first successful <code>Load</code>, or from <code>onLoaded</code> — the engine is reused across restarts):</p>
+<p>During every Load/Restart the director shows the kit&apos;s default <code>#bjs-loading</code> progress bar (status + percent). Encrypted publishes also drive that bar while <code>assets.pak</code> downloads, before the app module boots. Behaviors do not drive this UI.</p>
+<p><code>LevelDirector</code> installs <code>CreateKitLoadingScreen</code> as <code>engine.loadingScreen</code>, so Babylon <code>displayLoadingUI</code> / <code>hideLoadingUI</code> map to the same overlay. Helpers: <code>ShowLoadingOverlay</code>, <code>SetLoadingProgress</code>, <code>HideLoadingOverlay</code> from <code>@bjs/engine</code>.</p>
+<p>To replace the bar, edit <code>game/index.html</code>, or assign a custom Babylon <code>ILoadingScreen</code> after the engine exists (after the first successful <code>Load</code>, or from <code>onLoaded</code> — the engine is reused across restarts):</p>
 <pre><code class="language-typescript">import type { ILoadingScreen } from "@babylonjs/core";
 
 const customLoadingScreen: ILoadingScreen = {
@@ -630,6 +631,7 @@ director.GetEngine()!.loadingScreen = customLoadingScreen;</code></pre>
 <tr><td><code>clusterPunctualLights</code></td><td>from manifest</td><td>Light clustering policy</td></tr>
 <tr><td><code>lightBudget</code></td><td><code>8</code></td><td>Max forward punctual lights</td></tr>
 <tr><td><code>session</code></td><td>warn stub</td><td><code>LevelSession</code> injected onto behaviors as <code>this.session</code> (<code>LevelDirector</code> sets this automatically)</td></tr>
+<tr><td><code>onProgress</code></td><td>unset</td><td>GLB download progress (<code>ratio</code> 0..1 or <code>null</code>, plus status string). <code>LevelDirector</code> wires this to the default bar</td></tr>
 </tbody></table>
 
 <h2 id="physics">Physics (from behaviors)</h2>

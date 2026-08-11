@@ -234,8 +234,20 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "Expecting loose /levels/*.scene.json files after Publish with Encrypt / obfuscate",
     symptom: "HTTP 404 on manifest (e.g. Train Scene); engine throws could not fetch manifest",
-    fix: "Encrypted builds pack levels into assets.pak and remove loose files. Serve over http/https (not file://); index bootstrap must register pak-sw.js and control the page before the app loads. Republish after kit fixes — bootstrap uses pak-sw.js?v=… + update() so a stale worker is not kept. Spaces in level names are decoded in the worker.",
+    fix: "Encrypted builds pack levels into assets.pak and remove loose files. Serve over http/https (not file://); index bootstrap must register pak-sw.js, prefetch the pak (progress on #bjs-loading), and control the page before the app loads. Republish after kit fixes — bootstrap uses pak-sw.js?v=… + update() so a stale worker is not kept. Spaces in level names are decoded in the worker. Production uses base './' so level URLs are ./levels/… under the uploaded folder.",
     mcpTool: "get_scripting_context(section=\"published-encrypted-builds\")",
+  },
+  {
+    mistake: "Uploading a publish folder under a subdirectory while the build still uses absolute /assets/… paths",
+    symptom: "NS_ERROR_CORRUPTED_CONTENT or module load failure for /assets/index-*.js; response is HTML (e.g. WordPress 404) instead of JavaScript",
+    fix: "Production / Publish builds use Vite base './' — republish with the current kit and upload the whole folder. Open the directory URL with a trailing slash (/truck-train/). Do not rely on --base /subdir/ for the common case; that is only an escape hatch.",
+    mcpTool: "get_scripting_context(section=\"published-encrypted-builds\")",
+  },
+  {
+    mistake: "Expecting Publish startLevel validation to require an exact '/levels/…' string match after portable URL normalization",
+    symptom: "Unknown startLevel \"/levels/Train Scene/….scene.json\" when building from the Publish tab",
+    fix: "Hub manifests stay /levels/… for Vite dev; publish normalizes both the request and listed urls to ./levels/… before matching. Update to a kit that compares after NormalizeManifestUrl — do not rewrite b2bkit-project.json entryLevel to ./levels/ for the panel.",
+    mcpTool: "get_doc_chapter(chapter=\"control-panel/02-publishing\")",
   },
 
   {

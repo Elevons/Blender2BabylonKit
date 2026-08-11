@@ -17,6 +17,7 @@ export * from "./core/Level";
 export * from "./core/LevelLoader";
 export * from "./core/levelSession";
 export * from "./core/LevelDirector";
+export * from "./core/loadingOverlay";
 export * from "./core/bootstrap";
 
 // Scripting: the Behavior system and its Blender-facing @exposed decorator.

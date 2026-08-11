@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 /**
- * Deploy-only game build for a URL subdirectory (e.g. elevons.design/demo/).
+ * Deploy-only game build. Production Vite uses `base: './'`, so dist/ is
+ * portable: upload the folder to any host path without baking an absolute base.
  *
- * Leaves dev untouched: npm run dev and npm run build behave exactly as before.
- * This script only writes to game/dist/.
+ *   node scripts/build-playground-deploy.mjs
+ *   npm run deploy:playground
  *
- *   node scripts/build-playground-deploy.mjs --base /truck-train/
+ * Optional escape hatch (absolute asset URLs for a known subdirectory):
+ *
  *   npm run deploy:playground -- --base /truck-train/
  */
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GAME = path.join(REPO_ROOT, "game");
-const DIST = path.join(GAME, "dist");
 
 function ParseArgs(argv)
 {
@@ -34,10 +34,10 @@ function ParseArgs(argv)
     }
   }
 
-  if (!base.startsWith("/") || !base.endsWith("/"))
+  if (base.length > 0 && (!base.startsWith("/") || !base.endsWith("/")))
   {
-    console.error("Usage: build-playground-deploy.mjs --base /your-folder/");
-    console.error("  --base must start and end with / (e.g. /truck-train/)");
+    console.error("Usage: build-playground-deploy.mjs [--base /your-folder/]");
+    console.error("  --base is optional; when set it must start and end with /");
     process.exit(1);
   }
 
@@ -56,59 +56,33 @@ function Run(command, args, options = {})
   }
 }
 
-/** Patch hardcoded root-absolute level URLs in built chunks (main.ts stays dev-friendly). */
-function PatchLevelUrls(base)
-{
-  const assetsDir = path.join(DIST, "assets");
-  if (!fs.existsSync(assetsDir))
-  {
-    console.error("dist/assets missing — build failed?");
-    process.exit(1);
-  }
-
-  const from = '"/levels/';
-  const to = `"${base}levels/`;
-  let patchedFiles = 0;
-
-  for (const fileName of fs.readdirSync(assetsDir))
-  {
-    if (!fileName.endsWith(".js"))
-    {
-      continue;
-    }
-
-    const filePath = path.join(assetsDir, fileName);
-    const source = fs.readFileSync(filePath, "utf8");
-    if (!source.includes(from))
-    {
-      continue;
-    }
-
-    fs.writeFileSync(filePath, source.replaceAll(from, to));
-    patchedFiles++;
-  }
-
-  if (patchedFiles === 0)
-  {
-    console.warn(
-      "[deploy] warning: no /levels/ URLs found in dist/assets — " +
-        "if the level fails to load, check main.ts manifest path"
-    );
-  }
-  else
-  {
-    console.log(`[deploy] patched level URLs in ${patchedFiles} chunk(s) → ${base}levels/…`);
-  }
-}
-
 const { base } = ParseArgs(process.argv.slice(2));
 
-console.log(`[deploy] building game for subdirectory ${base}`);
+if (base.length > 0)
+{
+  console.log(`[deploy] building game with absolute base ${base}`);
+}
+else
+{
+  console.log("[deploy] building portable game (relative base ./)");
+}
 
 Run("npx", ["tsc", "--noEmit"], { cwd: GAME });
-Run("npx", ["vite", "build", "--base", base], { cwd: GAME });
-PatchLevelUrls(base);
 
-console.log(`[deploy] done → game/dist/`);
-console.log(`[deploy] upload dist/* to public_html${base.slice(0, -1)}/ on your host`);
-console.log(`[deploy] test locally: cd game && npx vite preview --base ${base}`);
+const viteArgs = ["vite", "build"];
+if (base.length > 0)
+{
+  viteArgs.push("--base", base);
+}
+Run("npx", viteArgs, { cwd: GAME });
+
+console.log("[deploy] done → game/dist/");
+console.log("[deploy] upload dist/* to any folder on your host (use a trailing slash URL)");
+if (base.length > 0)
+{
+  console.log(`[deploy] test locally: cd game && npx vite preview --base ${base}`);
+}
+else
+{
+  console.log("[deploy] test locally: cd game && npx vite preview");
+}

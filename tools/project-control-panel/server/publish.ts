@@ -298,7 +298,9 @@ function ValidatePublishOptions(appName: string, options: PublishOptions): void
 
   const startUrl = NormalizeManifestUrl(options.startLevel);
   const manifests = ListLevelManifests(appName);
-  const match = manifests.find((entry) => entry.url === startUrl);
+  const match = manifests.find(
+    (entry) => NormalizeManifestUrl(entry.url) === startUrl
+  );
   if (!match)
   {
     throw new Error(`Unknown startLevel "${options.startLevel}"`);
@@ -317,14 +319,17 @@ function ValidatePublishOptions(appName: string, options: PublishOptions): void
   AssertSafeDestination(appName, destination);
 }
 
+/**
+ * Publish-time start level for `VITE_START_LEVEL`. Relative `./levels/…` keeps
+ * the folder portable under Vite `base: './'` (any host subdirectory).
+ */
 function NormalizeManifestUrl(value: string): string
 {
-  const trimmed = value.trim();
-  if (trimmed.startsWith("/levels/"))
-  {
-    return trimmed;
-  }
-  return `/levels/${trimmed.replace(/^\/+/, "")}`;
+  const trimmed = value.trim().replace(/^\/+/, "");
+  const relative = trimmed.startsWith("levels/")
+    ? trimmed
+    : `levels/${trimmed}`;
+  return `./${relative}`;
 }
 
 /**
@@ -816,6 +821,7 @@ const KEY_B64 = ${JSON.stringify(keyBase64)};
 const PAK_URL = "./assets.pak";
 
 let pakPromise = null;
+let lastProgressSentAt = 0;
 
 async function LoadKey()
 {
@@ -823,11 +829,48 @@ async function LoadKey()
   return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
 }
 
+async function Broadcast(message)
+{
+  const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  for (const client of clients)
+  {
+    client.postMessage(message);
+  }
+}
+
+async function BroadcastProgress(loaded, total)
+{
+  const now = Date.now();
+  if (now - lastProgressSentAt < 100 && loaded !== total)
+  {
+    return;
+  }
+  lastProgressSentAt = now;
+  await Broadcast({ type: "bjs-pak-progress", loaded, total });
+}
+
+function ConcatChunks(chunks, totalLength)
+{
+  const buffer = new ArrayBuffer(totalLength);
+  const view = new Uint8Array(buffer);
+  let offset = 0;
+  for (const chunk of chunks)
+  {
+    view.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return buffer;
+}
+
 async function LoadPak()
 {
   if (pakPromise)
   {
-    return pakPromise;
+    return pakPromise.then(async (packed) =>
+    {
+      await Broadcast({ type: "bjs-pak-ready" });
+      return packed;
+    });
   }
   pakPromise = (async () =>
   {
@@ -836,14 +879,48 @@ async function LoadPak()
     {
       throw new Error("Failed to fetch assets.pak: " + response.status);
     }
-    const buffer = await response.arrayBuffer();
+
+    const totalHeader = Number(response.headers.get("content-length") || "0");
+    let buffer;
+    if (response.body && typeof response.body.getReader === "function")
+    {
+      const reader = response.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+      while (true)
+      {
+        const result = await reader.read();
+        if (result.done)
+        {
+          break;
+        }
+        chunks.push(result.value);
+        loaded += result.value.byteLength;
+        await BroadcastProgress(loaded, totalHeader);
+      }
+      buffer = ConcatChunks(chunks, loaded);
+      await BroadcastProgress(loaded, totalHeader > 0 ? totalHeader : loaded);
+    }
+    else
+    {
+      buffer = await response.arrayBuffer();
+      await BroadcastProgress(buffer.byteLength, buffer.byteLength);
+    }
+
     const view = new DataView(buffer);
     const indexLength = view.getUint32(0, true);
     const indexBytes = new Uint8Array(buffer, 4, indexLength);
     const index = JSON.parse(new TextDecoder().decode(indexBytes));
     const payloadOffset = 4 + indexLength;
-    return { buffer, index, payloadOffset, key: await LoadKey() };
-  })();
+    const packed = { buffer, index, payloadOffset, key: await LoadKey() };
+    await Broadcast({ type: "bjs-pak-ready" });
+    return packed;
+  })().catch((error) =>
+  {
+    pakPromise = null;
+    void Broadcast({ type: "bjs-pak-error", message: String(error && error.message ? error.message : error) });
+    throw error;
+  });
   return pakPromise;
 }
 
@@ -921,9 +998,18 @@ self.addEventListener("activate", (event) =>
 
 self.addEventListener("message", (event) =>
 {
-  if (event.data && event.data.type === "SKIP_WAITING")
+  if (!event.data)
+  {
+    return;
+  }
+  if (event.data.type === "SKIP_WAITING")
   {
     self.skipWaiting();
+    return;
+  }
+  if (event.data.type === "bjs-pak-prefetch")
+  {
+    void LoadPak();
   }
 });
 
@@ -986,12 +1072,51 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   var MODULE_SRC = ${JSON.stringify(moduleSrc)};
   var SW_URL = "./pak-sw.js?v=${swVersion}";
   var RELOAD_KEY = "bjs-pak-sw-reload";
+
+  function FormatBytes(byteCount) {
+    if (byteCount < 1024) { return byteCount + " B"; }
+    if (byteCount < 1048576) { return Math.round(byteCount / 1024) + " KB"; }
+    return (byteCount / 1048576).toFixed(1) + " MB";
+  }
+
+  function SetOverlay(status, ratio, detail) {
+    var root = document.getElementById("bjs-loading");
+    var statusElement = document.getElementById("bjs-loading-status");
+    var bar = document.getElementById("bjs-loading-bar");
+    var pct = document.getElementById("bjs-loading-pct");
+    if (!root || !bar) { return; }
+    root.dataset.hidden = "false";
+    root.style.display = "flex";
+    root.setAttribute("aria-busy", "true");
+    if (statusElement && status) { statusElement.textContent = status; }
+    if (ratio === null || ratio === undefined || !isFinite(ratio)) {
+      bar.dataset.indeterminate = "true";
+      bar.style.width = "40%";
+      if (pct) {
+        pct.textContent = detail && detail.total > 0
+          ? FormatBytes(detail.loaded) + " / " + FormatBytes(detail.total)
+          : "";
+      }
+      return;
+    }
+    var clamped = Math.min(1, Math.max(0, ratio));
+    bar.dataset.indeterminate = "false";
+    bar.style.width = (clamped * 100).toFixed(1) + "%";
+    if (pct) {
+      pct.textContent = detail && detail.total > 0
+        ? Math.round(clamped * 100) + "% · " + FormatBytes(detail.loaded) + " / " + FormatBytes(detail.total)
+        : Math.round(clamped * 100) + "%";
+    }
+  }
+
   function Boot() {
+    SetOverlay("Starting…", null);
     var tag = document.createElement("script");
     tag.type = "module";
     tag.src = MODULE_SRC;
     document.head.appendChild(tag);
   }
+
   function WaitForWorker(worker) {
     if (!worker) {
       return Promise.resolve();
@@ -1008,6 +1133,7 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       });
     });
   }
+
   function EnsureControlled() {
     if (navigator.serviceWorker.controller) {
       return Promise.resolve();
@@ -1018,10 +1144,53 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       }, { once: true });
     });
   }
+
+  function PrefetchPak() {
+    SetOverlay("Downloading assets…", null);
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      function Finish(error) {
+        if (settled) { return; }
+        settled = true;
+        navigator.serviceWorker.removeEventListener("message", onMessage);
+        if (error) { reject(error); }
+        else { resolve(); }
+      }
+      function onMessage(event) {
+        var data = event.data || {};
+        if (data.type === "bjs-pak-progress") {
+          var total = Number(data.total) || 0;
+          var loaded = Number(data.loaded) || 0;
+          var ratio = total > 0 ? loaded / total : null;
+          SetOverlay("Downloading assets…", ratio, { loaded: loaded, total: total });
+          return;
+        }
+        if (data.type === "bjs-pak-ready") {
+          SetOverlay("Assets ready", 1);
+          Finish();
+          return;
+        }
+        if (data.type === "bjs-pak-error") {
+          Finish(new Error(data.message || "assets.pak download failed"));
+        }
+      }
+      navigator.serviceWorker.addEventListener("message", onMessage);
+      var controller = navigator.serviceWorker.controller;
+      if (!controller) {
+        Finish(new Error("No service worker controller for pak prefetch"));
+        return;
+      }
+      controller.postMessage({ type: "bjs-pak-prefetch" });
+    });
+  }
+
   if (!("serviceWorker" in navigator)) {
     console.error("[bjs] Encrypted builds require a service worker (serve over http/https, not file://)");
+    SetOverlay("Service worker unavailable", null);
     return;
   }
+
+  SetOverlay("Preparing…", null);
   navigator.serviceWorker.register(SW_URL).then(function (registration) {
     // Always check for a newer pak-sw.js (republish) before booting the app.
     return registration.update().then(function () {
@@ -1035,8 +1204,7 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     }).then(function () {
       if (navigator.serviceWorker.controller) {
         sessionStorage.removeItem(RELOAD_KEY);
-        Boot();
-        return;
+        return PrefetchPak().then(Boot);
       }
       if (!sessionStorage.getItem(RELOAD_KEY)) {
         sessionStorage.setItem(RELOAD_KEY, "1");
@@ -1044,10 +1212,13 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
         return;
       }
       sessionStorage.removeItem(RELOAD_KEY);
-      return EnsureControlled().then(Boot);
+      return EnsureControlled().then(function () {
+        return PrefetchPak().then(Boot);
+      });
     });
   }).catch(function (error) {
     console.error("[bjs] Failed to register pak service worker", error);
+    SetOverlay("Failed to prepare assets", null);
   });
 })();
 </script>`;

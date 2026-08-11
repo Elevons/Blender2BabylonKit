@@ -68,7 +68,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | Section slug | Topic |
 |--------------|-------|
 | `lifecycle` | OnStart / OnPostReady / OnUpdate / OnDestroy / OnEnable / OnDisable / OnMessage / collision & trigger hooks |
-| `level-session` | `this.session` — soft restart / load / unload the level (`LevelDirector`) |
+| `level-session` | `this.session` — soft restart / load / unload; default `#bjs-loading` progress bar |
 | `entity` | Entity API, attachments, `EntityFromNode` / non-enumerable `metadata.bjsEntity` |
 | `exposed` | `@exposed` types and Blender parse rules |
 | `input` | Input Actions, `@inputMap` |
@@ -83,7 +83,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | `gui` | 2D GUI, particles, 3D GUI, MSDF text |
 | `detail-maps` | Detail texture overrides on glTF PBR — **author in Blender** |
 | `sidecar-assets` | Hot-reload GUI / particle / material JSON from the Control Panel with no Blender re-export |
-| `published-encrypted-builds` | Publish Encrypt / obfuscate — `assets.pak` + service worker; same `/levels/` URLs; 404 means SW/hosting, not missing JSON in source |
+| `published-encrypted-builds` | Publish Encrypt / obfuscate — `assets.pak` + SW prefetch progress on `#bjs-loading`; portable `./levels/` URLs; 404 means SW/hosting |
 
 ## Author in Blender vs write in behavior
 
@@ -204,7 +204,8 @@ so these methods recreate the Scene + Havok world and reload the manifest.
 
 ```ts
 await this.session.Restart();                 // soft-reload the current level
-await this.session.Load("/levels/Other/Other.scene.json");
+await this.session.Load("./levels/Other/Other.scene.json"); // published / portable
+// Dev (Vite base '/'): "/levels/Other/Other.scene.json" also works
 this.session.Unload();                        // tear down without loading
 this.session.manifestUrl;                     // current (or last) manifest URL
 this.session.isLoading;                       // true while Load/Restart is in flight
@@ -220,17 +221,26 @@ Rules:
 - Still not a full `Level`: use `this.spawner` for prefabs, `this.byTag` for
   queries, and app code for `componentHost`.
 
-### Loading UI (Babylon spinner)
+### Loading UI (default progress bar)
 
-`LevelDirector` shows Babylon's default loading overlay (spinning logo) for
-every `Load` / `Restart` via `engine.displayLoadingUI()`, and hides it with
-`engine.hideLoadingUI()` when the level is ready (or the load fails). Behaviors
-do **not** call those APIs — the director owns the overlay so the canvas never
-freezes on a stale last frame while the new scene is built.
+Every app ships a `#bjs-loading` overlay in `game/index.html` (status + bar + %).
+`LevelDirector` drives it for every `Load` / `Restart` (physics setup, GLB
+download progress, build) and hides it when the level is ready or the load
+fails. Behaviors do **not** call loading APIs — the director owns the overlay so
+the canvas never freezes on a stale last frame while the new scene is built.
 
-To customize the overlay, assign a Babylon `ILoadingScreen` on the **engine**
-from app code (`main.ts`), after the first load has created the engine (or from
-`onLoaded` on subsequent loads — the same engine is reused across restarts):
+Encrypted publishes also drive the same bar **before** the app module loads:
+the pak bootstrap prefetches `assets.pak` and shows download %. Plain publishes
+still show the bar for level load only.
+
+Helpers (from `@bjs/engine`): `ShowLoadingOverlay`, `SetLoadingProgress`,
+`HideLoadingOverlay`, `CreateKitLoadingScreen`. `LevelDirector` installs
+`CreateKitLoadingScreen` as `engine.loadingScreen` so Babylon
+`displayLoadingUI` / `hideLoadingUI` map to the kit bar.
+
+To brand the overlay, edit the markup/CSS in `game/index.html`, or assign a
+custom Babylon `ILoadingScreen` on the engine from app code after the first
+load (the same engine is reused across restarts):
 
 ```ts
 import type { ILoadingScreen } from "@babylonjs/core";
@@ -252,7 +262,6 @@ const customLoadingScreen: ILoadingScreen = {
 director.GetEngine()!.loadingScreen = customLoadingScreen;
 ```
 
-`DefaultLoadingScreen` is registered by the director (`@babylonjs/core/Loading/loadingScreen`).
 Replace `loadingScreen` before the next `Restart` / `Load` for the custom UI to
 appear. Full director API: `docs/engine/14-API-GUIDE.html`.
 
@@ -1747,18 +1756,28 @@ MCP: `get_fragment(name="spawn-prefab-instance")` ·
 
 Publish can pack `public/levels/` into `assets.pak` (Encrypt / obfuscate). Loose
 level files are removed from the output. A service worker (`pak-sw.js`) serves
-the same `/levels/…` URLs the engine already uses. **Behaviors do not change** —
-keep fetching manifest-relative paths; do not assume files exist on disk next to
-`index.html`.
+level URLs from the pak. **Behaviors do not change** — keep fetching
+manifest-relative paths; do not assume files exist on disk next to `index.html`.
+
+Production / Publish builds use Vite `base: './'` so the output folder is
+**portable**: copy it to the site root or any subdirectory (for example
+`/truck-train/`) without baking an absolute deploy base. Open the directory URL
+with a trailing slash. Dev still uses `base: '/'` (`/levels/…` from the control
+panel and `b2bkit-project.json` `entryLevel`). Publish accepts either
+`/levels/…` or `./levels/…` as `startLevel`, then writes `VITE_START_LEVEL` as
+`./levels/…`. Optional escape hatch: `npm run deploy:playground -- --base /demo/`.
 
 | Detail | Contract |
 |---|---|
-| URLs | Unchanged (`/levels/Train Scene/….scene.json`, GLB, GUI JSON, …) |
+| URLs | Relative to the published folder (`./levels/Train Scene/….scene.json`, GLB, GUI JSON, …); SW still intercepts `…/levels/…` |
+| startLevel API | Hub sends `/levels/…`; publish normalizes before validate + bake |
 | Spaces in level names | Browser sends `%20`; the worker decodes before pak lookup |
-| Bootstrap | Registers `pak-sw.js?v=…`, calls `update()`, waits for control, then loads the app |
+| Bootstrap | Registers `pak-sw.js?v=…`, calls `update()`, waits for control, then loads the app module (`./assets/…`) |
 | Republish | New pack key → new `?v=` so a stale worker is not kept |
 | HTTP 404 on `.scene.json` | Loose files are gone by design — SW not controlling, `file://`, or missing `assets.pak` |
-| Hosting | `http://` or `https://` only (include Node `server.mjs` or any static host) |
+| Hosting | `http://` or `https://` only; upload the whole folder anywhere (include Node `server.mjs` or any static host) |
+| Wrong host path | Absolute `/assets/…` requests mean an old root-base build — republish with current kit |
+| Loading UI | Default `#bjs-loading` bar in `index.html` — pak download % when encrypted, then level/GLB progress via `LevelDirector` |
 
 Full publish flow: `docs/control-panel/02-PUBLISHING.html` ·
 `get_doc_chapter(chapter="control-panel/02-publishing")`.

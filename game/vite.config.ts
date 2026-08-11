@@ -94,7 +94,11 @@ function ExcludeDeveloperTools(): Plugin
 
 // Havok ships a .wasm that must be served. Excluding it from dep-optimization
 // lets Vite resolve the wasm URL correctly in dev and build.
-export default defineConfig({
+//
+// Production uses base './' so dist/ is portable: copy the folder to any URL
+// path (site root or /truck-train/) without baking an absolute deploy base.
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "./" : "/",
   resolve: {
     // The published package points at dist/. Inside the kit monorepo, use live
     // engine TypeScript so engine edits still hot-reload without a build step.
@@ -107,4 +111,4 @@ export default defineConfig({
   // next free one would leave it reporting a server it cannot see.
   server: { port: 5173, strictPort: true },
   plugins: [ReloadOnLevelExport(), ExcludeDeveloperTools()],
-});
+}));

@@ -17,8 +17,21 @@ import {
  * `this.session`.
  */
 
-const DEFAULT_MANIFEST_URL = "/levels/Train Scene/Train Scene.scene.json";
 const INCLUDE_DEVELOPER_TOOLS = import.meta.env.VITE_INCLUDE_DEVELOPER_TOOLS !== "false";
+
+/**
+ * Join a path under Vite's base. Production builds use `base: './'` so the
+ * published folder works at any host path; dev keeps `base: '/'`.
+ */
+function ManifestUrlUnderBase(relativePath: string): string
+{
+  const trimmed = relativePath.replace(/^\/+/, "");
+  return `${import.meta.env.BASE_URL}${trimmed}`;
+}
+
+const DEFAULT_MANIFEST_URL = ManifestUrlUnderBase(
+  "levels/Train Scene/Train Scene.scene.json"
+);
 
 /**
  * Pick the level to load: `?manifest=` (dev jump from the Project Control Panel), then the
@@ -35,6 +48,12 @@ function ResolveManifestUrl(): string
   const fromEnv = import.meta.env.VITE_START_LEVEL as string | undefined;
   if (fromEnv !== undefined && fromEnv.length > 0)
   {
+    // Absolute `/levels/…` values (older publish / env) still resolve under BASE_URL.
+    if (fromEnv.startsWith("/"))
+    {
+      return ManifestUrlUnderBase(fromEnv);
+    }
+
     return fromEnv;
   }
 

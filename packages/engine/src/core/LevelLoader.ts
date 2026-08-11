@@ -60,6 +60,11 @@ export interface LevelLoaderOptions {
    * Prefer {@link LevelDirector}, which sets this automatically.
    */
   session?: LevelSession;
+  /**
+   * Scene file download progress (`0..1`, or `null` when length is unknown).
+   * Status is a short human label (e.g. "Loading scene…").
+   */
+  onProgress?: (ratio: number | null, status: string) => void;
 }
 
 /**
@@ -110,10 +115,26 @@ export class LevelLoader
 
     let earlyPunctualLighting: ClusteredLightsResult | null = null;
     const glbUrl = baseUrl + manifest.glb;
+    const reportProgress = (ratio: number | null, status: string): void =>
+    {
+      this.options.onProgress?.(ratio, status);
+    };
+    const onGlbProgress = (event: { lengthComputable?: boolean; loaded: number; total: number }): void =>
+    {
+      if (event.lengthComputable === true && event.total > 0)
+      {
+        reportProgress(event.loaded / event.total, "Loading scene…");
+        return;
+      }
+
+      reportProgress(null, "Loading scene…");
+    };
 
     if (ShouldClusterBeforeGlbLoad(manifest, clusterOptions))
     {
-      const container = await LoadAssetContainerAsync(glbUrl, this.scene);
+      const container = await LoadAssetContainerAsync(glbUrl, this.scene, {
+        onProgress: onGlbProgress,
+      });
       earlyPunctualLighting = AddContainerToSceneWithLightClustering(
         this.scene,
         container,
@@ -122,8 +143,12 @@ export class LevelLoader
     }
     else
     {
-      await appendSceneAsync(glbUrl, this.scene);
+      await appendSceneAsync(glbUrl, this.scene, {
+        onProgress: onGlbProgress,
+      });
     }
+
+    reportProgress(null, "Building level…");
 
     NeutralizeGltfRoot(this.scene);
     ApplyNodeVisibility(this.scene);
