@@ -43,7 +43,7 @@ const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
  * CarController drives up to eight wheel motors on HINGE or CUSTOM 6DoF joints
  * (outer + inner per corner) from input, with optional velocity/angular assists
  * and per-wheel ground raycasts that gate motors when airborne. Reset freezes
- * the host and Other Cars bodies, aligns each to its world-down ground normal,
+ * the Body and Other Cars bodies, aligns each to its world-down ground normal,
  * lifts them along that normal, holds for Place Hold, then releases to DYNAMIC.
  */
 export default class CarController extends Behavior
@@ -315,13 +315,20 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Car bodies to probe: this entity (the script host), then every non-null
-   * Other Cars pick. Duplicates of the host are skipped.
+   * Car bodies to probe: the exposed Body (main chassis), then every non-null
+   * Other Cars pick. The script host is skipped — it is often the player, not
+   * a vehicle. Duplicates of Body are skipped.
    */
   private CollectCarEntities(): Entity[]
   {
-    const cars: Entity[] = [this.entity];
-    const seenIds = new Set<string>([this.entity.id]);
+    const cars: Entity[] = [];
+    const seenIds = new Set<string>();
+
+    if (this.body !== null)
+    {
+      cars.push(this.body);
+      seenIds.add(this.body.id);
+    }
 
     for (const otherCar of this.otherCars)
     {
@@ -459,7 +466,7 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Freeze each car body (host + Other Cars) as ANIMATED with
+   * Freeze each car body (Body + Other Cars) as ANIMATED with
    * disablePreStep = false so later node teleports copy into Havok, and
    * clear linear/angular velocity so nothing keeps drifting.
    */

@@ -69,7 +69,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 |--------------|-------|
 | `lifecycle` | OnStart / OnPostReady / OnUpdate / OnDestroy / OnEnable / OnDisable / OnMessage / collision & trigger hooks |
 | `level-session` | `this.session` — soft restart / load / unload the level (`LevelDirector`) |
-| `entity` | Entity API, attachments |
+| `entity` | Entity API, attachments, `EntityFromNode` / non-enumerable `metadata.bjsEntity` |
 | `exposed` | `@exposed` types and Blender parse rules |
 | `input` | Input Actions, `@inputMap` |
 | `physics` | Bodies, triggers, constraints, movement |
@@ -83,6 +83,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | `gui` | 2D GUI, particles, 3D GUI, MSDF text |
 | `detail-maps` | Detail texture overrides on glTF PBR — **author in Blender** |
 | `sidecar-assets` | Hot-reload GUI / particle / material JSON from the Control Panel with no Blender re-export |
+| `published-encrypted-builds` | Publish Encrypt / obfuscate — `assets.pak` + service worker; same `/levels/` URLs; 404 means SW/hosting, not missing JSON in source |
 
 ## Author in Blender vs write in behavior
 
@@ -182,11 +183,13 @@ this.byTag  : (tag: string) => Entity[]  // find every entity carrying the given
 Behaviors do **not** receive a full `Level` handle. Look up other objects via
 `@exposed({ type: "entity" })` fields (preferred), `this.byTag("Enemy")` for
 tag-based grouping, `entity.GetAttachment("SCRIPT")` / `entity.GetBehavior` on
-the same entity, or `node.metadata.bjsEntity` from a Babylon node. For
-**duplicating** a loaded entity subtree at runtime, use `this.spawner.Spawn`
-(see [Prefab spawn](#prefab-spawn)) — never `node.clone()` plus manual
-attachment copying. For **restarting or changing levels**, use `this.session`
-(see [Level session](#level-session)).
+the same entity, or `EntityFromNode(node)` / `ReadNodeEntity(node)` from a
+Babylon node (the kit stores the back-reference on `node.metadata.bjsEntity` as a
+**non-enumerable** property — do not assign `metadata.bjsEntity = entity`
+yourself with a plain enumerable write). For **duplicating** a loaded entity
+subtree at runtime, use `this.spawner.Spawn` (see [Prefab spawn](#prefab-spawn))
+— never `node.clone()` plus manual attachment copying. For **restarting or
+changing levels**, use `this.session` (see [Level session](#level-session)).
 
 **Runtime component add/remove** is app-code only: `level.componentHost.AddComponent`
 / `RemoveComponent` after load (mutations are not written back to the manifest).
@@ -428,7 +431,16 @@ entity.GetReflectionProbes(): ReflectionProbe[]              // every REFLECTION
 entity.SendMessage(message, source): void              // deliver to all its behaviors' OnMessage
 entity.active: boolean                               // local activeSelf (Unity) — default true
 // IsEntityActive(entity)                             // activeInHierarchy (local + ancestor chain)
+// EntityFromNode(node) / ReadNodeEntity(node)        // node → Entity (non-enumerable metadata.bjsEntity)
+// AssignNodeEntity(node, entity)                     // loader/app bind — never enumerable plain write
 ```
+
+**Node ↔ Entity metadata:** the loader calls `AssignNodeEntity` so
+`metadata.bjsEntity` is **non-enumerable**. Prefer `EntityFromNode(node)` over
+hand-reading metadata. Do not write `node.metadata = { …, bjsEntity: entity }`
+with an enumerable property — that crashes the Babylon Inspector Properties pane
+(`ObjectCanSafelyStringify` / "too much recursion"). Same rule for scene
+`bjsLevel` via `AssignSceneLevel` / `ReadSceneLevel`.
 
 **Load-time hide vs runtime SetActive:** Viewport-hidden and **Make Invisible**
 colliders call `HideEntityNode` at load — rendering off only (`ApplyNodeSubtreeVisibility`);
@@ -619,8 +631,25 @@ Blender; it resolves to an `Entity` before `OnStart`). For tag-based grouping,
 author a TAG component in Blender and call `this.byTag("Enemy")` — it returns
 every entity carrying that tag. On the same entity, use
 `entity.GetBehavior(OtherBehavior)` or `entity.GetAttachment("SCRIPT")?.behavior`.
-If you only have a node:
-`node.metadata.bjsEntity` is the back-reference to its `Entity`.
+
+If you only have a Babylon node (e.g. a physics hit's `transformNode`):
+
+```ts
+import { EntityFromNode, ReadNodeEntity } from "@bjs/engine";
+
+const hitEntity = EntityFromNode(hitNode);       // preferred
+// or: ReadNodeEntity(hitNode)                   // same helper
+// or: hitNode.metadata?.bjsEntity               // still works (non-enumerable read)
+```
+
+The loader attaches the back-reference with **`AssignNodeEntity(node, entity)`**
+(`core/bjsMetadata.ts`): `bjsEntity` (and scene `bjsLevel`) are stored
+**non-enumerable** so the Babylon Inspector Properties pane can walk
+`Object.values(metadata)` without recursing the Entity↔node / Level↔scene
+cycle ("too much recursion" in `ObjectCanSafelyStringify`). **Do not** write
+`node.metadata = { ...node.metadata, bjsEntity: entity }` with an enumerable
+property — that reintroduces the Inspector crash. Use `AssignNodeEntity` /
+`AssignSceneLevel` from `@bjs/engine` if app code must bind them.
 
 ## LOD (level of detail)
 
@@ -1155,6 +1184,13 @@ Default** map are authored in Blender's **Input Actions** panel and exported as
 `scene.inputActions` + `scene.defaultInputMap` in the manifest. The canvas needs
 focus (the user clicks the viewport once).
 
+### Blender Input Actions persistence
+
+- Live data is on the **scene** (`scene.bjs_input_maps` in the `.blend`). The panel edits that collection.
+- **Save Asset (.json)** writes `game/input.inputactions.json` only (share across scenes / `npm run input:gen`). It does **not** replace File → Save on the `.blend`.
+- **Load Asset** copies the JSON into the open scene's props. Reloading or reopening the `.blend` restores the last **saved scene props** — it does **not** auto-load the JSON.
+- After edits: save the `.blend`. Also Save Asset when you want the sidecar / constants in sync. If the JSON is newer than an opened blend, Load Asset again.
+
 ### Blender gamepad authoring
 
 - **Labeled pickers** — face buttons, stick axes, and sticks use W3C standard-mapping names (not raw indices).
@@ -1166,6 +1202,7 @@ focus (the user clicks the viewport once).
   - **One digital direction** → **Button** action: direct key or direct axis with half.
 - **Composites** — **+ 1D Axis** (`positive − negative` scalar); **+ 2D Vector** (WASD keys). Default Move = 2D Vector + Left Stick binding.
 - **Axis half** — on composite **axis** rows only (not Stick bindings): **+ Half** / **− Half** so one stick axis can mean forward vs back. Manifest: `"axisHalf": "POSITIVE"` | `"NEGATIVE"` (export uppercase; runtime accepts any case). Stick Y (indices 1, 3) flipped at runtime (`OrientGamepadAxis`) so **+ Half = stick up**.
+- **Picker overlap / reload stomp** — W3C indices overlap kinds (0/1 = Button **and** Stick; 2/3 = Button **and** Axis). Older addon builds rewrote face-button rows to Stick/Axis on Load Asset or `.blend` reload when syncing labeled pickers (e.g. Reset Y/button 3 → `control: "axis"`). Current addon suppresses picker `update` callbacks during sync and repairs Button actions (non-trigger Axis/Stick → Button on load). If you still see stomps, reload the Blender addon, confirm the row, then save the `.blend` again.
 - **Disambiguation** — multiple bindings on one action: **most-actuated whole binding wins** (not per-axis merge). Use one device at a time (full stick *or* full WASD).
 - **Vehicle / `CarController`** — `@inputMap("Vehicle")`, action **Main Control** (Value, Vector 2): WASD 2D Vector + Left Stick; `throttle = control.y`, `steer = control.x`.
 - **Capture** — record icon binds keyboard or gamepad (Linux js device; Xbox-style remap).
@@ -1706,6 +1743,26 @@ MCP: `get_fragment(name="spawn-prefab-instance")` ·
 `get_recipe_template(recipe="scatter-prefab-spawner")` ·
 `get_playbook(name="spawn-prefab-instances")`.
 
+## Published encrypted builds
+
+Publish can pack `public/levels/` into `assets.pak` (Encrypt / obfuscate). Loose
+level files are removed from the output. A service worker (`pak-sw.js`) serves
+the same `/levels/…` URLs the engine already uses. **Behaviors do not change** —
+keep fetching manifest-relative paths; do not assume files exist on disk next to
+`index.html`.
+
+| Detail | Contract |
+|---|---|
+| URLs | Unchanged (`/levels/Train Scene/….scene.json`, GLB, GUI JSON, …) |
+| Spaces in level names | Browser sends `%20`; the worker decodes before pak lookup |
+| Bootstrap | Registers `pak-sw.js?v=…`, calls `update()`, waits for control, then loads the app |
+| Republish | New pack key → new `?v=` so a stale worker is not kept |
+| HTTP 404 on `.scene.json` | Loose files are gone by design — SW not controlling, `file://`, or missing `assets.pak` |
+| Hosting | `http://` or `https://` only (include Node `server.mjs` or any static host) |
+
+Full publish flow: `docs/control-panel/02-PUBLISHING.html` ·
+`get_doc_chapter(chapter="control-panel/02-publishing")`.
+
 ## Style (generated code must match)
 
 PascalCase methods/functions; camelCase, fully-descriptive fields & locals (no
@@ -1780,3 +1837,4 @@ export default class HoverBob extends Behavior
 | Code style | `docs/STYLE_GUIDE.md` · `get_style_guide` |
 | Prefabs + `this.spawner.Spawn` / `level.Spawn` | `get_scripting_context(section="prefab-spawn")` · `docs/blender/PREFABS.html` |
 | Level restart / load / unload (`this.session`, `LevelDirector`) | `get_scripting_context(section="level-session")` · `docs/engine/14-API-GUIDE.html` |
+| Publish / encrypt level assets (`assets.pak` + service worker) | `get_scripting_context(section="published-encrypted-builds")` · `docs/control-panel/02-PUBLISHING.html` |

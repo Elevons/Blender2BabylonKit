@@ -18,4 +18,5 @@ IsEntityInsideColliderVolume does not use babylon or havok volumes, it uses mani
 Export/Scene tab needs a rendering manager block for settings
 GUI editor still says open in "launcher"
 Need to hook up custom editors to current project
+repair components on linked objects might be hacky
 

@@ -5,7 +5,13 @@ export * from "./core/guidFields";
 export * from "./core/attachments";
 export * from "./core/ComponentHost";
 export * from "./core/Entity";
-export { SetEntityActive, IsEntityActive } from "./core/entityActive";
+export { SetEntityActive, IsEntityActive, EntityFromNode } from "./core/entityActive";
+export {
+  AssignNodeEntity,
+  ReadNodeEntity,
+  AssignSceneLevel,
+  ReadSceneLevel,
+} from "./core/bjsMetadata";
 export * from "./core/GameClock";
 export * from "./core/Level";
 export * from "./core/LevelLoader";

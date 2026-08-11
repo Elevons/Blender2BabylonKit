@@ -139,7 +139,7 @@
                 },
                 {
                   "device": "GAMEPAD",
-                  "control": "stick",
+                  "control": "button",
                   "index": 0
                 }
               ]
@@ -155,7 +155,7 @@
                 },
                 {
                   "device": "GAMEPAD",
-                  "control": "axis",
+                  "control": "button",
                   "index": 2
                 }
               ]
@@ -187,73 +187,8 @@
                 },
                 {
                   "device": "GAMEPAD",
-                  "control": "stick",
+                  "control": "button",
                   "index": 1
-                }
-              ]
-            },
-            {
-              "name": "Forward",
-              "type": "BUTTON",
-              "controlType": "BUTTON",
-              "bindings": [
-                {
-                  "device": "KEYBOARD",
-                  "control": "w"
-                },
-                {
-                  "device": "GAMEPAD",
-                  "control": "stick",
-                  "index": 1
-                }
-              ]
-            },
-            {
-              "name": "Backward",
-              "type": "BUTTON",
-              "controlType": "BUTTON",
-              "bindings": [
-                {
-                  "device": "KEYBOARD",
-                  "control": "s"
-                },
-                {
-                  "device": "GAMEPAD",
-                  "control": "stick",
-                  "index": 0
-                }
-              ]
-            },
-            {
-              "name": "Left",
-              "type": "BUTTON",
-              "controlType": "BUTTON",
-              "bindings": [
-                {
-                  "device": "KEYBOARD",
-                  "control": "a"
-                }
-              ]
-            },
-            {
-              "name": "Right",
-              "type": "BUTTON",
-              "controlType": "BUTTON",
-              "bindings": [
-                {
-                  "device": "KEYBOARD",
-                  "control": "d"
-                }
-              ]
-            },
-            {
-              "name": "Reset",
-              "type": "BUTTON",
-              "controlType": "BUTTON",
-              "bindings": [
-                {
-                  "device": "KEYBOARD",
-                  "control": "r"
                 }
               ]
             }
@@ -272,23 +207,19 @@
                   "parts": {
                     "up": {
                       "device": "KEYBOARD",
-                      "control": "w",
-                      "axisHalf": "POSITIVE"
+                      "control": "w"
                     },
                     "down": {
                       "device": "KEYBOARD",
-                      "control": "s",
-                      "axisHalf": "NEGATIVE"
+                      "control": "s"
                     },
                     "left": {
                       "device": "KEYBOARD",
-                      "control": "a",
-                      "axisHalf": "NEGATIVE"
+                      "control": "a"
                     },
                     "right": {
                       "device": "KEYBOARD",
-                      "control": "d",
-                      "axisHalf": "POSITIVE"
+                      "control": "d"
                     }
                   }
                 },
@@ -300,6 +231,42 @@
               ]
             },
             {
+              "name": "Look",
+              "type": "VALUE",
+              "controlType": "VECTOR2",
+              "bindings": [
+                {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1
+                }
+              ]
+            },
+            {
+              "name": "Zoom",
+              "type": "VALUE",
+              "controlType": "AXIS",
+              "bindings": [
+                {
+                  "composite": "1DAXIS",
+                  "parts": {
+                    "negative": {
+                      "device": "GAMEPAD",
+                      "control": "axis",
+                      "index": 1,
+                      "axisHalf": "NEGATIVE"
+                    },
+                    "positive": {
+                      "device": "GAMEPAD",
+                      "control": "axis",
+                      "index": 1,
+                      "axisHalf": "POSITIVE"
+                    }
+                  }
+                }
+              ]
+            },
+            {
               "name": "Reset",
               "type": "BUTTON",
               "controlType": "BUTTON",
@@ -307,6 +274,11 @@
                 {
                   "device": "KEYBOARD",
                   "control": "r"
+                },
+                {
+                  "device": "GAMEPAD",
+                  "control": "button",
+                  "index": 3
                 }
               ]
             }
@@ -314,7 +286,7 @@
         }
       ]
     },
-    "defaultInputMap": "Player",
+    "defaultInputMap": "Vehicle",
     "collisionLayers": {
       "layers": [
         "Default"
@@ -376,10 +348,11 @@
               "09cecd459b6f40649df0b8da4f5aefd2",
               "ed66c5632aca44809bfa173a0233826c",
               "34dec634d34d4c109ffae912ecd1d73d",
-              "4b4c14d7e04c49369061910bc0af2719"
+              "a674f884dd8e456288bba963596e4a1c"
             ],
             "maxDistance": 550.0,
-            "approachSlowdown": 12.0
+            "approachSlowdown": 12.0,
+            "lookDeadzone": 0.9900000095367432
           }
         },
         {
@@ -463,7 +436,8 @@
             "maxDepth": 18000.0,
             "surfaceHeight": 0.0,
             "invertPitch": false,
-            "invertRoll": true
+            "invertRoll": true,
+            "controlsPage": "31d5e2511d37476090a079b78aa43f86"
           },
           "name": "Script"
         },
@@ -507,6 +481,13 @@
           "width": 1024,
           "height": 1024,
           "name": "GUI"
+        },
+        {
+          "type": "SCRIPT",
+          "script": "ControlsOverlay",
+          "path": "//../src/behaviors/ControlsOverlay.ts",
+          "vars": {},
+          "name": "Script"
         }
       ]
     },
@@ -573,7 +554,7 @@
             ],
             "outsideToneMap": "ACES",
             "zoneLut": "post/Videofullness_FREE_Underwater_LUT_05.cube",
-            "secondTrigger": "154615e8fada459ba4cfa61f2e1ecec4",
+            "secondTrigger": "4600a7c8d5a545b7845a1337c8bb78f7",
             "fogCColor": [
               0.9912567734718323,
               0.9550626277923584,
@@ -911,7 +892,7 @@
       ]
     },
     {
-      "id": "154615e8fada459ba4cfa61f2e1ecec4",
+      "id": "4600a7c8d5a545b7845a1337c8bb78f7",
       "name": "Sphere",
       "parent": null,
       "components": [
@@ -954,7 +935,7 @@
           "script": "Endgame",
           "path": "//../src/behaviors/Endgame.ts",
           "vars": {
-            "endGameZone": "154615e8fada459ba4cfa61f2e1ecec4",
+            "endGameZone": "4600a7c8d5a545b7845a1337c8bb78f7",
             "target": "bc2042e80fcf404e988e0c9160a85b94",
             "endgameScreen": "184ba79e49984d638ad22680c43ec9b8",
             "enterDelay": 0.5,
@@ -5844,7 +5825,7 @@
             "minSpawnDistance": 250.0,
             "minimumDepth": -1500.0,
             "spawnClearanceRadius": 100.0,
-            "exclusionVolume": "154615e8fada459ba4cfa61f2e1ecec4"
+            "exclusionVolume": "4600a7c8d5a545b7845a1337c8bb78f7"
           },
           "name": "Shark Spawner"
         },
@@ -5870,7 +5851,7 @@
             "minSpawnDistance": 250.0,
             "minimumDepth": -2000.0,
             "spawnClearanceRadius": 100.0,
-            "exclusionVolume": "154615e8fada459ba4cfa61f2e1ecec4"
+            "exclusionVolume": "4600a7c8d5a545b7845a1337c8bb78f7"
           },
           "name": "Squid Spawner"
         },
@@ -5896,7 +5877,7 @@
             "minSpawnDistance": 250.0,
             "minimumDepth": -2000.0,
             "spawnClearanceRadius": 350.0,
-            "exclusionVolume": "154615e8fada459ba4cfa61f2e1ecec4"
+            "exclusionVolume": "4600a7c8d5a545b7845a1337c8bb78f7"
           },
           "name": "Whale Spawner"
         },
@@ -5922,7 +5903,7 @@
             "minSpawnDistance": 250.0,
             "minimumDepth": -1000.0,
             "spawnClearanceRadius": 100.0,
-            "exclusionVolume": "154615e8fada459ba4cfa61f2e1ecec4"
+            "exclusionVolume": "4600a7c8d5a545b7845a1337c8bb78f7"
           },
           "name": "Turtle Spawner"
         }
@@ -7366,7 +7347,7 @@
       }
     },
     {
-      "id": "799324c887d1496a9593febb79892f19",
+      "id": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "name": "Small Rover.004",
       "parent": null,
       "components": [
@@ -7425,7 +7406,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "64b6271c20d4472bb8565aedbeaa0b59",
+          "target": "dc00610120ce472c86a6f1ea365257c3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7503,8 +7484,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "0968ef5828664882aee0e6ff1ba8c716",
-              "2a14c8aca5b14ac2854539d136da7221"
+              "f439961bdef5447b84628710dbdd4988",
+              "ac863ad344fd404a9b7df54c5e96385d"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -7515,7 +7496,7 @@
       ]
     },
     {
-      "id": "ab09c436e6244625af2a4f24da528f2a",
+      "id": "34ff4f48b472455d919b63e3b7d402c1",
       "name": "RR.Wheel.001",
       "parent": null,
       "components": [
@@ -7533,7 +7514,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "6199b89d80e3445395fa9cb361620a65",
+          "target": "5e0fa6497ec3444cb9c792dcb08bfd2c",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7634,7 +7615,7 @@
       ]
     },
     {
-      "id": "6199b89d80e3445395fa9cb361620a65",
+      "id": "5e0fa6497ec3444cb9c792dcb08bfd2c",
       "name": "RR.Arm.001",
       "parent": null,
       "components": [
@@ -7678,7 +7659,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "799324c887d1496a9593febb79892f19",
+          "target": "5f3548b6157b43f5a0384d7cbc82a6fd",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7753,7 +7734,7 @@
       ]
     },
     {
-      "id": "82e644fa327e4b4e98aadbc40ba1c470",
+      "id": "e924fa5ae2504e70aa9618860fc5a813",
       "name": "RL.Wheel.001",
       "parent": null,
       "components": [
@@ -7771,7 +7752,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "12a2be8a24c84c95a0d77ac8a9ae91bf",
+          "target": "7dda72fcb3fe453296e07c542bf21ed4",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7872,7 +7853,7 @@
       ]
     },
     {
-      "id": "12a2be8a24c84c95a0d77ac8a9ae91bf",
+      "id": "7dda72fcb3fe453296e07c542bf21ed4",
       "name": "RL.Arm.001",
       "parent": null,
       "components": [
@@ -7916,7 +7897,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "799324c887d1496a9593febb79892f19",
+          "target": "5f3548b6157b43f5a0384d7cbc82a6fd",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -7991,7 +7972,7 @@
       ]
     },
     {
-      "id": "7dbfd79b95c141618307ef7cea48d74e",
+      "id": "d8bf00e6ea674cbe94f1ffa31158dcdd",
       "name": "FR.Wheel.001",
       "parent": null,
       "components": [
@@ -8009,7 +7990,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "f22dfc31ffd64c6aa1f353f5d930d5f4",
+          "target": "6a5859552e364545bb39c1bc11316ed8",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8110,7 +8091,7 @@
       ]
     },
     {
-      "id": "f22dfc31ffd64c6aa1f353f5d930d5f4",
+      "id": "6a5859552e364545bb39c1bc11316ed8",
       "name": "FR.Arm.001",
       "parent": null,
       "components": [
@@ -8154,7 +8135,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "799324c887d1496a9593febb79892f19",
+          "target": "5f3548b6157b43f5a0384d7cbc82a6fd",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8229,7 +8210,7 @@
       ]
     },
     {
-      "id": "1d95125f55e54b758b88e6d1b5384be5",
+      "id": "76f23321333545f9a3bd536902f304b6",
       "name": "FL.Wheel.001",
       "parent": null,
       "components": [
@@ -8273,7 +8254,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "818229544f5c4e9c9e03ab0de52d9a6f",
+          "target": "56927534ac0d42d9bbbf6ba7920287dc",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8348,7 +8329,7 @@
       ]
     },
     {
-      "id": "818229544f5c4e9c9e03ab0de52d9a6f",
+      "id": "56927534ac0d42d9bbbf6ba7920287dc",
       "name": "Fl.Arm.001",
       "parent": null,
       "components": [
@@ -8392,7 +8373,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "799324c887d1496a9593febb79892f19",
+          "target": "5f3548b6157b43f5a0384d7cbc82a6fd",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8467,9 +8448,9 @@
       ]
     },
     {
-      "id": "12b15e5797b5484f97accc7b40583aa6",
+      "id": "4121a00cfadb4b15b66387651af7aa69",
       "name": "Bubbles.012",
-      "parent": "799324c887d1496a9593febb79892f19",
+      "parent": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "components": [
         {
           "type": "PARTICLE",
@@ -8482,9 +8463,9 @@
       ]
     },
     {
-      "id": "2930a00296a04234abf20f9ed5ddef08",
+      "id": "3d59ab4324a04170a11219d4ad20af15",
       "name": "Bubbles.013",
-      "parent": "799324c887d1496a9593febb79892f19",
+      "parent": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "components": [
         {
           "type": "PARTICLE",
@@ -8497,9 +8478,9 @@
       ]
     },
     {
-      "id": "554e7abbd1604866babc0ae83ba87199",
+      "id": "b01ca9e1005f472c9f85ce9277b9c3d0",
       "name": "Bubbles.014",
-      "parent": "799324c887d1496a9593febb79892f19",
+      "parent": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "components": [
         {
           "type": "PARTICLE",
@@ -8512,9 +8493,9 @@
       ]
     },
     {
-      "id": "d90a74977b6a4bf88725ede863c0e327",
+      "id": "5ca419e621fd452bbb8cf9f2ba01c950",
       "name": "Bubbles.015",
-      "parent": "799324c887d1496a9593febb79892f19",
+      "parent": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "components": [
         {
           "type": "PARTICLE",
@@ -8527,9 +8508,9 @@
       ]
     },
     {
-      "id": "b8c97f60494d4758a1c950593db59967",
+      "id": "ba0d0f56c61c41b3aad0690b9ec315d3",
       "name": "Bubbles.016",
-      "parent": "799324c887d1496a9593febb79892f19",
+      "parent": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "components": [
         {
           "type": "PARTICLE",
@@ -8542,9 +8523,9 @@
       ]
     },
     {
-      "id": "d23e93e3516a4ea2bf03124be99cb726",
+      "id": "baad0fd22f3748329f1e8a2111263f87",
       "name": "Bubbles.017",
-      "parent": "799324c887d1496a9593febb79892f19",
+      "parent": "5f3548b6157b43f5a0384d7cbc82a6fd",
       "components": [
         {
           "type": "PARTICLE",
@@ -8557,7 +8538,7 @@
       ]
     },
     {
-      "id": "0968ef5828664882aee0e6ff1ba8c716",
+      "id": "f439961bdef5447b84628710dbdd4988",
       "name": "Spot.001",
       "parent": null,
       "components": [],
@@ -8587,7 +8568,7 @@
       }
     },
     {
-      "id": "2a14c8aca5b14ac2854539d136da7221",
+      "id": "ac863ad344fd404a9b7df54c5e96385d",
       "name": "Spot.002",
       "parent": null,
       "components": [],
@@ -8616,7 +8597,7 @@
       }
     },
     {
-      "id": "64b6271c20d4472bb8565aedbeaa0b59",
+      "id": "dc00610120ce472c86a6f1ea365257c3",
       "name": "Small Rover.005",
       "parent": null,
       "components": [
@@ -8753,8 +8734,8 @@
           "path": "//../src/behaviors/increaselights.ts",
           "vars": {
             "lights": [
-              "a45d88d37ceb42fdae1ee8c4b11806dd",
-              "ab56ba4d7bbb40109b51259a91a8a4d4"
+              "bb9f28f43092446893d9f858b5b056fb",
+              "cdbb7ebc4d0b471784f22dd0f733daa0"
             ],
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
@@ -8765,7 +8746,7 @@
       ]
     },
     {
-      "id": "97aa2a4a2c0d44378529b4288ebf9275",
+      "id": "7677dceadec5444b89de4fb9d9a0c877",
       "name": "RR.Wheel.002",
       "parent": null,
       "components": [
@@ -8783,7 +8764,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "3d99fb850e794783a7d6dcb646815906",
+          "target": "a175af49b6d84aac864d729485221ce1",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -8884,7 +8865,7 @@
       ]
     },
     {
-      "id": "3d99fb850e794783a7d6dcb646815906",
+      "id": "a175af49b6d84aac864d729485221ce1",
       "name": "RR.Arm.003",
       "parent": null,
       "components": [
@@ -8928,7 +8909,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "64b6271c20d4472bb8565aedbeaa0b59",
+          "target": "dc00610120ce472c86a6f1ea365257c3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9003,7 +8984,7 @@
       ]
     },
     {
-      "id": "21351cf8f031452087ad433523f07f28",
+      "id": "4ead0c5efc014e17ad733fe3fb36f87d",
       "name": "RL.Wheel.005",
       "parent": null,
       "components": [
@@ -9021,7 +9002,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "6955eaf283e34e23b35bc1064b53a3aa",
+          "target": "a1b0791c25654c73a49ef7e220613ad8",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9122,7 +9103,7 @@
       ]
     },
     {
-      "id": "6955eaf283e34e23b35bc1064b53a3aa",
+      "id": "a1b0791c25654c73a49ef7e220613ad8",
       "name": "RL.Arm.003",
       "parent": null,
       "components": [
@@ -9166,7 +9147,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "64b6271c20d4472bb8565aedbeaa0b59",
+          "target": "dc00610120ce472c86a6f1ea365257c3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9241,7 +9222,7 @@
       ]
     },
     {
-      "id": "81fc4d27bc0043238da6a29b7ca3676e",
+      "id": "b4e89bfde107434bb40fae34f6663d1c",
       "name": "FR.Wheel.002",
       "parent": null,
       "components": [
@@ -9259,7 +9240,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "522c205d695f439cbfe58283c7256566",
+          "target": "4383deb3e87146d3b22d6b458621e992",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9360,7 +9341,7 @@
       ]
     },
     {
-      "id": "522c205d695f439cbfe58283c7256566",
+      "id": "4383deb3e87146d3b22d6b458621e992",
       "name": "FR.Arm.003",
       "parent": null,
       "components": [
@@ -9404,7 +9385,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "64b6271c20d4472bb8565aedbeaa0b59",
+          "target": "dc00610120ce472c86a6f1ea365257c3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9479,7 +9460,7 @@
       ]
     },
     {
-      "id": "c47cb37a1a43409fa27ed6dc52cde389",
+      "id": "fa527a044ee54343bd21a6aef521c5eb",
       "name": "FL.Wheel.005",
       "parent": null,
       "components": [
@@ -9523,7 +9504,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "b58057aab9f44479a1de024dc7ca788e",
+          "target": "beb70f727f264f129e270d4f6131083c",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9598,7 +9579,7 @@
       ]
     },
     {
-      "id": "b58057aab9f44479a1de024dc7ca788e",
+      "id": "beb70f727f264f129e270d4f6131083c",
       "name": "Fl.Arm.003",
       "parent": null,
       "components": [
@@ -9642,7 +9623,7 @@
         {
           "type": "CONSTRAINT",
           "constraintType": "CUSTOM",
-          "target": "64b6271c20d4472bb8565aedbeaa0b59",
+          "target": "dc00610120ce472c86a6f1ea365257c3",
           "applyObjectScale": true,
           "pivot": [
             0.0,
@@ -9717,9 +9698,9 @@
       ]
     },
     {
-      "id": "0099c1e097c143e49034142e622ce359",
+      "id": "41f432e3b2b9429ca16b337d74906056",
       "name": "Bubbles.018",
-      "parent": "64b6271c20d4472bb8565aedbeaa0b59",
+      "parent": "dc00610120ce472c86a6f1ea365257c3",
       "components": [
         {
           "type": "PARTICLE",
@@ -9732,9 +9713,9 @@
       ]
     },
     {
-      "id": "d3a7143cedb9435490616effa9869597",
+      "id": "ddd00b4d253644f3a1357c2d0468c98a",
       "name": "Bubbles.019",
-      "parent": "64b6271c20d4472bb8565aedbeaa0b59",
+      "parent": "dc00610120ce472c86a6f1ea365257c3",
       "components": [
         {
           "type": "PARTICLE",
@@ -9747,9 +9728,9 @@
       ]
     },
     {
-      "id": "7c91c9e7de5f4c3cbf23ee4cb393bf4a",
+      "id": "9539b22b51b9435cbfbd200ba113986b",
       "name": "Bubbles.020",
-      "parent": "64b6271c20d4472bb8565aedbeaa0b59",
+      "parent": "dc00610120ce472c86a6f1ea365257c3",
       "components": [
         {
           "type": "PARTICLE",
@@ -9762,9 +9743,9 @@
       ]
     },
     {
-      "id": "38d311d04d9a4546955c88aeb84befdc",
+      "id": "38c2c021a45c43a9ad2b7244e11a937d",
       "name": "Bubbles.021",
-      "parent": "64b6271c20d4472bb8565aedbeaa0b59",
+      "parent": "dc00610120ce472c86a6f1ea365257c3",
       "components": [
         {
           "type": "PARTICLE",
@@ -9777,9 +9758,9 @@
       ]
     },
     {
-      "id": "9eedee91f0724cc1856e66a3ac911f6c",
+      "id": "fec9d7c0b4bc4487b453f300ef441eee",
       "name": "Bubbles.022",
-      "parent": "64b6271c20d4472bb8565aedbeaa0b59",
+      "parent": "dc00610120ce472c86a6f1ea365257c3",
       "components": [
         {
           "type": "PARTICLE",
@@ -9792,9 +9773,9 @@
       ]
     },
     {
-      "id": "7486814d321e46ddb23c214ea8514b0c",
+      "id": "158dd0b084b64e949e9f7ae2af345f34",
       "name": "Bubbles.023",
-      "parent": "64b6271c20d4472bb8565aedbeaa0b59",
+      "parent": "dc00610120ce472c86a6f1ea365257c3",
       "components": [
         {
           "type": "PARTICLE",
@@ -9807,7 +9788,7 @@
       ]
     },
     {
-      "id": "a45d88d37ceb42fdae1ee8c4b11806dd",
+      "id": "bb9f28f43092446893d9f858b5b056fb",
       "name": "Spot.006",
       "parent": null,
       "components": [],
@@ -9837,7 +9818,7 @@
       }
     },
     {
-      "id": "ab56ba4d7bbb40109b51259a91a8a4d4",
+      "id": "cdbb7ebc4d0b471784f22dd0f733daa0",
       "name": "Spot.007",
       "parent": null,
       "components": [],
@@ -9868,7 +9849,7 @@
     {
       "id": "f4af1a53adc841d399dfe48ba660f955",
       "name": "RR.Wheel",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -9937,7 +9918,7 @@
     {
       "id": "39d031ebb7734eb5808ab2c3f175bdee",
       "name": "RR.ArmCenter",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10056,7 +10037,7 @@
     {
       "id": "7bdd4efa1e7546cc9b0ec6045c4f3b0b",
       "name": "RR.Arm",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10175,7 +10156,7 @@
     {
       "id": "5289be0774ba4b21a0e1e8835de946fe",
       "name": "RL.Wheel.004",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10244,7 +10225,7 @@
     {
       "id": "49d565ba2c3b4efe911c2528098aba83",
       "name": "RL.Wheel.002",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10313,7 +10294,7 @@
     {
       "id": "da55807f3f654ff08426862b1e8a5cd3",
       "name": "RL.Wheel",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10382,7 +10363,7 @@
     {
       "id": "ed4d3659c1e3460db74090ce02467f66",
       "name": "RL.ArmCenter",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10501,7 +10482,7 @@
     {
       "id": "06e674c66e85489ba3970b4ff2766f6d",
       "name": "RL.Arm",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10620,7 +10601,7 @@
     {
       "id": "861a855d6d164e1f968eeb03b58e337b",
       "name": "FRArmCenter",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10739,7 +10720,7 @@
     {
       "id": "a4d8494367754a15b4fe2aaf4b7fdaa8",
       "name": "FR.Wheel",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10808,7 +10789,7 @@
     {
       "id": "d98484a8b72b42079248fdcd49588429",
       "name": "FR.Arm",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10927,7 +10908,7 @@
     {
       "id": "0806f0e60b8f4c26a3fd0902e6b7e203",
       "name": "FL.Wheel.004",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -10996,7 +10977,7 @@
     {
       "id": "7dd53a6e90a641e3991c48255b3209ae",
       "name": "FL.Wheel.002",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11065,7 +11046,7 @@
     {
       "id": "f77c4c18494849acb4f70461ec2fe694",
       "name": "FL.Wheel",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11134,7 +11115,7 @@
     {
       "id": "52fc5ee512a04668bb44ac7535c7db23",
       "name": "Fl.ArmCenter",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11253,7 +11234,7 @@
     {
       "id": "8459be8129c1471f8ec3e255791c8f19",
       "name": "Fl.Arm",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "RIGIDBODY",
@@ -11372,7 +11353,7 @@
     {
       "id": "bc2042e80fcf404e988e0c9160a85b94",
       "name": "Engine Rover.003",
-      "parent": "4b4c14d7e04c49369061910bc0af2719",
+      "parent": "a674f884dd8e456288bba963596e4a1c",
       "components": [
         {
           "type": "COLLIDER",
@@ -11402,6 +11383,36 @@
         },
         {
           "type": "SCRIPT",
+          "script": "ToggleInWater",
+          "path": "//../src/behaviors/ToggleInWater.ts",
+          "vars": {
+            "waterCollider": "c1f5d461e31a4b7e89cc3e0a3b17b662",
+            "targetObjects": [
+              "248b86de014d4c7aafd1daa6b52ba0da"
+            ],
+            "probe": "bc2042e80fcf404e988e0c9160a85b94",
+            "debugLogs": false,
+            "enableInWater": true
+          },
+          "name": "TurnonUnderwater"
+        },
+        {
+          "type": "SCRIPT",
+          "script": "ToggleInWater",
+          "path": "//../src/behaviors/ToggleInWater.ts",
+          "vars": {
+            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
+            "targetObjects": [
+              "d3c7bd1fc8d14aca83cb5c5fa0c81da8"
+            ],
+            "probe": "bc2042e80fcf404e988e0c9160a85b94",
+            "debugLogs": false,
+            "enableInWater": true
+          },
+          "name": "BubbleDisable"
+        },
+        {
+          "type": "SCRIPT",
           "script": "CarController",
           "path": "//../src/behaviors/CarController.ts",
           "vars": {
@@ -11422,19 +11433,12 @@
             "force": 100.0,
             "holdSeconds": 0.5,
             "turnRatio": 0.5,
-            "velocityAssist": 100.0,
+            "velocityAssist": 150.0,
             "velocityRampSeconds": 3.0,
             "angularAssist": 10.0,
             "playerEntity": "bc2042e80fcf404e988e0c9160a85b94",
-            "groundRaycastDistance": 200.0,
-            "debugGroundRay": false,
-            "resetLiftMeters": 50.0,
-            "otherCars": [
-              "98cdbaac898a4428951c085bdb580291",
-              "64b6271c20d4472bb8565aedbeaa0b59",
-              "799324c887d1496a9593febb79892f19"
-            ],
-            "carGroundProbeDistance": 50.0
+            "groundRaycastDistance": 40.0,
+            "debugGroundRay": false
           }
         },
         {
@@ -11467,38 +11471,8 @@
             "sceneIntensityA": 1.0,
             "sceneIntensityB": 0.10000000149011612,
             "brightnessX": 0.0,
-            "brightnessY": 8000.0
+            "brightnessY": 3000.0
           }
-        },
-        {
-          "type": "SCRIPT",
-          "script": "ToggleInWater",
-          "path": "//../src/behaviors/ToggleInWater.ts",
-          "vars": {
-            "waterCollider": "c1f5d461e31a4b7e89cc3e0a3b17b662",
-            "targetObjects": [
-              "248b86de014d4c7aafd1daa6b52ba0da"
-            ],
-            "probe": "bc2042e80fcf404e988e0c9160a85b94",
-            "debugLogs": false,
-            "enableInWater": true
-          },
-          "name": "TurnonUnderwater"
-        },
-        {
-          "type": "SCRIPT",
-          "script": "ToggleInWater",
-          "path": "//../src/behaviors/ToggleInWater.ts",
-          "vars": {
-            "waterCollider": "7e048d6033fc450fae6d64324a5b1bea",
-            "targetObjects": [
-              "d3c7bd1fc8d14aca83cb5c5fa0c81da8"
-            ],
-            "probe": "bc2042e80fcf404e988e0c9160a85b94",
-            "debugLogs": false,
-            "enableInWater": true
-          },
-          "name": "BubbleDisable"
         }
       ]
     },
@@ -11716,7 +11690,7 @@
       }
     },
     {
-      "id": "4b4c14d7e04c49369061910bc0af2719",
+      "id": "a674f884dd8e456288bba963596e4a1c",
       "name": "Engine Rover Parent",
       "parent": null,
       "components": []

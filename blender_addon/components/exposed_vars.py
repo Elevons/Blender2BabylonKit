@@ -79,11 +79,11 @@ class BJSListItem(PropertyGroup):
 class BJSExposedVar(PropertyGroup):
     """One @exposed variable parsed from a behavior script. Auto-populated by
     syncing; the value slot used depends on `vtype`."""
-    name:  StringProperty()
+    name:  StringProperty(overridable=False)
     # String id ('ENTITY', 'COLOR', …) — not EnumProperty, so .blend files survive
     # reordering VAR_TYPES. Set by sync from script_parse, never user-edited.
-    vtype: StringProperty(default='FLOAT')
-    label: StringProperty()
+    vtype: StringProperty(default='FLOAT', overridable=False)
+    label: StringProperty(overridable=False)
 
     f_val: FloatProperty(name="Value")
     b_val: BoolProperty(name="Value")
@@ -96,18 +96,18 @@ class BJSExposedVar(PropertyGroup):
     obj_val: PointerProperty(name="Object", type=Object, update=_on_obj_ref_update)
 
     # ENUM: choices stored as a separator-joined string; selection lives in s_val.
-    enum_options: StringProperty()
+    enum_options: StringProperty(overridable=False)
     e_val: EnumProperty(
         name="Value", items=_enum_items, get=_enum_get, set=_enum_set,
         overridable=False,
     )
 
     # LIST: element type + the items themselves.
-    elem_type:  StringProperty(default='FLOAT')
+    elem_type:  StringProperty(default='FLOAT', overridable=False)
     list_items: CollectionProperty(type=BJSListItem)
-    list_index: IntProperty(default=0)
+    list_index: IntProperty(default=0, overridable=False)
     # Per-list collapse, independent of the component's own show_expanded.
-    show_expanded: BoolProperty(default=True)
+    show_expanded: BoolProperty(default=True, overridable=False)
     # Typed length: reading returns the current item count, writing resizes.
     list_count: IntProperty(
         name="Count", description="Number of items in the list",

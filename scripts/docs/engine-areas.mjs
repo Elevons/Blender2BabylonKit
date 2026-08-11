@@ -1128,7 +1128,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "ProcessEntity (loop)",
           "sub": "step 5",
-          "desc": "Per manifest entity: resolve node, create Entity, back-ref node.metadata.bjsEntity, then ApplyEntityComponents + light/camera processing.",
+          "desc": "Per manifest entity: resolve node, create Entity, AssignNodeEntity (non-enumerable metadata.bjsEntity), then ApplyEntityComponents + light/camera processing.",
           "meta": [
             [
               "Light",
@@ -1137,6 +1137,10 @@ export const ENGINE_AREA_PAGES = {
             [
               "Camera",
               "ProcessCameraForEntity"
+            ],
+            [
+              "Back-ref",
+              "core/bjsMetadata.ts"
             ]
           ]
         },
@@ -1547,11 +1551,11 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Entity",
           "sub": "core/Entity.ts",
-          "desc": "id/name/node/tag, attachments (live component registry), behaviors, body?, animations, sounds. GetAttachment / GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage → every behavior's OnMessage.",
+          "desc": "id/name/node/tag, attachments (live component registry), behaviors, body?, animations, sounds. GetAttachment / GetBehavior / GetAnimation / GetSound (exact then contains), SendMessage → every behavior's OnMessage. Resolve from a node with EntityFromNode (non-enumerable metadata.bjsEntity).",
           "meta": [
             [
               "Back-ref",
-              "node.metadata.bjsEntity"
+              "AssignNodeEntity / EntityFromNode"
             ]
           ]
         },

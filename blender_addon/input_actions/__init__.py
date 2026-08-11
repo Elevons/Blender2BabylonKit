@@ -14,13 +14,19 @@ def _sync_gamepad_pickers_on_load(_dummy):
     if scenes is None:
         return
 
+    from .properties import (
+        MigrateGamepadTriggerBinding,
+        RepairCorruptedGamepadBinding,
+        SyncGpEnumsFromIndex,
+    )
+
     for scene in scenes:
         for input_map in scene.bjs_input_maps:
             for action in input_map.actions:
                 for row in action.bindings:
                     if row.device == 'GAMEPAD':
-                        from .properties import MigrateGamepadTriggerBinding
                         MigrateGamepadTriggerBinding(row)
+                        RepairCorruptedGamepadBinding(row, action.control_type)
                         SyncGpEnumsFromIndex(row)
 
 

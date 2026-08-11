@@ -93,7 +93,7 @@ def serialize_input_asset(scene):
 
 # ── manifest -> scene props ──
 
-def _apply_binding_fields(row, data):
+def _apply_binding_fields(row, data, action_control_type=None):
     """Fill one binding row's control fields from manifest-shaped data."""
     js_to_alias = {real: alias for alias, real in KEY_ALIASES.items()}
 
@@ -106,9 +106,7 @@ def _apply_binding_fields(row, data):
         control = str(data.get("control", "button")).upper()
         row.gp_control = control if control in _GP_CONTROLS else 'BUTTON'
         row.index = max(0, int(data.get("index", 0) or 0))
-        from .properties import MigrateGamepadTriggerBinding, SyncGpEnumsFromIndex
-        MigrateGamepadTriggerBinding(row)
-        SyncGpEnumsFromIndex(row)
+
     try:
         row.scale = float(data.get("scale", 1.0))
     except (TypeError, ValueError):
@@ -116,11 +114,23 @@ def _apply_binding_fields(row, data):
 
     axis_half = str(data.get("axisHalf", "none")).upper()
     row.axis_half = axis_half if axis_half in _AXIS_HALVES else 'NONE'
-    if (row.axis_half == 'NONE' and row.part != 'NONE'
-            and row.device == 'GAMEPAD' and row.gp_control == 'AXIS'
-            and "axisHalf" not in data):
-        from .properties import DefaultAxisHalfForPart
-        row.axis_half = DefaultAxisHalfForPart(row.part)
+
+    if row.device == 'GAMEPAD':
+        from .properties import (
+            DefaultAxisHalfForPart,
+            MigrateGamepadTriggerBinding,
+            RepairCorruptedGamepadBinding,
+            SyncGpEnumsFromIndex,
+        )
+        if (row.axis_half == 'NONE' and row.part != 'NONE'
+                and row.gp_control == 'AXIS'
+                and "axisHalf" not in data):
+            row.axis_half = DefaultAxisHalfForPart(row.part)
+        MigrateGamepadTriggerBinding(row)
+        # Repair before Sync so corrupted JSON/blend rows (button→stick) stick
+        # the intended control kind; Sync only mirrors picker labels.
+        RepairCorruptedGamepadBinding(row, action_control_type)
+        SyncGpEnumsFromIndex(row)
 
 
 def apply_input_asset(scene, data):
@@ -151,10 +161,10 @@ def apply_input_asset(scene, data):
                         if part in parts:
                             row = a.bindings.add()
                             row.part = part.upper()
-                            _apply_binding_fields(row, parts[part])
+                            _apply_binding_fields(row, parts[part], a.control_type)
                 else:
                     row = a.bindings.add()
-                    _apply_binding_fields(row, binding_data)
+                    _apply_binding_fields(row, binding_data, a.control_type)
 
         m.active_action = 0 if len(m.actions) else -1
 

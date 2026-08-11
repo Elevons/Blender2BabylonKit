@@ -85,36 +85,97 @@ _GP_BUTTON_IDS = {item[0] for item in GAMEPAD_BUTTON_ITEMS}
 _GP_AXIS_IDS = {item[0] for item in GAMEPAD_AXIS_ITEMS}
 _GP_STICK_IDS = {item[0] for item in GAMEPAD_STICK_ITEMS}
 
+# SyncGpEnumsFromIndex writes all three pickers so the UI stays coherent when
+# the user switches Button/Axis/Stick. Those EnumProperties have update()
+# callbacks that set gp_control — without this flag, index 0/1 (valid for
+# every kind) always ends as STICK after Load Asset / file reload.
+_SYNCING_GP_PICKERS = False
+
 
 def MigrateGamepadTriggerBinding(binding):
     """LT/RT were briefly authored as buttons 6/7; runtime expects axis 4/5."""
+    global _SYNCING_GP_PICKERS
+
     if binding.device != 'GAMEPAD':
         return False
 
-    if binding.gp_control == 'BUTTON' and binding.index == 6:
-        binding.gp_control = 'AXIS'
-        binding.index = GAMEPAD_TRIGGER_AXIS_LEFT
-        SyncGpEnumsFromIndex(binding)
-        return True
-
-    if binding.gp_control == 'BUTTON' and binding.index == 7:
-        binding.gp_control = 'AXIS'
-        binding.index = GAMEPAD_TRIGGER_AXIS_RIGHT
+    if binding.gp_control == 'BUTTON' and binding.index in (6, 7):
+        target = (GAMEPAD_TRIGGER_AXIS_LEFT if binding.index == 6
+                  else GAMEPAD_TRIGGER_AXIS_RIGHT)
+        _SYNCING_GP_PICKERS = True
+        try:
+            binding.gp_control = 'AXIS'
+            binding.index = target
+        finally:
+            _SYNCING_GP_PICKERS = False
         SyncGpEnumsFromIndex(binding)
         return True
 
     return False
 
 
+def RepairCorruptedGamepadBinding(binding, action_control_type=None):
+    """Undo SyncGpEnumsFromIndex stomps from older addon builds.
+
+    Picker update callbacks used to rewrite ``gp_control`` when mirroring index
+    into all three pickers — button 0/1 became stick, button 2/3 became axis,
+    and axis rows with Axis Half became sticks.
+    """
+    global _SYNCING_GP_PICKERS
+
+    if binding.device != 'GAMEPAD':
+        return False
+
+    new_control = None
+
+    # Axis Half only applies to axes; a stick row with a half was an axis.
+    if binding.gp_control == 'STICK' and binding.axis_half != 'NONE':
+        new_control = 'AXIS'
+
+    # Face-button actions almost never bind a whole stick; index landed on stick
+    # or a stick-axis because Sync ran the picker updates in button→axis→stick order.
+    if (action_control_type == 'BUTTON'
+            and binding.composite == 'NONE'
+            and binding.part == 'NONE'):
+        if binding.gp_control == 'STICK':
+            new_control = 'BUTTON'
+        elif (binding.gp_control == 'AXIS'
+              and binding.index not in (
+                  GAMEPAD_TRIGGER_AXIS_LEFT, GAMEPAD_TRIGGER_AXIS_RIGHT)):
+            new_control = 'BUTTON'
+
+    if new_control is None or new_control == binding.gp_control:
+        return False
+
+    # Assigning gp_control normally syncs index from the matching picker — that
+    # would clobber the real index (e.g. Interact button 2 → picker default 0).
+    _SYNCING_GP_PICKERS = True
+    try:
+        binding.gp_control = new_control
+    finally:
+        _SYNCING_GP_PICKERS = False
+    return True
+
+
 def SyncGpEnumsFromIndex(binding):
-    """Mirror index into the stored pickers (after load/capture)."""
+    """Mirror index into the stored pickers (after load/capture).
+
+    Does not change ``gp_control`` — picker updates are suppressed while syncing
+    so a button at index 0 is not rewritten as a stick (index 0 is also a stick).
+    """
+    global _SYNCING_GP_PICKERS
+
     key = str(binding.index)
-    if key in _GP_BUTTON_IDS:
-        binding.gp_button = key
-    if key in _GP_AXIS_IDS:
-        binding.gp_axis = key
-    if key in _GP_STICK_IDS:
-        binding.gp_stick = key
+    _SYNCING_GP_PICKERS = True
+    try:
+        if key in _GP_BUTTON_IDS:
+            binding.gp_button = key
+        if key in _GP_AXIS_IDS:
+            binding.gp_axis = key
+        if key in _GP_STICK_IDS:
+            binding.gp_stick = key
+    finally:
+        _SYNCING_GP_PICKERS = False
 
 
 def _sync_gp_index_from_enums(binding):
@@ -127,11 +188,15 @@ def _sync_gp_index_from_enums(binding):
 
 
 def _on_gp_button_changed(self, context):
+    if _SYNCING_GP_PICKERS:
+        return
     self.gp_control = 'BUTTON'
     self.index = int(self.gp_button)
 
 
 def _on_gp_axis_changed(self, context):
+    if _SYNCING_GP_PICKERS:
+        return
     self.gp_control = 'AXIS'
     self.index = int(self.gp_axis)
     if self.part != 'NONE' and self.axis_half == 'NONE':
@@ -139,11 +204,15 @@ def _on_gp_axis_changed(self, context):
 
 
 def _on_gp_stick_changed(self, context):
+    if _SYNCING_GP_PICKERS:
+        return
     self.gp_control = 'STICK'
     self.index = int(self.gp_stick)
 
 
 def _on_gp_control_changed(self, context):
+    if _SYNCING_GP_PICKERS:
+        return
     _sync_gp_index_from_enums(self)
 
 

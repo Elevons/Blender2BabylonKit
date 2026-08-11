@@ -43,6 +43,21 @@ class BJS_MT_component_menu(Menu):
         rm = layout.operator("bjs.remove_component", text="Delete", icon='TRASH')
         rm.index = idx
 
+        if obj is not None and getattr(obj, "override_library", None) is not None:
+            layout.separator()
+            layout.operator(
+                "bjs.repair_override_components",
+                text="Repair Override Components",
+                icon='FILE_REFRESH',
+            )
+        elif obj is not None and obj.library is None:
+            layout.separator()
+            layout.operator(
+                "bjs.ensure_component_row_names",
+                text="Ensure Component Row Names",
+                icon='FONT_DATA',
+            )
+
 
 classes = (
     BJS_MT_component_menu,

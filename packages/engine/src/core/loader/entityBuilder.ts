@@ -14,6 +14,7 @@ import { ApplyBlenderCamera, BuildTypedCamera, QueueCameraTargets } from "../../
 import { FindNodeByName, HideEntityNode } from "./nodeResolution";
 import { ApplyEntityComponents } from "./componentRegistry";
 import type { LoadContext } from "./context";
+import { AssignNodeEntity } from "../bjsMetadata";
 
 /**
  * The per-entity build pass: resolve each manifest entity to its glTF node,
@@ -97,7 +98,7 @@ export function ProcessEntity(
   context.level.entities.set(entityKey, entity);
   // Retained so Level.Spawn can rebuild this entity's component stack later.
   context.level.entityData.set(entityKey, entityData);
-  resolvedNode.metadata = { ...(resolvedNode.metadata ?? {}), bjsEntity: entity };
+  AssignNodeEntity(resolvedNode, entity);
 
   if (entityData.visible === false)
   {

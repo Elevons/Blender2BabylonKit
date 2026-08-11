@@ -176,6 +176,7 @@ export const RECIPES: Recipe[] = [
       "Do not overwrite wheel node.rotation when hinge motors drive physics.",
       "Use list_input_actions for real action names (Vehicle/Main Control vs legacy Forward/Backward).",
       "Author Main Control as Value + Vector 2: WASD 2D Vector + Left Stick (not four axis-half rows).",
+      "Reset/face-button gamepad rows: save the .blend (Save Asset alone is not enough). Button indices 2/3 can look like Axis after reload on older addon builds — reload addon + save blend.",
       "Constrained bodies work best as siblings, not parented to each other.",
     ],
     exposedFields: [

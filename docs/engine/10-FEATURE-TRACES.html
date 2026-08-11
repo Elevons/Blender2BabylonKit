@@ -390,7 +390,7 @@
 <li><span class="step-stage">Export</span><p class="step-what">Export writes that ID into the 3D model file on each node.</p><p class="step-code"><code>blender_addon/export/level.py</code> · glTF node <code>extras.bjs_id</code></p></li>
 <li><span class="step-stage">Manifest</span><p class="step-what">The same ID appears as <code>entities[].id</code> in the level JSON.</p><p class="step-code">manifest · <code>entities[].id</code></p></li>
 <li><span class="step-stage">Load</span><p class="step-what">The loader builds a lookup table from model nodes to IDs. It then matches each entity row to a node.</p><p class="step-code"><code>packages/engine/src/core/loader/nodeResolution.ts</code> · <code>BuildIdIndex</code>, <code>ProcessEntity</code></p></li>
-<li><span class="step-stage">Runtime</span><p class="step-what">You get an <code>Entity</code> in <code>level.entities</code>. The 3D node stores which entity owns it.</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · node <code>metadata.bjsEntity</code></p></li>
+<li><span class="step-stage">Runtime</span><p class="step-what">You get an <code>Entity</code> in <code>level.entities</code>. The 3D node stores which entity owns it via <code>AssignNodeEntity</code> (non-enumerable <code>metadata.bjsEntity</code>).</p><p class="step-code"><code>packages/engine/src/core/Entity.ts</code> · <code>core/bjsMetadata.ts</code> · <code>EntityFromNode(node)</code></p></li>
 </ol>
 </section>
 

@@ -11,22 +11,50 @@
             {
               "composite": "2DVECTOR",
               "parts": {
-                "up": { "device": "KEYBOARD", "control": "w" },
-                "down": { "device": "KEYBOARD", "control": "s" },
-                "left": { "device": "KEYBOARD", "control": "a" },
-                "right": { "device": "KEYBOARD", "control": "d" }
+                "up": {
+                  "device": "KEYBOARD",
+                  "control": "w"
+                },
+                "down": {
+                  "device": "KEYBOARD",
+                  "control": "s"
+                },
+                "left": {
+                  "device": "KEYBOARD",
+                  "control": "a"
+                },
+                "right": {
+                  "device": "KEYBOARD",
+                  "control": "d"
+                }
               }
             },
             {
               "composite": "2DVECTOR",
               "parts": {
-                "up": { "device": "KEYBOARD", "control": "arrowup" },
-                "down": { "device": "KEYBOARD", "control": "arrowdown" },
-                "left": { "device": "KEYBOARD", "control": "arrowleft" },
-                "right": { "device": "KEYBOARD", "control": "arrowright" }
+                "up": {
+                  "device": "KEYBOARD",
+                  "control": "arrowup"
+                },
+                "down": {
+                  "device": "KEYBOARD",
+                  "control": "arrowdown"
+                },
+                "left": {
+                  "device": "KEYBOARD",
+                  "control": "arrowleft"
+                },
+                "right": {
+                  "device": "KEYBOARD",
+                  "control": "arrowright"
+                }
               }
             },
-            { "device": "GAMEPAD", "control": "stick", "index": 0 }
+            {
+              "device": "GAMEPAD",
+              "control": "stick",
+              "index": 0
+            }
           ]
         },
         {
@@ -34,7 +62,11 @@
           "type": "VALUE",
           "controlType": "VECTOR2",
           "bindings": [
-            { "device": "GAMEPAD", "control": "stick", "index": 1 }
+            {
+              "device": "GAMEPAD",
+              "control": "stick",
+              "index": 1
+            }
           ]
         },
         {
@@ -42,8 +74,15 @@
           "type": "BUTTON",
           "controlType": "BUTTON",
           "bindings": [
-            { "device": "KEYBOARD", "control": "space" },
-            { "device": "GAMEPAD", "control": "button", "index": 0 }
+            {
+              "device": "KEYBOARD",
+              "control": " "
+            },
+            {
+              "device": "GAMEPAD",
+              "control": "stick",
+              "index": 0
+            }
           ]
         },
         {
@@ -51,8 +90,15 @@
           "type": "BUTTON",
           "controlType": "BUTTON",
           "bindings": [
-            { "device": "KEYBOARD", "control": "e" },
-            { "device": "GAMEPAD", "control": "button", "index": 2 }
+            {
+              "device": "KEYBOARD",
+              "control": "e"
+            },
+            {
+              "device": "GAMEPAD",
+              "control": "axis",
+              "index": 2
+            }
           ]
         },
         {
@@ -60,8 +106,15 @@
           "type": "BUTTON",
           "controlType": "BUTTON",
           "bindings": [
-            { "device": "KEYBOARD", "control": "shift" },
-            { "device": "GAMEPAD", "control": "button", "index": 10 }
+            {
+              "device": "KEYBOARD",
+              "control": "shift"
+            },
+            {
+              "device": "GAMEPAD",
+              "control": "button",
+              "index": 10
+            }
           ]
         },
         {
@@ -69,8 +122,15 @@
           "type": "BUTTON",
           "controlType": "BUTTON",
           "bindings": [
-            { "device": "KEYBOARD", "control": "c" },
-            { "device": "GAMEPAD", "control": "button", "index": 1 }
+            {
+              "device": "KEYBOARD",
+              "control": "c"
+            },
+            {
+              "device": "GAMEPAD",
+              "control": "stick",
+              "index": 1
+            }
           ]
         }
       ]
@@ -86,13 +146,65 @@
             {
               "composite": "2DVECTOR",
               "parts": {
-                "up": { "device": "KEYBOARD", "control": "w" },
-                "down": { "device": "KEYBOARD", "control": "s" },
-                "left": { "device": "KEYBOARD", "control": "a" },
-                "right": { "device": "KEYBOARD", "control": "d" }
+                "up": {
+                  "device": "KEYBOARD",
+                  "control": "w"
+                },
+                "down": {
+                  "device": "KEYBOARD",
+                  "control": "s"
+                },
+                "left": {
+                  "device": "KEYBOARD",
+                  "control": "a"
+                },
+                "right": {
+                  "device": "KEYBOARD",
+                  "control": "d"
+                }
               }
             },
-            { "device": "GAMEPAD", "control": "stick", "index": 0 }
+            {
+              "device": "GAMEPAD",
+              "control": "stick",
+              "index": 0
+            }
+          ]
+        },
+        {
+          "name": "Look",
+          "type": "VALUE",
+          "controlType": "VECTOR2",
+          "bindings": [
+            {
+              "device": "GAMEPAD",
+              "control": "stick",
+              "index": 1
+            }
+          ]
+        },
+        {
+          "name": "Zoom",
+          "type": "VALUE",
+          "controlType": "AXIS",
+          "bindings": [
+            {
+              "composite": "1DAXIS",
+              "parts": {
+                "negative": {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1,
+                  "axisHalf": "NEGATIVE"
+                },
+                "positive": {
+                  "device": "GAMEPAD",
+                  "control": "stick",
+                  "index": 1,
+                  "axisHalf": "POSITIVE"
+                }
+              }
+            }
           ]
         },
         {
@@ -100,7 +212,15 @@
           "type": "BUTTON",
           "controlType": "BUTTON",
           "bindings": [
-            { "device": "KEYBOARD", "control": "r" }
+            {
+              "device": "KEYBOARD",
+              "control": "r"
+            },
+            {
+              "device": "GAMEPAD",
+              "control": "button",
+              "index": 3
+            }
           ]
         }
       ]

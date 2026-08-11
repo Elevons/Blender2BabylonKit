@@ -103,6 +103,32 @@ def _check_scripts(obj, warnings):
                     f"{obj.name}: script file not found: {comp.script_path}")
 
 
+def _check_override_component_duplication(obj, warnings):
+    """Catch linked-base rows that were renamed on an override and came back as
+    INSERT_AFTER copies stacked on top of the library stack."""
+    override = getattr(obj, "override_library", None)
+    if override is None or override.reference is None:
+        return
+
+    source_comps = getattr(override.reference, "bjs_components", None)
+    if not source_comps:
+        return
+
+    source_count = len(source_comps)
+    local_count = len(obj.bjs_components)
+    if local_count < source_count * 2:
+        return
+
+    warnings.append(
+        f"{obj.name}: component stack looks duplicated on this library override "
+        f"({local_count} rows vs {source_count} in the prefab). Renaming linked "
+        f"base rows records them as local inserts — on reload the linked copies "
+        f"return too. Fix: run Repair Override Components on the object "
+        f"(component menu), or remove stuck rows only via that repair — Delete "
+        f"cannot remove them. Name rows in the prefab .blend."
+    )
+
+
 def _check_component_names(obj, warnings):
     """Duplicate display_name values on one entity break runtime name lookup."""
     seen = {}
@@ -808,6 +834,7 @@ def validate_scene(context):
             continue
         _check_scripts(obj, warnings)
         _check_component_names(obj, warnings)
+        _check_override_component_duplication(obj, warnings)
         _check_entity_refs(obj, context, warnings)
         _check_reflection_probes(obj, context, warnings)
         _check_render_layers(obj, warnings)

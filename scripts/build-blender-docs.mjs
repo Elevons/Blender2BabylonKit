@@ -65,7 +65,7 @@ export const AREA_PAGES = {
       N(5, 300, 290, "BJSEventMessage", "Event Messages / on-click rows", "Collider Event Messages (When + target + message + optional tag filter) AND 3D GUI button On Click reactions. Serialized into collider.eventMessages or gui3d events[].", [["Lives in", "comp.event_messages / gui3d_events"], ["File", "components/component.py"]]),
       N(6, 560, 110, "sync_exposed_vars", "reconcile", "Given freshly parsed @exposed fields, add new vars / drop removed ones / keep existing values. Called by the Sync operator (operators/scripts.py) and on script-path change.", [["Pairs with", "core/script_parse"], ["File", "components/exposed_vars.py"]]),
       N(7, 560, 230, "BJSLightShadow / BJSAnimationSettings", "per-object blocks", "Shadow parameters per lamp; autoplay clip/loop/speed + the NLA strip list per object. Parallel on Object (obj.bjs_shadow / obj.bjs_animation) — not fields inside BJSComponent.", [["On", "Object"], ["File", "components/object_settings.py"]]),
-      N(8, 560, 350, "copy_component / row names", "clipboard", "Deep-copies one component group (copy/cut/paste, duplicate) via copy_props. Also owns assign_component_row_name and ensure_component_collection_names: unique PropertyGroup name values so library-override INSERT_AFTER ops survive reload and keep stack order. Add/paste/duplicate/move call these before changing the stack.", [["Used by", "add/paste/duplicate/move"], ["File", "components/clipboard.py"]]),
+      N(8, 560, 350, "copy_component / row names", "clipboard", "Deep-copies one component group (copy/cut/paste, duplicate) via copy_props. Also owns assign_component_row_name, ensure_component_collection_names (local objects only — never rename linked base rows on overrides), and RepairOverrideComponentStack (reset component inserts, keep placement, re-add extras).", [["Used by", "add/paste/duplicate/move/repair"], ["File", "components/clipboard.py"]]),
     ],
     edges: [
       E(100, 2, 3, "vars"), E(101, 3, 4, "items"), E(102, 2, 5, "trigger + gui3d events"),
@@ -97,11 +97,11 @@ export const AREA_PAGES = {
   "input-actions.html": {
     title: "Input Actions",
     nodes: [
-      N(1, 40, 80, "Input Actions panel", "Babylon Scene", "Scene-level editor (ui/input_panel.py): maps/actions/bindings, Scene Default, labeled gamepad pickers, Stick vs 1D/2D composites, axis-half on 1D axis parts, key/gamepad capture, .inputactions.json save/load.", [["Panel", "Babylon Scene"], ["File", "ui/input_panel.py"]]),
-      N(2, 280, 40, "properties.py", "data model", "BJSInputBinding: gp_button/gp_axis/gp_stick pickers, axis_half on composite parts, index + gp_control for manifest export.", [["Package", "input_actions/"]]),
+      N(1, 40, 80, "Input Actions panel", "Babylon Scene", "Scene-level editor (ui/input_panel.py): maps/actions/bindings, Scene Default, labeled gamepad pickers, Stick vs 1D/2D composites, axis-half on 1D axis parts, key/gamepad capture. Live data is scene.bjs_input_maps in the .blend — Save Asset writes .inputactions.json only; File → Save keeps reload.", [["Panel", "Babylon Scene"], ["File", "ui/input_panel.py"]]),
+      N(2, 280, 40, "properties.py", "data model", "BJSInputBinding: gp_button/gp_axis/gp_stick pickers, axis_half on composite parts, index + gp_control. Picker sync uses _SYNCING_GP_PICKERS + RepairCorruptedGamepadBinding so face-button indices 0–3 are not rewritten as Stick/Axis on load.", [["Package", "input_actions/"]]),
       N(3, 280, 150, "defaults.py", "built-in Player", "Seeded on first export when the panel is empty — must stay in sync with engine DefaultAsset.ts.", [["Map", "Move Look Jump …"]]),
-      N(4, 280, 270, "serialize.py", "→ manifest", "serialize_input_asset: axisHalf POSITIVE/NEGATIVE, gamepad axis 4/5 for LT/RT, stick binding for 2D → scene.inputActions + defaultInputMap.", [["Keys", "inputActions · defaultInputMap"]]),
-      N(5, 520, 80, "operators.py", "seed / sync / capture", "Default asset, sync @inputMap maps, input_capture_key + input_capture_gamepad (Linux js).", [["Triggers", "panel buttons"]]),
+      N(4, 280, 270, "serialize.py", "→ manifest", "serialize_input_asset / apply_input_asset: axisHalf POSITIVE/NEGATIVE, gamepad axis 4/5 for LT/RT, stick binding for 2D → scene.inputActions + defaultInputMap. Load Asset applies JSON into scene props (not auto on .blend open).", [["Keys", "inputActions · defaultInputMap"]]),
+      N(5, 520, 80, "operators.py", "seed / sync / capture", "Save/Load Asset (.json), Default asset, sync @inputMap maps, input_capture_key + input_capture_gamepad (Linux js). load_post syncs/repairs gamepad pickers.", [["Triggers", "panel buttons"]]),
       N(6, 520, 220, "script_parse.py", "@inputMap scan", "Regex-reads @inputMap(\"Name\") from behavior .ts — lowercase literal like @exposed. Used to validate refs and seed maps.", [["File", "core/script_parse.py"]]),
       N(7, 760, 150, "InputManager.LoadAsset", "runtime", "Engine loads the asset before behaviors; @inputMap fields and behavior.input injected during ApplyComponents.", [["Diagram", "../engine/input.html"], ["Trace", "trace-input.html"]]),
     ],
@@ -235,7 +235,7 @@ export const TRACES = [
     title: "Input Actions: panel → manifest",
     intro: "How the scene-level Input Actions asset and Scene Default map reach the runtime.",
     steps: [
-      { file: "blender_addon/ui/input_panel.py", symbol: "BJS_PT_input_map", note: "Input Actions in **Babylon Scene**: Scene Default, maps/actions/bindings, labeled gamepad pickers (W3C mapping), Stick vs 1D/2D composites, Axis Half on 1D axis composite parts, key/gamepad capture, load/save .inputactions.json." },
+      { file: "blender_addon/ui/input_panel.py", symbol: "BJS_PT_input_map", note: "Input Actions in **Babylon Scene**: Scene Default, maps/actions/bindings, labeled gamepad pickers (W3C mapping), Stick vs 1D/2D composites, Axis Half on 1D axis parts, key/gamepad capture. Live data is the .blend scene props — Save Asset writes .inputactions.json only; load_post repairs face-button→Axis/Stick stomps." },
       { file: "blender_addon/input_actions/gamepad_mapping.py", symbol: "GamepadAxisLabel", note: "W3C labels for gamepad pickers — stick axes 0–3, LT/RT as axis indices 4/5 (runtime maps those to analog triggers)." },
       { file: "blender_addon/input_actions/serialize.py", symbol: "serialize_input_asset", note: "Maps/actions/bindings → scene.inputActions, including axisHalf on composite axis parts, stick bindings for 2D, gamepad axis 4/5 for triggers. Built-in Player when panel empty." },
       { file: "blender_addon/export/scene.py", symbol: "serialize_scene", note: "Writes scene.defaultInputMap alongside inputActions — the map scripts without @inputMap receive on behavior.input." },

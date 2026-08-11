@@ -9,7 +9,7 @@ import {
 import type { Vector2WithInfo } from "@babylonjs/gui";
 import { Vector3 } from "@babylonjs/core";
 import type { Observer } from "@babylonjs/core";
-import { Behavior, exposed } from "@bjs/engine";
+import { Behavior, exposed, SetEntityActive } from "@bjs/engine";
 import type { Entity } from "@bjs/engine";
 
 /**
@@ -43,6 +43,10 @@ export default class HUDController extends Behavior
   @exposed({ label: "Invert Roll" })
   invertRoll = false;
 
+  /** Entity that owns the controls overlay GUI (e.g. StartGame). */
+  @exposed({ type: "entity", label: "Controls Page" })
+  controlsPage: Entity | null = null;
+
   private currentDepthTag: TextBlock | null = null;
   private timerTag: TextBlock | null = null;
   private depthSlider: Slider | null = null;
@@ -57,6 +61,8 @@ export default class HUDController extends Behavior
 
   private restartLevelBtn: Button | null = null;
   private restartClickObserver: Observer<Vector2WithInfo> | null = null;
+  private controlsPageBtn: Button | null = null;
+  private controlsClickObserver: Observer<Vector2WithInfo> | null = null;
 
   private elapsedSeconds = 0;
 
@@ -96,8 +102,10 @@ export default class HUDController extends Behavior
     this.ahPitchValue    = this.ResolveControl(texture, "ahPitchValue", TextBlock);
     this.ahRollValue     = this.ResolveControl(texture, "ahRollValue", TextBlock);
     this.restartLevelBtn = this.ResolveControl(texture, "restartLevelBtn", Button);
+    this.controlsPageBtn = this.ResolveControl(texture, "controlsPageBtn", Button);
 
     this.WireRestartLevelButton();
+    this.WireControlsPageButton();
 
     if (this.timerTag !== null)
     {
@@ -145,7 +153,7 @@ export default class HUDController extends Behavior
     this.UpdateTimerTag(deltaSeconds);
   }
 
-  /** Drop the restart-button click observer when the level unloads. */
+  /** Drop HUD button click observers when the level unloads. */
   OnDestroy(): void
   {
     if (this.restartLevelBtn !== null && this.restartClickObserver !== null)
@@ -153,8 +161,15 @@ export default class HUDController extends Behavior
       this.restartLevelBtn.onPointerClickObservable.remove(this.restartClickObserver);
     }
 
+    if (this.controlsPageBtn !== null && this.controlsClickObserver !== null)
+    {
+      this.controlsPageBtn.onPointerClickObservable.remove(this.controlsClickObserver);
+    }
+
     this.restartClickObserver = null;
+    this.controlsClickObserver = null;
     this.restartLevelBtn = null;
+    this.controlsPageBtn = null;
   }
 
   /** Soft-restart the level when the authored restart button is clicked. */
@@ -165,10 +180,34 @@ export default class HUDController extends Behavior
       return;
     }
 
-    this.restartClickObserver = this.restartLevelBtn.onPointerClickObservable.add(() =>
-    {
+    this.restartClickObserver = this.restartLevelBtn.onPointerClickObservable.add(() => {
       void this.session.Restart();
     });
+  }
+
+  /** Show the controls overlay entity when the authored CONTROLS button is clicked. */
+  private WireControlsPageButton(): void
+  {
+    if (this.controlsPageBtn === null)
+    {
+      return;
+    }
+
+    this.controlsClickObserver = this.controlsPageBtn.onPointerClickObservable.add(() => {
+      this.ShowControlsPage();
+    });
+  }
+
+  /** Enable the exposed controls-page entity (no-op if unset or already active). */
+  private ShowControlsPage(): void
+  {
+    if (this.controlsPage === null)
+    {
+      console.warn(`[HUDController] "${this.entity.name}" has no Controls Page assigned.`);
+      return;
+    }
+
+    SetEntityActive(this.controlsPage, true);
   }
 
   /** Depth readout, slider value, and tag position along the slider track. */

@@ -9,10 +9,12 @@
 <h2>Blender authoring</h2>
 <p>Author the asset and <strong>Scene Default</strong> map in Blender&apos;s <strong>Input Actions</strong> panel. The <code>input_actions/</code> package provides <code>properties.py</code>, <code>serialize.py</code>, and <code>operators.py</code>. <code>ui/input_panel.py</code> draws the panel. Export writes <code>scene.inputActions</code> and <code>scene.defaultInputMap</code>.</p>
 <p>If the panel is empty at export, the built-in &quot;Player&quot; map is serialized anyway.</p>
+<p><strong>Persistence:</strong> live data is <code>scene.bjs_input_maps</code> on the Blender scene. <strong>Save Asset</strong> writes <code>.inputactions.json</code> only. <strong>Load Asset</strong> applies that file into the open scene. Reopening the <code>.blend</code> restores last saved scene props — it does not auto-load the JSON. Always <strong>File → Save</strong> the blend after edits you want to keep.</p>
+<p><strong>Gamepad picker sync:</strong> W3C indices overlap kinds (Button 0/1 also Stick; Button 2/3 also Axis). Older builds rewrote face-button rows to Stick/Axis on Load Asset or file reload. Current addon suppresses picker <code>update</code> callbacks during sync (<code>_SYNCING_GP_PICKERS</code>) and runs <code>RepairCorruptedGamepadBinding</code> on load for Button actions. Reload the addon if an older session still stomps rows, then save the blend again. Detail: <a href="../blender/03-SCENE-SETTINGS.html">03 — Scene settings</a>.</p>
 <p>Panel tools:</p>
 <ul>
 <li><strong>Load Default Asset</strong> — seeds the built-in Player map (Move/Look/Jump/…)</li>
-<li><strong>Save / Load Asset (.json)</strong> — share <code>.inputactions.json</code> across scenes. Feed <code>npm run input:gen</code> for TypeScript constants</li>
+<li><strong>Save / Load Asset (.json)</strong> — share <code>.inputactions.json</code> across scenes. Feed <code>npm run input:gen</code> for TypeScript constants. Does not replace saving the <code>.blend</code></li>
 <li><strong>Create Maps Used by Scripts</strong> — scans <code>@inputMap("Name")</code> in behavior sources and creates missing maps</li>
 <li><strong>Capture</strong> (<img alt="rec" src="data:," style="display:none"> record icon) — keyboard capture on any key row. Gamepad capture on gamepad rows (Linux <code>/dev/input/js*</code>, Xbox-style remapping)</li>
 </ul>

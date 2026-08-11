@@ -1,4 +1,12 @@
-import { Behavior, exposed, CopyLens, FindCameraForNode, type Entity } from "@bjs/engine";
+import {
+  Behavior,
+  exposed,
+  inputMap,
+  CopyLens,
+  FindCameraForNode,
+  type Entity,
+  type InputActionMap,
+} from "@bjs/engine";
 import {
   ArcRotateCamera,
   PhysicsRaycastResult,
@@ -7,6 +15,7 @@ import {
   type Observer,
   type Scene,
 } from "@babylonjs/core";
+import { VehicleActions } from "../InputActions";
 
 interface PhysicsRaycastEngine
 {
@@ -29,6 +38,12 @@ const MAX_CAMERA_STEP_METERS = 0.25;
 /** Absolute floor for collision pull-in (minRadius only limits free zoom). */
 const COLLISION_RADIUS_FLOOR = 0.1;
 
+/** Full-stick Look yaw/pitch rate (radians per second). */
+const GAMEPAD_LOOK_RADIANS_PER_SECOND = 2.2;
+
+/** Full-press Zoom rate as a fraction of current radius per second (A in / B out). */
+const GAMEPAD_ZOOM_RADIUS_FRACTION_PER_SECOND = 1.25;
+
 /** Lateral proximity samples evenly spaced around the horizontal ring. */
 const LATERAL_PROBE_DIRECTIONS = 16;
 
@@ -44,15 +59,15 @@ const PENETRATION_RECOVERY_PASSES = 3;
 /**
  * Manual orbit camera around a target with collision via proximity raycasts.
  *
- * Drag to orbit, scroll to zoom. Obstacles between the lens and target do not
- * pull the orbit inward — you can orbit behind cover without the view snapping
- * toward the target. Rays from the camera only push it out when it is flush
- * against or inside solid geometry. A ring of lateral probes rejects orbit steps
- * that *worsen* clearance (so you can still slide along or pull away from a wall
- * once flush — isotropic "too close" checks freeze the lens inside the standoff
- * bubble). Motion between frames uses a shape sweep (parallel rays offset by
- * standoff) so tangential approaches cannot tunnel. Approach Slowdown brakes
- * orbit/zoom before hard contact.
+ * Drag (LMB) or right stick to orbit, scroll or A/B to zoom. Obstacles between
+ * the lens and target do not pull the orbit inward — you can orbit behind cover
+ * without the view snapping toward the target. Rays from the camera only push it
+ * out when it is flush against or inside solid geometry. A ring of lateral probes
+ * rejects orbit steps that *worsen* clearance (so you can still slide along or
+ * pull away from a wall once flush — isotropic "too close" checks freeze the lens
+ * inside the standoff bubble). Motion between frames uses a shape sweep (parallel
+ * rays offset by standoff) so tangential approaches cannot tunnel. Approach
+ * Slowdown brakes orbit/zoom before hard contact.
  *
  * Blender setup:
  * - Attach this script to an empty (the camera pivot).
@@ -100,6 +115,17 @@ export default class TrainCamera extends Behavior
 
   @exposed({ min: 0, max: 100, label: "Approach Slowdown" })
   approachSlowdown = 4;
+
+  /**
+   * Extra radial deadzone for Look (right stick), on top of the input layer's
+   * 0.15 stick deadzone. 0 = only the engine deadzone; values near 1 ignore almost
+   * all stick travel. Output is rescaled so full deflection still reaches 1.
+   */
+  @exposed({ min: 0, max: 0.95, step: 0.01, label: "Look Deadzone" })
+  lookDeadzone = 0.2;
+
+  /** Vehicle map: Look (right stick) and Zoom (A/B) drive this orbit camera. */
+  @inputMap("Vehicle") vehicle!: InputActionMap;
 
   private camera: ArcRotateCamera | null = null;
   private preferredRadius = 10;
@@ -207,9 +233,12 @@ export default class TrainCamera extends Behavior
 
     this.camera.setTarget(this.target.node.getAbsolutePosition());
     this.camera.upperRadiusLimit = this.GetMaxDistance();
+
+    // Pointer + inertia already wrote alpha/beta/radius; fold in gamepad Look/Zoom.
+    const deltaSeconds = this.scene.getEngine().getDeltaTime() / 1000;
+    this.ApplyGamepadOrbitInput(deltaSeconds);
     this.RefreshPreferredRadiusFromUserZoom();
 
-    // Pointer + inertia already wrote alpha/beta/radius for this frame.
     const desiredAlpha = this.camera.alpha;
     const desiredBeta = this.camera.beta;
 
@@ -339,6 +368,63 @@ export default class TrainCamera extends Behavior
 
     const normalized = (distance - stopDistance) / (slowStartDistance - stopDistance);
     return normalized * normalized * (3 - 2 * normalized);
+  }
+
+  /**
+   * Apply Vehicle Look (right stick) and Zoom (A/B) onto the arc camera before
+   * collision clamping. Stick Y is flipped by the input layer; A is zoom-in
+   * (closer), B is zoom-out. Look applies an additional radial deadzone from
+   * {@link lookDeadzone}.
+   */
+  private ApplyGamepadOrbitInput(deltaSeconds: number): void
+  {
+    if (this.camera === null || deltaSeconds <= 0)
+    {
+      return;
+    }
+
+    const look = this.ApplyLookDeadzone(
+      this.vehicle.FindAction(VehicleActions.Look)?.ReadVector2() ?? { x: 0, y: 0 },
+    );
+    if (look.x !== 0 || look.y !== 0)
+    {
+      const lookStep = GAMEPAD_LOOK_RADIANS_PER_SECOND * deltaSeconds;
+      this.camera.alpha -= look.x * lookStep;
+      this.camera.beta -= look.y * lookStep;
+
+      const lowerBeta = this.camera.lowerBetaLimit ?? 0.01;
+      const upperBeta = this.camera.upperBetaLimit ?? Math.PI - 0.01;
+      this.camera.beta = Math.min(upperBeta, Math.max(lowerBeta, this.camera.beta));
+    }
+
+    const zoom = this.vehicle.FindAction(VehicleActions.Zoom)?.ReadValue() ?? 0;
+    if (zoom !== 0)
+    {
+      const zoomStep = this.preferredRadius * GAMEPAD_ZOOM_RADIUS_FRACTION_PER_SECOND * zoom * deltaSeconds;
+      this.preferredRadius = this.ClampPreferredRadius(this.preferredRadius - zoomStep);
+    }
+  }
+
+  /**
+   * Zero Look input inside the radial deadzone; rescale the remainder so full
+   * stick deflection still maps to length 1.
+   */
+  private ApplyLookDeadzone(look: { x: number; y: number }): { x: number; y: number }
+  {
+    const deadzone = Math.min(Math.max(this.lookDeadzone, 0), 0.95);
+    if (deadzone <= 0)
+    {
+      return look;
+    }
+
+    const magnitude = Math.hypot(look.x, look.y);
+    if (magnitude <= deadzone)
+    {
+      return { x: 0, y: 0 };
+    }
+
+    const scale = ((magnitude - deadzone) / (1 - deadzone)) / magnitude;
+    return { x: look.x * scale, y: look.y * scale };
   }
 
   /**

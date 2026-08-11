@@ -124,8 +124,9 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
   CheckKeyboardObserverCleanup(source, issues);
   CheckScenePostProcessInBehavior(source, issues);
   CheckPageReloadForRestart(source, issues);
-    CheckTargetTransformLoop(source, issues);
+  CheckTargetTransformLoop(source, issues);
   CheckManualPrefabClone(source, issues);
+  CheckEnumerableBjsEntityAssign(source, issues);
 
   return {
     valid: issues.filter((issue) => issue.severity === "error").length === 0,
@@ -467,6 +468,34 @@ function CheckManualPrefabClone(source: string, issues: ValidationIssue[]): void
   });
 }
 
+/**
+ * Enumerable `metadata.bjsEntity = entity` (or object-literal spreads) recreate
+ * Entity↔node cycles that crash the Babylon Inspector Properties pane.
+ */
+function CheckEnumerableBjsEntityAssign(source: string, issues: ValidationIssue[]): void
+{
+  if (source.includes("AssignNodeEntity") || source.includes("AssignSceneLevel"))
+  {
+    return;
+  }
+
+  const assignsEnumerable =
+    /metadata\.bjsEntity\s*=/.test(source) ||
+    /\.metadata\s*=\s*\{[\s\S]{0,200}?bjsEntity\s*:/.test(source);
+
+  if (!assignsEnumerable)
+  {
+    return;
+  }
+
+  issues.push({
+    code: "enumerable-bjs-entity-metadata",
+    message:
+      'Do not write enumerable metadata.bjsEntity (Inspector "too much recursion"). Use AssignNodeEntity(node, entity) / EntityFromNode(node) from @bjs/engine.',
+    severity: "warning",
+  });
+}
+
 const FIX_HINTS: Record<string, string> = {
   "missing-engine-import": 'Add: import { Behavior, … } from "@bjs/engine";',
   "missing-export-default": "Add: export default class YourName extends Behavior { }",
@@ -492,6 +521,8 @@ const FIX_HINTS: Record<string, string> = {
     'Author in Blender Scene panels — get_scripting_context(section="scene-look").',
   "manual-prefab-clone":
     'Use await this.spawner.Spawn(template, { position }) — get_fragment(name="spawn-prefab-instance").',
+  "enumerable-bjs-entity-metadata":
+    "Use AssignNodeEntity(node, entity) / EntityFromNode(node) from @bjs/engine (non-enumerable metadata).",
   "paint-color-kind":
     'Leave color kind blank or use COLOR_1; luminance ~0.5 — get_fragment(name="paint-scatter-vertex-colors").',
 };

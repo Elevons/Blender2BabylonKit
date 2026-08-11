@@ -16,6 +16,9 @@ from ..components.clipboard import (
     assign_component_row_name,
     copy_component,
     ensure_component_collection_names,
+    LibraryComponentRowsUnnamedWarning,
+    OverrideComponentStackLooksDuplicated,
+    RepairOverrideComponentStack,
 )
 from ..components.particle_scan import sync_component_particle_textures
 
@@ -52,14 +55,71 @@ class BJS_OT_add_component(Operator):
             self.report({'WARNING'}, "No active object")
             return {'CANCELLED'}
         ensure_object_id(obj)  # entity gets a stable GUID as soon as it has a component
-        # Name any legacy unnamed rows first so a new named insert does not
-        # reshuffle the stack when Blender re-diffs override ops on save.
-        ensure_component_collection_names(obj.bjs_components)
+        # Name legacy unnamed rows on *local* objects only (prefab library).
+        # Never rename linked base rows on an override — that duplicates them.
+        ensure_component_collection_names(obj.bjs_components, obj=obj)
+        warning = LibraryComponentRowsUnnamedWarning(obj)
         comp = obj.bjs_components.add()
         assign_component_row_name(comp)  # required for library-override insert persistence
         comp.comp_type = self.comp_type
         comp.display_name = component_type_label(self.comp_type)
         obj.bjs_components_index = len(obj.bjs_components) - 1
+        if warning is not None:
+            self.report({'WARNING'}, warning)
+        return {'FINISHED'}
+
+
+class BJS_OT_ensure_component_row_names(Operator):
+    """Give every unnamed component row a stable PropertyGroup name.
+
+    Run this in the prefab library .blend (not on a level override). Named
+    library rows keep instance @exposed overrides stable when the level also
+    has local component inserts.
+    """
+    bl_idname = "bjs.ensure_component_row_names"
+    bl_label = "Ensure Component Row Names"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    selected_only: BoolProperty(
+        name="Selected Only",
+        default=False,
+        description="Only process selected objects (default: all objects in the file)",
+    )
+
+    def execute(self, context):
+        if self.selected_only:
+            targets = list(context.selected_objects)
+        else:
+            targets = list(bpy.data.objects)
+
+        named = 0
+        local_targets = 0
+        for obj in targets:
+            if not hasattr(obj, "bjs_components"):
+                continue
+            if getattr(obj, "override_library", None) is not None:
+                continue
+            if obj.library is not None:
+                continue  # linked read-only datablock
+            local_targets += 1
+            unnamed_before = sum(1 for comp in obj.bjs_components if not comp.name)
+            ensure_component_collection_names(obj.bjs_components, obj=obj)
+            unnamed_after = sum(1 for comp in obj.bjs_components if not comp.name)
+            named += unnamed_before - unnamed_after
+
+        if named:
+            self.report(
+                {'INFO'},
+                f"Named {named} component row(s). Save this prefab, then reload "
+                f"libraries in the level.",
+            )
+        elif local_targets == 0:
+            self.report(
+                {'WARNING'},
+                "Nothing to name — open the prefab .blend (not a level override).",
+            )
+        else:
+            self.report({'INFO'}, "All local component rows already have names")
         return {'FINISHED'}
 
 
@@ -95,7 +155,7 @@ class BJS_OT_duplicate_component(Operator):
         obj = inspector_object(context)
         if not (obj and 0 <= self.index < len(obj.bjs_components)):
             return {'CANCELLED'}
-        ensure_component_collection_names(obj.bjs_components)
+        ensure_component_collection_names(obj.bjs_components, obj=obj)
         new = obj.bjs_components.add()                 # appended at the end
         copy_component(obj.bjs_components[self.index], new)
         obj.bjs_components.move(len(obj.bjs_components) - 1, self.index + 1)
@@ -116,7 +176,7 @@ class BJS_OT_move_component(Operator):
         if not obj:
             return {'CANCELLED'}
         comps = obj.bjs_components
-        ensure_component_collection_names(comps)
+        ensure_component_collection_names(comps, obj=obj)
         j = self.index - 1 if self.direction == 'UP' else self.index + 1
         if 0 <= self.index < len(comps) and 0 <= j < len(comps):
             comps.move(self.index, j)
@@ -178,7 +238,7 @@ class BJS_OT_paste_component(Operator):
         if not (obj and len(clip) > 0):
             return {'CANCELLED'}
         ensure_object_id(obj)  # it's now an entity
-        ensure_component_collection_names(obj.bjs_components)
+        ensure_component_collection_names(obj.bjs_components, obj=obj)
         copy_component(clip[0], obj.bjs_components.add())
         obj.bjs_components_index = len(obj.bjs_components) - 1
         return {'FINISHED'}
@@ -256,9 +316,58 @@ class BJS_OT_remove_component(Operator):
 
     def execute(self, context):
         obj = inspector_object(context)
-        if obj and 0 <= self.index < len(obj.bjs_components):
-            remove_collection_item(obj.bjs_components, self.index)
-            obj.bjs_components_index = min(self.index, len(obj.bjs_components) - 1)
+        if not (obj and 0 <= self.index < len(obj.bjs_components)):
+            return {'CANCELLED'}
+
+        if remove_collection_item(obj.bjs_components, self.index):
+            obj.bjs_components_index = min(
+                self.index, len(obj.bjs_components) - 1)
+            return {'FINISHED'}
+
+        # Linked base rows (and stuck renamed-base hybrids) refuse remove().
+        if OverrideComponentStackLooksDuplicated(obj):
+            self.report(
+                {'WARNING'},
+                "Can't delete this row — the override stack is duplicated. "
+                "Use Repair Override Components.",
+            )
+        else:
+            self.report(
+                {'WARNING'},
+                "Can't delete linked prefab components here — remove them in "
+                "the library .blend, or delete only locally-added rows.",
+            )
+        return {'CANCELLED'}
+
+
+class BJS_OT_repair_override_components(Operator):
+    """Reset a duplicated library-override component stack back to the prefab,
+    keeping instance-only extras that the prefab does not own."""
+    bl_idname = "bjs.repair_override_components"
+    bl_label = "Repair Override Components"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = inspector_object(context)
+        return (
+            obj is not None
+            and getattr(obj, "override_library", None) is not None
+        )
+
+    def execute(self, context):
+        obj = inspector_object(context)
+        if obj is None:
+            return {'CANCELLED'}
+
+        extra_count, message = RepairOverrideComponentStack(obj)
+        obj.bjs_components_index = min(
+            obj.bjs_components_index, max(len(obj.bjs_components) - 1, 0))
+        warning = LibraryComponentRowsUnnamedWarning(obj)
+        if warning is not None:
+            self.report({'WARNING'}, f"{message} {warning}")
+        else:
+            self.report({'INFO'}, message)
         return {'FINISHED'}
 
 
@@ -605,6 +714,7 @@ class BJS_OT_list_remove(Operator):
 classes = (
     BJS_OT_toggle_pin,
     BJS_OT_add_component,
+    BJS_OT_ensure_component_row_names,
     BJS_OT_assign_id,
     BJS_OT_list_add,
     BJS_OT_list_add_selected,
@@ -618,6 +728,7 @@ classes = (
     BJS_OT_paste_component,
     BJS_OT_component_menu,
     BJS_OT_remove_component,
+    BJS_OT_repair_override_components,
     BJS_OT_event_message_add,
     BJS_OT_event_message_remove,
     BJS_OT_gui3d_event_add,

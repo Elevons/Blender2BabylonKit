@@ -233,7 +233,11 @@ def _poll_animator_tree(self, tree):
 class BJSComponent(PropertyGroup):
     comp_type: EnumProperty(name="Type", items=COMPONENT_TYPES, default='TAG')
     enabled:   BoolProperty(name="Enabled", default=True)
-    show_expanded: BoolProperty(name="Expanded", default=True)
+    show_expanded: BoolProperty(
+        name="Expanded",
+        default=True,
+        overridable=False,
+    )
     display_name: StringProperty(
         name="Name",
         description="Instance label for this component (exported as name in the manifest)",

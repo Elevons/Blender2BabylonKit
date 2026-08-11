@@ -867,7 +867,18 @@ function MimeFor(pathName)
 
 function NormalizeRequestPath(url)
 {
-  const pathname = new URL(url).pathname.replace(/^\\/+/, "");
+  // URL.pathname stays percent-encoded (Train%20Scene); the pak index stores
+  // decoded filesystem paths (Train Scene). Decode before lookup.
+  let pathname = new URL(url).pathname;
+  try
+  {
+    pathname = decodeURIComponent(pathname);
+  }
+  catch (_error)
+  {
+    // Keep the raw pathname if the request URI is malformed.
+  }
+  pathname = pathname.replace(/^\\/+/, "");
   // Strip a single leading base segment if present (subdirectory deploys).
   if (pathname.startsWith("levels/"))
   {
@@ -906,6 +917,14 @@ self.addEventListener("install", (event) =>
 self.addEventListener("activate", (event) =>
 {
   event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("message", (event) =>
+{
+  if (event.data && event.data.type === "SKIP_WAITING")
+  {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) =>
@@ -960,9 +979,12 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   }
 
   const moduleSrc = scriptMatch[1];
+  // Query bust so a republish installs a new worker instead of keeping a stale one.
+  const swVersion = keyBase64.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
   const bootstrap = `<script>
 (function () {
   var MODULE_SRC = ${JSON.stringify(moduleSrc)};
+  var SW_URL = "./pak-sw.js?v=${swVersion}";
   var RELOAD_KEY = "bjs-pak-sw-reload";
   function Boot() {
     var tag = document.createElement("script");
@@ -970,28 +992,65 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     tag.src = MODULE_SRC;
     document.head.appendChild(tag);
   }
+  function WaitForWorker(worker) {
+    if (!worker) {
+      return Promise.resolve();
+    }
+    if (worker.state === "activated") {
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve) {
+      worker.addEventListener("statechange", function onStateChange() {
+        if (worker.state === "activated") {
+          worker.removeEventListener("statechange", onStateChange);
+          resolve();
+        }
+      });
+    });
+  }
+  function EnsureControlled() {
+    if (navigator.serviceWorker.controller) {
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve) {
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        resolve();
+      }, { once: true });
+    });
+  }
   if (!("serviceWorker" in navigator)) {
     console.error("[bjs] Encrypted builds require a service worker (serve over http/https, not file://)");
-    Boot();
     return;
   }
-  navigator.serviceWorker.register("./pak-sw.js").then(function (registration) {
-    var controlled = Boolean(navigator.serviceWorker.controller);
-    if (!controlled && !sessionStorage.getItem(RELOAD_KEY)) {
-      sessionStorage.setItem(RELOAD_KEY, "1");
-      return registration.update().then(function () { location.reload(); });
-    }
-    sessionStorage.removeItem(RELOAD_KEY);
-    Boot();
+  navigator.serviceWorker.register(SW_URL).then(function (registration) {
+    // Always check for a newer pak-sw.js (republish) before booting the app.
+    return registration.update().then(function () {
+      var pending = registration.installing || registration.waiting;
+      if (pending) {
+        pending.postMessage({ type: "SKIP_WAITING" });
+      }
+      return WaitForWorker(pending);
+    }).then(function () {
+      return navigator.serviceWorker.ready;
+    }).then(function () {
+      if (navigator.serviceWorker.controller) {
+        sessionStorage.removeItem(RELOAD_KEY);
+        Boot();
+        return;
+      }
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, "1");
+        location.reload();
+        return;
+      }
+      sessionStorage.removeItem(RELOAD_KEY);
+      return EnsureControlled().then(Boot);
+    });
   }).catch(function (error) {
     console.error("[bjs] Failed to register pak service worker", error);
-    Boot();
   });
 })();
 </script>`;
-
-  // keyBase64 is embedded in pak-sw.js; keep a comment in index for diagnostics only.
-  void keyBase64;
 
   html = html.replace(scriptMatch[0], bootstrap);
   fs.writeFileSync(indexPath, html, "utf8");

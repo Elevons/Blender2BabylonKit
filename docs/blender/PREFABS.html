@@ -409,9 +409,36 @@
 
 <h2 id="local-component-rows-need-propertygroup-names">Local component rows need PropertyGroup names</h2>
 <p>A library override does not store a full copy of <code>bjs_components</code>. It stores a <strong>diff</strong> of insert ops (<code>INSERT_AFTER</code>) against the linked source. Blender keys those ops by each row&apos;s PropertyGroup <code>name</code>.</p>
-<p>Add, paste, duplicate, and move call <code>assign_component_row_name</code> / <code>ensure_component_collection_names</code> in <code>components/clipboard.py</code>. Every local row gets a unique hex <code>name</code> before the stack changes. New inserts then survive save and library reload. Their order stays stable.</p>
-<p>Without names, Blender uses index-only insert ops. The first one or two unnamed local rows can stick. Later unnamed inserts often never get a new op, so they vanish on reload. Mix unnamed legacy rows with one newly named row and Blender can re-diff on save. That reshuffles order (for example <code>COLLIDER, SCRIPT, MESH_SHADOWS</code> instead of append-at-end).</p>
-<p>Prefer the default component stack in the <strong>prefab library</strong> when every instance should share it. Use level-side inserts for instance-only extras. After you update the add-on, add or touch the stack once on old overrides so unnamed legacy rows get names.</p>
+
+<h3>Authoring rules</h3>
+<ol>
+  <li><p><strong>Name the shared stack in the prefab <code>.blend</code>.</strong> On local objects, add / paste / duplicate / move run <code>ensure_component_collection_names</code> so legacy unnamed rows get stable hex names. Those names travel with the link and give level inserts a clear <code>INSERT_AFTER</code> anchor.</p></li>
+  <li><p><strong>New local inserts on a level override</strong> call <code>assign_component_row_name</code> (add / paste / duplicate). Each new row gets its own hex <code>name</code> and survives save and library reload.</p></li>
+  <li><p><strong>Do not rename linked base rows on an override.</strong> A new local <code>name</code> on a linked row makes Blender re-diff it as an <code>INSERT_AFTER</code>. On reload you get that insert <em>and</em> the original linked row — duplicated scripts, colliders, and rigidbodies. The add-on skips <code>ensure_component_collection_names</code> on library overrides for that reason.</p></li>
+</ol>
+<p>If the library rows stay unnamed, Blender falls back to fragile index or empty-name insert ops. The first one or two local inserts can stick. Later unnamed inserts often vanish on reload. A mix of unnamed library rows and one named insert can also reshuffle order on save.</p>
+<p>Put the default component stack in the <strong>prefab library</strong> when every instance needs it. Use level-side inserts only for instance-only extras.</p>
+
+<h3 id="repair-override-components">Repair Override Components</h3>
+<p>Delete cannot remove linked prefab rows. It also cannot remove <strong>stuck hybrids</strong> — renamed linked-base rows that Blender recorded as inserts. <code>clear()</code> does not drop those hybrids either.</p>
+<p>When the stack looks doubled (export warns when an override has at least twice as many rows as the prefab), open the component <strong>▾</strong> menu and choose <strong>Repair Override Components</strong> (<code>bjs.repair_override_components</code> / <code>RepairOverrideComponentStack</code> in <code>components/clipboard.py</code>):</p>
+<ol>
+  <li>Stages true instance-only extras (named surplus rows the prefab does not own, or a second copy of one it does).</li>
+  <li>Calls <code>override_library.reset()</code> to restore the prefab component stack.</li>
+  <li>Writes location, rotation, scale, parent, and visibility back so the instance keeps its level pose.</li>
+  <li>Re-adds the staged extras with fresh row names.</li>
+</ol>
+<p>After repair, re-check script entity references if you had overridden them on linked SCRIPT rows. Parent and transform overrides stay.</p>
+
+<h3 id="instance-exposed-overrides-reset-on-reload">Instance @exposed settings reset on reload</h3>
+<p>The add-on does not clear script values on file load. When an instance setting (for example <code>Swap Steering</code>) snaps back after reload, Blender dropped the library-override REPLACE op.</p>
+<p>That happens when the prefab&apos;s component rows have empty PropertyGroup <code>name</code>s <em>and</em> the level override also has local component inserts. Override paths then use indices like <code>bjs_components[3].exposed_vars[&quot;swapSteering&quot;].b_val</code>. Inserts reshuffle those indices on reload, and the REPLACE ops for floats/bools are lost.</p>
+<ol>
+  <li>Open the <strong>prefab</strong> <code>.blend</code> (for example <code>Engine Rover.blend</code>).</li>
+  <li>Component ▾ menu → <strong>Ensure Component Row Names</strong> (or add/move any component once).</li>
+  <li>Save the prefab. In the level, reload the library (or reopen the level).</li>
+</ol>
+<p>Entity pointer overrides often still stick in the broken case. Floats and bools are the ones that vanish. Adding a local component on an override warns when the prefab rows are still unnamed.</p>
 
 <h2>GUIDs and multiple instances</h2>
 <p>Entity identity is <code>obj["bjs_id"]</code> (see <a href="trace-guid.html">GUID trace</a>). Linked copies initially <strong>share the library GUIDs</strong>. That is fine when one instance is in the level; for <strong>several instances of the same prefab</strong>, each object that becomes its own runtime entity needs a unique id.</p>
@@ -428,7 +455,7 @@
   <thead><tr><th>Typical override on an instance</th><th>Usually stays in the library file</th></tr></thead>
   <tbody>
     <tr><td>Transform, parenting, viewport/render visibility</td><td>Default mesh topology and materials</td></tr>
-    <tr><td>Per-instance script <code>@exposed</code> values; local component inserts (named rows)</td><td>Default shared component stack (author in the library when every instance needs it)</td></tr>
+    <tr><td>Per-instance script <code>@exposed</code> values; local component inserts (named rows). Repair Override Components if the stack duplicated</td><td>Default shared component stack with PropertyGroup <code>name</code>s (author in the library when every instance needs it)</td></tr>
     <tr><td>Collider size, body type, trigger messages</td><td>Shared behavior <code>.ts</code> paths (relative to the app)</td></tr>
     <tr><td>Per-instance GUID when duplicated</td><td>Scene-wide settings (<code>Scene.bjs_scene</code>) — live in the level file only</td></tr>
   </tbody>

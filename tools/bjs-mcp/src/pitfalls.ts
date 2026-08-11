@@ -117,6 +117,18 @@ export const PITFALLS: PitfallEntry[] = [
     mcpTool: "list_input_actions",
   },
   {
+    mistake: "Expecting Save Asset (.json) alone to persist Input Actions across .blend reload",
+    symptom: "Change looks fine after Load Asset; reopening the scene shows the old maps/bindings",
+    fix: "Live data is scene.bjs_input_maps in the .blend. Save Asset writes the JSON sidecar only. File → Save the .blend after edits (or Load Asset again if the JSON is newer)",
+    mcpTool: "get_scripting_context(section=\"input\")",
+  },
+  {
+    mistake: "Gamepad face-button binding reverts to Axis/Stick after .blend reload",
+    symptom: "Reset (or similar) set to Button index 2/3; after reload export shows control: \"axis\" (0/1 often become Stick)",
+    fix: "W3C indices overlap Button/Axis/Stick. Reload the Blender addon so picker sync suppresses update callbacks and RepairCorruptedGamepadBinding restores Button for BUTTON actions. Confirm the row, save the .blend, Save Asset, re-export",
+    mcpTool: "get_scripting_context(section=\"input\")",
+  },
+  {
     mistake: "`window.addEventListener` for keys",
     symptom: "Leaks; breaks focus model",
     fix: "Use @inputMap + FindAction, or scene.onKeyboardObservable + OnDestroy cleanup",
@@ -220,6 +232,13 @@ export const PITFALLS: PitfallEntry[] = [
   },
 
   {
+    mistake: "Expecting loose /levels/*.scene.json files after Publish with Encrypt / obfuscate",
+    symptom: "HTTP 404 on manifest (e.g. Train Scene); engine throws could not fetch manifest",
+    fix: "Encrypted builds pack levels into assets.pak and remove loose files. Serve over http/https (not file://); index bootstrap must register pak-sw.js and control the page before the app loads. Republish after kit fixes — bootstrap uses pak-sw.js?v=… + update() so a stale worker is not kept. Spaces in level names are decoded in the worker.",
+    mcpTool: "get_scripting_context(section=\"published-encrypted-builds\")",
+  },
+
+  {
     mistake: "Runtime-adding REFLECTION_PROBE or RENDERING_GROUP",
     symptom: "ComponentHost logs policy warning; nothing applied",
     fix: "Author those components in Blender at export time",
@@ -254,6 +273,12 @@ export const PITFALLS: PitfallEntry[] = [
     symptom: "Mesh hides but Havok still collides; behaviors keep running OnUpdate",
     fix: "Use `SetEntityActive(entity, active)` from `@bjs/engine` — not `isVisible` alone (physics and OnUpdate keep running)",
     mcpTool: "get_fragment(name=\"set-entity-active\")",
+  },
+  {
+    mistake: "Writing `node.metadata.bjsEntity = entity` (or spreading it) as an enumerable property",
+    symptom: "Babylon Inspector Properties pane crashes with InternalError: too much recursion in ObjectCanSafelyStringify / MetadataProperties",
+    fix: "Use AssignNodeEntity(node, entity) / EntityFromNode(node) from @bjs/engine — bjsEntity and scene bjsLevel are stored non-enumerable so Inspector Object.values walks stay acyclic",
+    mcpTool: "get_scripting_context(section=\"entity\")",
   },
   {
     mistake: "Slow motion / pause via scene.animationTimeScale, physicsEngine.setTimeStep, or a hand-rolled multiplier",

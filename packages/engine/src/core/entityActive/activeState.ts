@@ -9,25 +9,18 @@ import { Entity } from "../Entity";
 import { RefreshCollisionCallbacks } from "../../subsystems/collisions";
 import { ResumeEntityRuntime, SuspendEntityRuntime } from "./suspend";
 import { ApplyNodeSubtreeVisibility } from "./subtreeVisibility";
-
-/** Scene metadata written during load for runtime entity helpers. */
-interface BjsSceneMetadata
-{
-  bjsLevel?: Level;
-}
+import { AssignSceneLevel, ReadNodeEntity, ReadSceneLevel } from "../bjsMetadata";
 
 /** Level registered on the scene during load, when available. */
 function ResolveLevelFromScene(scene: Scene): Level | undefined
 {
-  return (scene.metadata as BjsSceneMetadata | undefined)?.bjsLevel;
+  return ReadSceneLevel(scene);
 }
 
 /** Resolve the Entity registered on a scene node, if any. */
-function EntityFromNode(node: TransformNode): Entity | undefined
+export function EntityFromNode(node: TransformNode): Entity | undefined
 {
-  const metadata = node.metadata as { bjsEntity?: Entity } | undefined;
-  const entity = metadata?.bjsEntity;
-  return entity instanceof Entity ? entity : undefined;
+  return ReadNodeEntity(node);
 }
 
 /**
@@ -201,6 +194,5 @@ export function SetEntityActive(entity: Entity, active: boolean): void
 /** Bind the loaded level on the scene so runtime helpers can reach physics state. */
 export function BindLevelToScene(scene: Scene, level: Level): void
 {
-  const metadata = (scene.metadata ?? {}) as BjsSceneMetadata;
-  scene.metadata = { ...metadata, bjsLevel: level };
+  AssignSceneLevel(scene, level);
 }

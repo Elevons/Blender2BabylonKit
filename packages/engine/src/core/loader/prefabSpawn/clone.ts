@@ -7,6 +7,7 @@ import type { SpawnOptions } from "../../spawnTypes";
 import { RemapEntityData } from "../../guidFields";
 import { HideEntityNode } from "../nodeResolution";
 import { ApplyNodeSubtreeVisibility } from "../../entityActive";
+import { AssignNodeEntity } from "../../bjsMetadata";
 
 /** Components a spawned instance cannot host in v1 — stripped with a warning. */
 export const UNSUPPORTED_SPAWN_COMPONENTS: ReadonlySet<Component["type"]> = new Set([
@@ -124,12 +125,12 @@ export function StampCloneMetadata(
 ): void
 {
   const templateMetadata = (templateNode.metadata ?? {}) as Record<string, unknown>;
-  const templateGltf = (templateMetadata.gltf ?? {}) as Record<string, unknown>;
+  const { bjsEntity: _templateEntity, ...templateMetadataRest } = templateMetadata;
+  const templateGltf = (templateMetadataRest.gltf ?? {}) as Record<string, unknown>;
   const templateExtras = (templateGltf.extras ?? {}) as Record<string, unknown>;
 
   clonedNode.metadata = {
-    ...templateMetadata,
-    bjsEntity: undefined,
+    ...templateMetadataRest,
     gltf: {
       ...templateGltf,
       extras: { ...templateExtras, [ID_KEY]: newGuid },
@@ -289,7 +290,7 @@ export function RegisterSpawnedEntities(
     const spawnedEntity = new Entity(newGuid, spawnedRow.name, clonedNode);
     level.entities.set(newGuid, spawnedEntity);
     level.entityData.set(newGuid, spawnedRow);
-    clonedNode.metadata = { ...(clonedNode.metadata ?? {}), bjsEntity: spawnedEntity };
+    AssignNodeEntity(clonedNode, spawnedEntity);
 
     if (!isRoot && spawnedRow.visible === false)
     {

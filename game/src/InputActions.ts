@@ -19,6 +19,8 @@ export const PlayerActions = {
 
 export const VehicleActions = {
   MainControl: "Main Control",
+  Look: "Look",
+  Zoom: "Zoom",
   Reset: "Reset",
 } as const;
 
