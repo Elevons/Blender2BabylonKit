@@ -1147,8 +1147,9 @@ async function LoadPak()
   return pakPromise;
 }
 
-async function LoadPakFromBuffer(buffer)
+async function LoadPakFromBuffer(buffer, options)
 {
+  const skipCacheWrite = !!(options && options.skipCacheWrite);
   if (pakPromise)
   {
     return pakPromise.then(async (packed) =>
@@ -1159,8 +1160,13 @@ async function LoadPakFromBuffer(buffer)
   }
   pakPromise = (async () =>
   {
-    await WritePakToCache(buffer);
-    return IngestPakBuffer(buffer);
+    // Ingest first and acknowledge — do not block ready on another 302MB cache write.
+    const packed = await IngestPakBuffer(buffer);
+    if (!skipCacheWrite)
+    {
+      void WritePakToCache(buffer);
+    }
+    return packed;
   })().catch((error) =>
   {
     pakPromise = null;
@@ -1259,14 +1265,35 @@ self.addEventListener("message", (event) =>
   }
   if (event.data.type === "bjs-pak-prefetch")
   {
-    // Page downloads into Cache Storage; this path should be a fast cache hit.
-    // waitUntil still required so a cold-cache fallback fetch is not killed mid-stream.
+    // Fallback only (e.g. a levels/ fetch before bootstrap finished). Prefer bjs-pak-buffer.
     event.waitUntil(LoadPak());
     return;
   }
   if (event.data.type === "bjs-pak-buffer" && event.data.buffer)
   {
-    event.waitUntil(LoadPakFromBuffer(event.data.buffer));
+    const replyPort = event.ports && event.ports[0] ? event.ports[0] : null;
+    event.waitUntil((async () =>
+    {
+      try
+      {
+        await LoadPakFromBuffer(event.data.buffer, { skipCacheWrite: !!event.data.cached });
+        if (replyPort)
+        {
+          replyPort.postMessage({ type: "bjs-pak-ready" });
+        }
+      }
+      catch (error)
+      {
+        if (replyPort)
+        {
+          replyPort.postMessage({
+            type: "bjs-pak-error",
+            message: String(error && error.message ? error.message : error),
+          });
+        }
+        throw error;
+      }
+    })());
   }
 });
 
@@ -1531,14 +1558,16 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   function AskSwToLoadPak(downloadResult) {
     return new Promise(function (resolve, reject) {
       var settled = false;
+      var channel = new MessageChannel();
       var timeout = setTimeout(function () {
         Finish(new Error("Service worker did not acknowledge assets.pak"));
-      }, 60000);
+      }, 120000);
       function Finish(error) {
         if (settled) { return; }
         settled = true;
         clearTimeout(timeout);
-        navigator.serviceWorker.removeEventListener("message", onMessage);
+        channel.port1.onmessage = null;
+        navigator.serviceWorker.removeEventListener("message", onBroadcast);
         if (error) {
           console.error("[bjs] Pak load failed", error);
           SetOverlay("Download failed — reload to retry", null);
@@ -1546,8 +1575,8 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
         }
         else { resolve(); }
       }
-      function onMessage(event) {
-        var data = event.data || {};
+      function HandleAck(data) {
+        if (!data) { return; }
         if (data.type === "bjs-pak-ready") {
           SetOverlay("Assets ready", 1);
           Finish();
@@ -1557,20 +1586,35 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
           Finish(new Error(data.message || "assets.pak load failed"));
         }
       }
-      navigator.serviceWorker.addEventListener("message", onMessage);
+      function onBroadcast(event) {
+        HandleAck(event.data);
+      }
+      channel.port1.onmessage = function (event) {
+        HandleAck(event.data);
+      };
+      navigator.serviceWorker.addEventListener("message", onBroadcast);
       var controller = navigator.serviceWorker.controller;
       if (!controller) {
         Finish(new Error("No service worker controller for pak prefetch"));
         return;
       }
-      if (downloadResult && downloadResult.cached === false && downloadResult.buffer) {
-        controller.postMessage(
-          { type: "bjs-pak-buffer", buffer: downloadResult.buffer },
-          [downloadResult.buffer]
-        );
+      if (!downloadResult || !downloadResult.buffer) {
+        Finish(new Error("assets.pak buffer missing after download"));
         return;
       }
-      controller.postMessage({ type: "bjs-pak-prefetch" });
+      // Always transfer the buffer — never ask the SW to re-read 302MB from Cache Storage.
+      try {
+        controller.postMessage(
+          {
+            type: "bjs-pak-buffer",
+            buffer: downloadResult.buffer,
+            cached: !!downloadResult.cached,
+          },
+          [downloadResult.buffer, channel.port2]
+        );
+      } catch (error) {
+        Finish(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 
