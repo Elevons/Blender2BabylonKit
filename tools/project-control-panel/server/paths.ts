@@ -29,6 +29,21 @@ export const DEFAULT_PROJECT_MANIFEST = {
   dev: { port: 5173 },
 };
 
+/**
+ * Publish-tab form values persisted in b2bkit-project.json so they survive
+ * reloads and control-panel restarts. Entry level stays on `entryLevel`.
+ */
+export interface ProjectPublishSettings
+{
+  platform: "web" | "tauri";
+  title: string;
+  version: string;
+  destination: string;
+  levels: string[];
+  encryptAssets: boolean;
+  includeServer: boolean;
+}
+
 export interface B2BKitProjectManifest
 {
   name: string;
@@ -38,6 +53,7 @@ export interface B2BKitProjectManifest
   assetFolders: string[];
   dev: { port: number };
   blenderExportPath?: string;
+  publish?: ProjectPublishSettings;
 }
 
 /**

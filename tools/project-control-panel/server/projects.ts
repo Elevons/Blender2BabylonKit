@@ -10,7 +10,10 @@ import {
   ResolveProjectRoot,
   ReadProjectManifest,
   type B2BKitProjectManifest,
+  type ProjectPublishSettings,
 } from "./paths.js";
+
+export type { ProjectPublishSettings };
 
 export interface ProjectSummary
 {
@@ -20,6 +23,7 @@ export interface ProjectSummary
   defaultLevel?: string;
   devPort: number;
   blenderExportPath: string;
+  publish?: ProjectPublishSettings;
   manifest?: B2BKitProjectManifest;
   hasManifest: boolean;
   hasLevels: boolean;
@@ -124,10 +128,56 @@ export function ListProjects(): ProjectSummary[]
     defaultLevel: manifest?.defaultLevel,
     devPort: manifest?.dev.port ?? 5173,
     blenderExportPath: manifest?.blenderExportPath ?? "game/public/levels/",
+    publish: NormalizePublishSettings(manifest?.publish),
     manifest: manifest ?? undefined,
     hasManifest: manifest !== null,
     hasLevels: HasLevels(gameDir),
   }];
+}
+
+/**
+ * Write the project manifest with stable formatting.
+ */
+function WriteProjectManifest(
+  appDir: string,
+  manifest: B2BKitProjectManifest,
+): void
+{
+  fs.writeFileSync(
+    path.join(appDir, PROJECT_MANIFEST_FILENAME),
+    JSON.stringify(manifest, null, 2) + "\n",
+    "utf8"
+  );
+}
+
+/**
+ * Coerce a partial/legacy publish block into the shape the hub form expects.
+ */
+function NormalizePublishSettings(
+  settings: Partial<ProjectPublishSettings> | undefined,
+): ProjectPublishSettings | undefined
+{
+  if (settings === undefined)
+  {
+    return undefined;
+  }
+
+  const platform = settings.platform === "tauri" ? "tauri" : "web";
+  const levels = Array.isArray(settings.levels)
+    ? settings.levels.filter((level): level is string => typeof level === "string")
+    : [];
+
+  return {
+    platform,
+    title: typeof settings.title === "string" ? settings.title : "",
+    version: typeof settings.version === "string" && settings.version.length > 0
+      ? settings.version
+      : "1.0.0",
+    destination: typeof settings.destination === "string" ? settings.destination : "",
+    levels,
+    encryptAssets: settings.encryptAssets === true,
+    includeServer: settings.includeServer === true,
+  };
 }
 
 /**
@@ -275,11 +325,43 @@ export function SetProjectEntryLevel(
 
   manifest.entryLevel = entry.url;
   manifest.defaultLevel = entry.level;
-  fs.writeFileSync(
-    path.join(appDir, PROJECT_MANIFEST_FILENAME),
-    JSON.stringify(manifest, null, 2) + "\n",
-    "utf8"
+  WriteProjectManifest(appDir, manifest);
+
+  return GetCurrentProject();
+}
+
+/**
+ * Persist Publish-tab form values into b2bkit-project.json.
+ */
+export function SetProjectPublishSettings(
+  appName: string,
+  settings: ProjectPublishSettings,
+): ProjectSummary
+{
+  const appDir = ProjectDir(appName);
+  const manifest = ReadProjectManifest(appDir);
+  if (manifest === null)
+  {
+    throw new Error(`Project "${appName}" has no ${PROJECT_MANIFEST_FILENAME}`);
+  }
+
+  const availableLevels = new Set(ListLevels(appName));
+  const normalized = NormalizePublishSettings(settings);
+  if (normalized === undefined)
+  {
+    throw new Error("Publish settings are required");
+  }
+
+  const unknownLevels = normalized.levels.filter(
+    (level) => !availableLevels.has(level)
   );
+  if (unknownLevels.length > 0)
+  {
+    throw new Error(`Unknown publish levels: ${unknownLevels.join(", ")}`);
+  }
+
+  manifest.publish = normalized;
+  WriteProjectManifest(appDir, manifest);
 
   return GetCurrentProject();
 }

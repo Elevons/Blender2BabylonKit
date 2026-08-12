@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   api,
   type LevelManifestEntry,
+  type ProjectPublishSettings,
+  type ProjectSummary,
   type PublishOptions,
   type PublishStatus,
 } from "../api/client";
@@ -11,12 +13,43 @@ interface Props
 {
   project: string;
   entryLevel?: string;
+  savedPublish?: ProjectPublishSettings;
   onEntryLevelChange: (manifestUrl: string) => Promise<void>;
+  onPublishSettingsChange?: (project: ProjectSummary) => void;
   onError: (message: string) => void;
 }
 
 /** How close to the bottom counts as "following" the live log. */
 const LOG_FOLLOW_THRESHOLD_PX = 24;
+
+/** Debounce writes to b2bkit-project.json while the form is edited. */
+const PUBLISH_SETTINGS_SAVE_MS = 400;
+
+function BuildPublishSettingsSnapshot(
+  platform: "web" | "tauri",
+  title: string,
+  version: string,
+  destination: string,
+  includedLevelsKey: string,
+  encryptAssets: boolean,
+  includeServer: boolean,
+): ProjectPublishSettings
+{
+  return {
+    platform,
+    title,
+    version,
+    destination,
+    levels: includedLevelsKey.length > 0 ? includedLevelsKey.split("\0") : [],
+    encryptAssets,
+    includeServer,
+  };
+}
+
+function PublishSettingsKey(settings: ProjectPublishSettings): string
+{
+  return JSON.stringify(settings);
+}
 
 /** Convert publish phases into a stable progress percentage. */
 function GetPublishProgress(status: PublishStatus): number
@@ -61,7 +94,9 @@ function IsRunningPublishPhase(phase: PublishStatus["phase"]): boolean
 export function PublishPanel({
   project,
   entryLevel,
+  savedPublish,
   onEntryLevelChange,
+  onPublishSettingsChange,
   onError,
 }: Props): JSX.Element
 {
@@ -75,10 +110,22 @@ export function PublishPanel({
   const [destination, setDestination] = useState("");
   const [encryptAssets, setEncryptAssets] = useState(false);
   const [includeServer, setIncludeServer] = useState(false);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [status, setStatus] = useState<PublishStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const logElementRef = useRef<HTMLPreElement | null>(null);
   const followLogRef = useRef(true);
+  const savedPublishRef = useRef(savedPublish);
+  const entryLevelRef = useRef(entryLevel);
+  const onErrorRef = useRef(onError);
+  const onPublishSettingsChangeRef = useRef(onPublishSettingsChange);
+  const lastSavedKeyRef = useRef("");
+  const pendingSettingsRef = useRef<ProjectPublishSettings | null>(null);
+
+  savedPublishRef.current = savedPublish;
+  entryLevelRef.current = entryLevel;
+  onErrorRef.current = onError;
+  onPublishSettingsChangeRef.current = onPublishSettingsChange;
 
   const availableLevels = useMemo(
     () => [...new Set(manifests.map((entry) => entry.level))].sort((a, b) => a.localeCompare(b)),
@@ -90,35 +137,175 @@ export function PublishPanel({
     [manifests, includedLevels],
   );
 
-  const refreshManifests = useCallback(async () =>
+  const includedLevelsKey = useMemo(
+    () => [...includedLevels].sort((a, b) => a.localeCompare(b)).join("\0"),
+    [includedLevels],
+  );
+
+  function PersistPublishSettings(settings: ProjectPublishSettings): void
   {
-    if (!project)
+    const settingsKey = PublishSettingsKey(settings);
+    if (settingsKey === lastSavedKeyRef.current)
     {
-      setManifests([]);
-      setLevels([]);
       return;
     }
-    const [manifestList, levelList] = await Promise.all([
-      api.getLevelManifests(project),
-      api.getLevels(project),
-    ]);
-    setManifests(manifestList);
-    setLevels(levelList);
-    setIncludedLevels(new Set(levelList));
-    if (manifestList.length > 0)
-    {
-      setStartLevel(manifestList[0].url);
-    }
-    else
-    {
-      setStartLevel("");
-    }
-  }, [project]);
 
+    lastSavedKeyRef.current = settingsKey;
+    api.setPublishSettings(settings)
+      .then((nextProject) =>
+      {
+        onPublishSettingsChangeRef.current?.(nextProject);
+      })
+      .catch((error: Error) => onErrorRef.current(error.message));
+  }
+
+  // Seed the form from b2bkit-project.json once per mount / project switch.
   useEffect(() =>
   {
-    refreshManifests().catch((error: Error) => onError(error.message));
-  }, [refreshManifests, onError]);
+    let cancelled = false;
+
+    async function LoadManifests(): Promise<void>
+    {
+      if (!project)
+      {
+        setManifests([]);
+        setLevels([]);
+        setSettingsReady(false);
+        pendingSettingsRef.current = null;
+        return;
+      }
+
+      setSettingsReady(false);
+      try
+      {
+        const [manifestList, levelList] = await Promise.all([
+          api.getLevelManifests(project),
+          api.getLevels(project),
+        ]);
+        if (cancelled)
+        {
+          return;
+        }
+
+        const saved = savedPublishRef.current;
+        const configuredEntryLevel = entryLevelRef.current;
+
+        setManifests(manifestList);
+        setLevels(levelList);
+
+        const savedLevels = (saved?.levels ?? [])
+          .filter((level) => levelList.includes(level));
+        const nextIncluded = savedLevels.length > 0 ? savedLevels : levelList;
+        const nextIncludedKey = [...nextIncluded]
+          .sort((a, b) => a.localeCompare(b))
+          .join("\0");
+        const nextPlatform = saved?.platform === "tauri" ? "tauri" : "web";
+        const nextTitle = saved?.title ?? "";
+        const nextVersion = saved?.version !== undefined && saved.version.length > 0
+          ? saved.version
+          : "1.0.0";
+        const nextDestination = saved?.destination ?? "";
+        const nextEncryptAssets = saved?.encryptAssets === true;
+        const nextIncludeServer = saved?.includeServer === true;
+
+        setIncludedLevels(new Set(nextIncluded));
+        setPlatform(nextPlatform);
+        setTitle(nextTitle);
+        setVersion(nextVersion);
+        setDestination(nextDestination);
+        setEncryptAssets(nextEncryptAssets);
+        setIncludeServer(nextIncludeServer);
+
+        const preferredStart = configuredEntryLevel !== undefined
+          && manifestList.some((entry) => entry.url === configuredEntryLevel)
+          ? configuredEntryLevel
+          : manifestList[0]?.url ?? "";
+        setStartLevel(preferredStart);
+
+        const seeded = BuildPublishSettingsSnapshot(
+          nextPlatform,
+          nextTitle,
+          nextVersion,
+          nextDestination,
+          nextIncludedKey,
+          nextEncryptAssets,
+          nextIncludeServer,
+        );
+        pendingSettingsRef.current = seeded;
+        lastSavedKeyRef.current = saved !== undefined
+          ? PublishSettingsKey(seeded)
+          : "";
+        setSettingsReady(true);
+      }
+      catch (error)
+      {
+        if (!cancelled)
+        {
+          onErrorRef.current((error as Error).message);
+        }
+      }
+    }
+
+    void LoadManifests();
+    return () =>
+    {
+      cancelled = true;
+    };
+  }, [project]);
+
+  // Persist form values into b2bkit-project.json (entry level is saved separately).
+  useEffect(() =>
+  {
+    if (!project || !settingsReady)
+    {
+      return;
+    }
+
+    const settings = BuildPublishSettingsSnapshot(
+      platform,
+      title,
+      version,
+      destination,
+      includedLevelsKey,
+      encryptAssets,
+      includeServer,
+    );
+    pendingSettingsRef.current = settings;
+
+    const timer = setTimeout(() =>
+    {
+      PersistPublishSettings(settings);
+    }, PUBLISH_SETTINGS_SAVE_MS);
+
+    return () =>
+    {
+      clearTimeout(timer);
+    };
+  }, [
+    project,
+    settingsReady,
+    platform,
+    title,
+    version,
+    destination,
+    includedLevelsKey,
+    encryptAssets,
+    includeServer,
+  ]);
+
+  // Flush the latest form values if the tab unmounts before debounce fires.
+  useEffect(() =>
+  {
+    return () =>
+    {
+      if (!project || pendingSettingsRef.current === null)
+      {
+        return;
+      }
+
+      PersistPublishSettings(pendingSettingsRef.current);
+    };
+  }, [project]);
 
   // Follow new output, but leave the view alone once the user scrolls up.
   useEffect(() =>

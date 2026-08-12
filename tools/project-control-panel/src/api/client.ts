@@ -1,3 +1,14 @@
+export interface ProjectPublishSettings
+{
+  platform: "web" | "tauri";
+  title: string;
+  version: string;
+  destination: string;
+  levels: string[];
+  encryptAssets: boolean;
+  includeServer: boolean;
+}
+
 export interface ProjectSummary
 {
   name: string;
@@ -6,6 +17,7 @@ export interface ProjectSummary
   defaultLevel?: string;
   devPort: number;
   blenderExportPath: string;
+  publish?: ProjectPublishSettings;
   hasManifest: boolean;
   hasLevels: boolean;
 }
@@ -134,6 +146,12 @@ export const api = {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ manifestUrl }),
+    }),
+  setPublishSettings: (settings: ProjectPublishSettings) =>
+    Request<ProjectSummary>("/api/project/publish", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
     }),
   getLevels: (app: string) => Request<string[]>(`/api/projects/${encodeURIComponent(app)}/levels`),
   getLevelManifests: (app: string) =>

@@ -19,8 +19,10 @@ import {
   ListLevelManifests,
   ListLevels,
   SetProjectEntryLevel,
+  SetProjectPublishSettings,
   StartDevServer,
   StopDevServer,
+  type ProjectPublishSettings,
 } from "./projects.js";
 import {
   BuildMcp,
@@ -104,6 +106,38 @@ export function CreateApiApp(): Express
     }
     const currentProject = GetCurrentProject();
     res.json(SetProjectEntryLevel(currentProject.name, body.manifestUrl));
+  });
+
+  app.put("/api/project/publish", (req, res) =>
+  {
+    const body = req.body as Partial<ProjectPublishSettings>;
+    if (body === null || typeof body !== "object")
+    {
+      res.status(400).json({ error: "Publish settings body is required" });
+      return;
+    }
+
+    const settings: ProjectPublishSettings = {
+      platform: body.platform === "tauri" ? "tauri" : "web",
+      title: typeof body.title === "string" ? body.title : "",
+      version: typeof body.version === "string" ? body.version : "1.0.0",
+      destination: typeof body.destination === "string" ? body.destination : "",
+      levels: Array.isArray(body.levels)
+        ? body.levels.filter((level): level is string => typeof level === "string")
+        : [],
+      encryptAssets: body.encryptAssets === true,
+      includeServer: body.includeServer === true,
+    };
+
+    try
+    {
+      const currentProject = GetCurrentProject();
+      res.json(SetProjectPublishSettings(currentProject.name, settings));
+    }
+    catch (error)
+    {
+      res.status(400).json({ error: (error as Error).message });
+    }
   });
 
   app.get("/api/projects/:app/levels", (req, res) =>

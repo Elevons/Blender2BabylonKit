@@ -14,5 +14,17 @@
     "port": 5173
   },
   "blenderExportPath": "game/public/levels/",
-  "entryLevel": "/levels/Train Scene/Train Scene.scene.json"
+  "entryLevel": "/levels/Train Scene/Train Scene.scene.json",
+  "publish": {
+    "platform": "web",
+    "title": "Underwater Truck Train",
+    "version": "1.0.0",
+    "destination": "/home/jordan/Desktop/trucktrain",
+    "levels": [
+      "TestScene",
+      "Train Scene"
+    ],
+    "encryptAssets": true,
+    "includeServer": false
+  }
 }

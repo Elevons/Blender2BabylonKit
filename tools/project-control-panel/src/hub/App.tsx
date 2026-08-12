@@ -34,6 +34,11 @@ export function App(): JSX.Element
     setError(undefined);
   }, []);
 
+  const HandlePublishSettingsChange = useCallback((project: ProjectSummary): void =>
+  {
+    setCurrentProject(project);
+  }, []);
+
   useEffect(() =>
   {
     api.getCurrentProject()
@@ -144,7 +149,9 @@ export function App(): JSX.Element
           <PublishPanel
             project={currentProject.name}
             entryLevel={currentProject.entryLevel}
+            savedPublish={currentProject.publish}
             onEntryLevelChange={HandleEntryLevelChange}
+            onPublishSettingsChange={HandlePublishSettingsChange}
             onError={HandleError}
           />
         )}
