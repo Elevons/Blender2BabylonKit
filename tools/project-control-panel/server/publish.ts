@@ -599,13 +599,52 @@ function SendFile(request, response, filePath)
   const stat = fs.statSync(filePath);
   const contentType = MIME_TYPES.get(path.extname(filePath).toLowerCase())
     ?? "application/octet-stream";
+  const cacheControl = filePath.endsWith("index.html") || filePath.endsWith("pak-sw.js")
+    ? "no-cache"
+    : "public, max-age=3600";
+  const rangeHeader = request.headers.range;
+
+  if (typeof rangeHeader === "string")
+  {
+    const match = /^bytes=(\\d*)-(\\d*)$/i.exec(rangeHeader.trim());
+    if (match)
+    {
+      const size = stat.size;
+      let start = match[1] === "" ? 0 : Number(match[1]);
+      let end = match[2] === "" ? size - 1 : Number(match[2]);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end < start || start >= size)
+      {
+        response.writeHead(416, {
+          "Content-Range": "bytes */" + size,
+          "Accept-Ranges": "bytes",
+        });
+        response.end();
+        return;
+      }
+      end = Math.min(end, size - 1);
+      const length = end - start + 1;
+      response.writeHead(206, {
+        "Content-Type": contentType,
+        "Content-Length": length,
+        "Content-Range": "bytes " + start + "-" + end + "/" + size,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": cacheControl,
+      });
+      if (request.method === "HEAD")
+      {
+        response.end();
+        return;
+      }
+      fs.createReadStream(filePath, { start, end }).pipe(response);
+      return;
+    }
+  }
 
   response.writeHead(200, {
     "Content-Type": contentType,
     "Content-Length": stat.size,
-    "Cache-Control": filePath.endsWith("index.html") || filePath.endsWith("pak-sw.js")
-      ? "no-cache"
-      : "public, max-age=3600",
+    "Accept-Ranges": "bytes",
+    "Cache-Control": cacheControl,
   });
 
   if (request.method === "HEAD")
@@ -963,6 +1002,57 @@ async function StreamResponseToBuffer(response, totalHeader)
   return buffer;
 }
 
+async function ReadRangeIntoView(view, start, end, total)
+{
+  const response = await fetch(PAK_URL, {
+    headers: { Range: "bytes=" + start + "-" + end },
+    cache: "no-store",
+  });
+  if (response.status !== 206 && !(response.status === 200 && start === 0))
+  {
+    throw new Error("Failed to fetch assets.pak range: " + response.status);
+  }
+  if (response.status === 200)
+  {
+    // Server ignored Range and returned the whole file.
+    const full = await StreamResponseToBuffer(response, total);
+    view.set(new Uint8Array(full), 0);
+    return total;
+  }
+
+  const expected = end - start + 1;
+  if (response.body && typeof response.body.getReader === "function")
+  {
+    const reader = response.body.getReader();
+    let offset = start;
+    while (true)
+    {
+      const result = await reader.read();
+      if (result.done)
+      {
+        break;
+      }
+      view.set(result.value, offset);
+      offset += result.value.byteLength;
+      await BroadcastProgress(offset, total);
+    }
+    if (offset - start !== expected)
+    {
+      throw new Error("assets.pak range size mismatch at " + start);
+    }
+    return offset;
+  }
+
+  const chunk = new Uint8Array(await response.arrayBuffer());
+  if (chunk.byteLength !== expected)
+  {
+    throw new Error("assets.pak range size mismatch at " + start);
+  }
+  view.set(chunk, start);
+  await BroadcastProgress(end + 1, total);
+  return end + 1;
+}
+
 async function FetchPakViaRanges(total)
 {
   const buffer = new ArrayBuffer(total);
@@ -970,34 +1060,26 @@ async function FetchPakViaRanges(total)
   for (let start = 0; start < total; start += CHUNK_SIZE)
   {
     const end = Math.min(start + CHUNK_SIZE - 1, total - 1);
-    const response = await fetch(PAK_URL, {
-      headers: { Range: "bytes=" + start + "-" + end },
-      cache: "no-store",
-    });
-    if (response.status !== 206 && !(response.status === 200 && start === 0))
+    const loaded = await ReadRangeIntoView(view, start, end, total);
+    if (loaded >= total && start === 0 && end < total - 1)
     {
-      throw new Error("Failed to fetch assets.pak range: " + response.status);
-    }
-    const chunk = new Uint8Array(await response.arrayBuffer());
-    if (response.status === 200)
-    {
-      // Server ignored Range and returned the whole file.
-      if (chunk.byteLength !== total)
-      {
-        throw new Error("assets.pak size mismatch on full response");
-      }
-      view.set(chunk, 0);
-      await BroadcastProgress(total, total);
+      // Full-file 200 response already filled the buffer.
       return buffer;
     }
-    if (chunk.byteLength !== (end - start + 1))
-    {
-      throw new Error("assets.pak range size mismatch at " + start);
-    }
-    view.set(chunk, start);
-    await BroadcastProgress(end + 1, total);
   }
   return buffer;
+}
+
+async function IngestPakBuffer(buffer)
+{
+  const view = new DataView(buffer);
+  const indexLength = view.getUint32(0, true);
+  const indexBytes = new Uint8Array(buffer, 4, indexLength);
+  const index = JSON.parse(new TextDecoder().decode(indexBytes));
+  const payloadOffset = 4 + indexLength;
+  const packed = { buffer, index, payloadOffset, key: await LoadKey() };
+  await Broadcast({ type: "bjs-pak-ready" });
+  return packed;
 }
 
 async function FetchPakBuffer()
@@ -1055,14 +1137,30 @@ async function LoadPak()
   pakPromise = (async () =>
   {
     const buffer = await FetchPakBuffer();
-    const view = new DataView(buffer);
-    const indexLength = view.getUint32(0, true);
-    const indexBytes = new Uint8Array(buffer, 4, indexLength);
-    const index = JSON.parse(new TextDecoder().decode(indexBytes));
-    const payloadOffset = 4 + indexLength;
-    const packed = { buffer, index, payloadOffset, key: await LoadKey() };
-    await Broadcast({ type: "bjs-pak-ready" });
-    return packed;
+    return IngestPakBuffer(buffer);
+  })().catch((error) =>
+  {
+    pakPromise = null;
+    void Broadcast({ type: "bjs-pak-error", message: String(error && error.message ? error.message : error) });
+    throw error;
+  });
+  return pakPromise;
+}
+
+async function LoadPakFromBuffer(buffer)
+{
+  if (pakPromise)
+  {
+    return pakPromise.then(async (packed) =>
+    {
+      await Broadcast({ type: "bjs-pak-ready" });
+      return packed;
+    });
+  }
+  pakPromise = (async () =>
+  {
+    await WritePakToCache(buffer);
+    return IngestPakBuffer(buffer);
   })().catch((error) =>
   {
     pakPromise = null;
@@ -1161,9 +1259,14 @@ self.addEventListener("message", (event) =>
   }
   if (event.data.type === "bjs-pak-prefetch")
   {
-    // Keep the worker alive for the full download — without waitUntil,
-    // Chrome treats the message handler as idle and kills the SW ~30s in.
+    // Page downloads into Cache Storage; this path should be a fast cache hit.
+    // waitUntil still required so a cold-cache fallback fetch is not killed mid-stream.
     event.waitUntil(LoadPak());
+    return;
+  }
+  if (event.data.type === "bjs-pak-buffer" && event.data.buffer)
+  {
+    event.waitUntil(LoadPakFromBuffer(event.data.buffer));
   }
 });
 
@@ -1200,6 +1303,7 @@ self.addEventListener("fetch", (event) =>
 /**
  * Replace the Vite module script tag with a bootstrap that registers the SW,
  * reloads once so the page is controlled, then dynamically imports the bundle.
+ * Safe to re-run on an already-bootstrapped index.html (picks up MODULE_SRC).
  */
 function RewriteIndexForPak(destination: string, keyBase64: string): void
 {
@@ -1212,19 +1316,33 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   let html = fs.readFileSync(indexPath, "utf8");
   const scriptMatch = html.match(/<script\s+type="module"[^>]*\ssrc="([^"]+)"[^>]*>\s*<\/script>/i)
     ?? html.match(/<script\s+type="module"\s+crossorigin\s+src="([^"]+)"><\/script>/i);
+  const existingModule = html.match(/var MODULE_SRC = ("[^"]+")/);
+  const existingBootstrap = html.match(/<script>\s*\(function \(\) \{\s*var MODULE_SRC = "[^"]+";[\s\S]*?\}\)\(\);\s*<\/script>/);
 
-  if (!scriptMatch)
+  let moduleSrc: string;
+  let replaceTarget: string;
+  if (scriptMatch)
+  {
+    moduleSrc = scriptMatch[1];
+    replaceTarget = scriptMatch[0];
+  }
+  else if (existingModule && existingBootstrap)
+  {
+    moduleSrc = JSON.parse(existingModule[1]);
+    replaceTarget = existingBootstrap[0];
+  }
+  else
   {
     throw new Error("Could not find Vite module script in index.html");
   }
-
-  const moduleSrc = scriptMatch[1];
   // Query bust so a republish installs a new worker instead of keeping a stale one.
   const swVersion = keyBase64.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
   const bootstrap = `<script>
 (function () {
   var MODULE_SRC = ${JSON.stringify(moduleSrc)};
   var SW_URL = "./pak-sw.js?v=${swVersion}";
+  var PAK_URL = "./assets.pak";
+  var CACHE_NAME = "bjs-pak-${swVersion}";
   var RELOAD_KEY = "bjs-pak-sw-reload";
 
   function FormatBytes(byteCount) {
@@ -1299,23 +1417,130 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     });
   }
 
-  function PrefetchPak() {
-    SetOverlay("Downloading assets…", null);
+  function ConcatChunks(chunks, totalLength) {
+    var buffer = new ArrayBuffer(totalLength);
+    var view = new Uint8Array(buffer);
+    var offset = 0;
+    for (var index = 0; index < chunks.length; index++) {
+      view.set(chunks[index], offset);
+      offset += chunks[index].byteLength;
+    }
+    return buffer;
+  }
+
+  function StorePakInCache(buffer) {
+    return caches.open(CACHE_NAME).then(function (cache) {
+      return cache.put(PAK_URL, new Response(buffer, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Content-Length": String(buffer.byteLength),
+        },
+      })).then(function () {
+        return { cached: true, buffer: buffer };
+      });
+    }).catch(function (error) {
+      console.warn("[bjs] Could not cache assets.pak; transferring to service worker", error);
+      return { cached: false, buffer: buffer };
+    });
+  }
+
+  /**
+   * Download assets.pak on the page thread. Chrome can still kill a service
+   * worker mid-fetch even with waitUntil; the window is not subject to that.
+   */
+  function DownloadPakOnPage(onProgress) {
+    return caches.open(CACHE_NAME).then(function (cache) {
+      return cache.match(PAK_URL).then(function (cached) {
+        if (cached) {
+          return cached.arrayBuffer().then(function (buffer) {
+            onProgress(buffer.byteLength, buffer.byteLength);
+            return { cached: true, buffer: buffer };
+          });
+        }
+
+        return fetch(PAK_URL, { cache: "no-store" }).then(function (response) {
+          if (!response.ok) {
+            throw new Error("Failed to fetch assets.pak: " + response.status);
+          }
+          var total = Number(response.headers.get("content-length") || "0");
+          var lastProgressAt = 0;
+
+          function Report(loaded, totalBytes) {
+            var now = Date.now();
+            if (now - lastProgressAt < 100 && loaded !== totalBytes) {
+              return;
+            }
+            lastProgressAt = now;
+            onProgress(loaded, totalBytes);
+          }
+
+          if (!response.body || typeof response.body.getReader !== "function") {
+            return response.arrayBuffer().then(function (buffer) {
+              Report(buffer.byteLength, buffer.byteLength);
+              return StorePakInCache(buffer);
+            });
+          }
+
+          var reader = response.body.getReader();
+          var loaded = 0;
+
+          if (total > 0) {
+            var view = new Uint8Array(total);
+            function PumpKnown() {
+              return reader.read().then(function (result) {
+                if (result.done) {
+                  if (loaded !== total) {
+                    throw new Error("assets.pak truncated: got " + loaded + " of " + total + " bytes");
+                  }
+                  Report(loaded, total);
+                  return StorePakInCache(view.buffer);
+                }
+                if (loaded + result.value.byteLength > total) {
+                  throw new Error("assets.pak larger than Content-Length");
+                }
+                view.set(result.value, loaded);
+                loaded += result.value.byteLength;
+                Report(loaded, total);
+                return PumpKnown();
+              });
+            }
+            return PumpKnown();
+          }
+
+          var chunks = [];
+          function PumpUnknown() {
+            return reader.read().then(function (result) {
+              if (result.done) {
+                var buffer = ConcatChunks(chunks, loaded);
+                Report(loaded, loaded);
+                return StorePakInCache(buffer);
+              }
+              chunks.push(result.value);
+              loaded += result.value.byteLength;
+              Report(loaded, 0);
+              return PumpUnknown();
+            });
+          }
+          return PumpUnknown();
+        });
+      });
+    });
+  }
+
+  function AskSwToLoadPak(downloadResult) {
     return new Promise(function (resolve, reject) {
       var settled = false;
-      var lastProgressAt = Date.now();
-      var watchdog = setInterval(function () {
-        if (Date.now() - lastProgressAt > 15000) {
-          Finish(new Error("assets.pak download stalled (no progress for 15s)"));
-        }
-      }, 1000);
+      var timeout = setTimeout(function () {
+        Finish(new Error("Service worker did not acknowledge assets.pak"));
+      }, 60000);
       function Finish(error) {
         if (settled) { return; }
         settled = true;
-        clearInterval(watchdog);
+        clearTimeout(timeout);
         navigator.serviceWorker.removeEventListener("message", onMessage);
         if (error) {
-          console.error("[bjs] Pak prefetch failed", error);
+          console.error("[bjs] Pak load failed", error);
           SetOverlay("Download failed — reload to retry", null);
           reject(error);
         }
@@ -1323,22 +1548,13 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       }
       function onMessage(event) {
         var data = event.data || {};
-        if (data.type === "bjs-pak-progress") {
-          lastProgressAt = Date.now();
-          var total = Number(data.total) || 0;
-          var loaded = Number(data.loaded) || 0;
-          var ratio = total > 0 ? loaded / total : null;
-          SetOverlay("Downloading assets…", ratio, { loaded: loaded, total: total });
-          return;
-        }
         if (data.type === "bjs-pak-ready") {
-          lastProgressAt = Date.now();
           SetOverlay("Assets ready", 1);
           Finish();
           return;
         }
         if (data.type === "bjs-pak-error") {
-          Finish(new Error(data.message || "assets.pak download failed"));
+          Finish(new Error(data.message || "assets.pak load failed"));
         }
       }
       navigator.serviceWorker.addEventListener("message", onMessage);
@@ -1347,7 +1563,46 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
         Finish(new Error("No service worker controller for pak prefetch"));
         return;
       }
+      if (downloadResult && downloadResult.cached === false && downloadResult.buffer) {
+        controller.postMessage(
+          { type: "bjs-pak-buffer", buffer: downloadResult.buffer },
+          [downloadResult.buffer]
+        );
+        return;
+      }
       controller.postMessage({ type: "bjs-pak-prefetch" });
+    });
+  }
+
+  function PrefetchPak() {
+    SetOverlay("Downloading assets…", null);
+    var lastProgressAt = Date.now();
+    var stallError = null;
+    var stallTimer = setInterval(function () {
+      if (Date.now() - lastProgressAt > 30000) {
+        stallError = new Error("assets.pak download stalled (no progress for 30s)");
+      }
+    }, 1000);
+
+    return DownloadPakOnPage(function (loaded, total) {
+      if (stallError) {
+        throw stallError;
+      }
+      lastProgressAt = Date.now();
+      var ratio = total > 0 ? loaded / total : null;
+      SetOverlay("Downloading assets…", ratio, { loaded: loaded, total: total });
+    }).then(function (downloadResult) {
+      clearInterval(stallTimer);
+      if (stallError) {
+        throw stallError;
+      }
+      SetOverlay("Preparing assets…", 1);
+      return AskSwToLoadPak(downloadResult);
+    }).catch(function (error) {
+      clearInterval(stallTimer);
+      console.error("[bjs] Pak prefetch failed", error);
+      SetOverlay("Download failed — reload to retry", null);
+      throw error;
     });
   }
 
@@ -1390,8 +1645,23 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
 })();
 </script>`;
 
-  html = html.replace(scriptMatch[0], bootstrap);
+  html = html.replace(replaceTarget, bootstrap);
   fs.writeFileSync(indexPath, html, "utf8");
+}
+
+/**
+ * Re-emit pak-sw.js + index bootstrap for an existing encrypted publish folder
+ * without re-packing assets.pak (keeps the current AES key).
+ */
+export function RefreshEncryptedBootstrap(destination: string, keyBase64: string): void
+{
+  fs.writeFileSync(
+    path.join(destination, "pak-sw.js"),
+    BuildServiceWorkerSource(keyBase64),
+    "utf8",
+  );
+  RewriteIndexForPak(destination, keyBase64);
+  WriteWebServer(destination);
 }
 
 /**
