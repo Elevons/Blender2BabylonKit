@@ -68,7 +68,7 @@ APIs.
 ## Run the example game
 
 The repo is an **npm workspaces monorepo**: the engine lives once in
-`packages/engine` (`@bjs/engine`) and the playable example lives under `game/`
+`packages/engine` (`b2bkit`) and the playable example lives under `game/`
 (self-contained app with its own Vite config and `b2bkit-project.json`).
 
 ```bash
@@ -121,7 +121,7 @@ name matching the filename stem. Mark editable fields with `@exposed`:
 
 ```ts
 // src/behaviors/Rotator.ts
-import { Behavior, exposed } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
 
 export default class Rotator extends Behavior
 {
@@ -159,7 +159,7 @@ game outside the monorepo, copy that folder (or follow
 [Create a game with the published kit](docs/CREATE-A-GAME.html) once published):
 
 ```bash
-# After publishing @bjs/engine:
+# After publishing b2bkit:
 mkdir my-project && cd my-project
 # scaffold root + game/ (see docs/CREATE-A-GAME.html)
 npm install
@@ -209,7 +209,7 @@ and reference it from a Script component in Blender.
 
 ```
 blender_addon/                 # Blender extension (export, components, UI)
-packages/engine/               # @bjs/engine — runtime (+ release embeds panel, bjs-mcp, docs, add-on zip)
+packages/engine/               # b2bkit — runtime (+ release embeds panel, bjs-mcp, docs, add-on zip)
 game/                          # example playable app (Vite + b2bkit-project.json)
 tools/project-control-panel/   # Project Control Panel hub
 tools/bjs-mcp/                 # MCP server for LLM-assisted behavior authoring

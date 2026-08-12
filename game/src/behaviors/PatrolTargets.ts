@@ -1,5 +1,5 @@
-import { Behavior, exposed } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 /**
  * TEST/demo for an entity LIST. Moves the node toward each target object in

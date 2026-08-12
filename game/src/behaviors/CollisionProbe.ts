@@ -1,5 +1,5 @@
-import { Behavior, exposed } from "@bjs/engine";
-import type { CollisionContact, Entity } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
+import type { CollisionContact, Entity } from "b2bkit";
 
 /**
  * Demo for Unity-style collision/trigger lifecycle hooks. Attach to any entity

@@ -2,7 +2,7 @@
 <p class="doc-links">Subsystem diagram: <a href="runtime-loop.html">runtime-loop.html</a> · Code traces: <a href="trace-runtime-loop.html">runtime loop</a> · <a href="trace-lifecycle.html">lifecycle</a> · <a href="trace-load.html">load</a></p>
 <p><strong>Behavior authors:</strong> this is usually your first engine chapter. It explains <strong>what runs when</strong> and how the kit hooks into Babylon.js. Skim <a href="01-ARCHITECTURE.html">01 — Architecture</a> first only if you need the two-file export model (glb + manifest).</p>
 <h2>App vs kit</h2>
-<p>Your game app (e.g. <code>game/src/main.ts</code>) owns the level lifecycle — normally through a <code>LevelDirector</code>, which creates the Babylon <strong>Engine</strong>, a fresh <strong>Scene</strong> per load, and the browser render loop. The kit (<code>@bjs/engine</code>) owns loading a level into that scene. It also drives gameplay scripts.</p>
+<p>Your game app (e.g. <code>game/src/main.ts</code>) owns the level lifecycle — normally through a <code>LevelDirector</code>, which creates the Babylon <strong>Engine</strong>, a fresh <strong>Scene</strong> per load, and the browser render loop. The kit (<code>b2bkit</code>) owns loading a level into that scene. It also drives gameplay scripts.</p>
 <table><thead><tr><th>Layer</th><th>Typical owner</th><th>Role</th></tr></thead><tbody>
 <tr><td><code>LevelDirector</code></td><td>App (kit-provided)</td><td>Engine + render loop + scene recreation across <code>Load</code>/<code>Restart</code>/<code>Unload</code>; injected onto behaviors as <code>this.session</code></td></tr>
 <tr><td><code>Engine</code></td><td>Director (or app)</td><td>WebGL/WebGPU context, <code>runRenderLoop</code>, <code>getDeltaTime()</code></td></tr>

@@ -1,4 +1,4 @@
-import { Behavior, exposed } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
 import { Vector3, PhysicsMotionType } from "@babylonjs/core";
 
 /** Eases a node back and forth between its start and start + offset. */

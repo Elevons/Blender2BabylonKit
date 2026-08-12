@@ -1,7 +1,7 @@
 {
-  "name": "@bjs/engine",
-  "private": true,
-  "version": "0.32.0",
+  "name": "b2bkit",
+  "private": false,
+  "version": "1.0.0",
   "author": "Jordan Elevons (Elevons LLC)",
   "homepage": "https://elevons.design",
   "type": "module",
@@ -25,9 +25,9 @@
     "README.md"
   ],
   "bin": {
-    "b2bkit-addon-path": "./bin/addon-path.mjs",
-    "b2bkit-control-panel": "./bin/control-panel.mjs",
-    "b2bkit-mcp": "./mcp/dist/index.js"
+    "b2bkit-addon-path": "bin/addon-path.js",
+    "b2bkit-control-panel": "bin/control-panel.js",
+    "b2bkit-mcp": "bin/mcp.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

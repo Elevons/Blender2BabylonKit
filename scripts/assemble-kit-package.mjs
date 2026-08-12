@@ -50,7 +50,7 @@ function ReplaceDirectory(sourceDirectory, destinationDirectory)
 // doc-embeddings.json cannot ship. docs:build ends with mcp:index.
 Run("npm", ["run", "docs:build"]);
 
-Run("npm", ["run", "build", "--workspace", "@bjs/engine"]);
+Run("npm", ["run", "build", "--workspace", "b2bkit"]);
 Run("npm", ["run", "build", "--workspace", "@bjs/project-control-panel"]);
 Run("npm", ["run", "build", "--workspace", "@bjs/mcp"]);
 Run("node", ["scripts/pack-blender-addon.mjs", "--out", "packages/engine/blender-addon"]);

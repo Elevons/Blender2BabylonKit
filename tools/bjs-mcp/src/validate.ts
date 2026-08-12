@@ -36,11 +36,11 @@ export function ValidateBehavior(source: string, filename?: string): ValidationR
 {
   const issues: ValidationIssue[] = [];
 
-  if (!source.includes('from "@bjs/engine"'))
+  if (!source.includes('from "b2bkit"'))
   {
     issues.push({
       code: "missing-engine-import",
-      message: 'Import from "@bjs/engine" (Behavior, exposed, etc.).',
+      message: 'Import from "b2bkit" (Behavior, exposed, etc.).',
       severity: "error",
     });
   }
@@ -491,13 +491,13 @@ function CheckEnumerableBjsEntityAssign(source: string, issues: ValidationIssue[
   issues.push({
     code: "enumerable-bjs-entity-metadata",
     message:
-      'Do not write enumerable metadata.bjsEntity (Inspector "too much recursion"). Use AssignNodeEntity(node, entity) / EntityFromNode(node) from @bjs/engine.',
+      'Do not write enumerable metadata.bjsEntity (Inspector "too much recursion"). Use AssignNodeEntity(node, entity) / EntityFromNode(node) from b2bkit.',
     severity: "warning",
   });
 }
 
 const FIX_HINTS: Record<string, string> = {
-  "missing-engine-import": 'Add: import { Behavior, … } from "@bjs/engine";',
+  "missing-engine-import": 'Add: import { Behavior, … } from "b2bkit";',
   "missing-export-default": "Add: export default class YourName extends Behavior { }",
   "class-filename-mismatch": "Rename class or file so stems match (Patrol.ts → class Patrol).",
   "lowercase-lifecycle": "Rename to PascalCase: OnStart, OnPostReady, OnUpdate, OnDestroy, OnMessage.",
@@ -522,7 +522,7 @@ const FIX_HINTS: Record<string, string> = {
   "manual-prefab-clone":
     'Use await this.spawner.Spawn(template, { position }) — get_fragment(name="spawn-prefab-instance").',
   "enumerable-bjs-entity-metadata":
-    "Use AssignNodeEntity(node, entity) / EntityFromNode(node) from @bjs/engine (non-enumerable metadata).",
+    "Use AssignNodeEntity(node, entity) / EntityFromNode(node) from b2bkit (non-enumerable metadata).",
   "paint-color-kind":
     'Leave color kind blank or use COLOR_1; luminance ~0.5 — get_fragment(name="paint-scatter-vertex-colors").',
 };

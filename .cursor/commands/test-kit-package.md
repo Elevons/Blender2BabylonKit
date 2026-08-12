@@ -11,7 +11,7 @@ npm run kit:test
 
 That single command does everything:
 
-1. `npm pack --workspace @bjs/engine` — the `prepack` hook runs
+1. `npm pack --workspace b2bkit` — the `prepack` hook runs
    `scripts/assemble-kit-package.mjs`, which rebuilds the documentation site and
    the MCP vector index (`doc-embeddings.json`), builds the engine, control
    panel, and `bjs-mcp`, and packs the Blender add-on zip.

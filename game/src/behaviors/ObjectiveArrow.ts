@@ -1,4 +1,4 @@
-import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Behavior, exposed, type Entity } from "b2bkit";
 import type { TransformNode } from "@babylonjs/core";
 import { Space, Vector3 } from "@babylonjs/core";
 

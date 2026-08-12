@@ -1,4 +1,4 @@
-import { Behavior, exposed } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
 import { KeyboardEventTypes, Vector3 } from "@babylonjs/core";
 import type { Observer, KeyboardInfo } from "@babylonjs/core";
 

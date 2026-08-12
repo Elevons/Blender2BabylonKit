@@ -18,7 +18,7 @@
 <p>Use <strong>Make Invisible</strong> for collision-only props without toggling the outliner eye icon. At load only rendering is off — physics and scripts keep running. Runtime SetActive: <code>SetEntityActive(entity, active)</code>.</p>
 <h3>Runtime enable / disable (<code>SetEntityActive</code>)</h3>
 <p>Unity-style SetActive. Sets local <code>entity.active</code> (<code>activeSelf</code>) on one entity, then reconciles every descendant entity on its node subtree.</p>
-<pre><code class="language-typescript">import { SetEntityActive, IsEntityActive } from "@bjs/engine";
+<pre><code class="language-typescript">import { SetEntityActive, IsEntityActive } from "b2bkit";
 
 SetEntityActive(targetEntity, false);
 SetEntityActive(targetEntity, true);</code></pre>
@@ -99,8 +99,8 @@ SetEntityActive(targetEntity, true);</code></pre>
 <h2>Collision lifecycle hooks (<code>WireCollisionEvents</code>) <a name="collision-hooks"></a></h2>
 <p>Behaviors may override Unity-style hooks: <code>OnCollisionEnter</code> / <code>OnCollisionStay</code> / <code>OnCollisionExit</code> (solid colliders) and <code>OnTriggerEnter</code> / <code>OnTriggerExit</code> (trigger volumes). <code>WireCollisionEvents</code> relays Havok plugin observables — <code>COLLISION_STARTED</code> / <code>CONTINUED</code> / <code>FINISHED</code> and <code>TRIGGER_ENTERED</code> / <code>EXITED</code>. Both bodies in a contact receive hook callbacks (Unity semantics). Collision callbacks are opt-in (overridden hook or collision-phase Event Message). Trigger hooks need no per-body flag. No <code>OnTriggerStay</code>. Havok has no continued trigger event. Handles stored on <code>level.collisionEventHandles</code>, removed on dispose.</p>
 <p>Usage — override a hook on any behavior whose entity has a COLLIDER (+ RIGIDBODY for solid contacts). No subscription code needed:</p>
-<pre><code class="language-typescript">import { Behavior } from "@bjs/engine";
-import type { CollisionContact, Entity } from "@bjs/engine";
+<pre><code class="language-typescript">import { Behavior } from "b2bkit";
+import type { CollisionContact, Entity } from "b2bkit";
 
 export default class LandingDetector extends Behavior
 {
@@ -120,8 +120,8 @@ export default class LandingDetector extends Behavior
 <p>Working demo: <code>game/src/behaviors/CollisionProbe.ts</code> logs all five hooks with an optional tag filter. Trigger-only logging: <code>TriggerLogger.ts</code> (<code>OnTriggerEnter</code> / <code>OnTriggerExit</code>).</p>
 <p><strong>Do not use <code>body.getCollisionObservable()</code> for triggers.</strong> That per-body observable only receives solid contacts (<code>COLLISION_STARTED</code> / <code>CONTINUED</code>). Trigger overlaps (<code>TRIGGER_ENTERED</code> / <code>EXITED</code>) are dispatched on <code>HavokPlugin.onTriggerCollisionObservable</code>. Override <code>OnTriggerEnter</code> / <code>OnTriggerExit</code> on the entity that owns the trigger body, or subscribe to the plugin observable when listening from another entity (see <code>animalSpawner.ts</code>).</p>
 <h2>Trigger volume queries (<code>IsEntityInsideColliderVolume</code>) <a name="trigger-volume-queries"></a></h2>
-<p>For <strong>zone behaviors</strong> (fog/LUT swaps, underwater toggles) that must stay correct when Havok trigger events are missed (dual-trigger probes, start-overlapped volumes), poll trigger collider geometry instead of relying on <code>OnTriggerEnter</code>/<code>OnTriggerExit</code> alone. Exported from <code>@bjs/engine</code> (<code>subsystems/physics/shapes.ts</code>):</p>
-<pre><code class="language-typescript">import { IsEntityInsideColliderVolume, IsPointInsideColliderVolume } from "@bjs/engine";
+<p>For <strong>zone behaviors</strong> (fog/LUT swaps, underwater toggles) that must stay correct when Havok trigger events are missed (dual-trigger probes, start-overlapped volumes), poll trigger collider geometry instead of relying on <code>OnTriggerEnter</code>/<code>OnTriggerExit</code> alone. Exported from <code>b2bkit</code> (<code>subsystems/physics/shapes.ts</code>):</p>
+<pre><code class="language-typescript">import { IsEntityInsideColliderVolume, IsPointInsideColliderVolume } from "b2bkit";
 
 const inside = IsEntityInsideColliderVolume(probeEntity, volumeEntity);
 const insidePoint = IsPointInsideColliderVolume(worldPoint, volumeEntity);</code></pre>

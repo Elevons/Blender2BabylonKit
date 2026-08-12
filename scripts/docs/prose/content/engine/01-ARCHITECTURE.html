@@ -26,9 +26,9 @@
 <h2>Monorepo layout</h2>
 <pre><code>bjs-level-kit/
   package.json            # npm workspaces root: dev / typecheck / release
-  packages/engine/        # &quot;@bjs/engine&quot; — the runtime and the publishable kit
+  packages/engine/        # &quot;b2bkit&quot; — the runtime and the publishable kit
     src/                  #   TypeScript sources (dev imports this across the workspace)
-      index.ts            #     public barrel (the game imports &quot;@bjs/engine&quot;)
+      index.ts            #     public barrel (the game imports &quot;b2bkit&quot;)
       core/               #     types.ts (schema) · attachments.ts · ComponentHost.ts · Entity.ts · Level.ts · LevelLoader.ts
                           #     loader/ (manifest · nodeResolution · entityBuilder · componentRegistry · scripts · sceneSettings)
       scripting/          #     Behavior.ts · exposed.ts · BehaviorRegistry.ts
@@ -43,7 +43,7 @@
   blender_addon/          # the editor half (Python, Blender 4.2+ extension)
   scripts/                # release + docs build (assemble-kit-package.mjs, build-docs.mjs, …)
   docs/                   # built HTML docs (version-controlled, shipped in the package)</code></pre>
-<p><code>game/</code> declares <code>&quot;@bjs/engine&quot;: &quot;*&quot;</code>. <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code>, and the game's Vite config aliases <code>@bjs/engine</code> to <code>src/index.ts</code> so engine edits hot-reload with no build step. The <strong>published</strong> package is different: <code>exports</code> point at <code>dist/</code>, and <code>npm pack</code> assembles the compiled engine, the control panel, a prebuilt <code>bjs-mcp</code> with its search index, the docs site, and the Blender add-on zip into one artifact. Engine, panel, MCP, and Blender add-on versions move in lockstep.</p>
+<p><code>game/</code> declares <code>&quot;b2bkit&quot;: &quot;*&quot;</code>. <code>npm install</code> at the root satisfies it with a <strong>symlink</strong> to <code>packages/engine</code>, and the game's Vite config aliases <code>b2bkit</code> to <code>src/index.ts</code> so engine edits hot-reload with no build step. The <strong>published</strong> package is different: <code>exports</code> point at <code>dist/</code>, and <code>npm pack</code> assembles the compiled engine, the control panel, a prebuilt <code>bjs-mcp</code> with its search index, the docs site, and the Blender add-on zip into one artifact. Engine, panel, MCP, and Blender add-on versions move in lockstep.</p>
 
 <h2>End-to-end data flow</h2>
 <pre><code>Blender scene (objects + components + GUIDs)

@@ -9,7 +9,7 @@ import {
   LevelDirector,
   AutoRegisterBehaviors,
   type Level,
-} from "@bjs/engine";
+} from "b2bkit";
 
 /**
  * App bootstrap: register behaviors, own level load/restart via LevelDirector,

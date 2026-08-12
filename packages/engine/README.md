@@ -1,4 +1,4 @@
-# @bjs/engine
+# b2bkit
 
 Babylon Level Kit runtime — loads Blender-exported `.scene.json` + `.glb` levels.
 
@@ -6,7 +6,7 @@ Babylon Level Kit runtime — loads Blender-exported `.scene.json` + `.glb` leve
 
 This package is the publishable kit surface:
 
-- **Runtime** — `import { LevelLoader, Behavior, … } from "@bjs/engine"`
+- **Runtime** — `import { LevelLoader, Behavior, … } from "b2bkit"`
 - **Blender add-on** — `npx b2bkit-addon-path` prints the Install-from-Disk zip
 - **Project Control Panel** — `npx b2bkit-control-panel` (from a project root that contains `game/`)
 - **MCP server** — `npx b2bkit-mcp` reads the current project's `game/` folder

@@ -100,7 +100,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 | 2D HUD / particles / 3D buttons | GUI / PARTICLE / GUI3D_* components | `GetGui` / `GetParticles` / `GetControl3D` |
 | MSDF labels | MSDF_TEXT component | `GetTextRenderer` — update paragraphs only |
 | Locomotion / clip state machine | **ANIMATOR** on the **armature** (node graph + Parameters) | Drive params: `SetFloat` / `SetBool` / `SetTrigger` via `GetAttachment("ANIMATOR")` |
-| Enable / disable an object at runtime | — | `SetEntityActive(entity, active)` from `@bjs/engine` (rendering, physics, behaviors) |
+| Enable / disable an object at runtime | — | `SetEntityActive(entity, active)` from `b2bkit` (rendering, physics, behaviors) |
 | Light budget / clustering | **Babylon Scene › Export** (budget + master toggle); per lamp **Cluster When Over Budget** | Drive intensity with `FindLightForNode` only |
 
 ## File contract (every behavior)
@@ -108,7 +108,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
 - **One class per file**, `export default`, **class name === file name** (the
   filename stem is the Blender registry key: `behaviors/Patrol.ts` → `"Patrol"`).
 - Lives in `src/behaviors/`.
-- Import the engine package: `from "@bjs/engine"` (the workspace package).
+- Import the engine package: `from "b2bkit"` (the workspace package).
 - Import Babylon types from `@babylonjs/core`.
 - `main.ts` auto-registers every file in `behaviors/` **by filename stem** via
   `import.meta.glob` + `BehaviorRegistry` — exactly the key Blender's "Open
@@ -117,7 +117,7 @@ LLM contract files. Details: `docs/BUILDING-DOCS.html` · MCP semantic search se
   component in Blender so the inspector picks up new fields.
 
 ```ts
-import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Behavior, exposed, type Entity } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 export default class MyBehavior extends Behavior
@@ -233,7 +233,7 @@ Encrypted publishes also drive the same bar **before** the app module loads:
 the pak bootstrap prefetches `assets.pak` and shows download %. Plain publishes
 still show the bar for level load only.
 
-Helpers (from `@bjs/engine`): `ShowLoadingOverlay`, `SetLoadingProgress`,
+Helpers (from `b2bkit`): `ShowLoadingOverlay`, `SetLoadingProgress`,
 `HideLoadingOverlay`, `CreateKitLoadingScreen`. `LevelDirector` installs
 `CreateKitLoadingScreen` as `engine.loadingScreen` so Babylon
 `displayLoadingUI` / `hideLoadingUI` map to the kit bar.
@@ -406,7 +406,7 @@ Human docs: `docs/engine/15-AXIS-CONVERSION.html` · export math:
 ## Entity API
 
 Types for attachments live in `core/attachments.ts` (`EntityAttachment`,
-`ComponentType`, `AttachmentOfType<T>` — exported from `@bjs/engine`).
+`ComponentType`, `AttachmentOfType<T>` — exported from `b2bkit`).
 
 ```ts
 entity.id: string                 // Blender GUID (readonly)
@@ -493,7 +493,7 @@ runtime object when one exists (`behavior`, `body`, `sound`, `texture`, …).
 There is no frozen manifest copy on `Entity` — query attachments, not JSON.
 
 ```ts
-import { type EntityAttachment, type AttachmentOfType } from "@bjs/engine";
+import { type EntityAttachment, type AttachmentOfType } from "b2bkit";
 
 // First SCRIPT row (typed) — same as entity.behaviors[0] when one script is authored
 const script = entity.GetAttachment("SCRIPT");
@@ -605,7 +605,7 @@ Use render-disable for editor-only helpers (rigs, guides, blocking meshes) that 
 never ship.
 
 ```ts
-import { SetEntityActive, IsEntityActive } from "@bjs/engine";
+import { SetEntityActive, IsEntityActive } from "b2bkit";
 
 SetEntityActive(targetEntity, false); // local activeSelf off
 SetEntityActive(targetEntity, true);
@@ -644,7 +644,7 @@ every entity carrying that tag. On the same entity, use
 If you only have a Babylon node (e.g. a physics hit's `transformNode`):
 
 ```ts
-import { EntityFromNode, ReadNodeEntity } from "@bjs/engine";
+import { EntityFromNode, ReadNodeEntity } from "b2bkit";
 
 const hitEntity = EntityFromNode(hitNode);       // preferred
 // or: ReadNodeEntity(hitNode)                   // same helper
@@ -658,7 +658,7 @@ The loader attaches the back-reference with **`AssignNodeEntity(node, entity)`**
 cycle ("too much recursion" in `ObjectCanSafelyStringify`). **Do not** write
 `node.metadata = { ...node.metadata, bjsEntity: entity }` with an enumerable
 property — that reintroduces the Inspector crash. Use `AssignNodeEntity` /
-`AssignSceneLevel` from `@bjs/engine` if app code must bind them.
+`AssignSceneLevel` from `b2bkit` if app code must bind them.
 
 ## LOD (level of detail)
 
@@ -790,7 +790,7 @@ For a **script-built** camera that replaces the exported one (e.g. `camera-follo
 match the authored camera:
 
 ```ts
-import { CopyLens, FindCameraForNode } from "@bjs/engine";
+import { CopyLens, FindCameraForNode } from "b2bkit";
 import { ArcRotateCamera } from "@babylonjs/core";
 
 const authored = FindCameraForNode(this.scene, this.node);
@@ -841,7 +841,7 @@ volumes. Reliable pattern (poll-only — do not rely on `OnTriggerEnter`/`Exit` 
   script host is not that point (e.g. `CameraBlock` for a `TrainCamera` rig — same as
   `TrainCamera.colliderProbe` / `FogChanger.movingObject`).
 - Poll **`IsEntityInsideColliderVolume(probe, volumeEntity)`** in `OnStart` and
-  `OnUpdate` (exported from `@bjs/engine`, `physics/shapes.ts`). BOX and SPHERE
+  `OnUpdate` (exported from `b2bkit`, `physics/shapes.ts`). BOX and SPHERE
   trigger colliders only; auto-fit volumes resolve owned-mesh bounds like Havok body build.
 - Apply the initial fog/LUT preset in **`OnPostReady`** (when `level.post` exists).
 - Linear fog divides by `(fogEnd - fogStart)` — equal or inverted ranges break scene
@@ -855,11 +855,11 @@ See **`get_fragment(name="poll-trigger-volume")`** and `FogChanger.ts` / `Toggle
 **Runtime color grading (exception):** do not instantiate a second
 `DefaultRenderingPipeline` or load `.cube` files as plain `Texture` objects.
 Use the exported **`ApplyColorGradingLut(scene, baseUrl, imageProcessing, { file })`**
-from `@bjs/engine` on the **existing** pipeline:
+from `b2bkit` on the **existing** pipeline:
 
 ```ts
-import { ApplyColorGradingLut, Behavior, exposed } from "@bjs/engine";
-import type { Level } from "@bjs/engine";
+import { ApplyColorGradingLut, Behavior, exposed } from "b2bkit";
+import type { Level } from "b2bkit";
 
 // level.post.pipeline.imageProcessing — cast this.spawner as Level when needed
 const imageProcessing = (this.spawner as Level).post?.pipeline?.imageProcessing;
@@ -944,8 +944,8 @@ Lamps are authored in Blender (no component) and copied at load via
 light from the lamp entity's node — do not iterate `scene.lights` alone.
 
 ```ts
-import { Behavior, exposed, FindLightForNode } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+import { Behavior, exposed, FindLightForNode } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 // FindLightForNode walks the light's parent chain (orientation-correction nodes)
 // and falls back to name match. It also searches lights inside
@@ -962,7 +962,7 @@ if (light !== null)
 moves eligible **point/spot** lamps into a `ClusteredLightContainer` and
 **removes them from `scene.lights`**. They remain the same `Light` instances —
 `light.intensity` still updates the cluster each frame via `getScaledIntensity()`.
-Use **`FindLightForNode`** (exported from `@bjs/engine`); raw `scene.lights` /
+Use **`FindLightForNode`** (exported from `b2bkit`); raw `scene.lights` /
 `getLightByName` lookups silently fail on large rigs.
 
 **Authoring (Blender, not behavior code):**
@@ -1040,7 +1040,7 @@ trigger collider geometry when overlap must stay correct (dual-trigger probes,
 start-overlapped volumes, scripts on the moving entity rather than the volume).
 
 ```ts
-import { IsEntityInsideColliderVolume, IsPointInsideColliderVolume } from "@bjs/engine";
+import { IsEntityInsideColliderVolume, IsPointInsideColliderVolume } from "b2bkit";
 
 // Probe entity world position vs volume entity (BOX/SPHERE trigger collider)
 const inside = IsEntityInsideColliderVolume(probeEntity, volumeEntity);
@@ -1155,7 +1155,7 @@ colliders overlap at rest.
 
 Hand-built `Physics6DoFConstraint` in code is still possible — follow the
 pivot/axis frame and limit patterns in `subsystems/constraints.ts` (its helpers
-are internal, not exported from `@bjs/engine`).
+are internal, not exported from `b2bkit`).
 
 ### Event Messages and collision hooks
 
@@ -1219,8 +1219,8 @@ focus (the user clicks the viewport once).
 **Three ways to get a map handle** (all injected before `OnStart`):
 
 ```ts
-import { Behavior, inputMap } from "@bjs/engine";
-import type { InputActionMap } from "@bjs/engine";
+import { Behavior, inputMap } from "b2bkit";
+import type { InputActionMap } from "b2bkit";
 
 export default class MyBehavior extends Behavior
 {
@@ -1316,7 +1316,7 @@ Runtime: the loader creates a built-in `AnimatorController` (extends `Behavior`,
 not a SCRIPT / BehaviorRegistry entry). Behaviors on the same entity drive it:
 
 ```ts
-import type { AnimatorController } from "@bjs/engine";
+import type { AnimatorController } from "b2bkit";
 
 const attachment = this.entity.GetAttachment("ANIMATOR");
 if (attachment !== undefined && attachment.type === "ANIMATOR")
@@ -1794,7 +1794,7 @@ decorators stay lowercase. Full rules: `docs/STYLE_GUIDE.md`.
 
 ```ts
 // src/behaviors/HoverBob.ts
-import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Behavior, exposed, type Entity } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 /** Bobs the node up and down, and faces an optional target while doing so. */

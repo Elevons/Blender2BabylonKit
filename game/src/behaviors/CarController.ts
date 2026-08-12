@@ -4,8 +4,8 @@ import {
   inputMap,
   ReadSceneLevel,
   type Entity,
-} from "@bjs/engine";
-import type { ConstraintAxisName, ConstraintComponent, InputActionMap } from "@bjs/engine";
+} from "b2bkit";
+import type { ConstraintAxisName, ConstraintComponent, InputActionMap } from "b2bkit";
 import {
   Color3,
   LinesMesh,

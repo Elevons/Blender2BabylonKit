@@ -1,5 +1,5 @@
-import { Behavior, exposed } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 /** Logs when a trigger collider is overlapped. Attach to the entity that owns the trigger body. */
 export default class TriggerLogger extends Behavior

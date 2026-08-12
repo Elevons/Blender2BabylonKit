@@ -1,5 +1,5 @@
-import { Behavior, exposed, inputMap } from "@bjs/engine";
-import type { InputActionMap } from "@bjs/engine";
+import { Behavior, exposed, inputMap } from "b2bkit";
+import type { InputActionMap } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 import { PlayerActions } from "../InputActions";
 

@@ -5,7 +5,7 @@ import {
   IsPointInsideColliderVolume,
   type AttachmentOfType,
   type Entity,
-} from "@bjs/engine";
+} from "b2bkit";
 import {
   Frustum,
   HavokPlugin,

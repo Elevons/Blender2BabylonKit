@@ -42,8 +42,8 @@ if (move.x !== 0 || move.y !== 0)
   {
     name: "poll-trigger-volume",
     description: "Poll whether a probe entity is inside a BOX/SPHERE trigger volume each frame (auto-fit bounds match Havok body build).",
-    code: `import { Behavior, exposed, IsEntityInsideColliderVolume } from "@bjs/engine";
-import type { AttachmentOfType, Entity } from "@bjs/engine";
+    code: `import { Behavior, exposed, IsEntityInsideColliderVolume } from "b2bkit";
+import type { AttachmentOfType, Entity } from "b2bkit";
 
 // fields:
 private volumeAttachment: AttachmentOfType<"COLLIDER"> | undefined;
@@ -215,7 +215,7 @@ this.camera.setTarget(targetPosition);`,
     name: "copy-lens-from-authored-camera",
     description:
       "Copy Blender FOV / clip planes onto a script-created camera (same helper BuildTypedCamera uses).",
-    code: `import { CopyLens, FindCameraForNode } from "@bjs/engine";
+    code: `import { CopyLens, FindCameraForNode } from "b2bkit";
 
 const authoredCamera = FindCameraForNode(this.scene, this.node);
 // … create ArcRotateCamera / UniversalCamera …
@@ -288,7 +288,7 @@ await activeCamera.flyToAsync(
     name: "reveal-entity",
     description:
       "Reveal an entity at runtime. Load hide keeps entity.active === true, so SetEntityActive(entity, true) alone is a no-op — disable in OnStart, enable on demand.",
-    code: `import { SetEntityActive } from "@bjs/engine";
+    code: `import { SetEntityActive } from "b2bkit";
 
 OnStart(): void
 {
@@ -302,8 +302,8 @@ SetEntityActive(this.entity, true); // re-shows the subtree even when the mesh l
     name: "set-entity-active",
     description:
       "Full Unity-style SetActive — hide/show subtree, suspend/rebuild Havok, pause behaviors (ToggleInWater pattern).",
-    code: `import { SetEntityActive, IsEntityInsideColliderVolume } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+    code: `import { SetEntityActive, IsEntityInsideColliderVolume } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 @exposed({ type: "list", of: "entity", label: "Targets" })
 targets: (Entity | null)[] = [];
@@ -382,7 +382,7 @@ body.setAngularVelocity(Vector3.Zero());`,
     name: "zone-lut-swap",
     description:
       "Swap color grading on the existing Default Rendering Pipeline (FogChanger pattern). Use OnPostReady — cast spawner as Level for baseUrl + post handles.",
-    code: `import { ApplyColorGradingLut, Behavior, type Level } from "@bjs/engine";
+    code: `import { ApplyColorGradingLut, Behavior, type Level } from "b2bkit";
 
 OnPostReady(): void
 {

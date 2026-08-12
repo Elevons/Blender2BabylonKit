@@ -1,5 +1,5 @@
-import { ApplyColorGradingLut, Behavior, exposed, IsEntityInsideColliderVolume } from "@bjs/engine";
-import type { AttachmentOfType, Entity, Level } from "@bjs/engine";
+import { ApplyColorGradingLut, Behavior, exposed, IsEntityInsideColliderVolume } from "b2bkit";
+import type { AttachmentOfType, Entity, Level } from "b2bkit";
 import {
   Color3,
   ImageProcessingConfiguration,

@@ -1,4 +1,4 @@
-import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Behavior, exposed, type Entity } from "b2bkit";
 import { Vector3, Matrix, PhysicsRaycastResult } from "@babylonjs/core";
 
 interface PhysicsRaycastEngine

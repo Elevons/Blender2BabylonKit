@@ -105,7 +105,7 @@ Run("node", ["scripts/assemble-kit-package.mjs"]);
 if (args.publish)
 {
   // Publishing requires removing private:true temporarily or a dedicated public package.
-  console.log("\n[release] --publish: publishing @bjs/engine from packages/engine");
+  console.log("\n[release] --publish: publishing b2bkit from packages/engine");
   console.log("[release] Ensure the package is not private and you are logged in to npm.");
   Run("npm", ["publish", "--access", "public"], { cwd: path.join(ROOT, "packages/engine") });
 }

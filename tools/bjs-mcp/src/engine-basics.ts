@@ -171,7 +171,7 @@ Lamps are exported in the glb; the loader copies manifest \`energy\` → \`light
 **To change intensity at runtime:**
 
 \`\`\`ts
-import { FindLightForNode } from "@bjs/engine";
+import { FindLightForNode } from "b2bkit";
 
 const light = FindLightForNode(this.scene, lampEntity.node);
 if (light !== null) { light.intensity = brightness; }

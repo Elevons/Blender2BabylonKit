@@ -161,7 +161,7 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "Loading a .cube color-grading LUT as Texture or ad-hoc fetch in behavior",
     symptom: "Black/red image or no visible grade",
-    fix: "Scene-wide: Post-Processing › Color Grading in Blender. Per-zone: @exposed({ type: \"file\" }) + ApplyColorGradingLut from @bjs/engine (see FogChanger.ts)",
+    fix: "Scene-wide: Post-Processing › Color Grading in Blender. Per-zone: @exposed({ type: \"file\" }) + ApplyColorGradingLut from b2bkit (see FogChanger.ts)",
     mcpTool: "get_fragment(name=\"zone-lut-swap\")",
   },
   {
@@ -277,19 +277,19 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "Resolving lamps via `scene.lights` or `getLightByName` on large rigs",
     symptom: "increaselights / runtime dimming does nothing; no error after OnStart",
-    fix: "Use `FindLightForNode(scene, entity.node)` from `@bjs/engine` — clustered point/spot lights are removed from `scene.lights` but stay drivable through the helper",
+    fix: "Use `FindLightForNode(scene, entity.node)` from `b2bkit` — clustered point/spot lights are removed from `scene.lights` but stay drivable through the helper",
     mcpTool: "get_scripting_context(section=\"lights\")",
   },
   {
     mistake: "Toggling entity.node.isVisible / setEnabled manually for full enable/disable",
     symptom: "Mesh hides but Havok still collides; behaviors keep running OnUpdate",
-    fix: "Use `SetEntityActive(entity, active)` from `@bjs/engine` — not `isVisible` alone (physics and OnUpdate keep running)",
+    fix: "Use `SetEntityActive(entity, active)` from `b2bkit` — not `isVisible` alone (physics and OnUpdate keep running)",
     mcpTool: "get_fragment(name=\"set-entity-active\")",
   },
   {
     mistake: "Writing `node.metadata.bjsEntity = entity` (or spreading it) as an enumerable property",
     symptom: "Babylon Inspector Properties pane crashes with InternalError: too much recursion in ObjectCanSafelyStringify / MetadataProperties",
-    fix: "Use AssignNodeEntity(node, entity) / EntityFromNode(node) from @bjs/engine — bjsEntity and scene bjsLevel are stored non-enumerable so Inspector Object.values walks stay acyclic",
+    fix: "Use AssignNodeEntity(node, entity) / EntityFromNode(node) from b2bkit — bjsEntity and scene bjsLevel are stored non-enumerable so Inspector Object.values walks stay acyclic",
     mcpTool: "get_scripting_context(section=\"entity\")",
   },
   {

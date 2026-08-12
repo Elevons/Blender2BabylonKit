@@ -1,10 +1,10 @@
 <h1>14 — API Guide (runtime)</h1>
 <p class="doc-links">Feature inventory: <a href="13-FEATURE-LIST.html">13 — Feature List</a> · Behavior quick-start: <a href="../LLM_SCRIPTING_CONTEXT.md">LLM_SCRIPTING_CONTEXT.md</a> · Scripting prose: <a href="05-SCRIPTING.html">05 — Scripting</a> · Input: <a href="12-INPUT.html">12 — Input</a></p>
-<p>This guide is a reference for <strong>behavior authors</strong> and anyone who reads runtime code. Import from <code>@bjs/engine</code> in app behavior files. This guide covers the kit&apos;s public surface. It does not cover every Babylon.js API.</p>
+<p>This guide is a reference for <strong>behavior authors</strong> and anyone who reads runtime code. Import from <code>b2bkit</code> in app behavior files. This guide covers the kit&apos;s public surface. It does not cover every Babylon.js API.</p>
 
 <h2>Quick example</h2>
-<pre><code class="language-typescript">import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
-import type { InputActionMap } from "@bjs/engine";
+<pre><code class="language-typescript">import { Behavior, exposed, inputMap, type Entity } from "b2bkit";
+import type { InputActionMap } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 export default class Patrol extends Behavior
@@ -195,7 +195,7 @@ await level.componentHost.RemoveComponent(enemy, "SCRIPT", 0);</code></pre>
 <p>Mutations are <strong>ephemeral</strong>. They are not written back to <code>.scene.json</code>. A SCRIPT added after <code>level.Begin()</code> runs <code>OnStart</code> immediately (and <code>OnPostReady</code> when <code>level.postReady</code> is already true). COLLIDER or RIGIDBODY changes rebuild the entity&apos;s single Havok body from all remaining attachment data.</p>
 
 <h2 id="exposed">@exposed (Blender-editable fields)</h2>
-<p>This decorator is <code>exposed(options?)</code> from <code>@bjs/engine</code>. It must stay lowercase. Blender regex-parses the token literally.</p>
+<p>This decorator is <code>exposed(options?)</code> from <code>b2bkit</code>. It must stay lowercase. Blender regex-parses the token literally.</p>
 <table><thead><tr><th>Type / option</th><th>Blender UI</th><th>Runtime value</th></tr></thead><tbody>
 <tr><td><code>float</code> / <code>int</code> (+ min, max, step)</td><td>Number slider</td><td><code>number</code></td></tr>
 <tr><td><code>bool</code></td><td>Checkbox</td><td><code>boolean</code></td></tr>
@@ -265,7 +265,7 @@ await director.Load(manifestUrl);
 <tr><td><code>onLoaded</code> (option)</td><td>Hook after every successful Load/Restart — fallback cameras, logging, …</td></tr>
 </tbody></table>
 <p>During every Load/Restart the director shows the kit&apos;s default <code>#bjs-loading</code> progress bar (status + percent). Encrypted publishes also drive that bar while <code>assets.pak</code> downloads, before the app module boots. Behaviors do not drive this UI.</p>
-<p><code>LevelDirector</code> installs <code>CreateKitLoadingScreen</code> as <code>engine.loadingScreen</code>, so Babylon <code>displayLoadingUI</code> / <code>hideLoadingUI</code> map to the same overlay. Helpers: <code>ShowLoadingOverlay</code>, <code>SetLoadingProgress</code>, <code>HideLoadingOverlay</code> from <code>@bjs/engine</code>.</p>
+<p><code>LevelDirector</code> installs <code>CreateKitLoadingScreen</code> as <code>engine.loadingScreen</code>, so Babylon <code>displayLoadingUI</code> / <code>hideLoadingUI</code> map to the same overlay. Helpers: <code>ShowLoadingOverlay</code>, <code>SetLoadingProgress</code>, <code>HideLoadingOverlay</code> from <code>b2bkit</code>.</p>
 <p>To replace the bar, edit <code>game/index.html</code>, or assign a custom Babylon <code>ILoadingScreen</code> after the engine exists (after the first successful <code>Load</code>, or from <code>onLoaded</code> — the engine is reused across restarts):</p>
 <pre><code class="language-typescript">import type { ILoadingScreen } from "@babylonjs/core";
 
@@ -296,7 +296,7 @@ director.GetEngine()!.loadingScreen = customLoadingScreen;</code></pre>
 <h2 id="physics">Physics (from behaviors)</h2>
 <p>When an entity has a body, <code>this.entity.body</code> is a Babylon <code>PhysicsBody</code>. Use Havok APIs for impulses, velocities, and similar values. Toggle the collider overlay with the app debug key and <code>level.ShowColliders()</code> (when <code>level.debugEnabled</code>).</p>
 <h3>Trigger volume queries</h3>
-<p>Exported from <code>@bjs/engine</code> (<code>subsystems/physics/shapes.ts</code>). Test whether a probe is inside a BOX/SPHERE trigger collider. Manual colliders use manifest dimensions; auto-fit colliders resolve owned-mesh bounds the same way as Havok body build. Analytic math — not Havok overlap events — so bodyless probes work in <code>OnStart</code>/<code>OnUpdate</code>. See <a href="06-PHYSICS.html#trigger-volume-queries">06 — Physics › Trigger volume queries</a>.</p>
+<p>Exported from <code>b2bkit</code> (<code>subsystems/physics/shapes.ts</code>). Test whether a probe is inside a BOX/SPHERE trigger collider. Manual colliders use manifest dimensions; auto-fit colliders resolve owned-mesh bounds the same way as Havok body build. Analytic math — not Havok overlap events — so bodyless probes work in <code>OnStart</code>/<code>OnUpdate</code>. See <a href="06-PHYSICS.html#trigger-volume-queries">06 — Physics › Trigger volume queries</a>.</p>
 <table><thead><tr><th>Function</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>IsEntityInsideColliderVolume(probe, volume, collider?)</code></td><td><code>probe.node</code> world position inside <code>volume</code>&apos;s trigger collider</td></tr>
 <tr><td><code>IsPointInsideColliderVolume(point, volume, collider?)</code></td><td>World <code>Vector3</code> inside volume trigger collider</td></tr>
@@ -304,12 +304,12 @@ director.GetEngine()!.loadingScreen = customLoadingScreen;</code></pre>
 <p>Zone behaviors poll in <code>OnStart</code>/<code>OnUpdate</code>. Assign an explicit probe entity when the script host is not the sample point. Fragment: <code>poll-trigger-volume</code>.</p>
 
 <h2 id="entity-active">Runtime enable / disable (<code>SetEntityActive</code>)</h2>
-<p>Exported from <code>@bjs/engine</code> (<code>core/entityActive/</code>). Unity-style SetActive — distinct from load-time <code>HideEntityNode</code> (rendering only).</p>
+<p>Exported from <code>b2bkit</code> (<code>core/entityActive/</code>). Unity-style SetActive — distinct from load-time <code>HideEntityNode</code> (rendering only).</p>
 <table><thead><tr><th>Function</th><th>Description</th></tr></thead><tbody>
 <tr><td><code>SetEntityActive(entity, active)</code></td><td>Set local <code>activeSelf</code>, reconcile descendant entities, fire <code>OnDisable</code>/<code>OnEnable</code>, suspend/resume Havok, attachments, constraints, probes, MSDF draw</td></tr>
 <tr><td><code>IsEntityActive(entity)</code></td><td><code>activeInHierarchy</code> — local active && every ancestor entity active</td></tr>
 </tbody></table>
-<pre><code class="language-typescript">import { SetEntityActive, IsEntityActive } from "@bjs/engine";
+<pre><code class="language-typescript">import { SetEntityActive, IsEntityActive } from "b2bkit";
 
 SetEntityActive(targetEntity, false);
 SetEntityActive(targetEntity, true);</code></pre>
@@ -319,8 +319,8 @@ SetEntityActive(targetEntity, true);</code></pre>
 <p>Event Messages and 3D GUI buttons call <code>targetEntity.SendMessage(message, sourceEntity)</code>. Every behavior on the target receives <code>OnMessage(message, source)</code>. Use the same string names you authored in Blender event rows.</p>
 
 <h2 id="lights">Runtime lights (<code>FindLightForNode</code>)</h2>
-<p>This helper is exported from <code>@bjs/engine</code> (<code>subsystems/lights.ts</code>). It resolves the Babylon <code>Light</code> for a lamp entity&apos;s glTF node. It walks the parent chain, then matches by name, then checks lights inside <code>ClusteredLightContainer</code>.</p>
-<pre><code class="language-typescript">import { FindLightForNode } from "@bjs/engine";
+<p>This helper is exported from <code>b2bkit</code> (<code>subsystems/lights.ts</code>). It resolves the Babylon <code>Light</code> for a lamp entity&apos;s glTF node. It walks the parent chain, then matches by name, then checks lights inside <code>ClusteredLightContainer</code>.</p>
+<pre><code class="language-typescript">import { FindLightForNode } from "b2bkit";
 
 const light = FindLightForNode(this.scene, lampEntity.node);
 if (light !== null)
@@ -330,8 +330,8 @@ if (light !== null)
 <p>Do <strong>not</strong> iterate <code>scene.lights</code> alone on large scenes. Clustered point and spot lamps are removed from that array. You can still drive them through this helper. See <code>increaselights.ts</code> and <code>07-RENDERING.html</code> (punctual light budget). Set budget and per-lamp clustering in Blender (<strong>Scene › Export</strong>, <strong>Object › Light › Cluster When Over Budget</strong>).</p>
 
 <h2 id="cameras">Runtime cameras (<code>FindCameraForNode</code> / <code>CopyLens</code>)</h2>
-<p>These helpers are exported from <code>@bjs/engine</code> (<code>subsystems/cameras/</code>). <code>FindCameraForNode</code> resolves the Babylon <code>Camera</code> for a camera entity&apos;s glTF node. It walks the parent chain, then matches by name. The loader uses the same helper. <code>CopyLens</code> copies FOV, <code>fovMode</code>, clip planes, and projection mode. <code>BuildTypedCamera</code> calls it when Blender Camera-component overrides swap the FreeCamera for Arc/Follow/etc.</p>
-<pre><code class="language-typescript">import { CopyLens, FindCameraForNode } from "@bjs/engine";
+<p>These helpers are exported from <code>b2bkit</code> (<code>subsystems/cameras/</code>). <code>FindCameraForNode</code> resolves the Babylon <code>Camera</code> for a camera entity&apos;s glTF node. It walks the parent chain, then matches by name. The loader uses the same helper. <code>CopyLens</code> copies FOV, <code>fovMode</code>, clip planes, and projection mode. <code>BuildTypedCamera</code> calls it when Blender Camera-component overrides swap the FreeCamera for Arc/Follow/etc.</p>
+<pre><code class="language-typescript">import { CopyLens, FindCameraForNode } from "b2bkit";
 import { ArcRotateCamera } from "@babylonjs/core";
 
 const authored = FindCameraForNode(this.scene, this.node);
@@ -344,7 +344,7 @@ this.scene.activeCamera = camera;</code></pre>
 <p>Prefer to author camera <strong>type</strong> in Blender. Use these helpers when a behavior must create its own camera (see <code>TrainCamera.ts</code>). Without <code>CopyLens</code>, a script-built camera keeps Babylon defaults. It will silently ignore the authored FOV.</p>
 
 <h2 id="animator">AnimatorController</h2>
-<p>This controller is a built-in FSM from an <strong>ANIMATOR</strong> component (not a SCRIPT). It is exported from <code>@bjs/engine</code> (<code>subsystems/animatorController.ts</code>). Retrieve it with <code>entity.GetAttachment(&quot;ANIMATOR&quot;)?.behavior</code>.</p>
+<p>This controller is a built-in FSM from an <strong>ANIMATOR</strong> component (not a SCRIPT). It is exported from <code>b2bkit</code> (<code>subsystems/animatorController.ts</code>). Retrieve it with <code>entity.GetAttachment(&quot;ANIMATOR&quot;)?.behavior</code>.</p>
 <table><thead><tr><th>Method</th><th>Notes</th></tr></thead><tbody>
 <tr><td><code>SetFloat(name, value)</code> / <code>GetFloat(name)</code></td><td>Float parameters</td></tr>
 <tr><td><code>SetBool(name, value)</code> / <code>GetBool(name)</code></td><td>Bool parameters</td></tr>
@@ -355,4 +355,4 @@ this.scene.activeCamera = camera;</code></pre>
 <p>Author the graph in Blender (Entry / State / Parameter / Transition). State clips use <strong>Action</strong> names from the owning armature. See <a href="08-AUDIO-ANIMATION.html">08 — Audio &amp; Animation</a> and playground <code>DriveAnimator.ts</code>.</p>
 
 <h2>Related exports</h2>
-<p><code>@bjs/engine</code> also re-exports manifest types (<code>core/types/</code>, barrel <code>core/types.ts</code>), subsystem helpers (physics, lights, cameras, …), and UI loaders. App code and advanced scripts use these most often. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>
+<p><code>b2bkit</code> also re-exports manifest types (<code>core/types/</code>, barrel <code>core/types.ts</code>), subsystem helpers (physics, lights, cameras, …), and UI loaders. App code and advanced scripts use these most often. Behavior authors usually need <code>Behavior</code>, <code>exposed</code>, <code>inputMap</code>, and Babylon types only.</p>

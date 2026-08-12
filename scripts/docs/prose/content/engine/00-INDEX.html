@@ -21,7 +21,7 @@
 <p>Many topics exist in all three forms. The <strong>subsystem map</strong> table below links them. Contributors wire traces and diagrams from <code>PAGE_TOPICS</code>. See <a href="../BUILDING-DOCS.html">BUILDING-DOCS</a>.</p>
 
 <h2>What the runtime does</h2>
-<p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports. These are <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything glTF cannot express). The loader turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb. It indexes nodes by GUID. It builds an <code>Entity</code> per manifest entry. It applies components through small subsystems (physics, lights, cameras, audio, …). Then it runs your <code>Behavior</code> scripts.</p>
+<p><code>b2bkit</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports. These are <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything glTF cannot express). The loader turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb. It indexes nodes by GUID. It builds an <code>Entity</code> per manifest entry. It applies components through small subsystems (physics, lights, cameras, audio, …). Then it runs your <code>Behavior</code> scripts.</p>
 
 <h2>Subsystem map</h2>
 <table><thead><tr><th>Subsystem</th><th>Engine diagram</th><th>Blender diagram</th><th>Prose</th></tr></thead><tbody>

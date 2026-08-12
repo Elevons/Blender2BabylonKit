@@ -533,7 +533,7 @@ export function GetRecipeByName(name: string): Recipe | undefined
 }
 
 const TEMPLATES: Record<string, (className: string) => string> = {
-  "minimal-behavior": (className) => `import { Behavior } from "@bjs/engine";
+  "minimal-behavior": (className) => `import { Behavior } from "b2bkit";
 
 /** TODO: describe what this behavior does. */
 export default class ${className} extends Behavior
@@ -541,7 +541,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "look-at-target": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "look-at-target": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 
 /** Continuously orients this object to face the target entity. */
 export default class ${className} extends Behavior
@@ -562,7 +562,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "constant-rotate": (className) => `import { Behavior, exposed } from "@bjs/engine";
+  "constant-rotate": (className) => `import { Behavior, exposed } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 /** Spins a node around a fixed axis at a constant rate. */
@@ -592,7 +592,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "waypoint-path": (className) => `import { Behavior, exposed } from "@bjs/engine";
+  "waypoint-path": (className) => `import { Behavior, exposed } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 /** Moves the node through a list of waypoints with configurable easing. */
@@ -637,7 +637,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "patrol-oscillate": (className) => `import { Behavior, exposed } from "@bjs/engine";
+  "patrol-oscillate": (className) => `import { Behavior, exposed } from "b2bkit";
 import { Vector3, PhysicsMotionType } from "@babylonjs/core";
 
 /** Eases a node back and forth between its start and start + offset. */
@@ -675,8 +675,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "input-poll-move": (className) => `import { Behavior, exposed, inputMap } from "@bjs/engine";
-import type { InputActionMap } from "@bjs/engine";
+  "input-poll-move": (className) => `import { Behavior, exposed, inputMap } from "b2bkit";
+import type { InputActionMap } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 import { PlayerActions } from "../InputActions";
 
@@ -702,8 +702,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "on-message-handler": (className) => `import { Behavior, exposed } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+  "on-message-handler": (className) => `import { Behavior, exposed } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 /** Logs or reacts when this entity receives a message. */
 export default class ${className} extends Behavior
@@ -725,7 +725,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "animation-cycle": (className) => `import { Behavior, exposed } from "@bjs/engine";
+  "animation-cycle": (className) => `import { Behavior, exposed } from "b2bkit";
 
 /** Cycles through this entity's animation clips on an interval. */
 export default class ${className} extends Behavior
@@ -774,7 +774,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "kinematic-body-move": (className) => `import { Behavior } from "@bjs/engine";
+  "kinematic-body-move": (className) => `import { Behavior } from "b2bkit";
 import { PhysicsMotionType } from "@babylonjs/core";
 
 /** Template for per-frame node motion on a physics body — set kinematic first. */
@@ -797,8 +797,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "trigger-logger": (className) => `import { Behavior, exposed } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+  "trigger-logger": (className) => `import { Behavior, exposed } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 /** Logs when a trigger collider is overlapped (needs a trigger COLLIDER). */
 export default class ${className} extends Behavior
@@ -823,8 +823,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "collision-probe": (className) => `import { Behavior, exposed } from "@bjs/engine";
-import type { CollisionContact, Entity } from "@bjs/engine";
+  "collision-probe": (className) => `import { Behavior, exposed } from "b2bkit";
+import type { CollisionContact, Entity } from "b2bkit";
 
 /** Logs Unity-style collision/trigger lifecycle hooks. */
 export default class ${className} extends Behavior
@@ -884,8 +884,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "constraint-hinge-motor": (className) => `import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
-import type { InputActionMap } from "@bjs/engine";
+  "constraint-hinge-motor": (className) => `import { Behavior, exposed, inputMap, type Entity } from "b2bkit";
+import type { InputActionMap } from "b2bkit";
 import {
   Physics6DoFConstraint,
   PhysicsConstraintAxis,
@@ -984,7 +984,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "path-follow-advanced": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "path-follow-advanced": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 import { Path3D, Quaternion, Vector3, PhysicsMotionType } from "@babylonjs/core";
 
 /** Moves along a Path3D built from waypoint entities with throttle and tangent facing. */
@@ -1097,7 +1097,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "camera-follow": (className) => `import { Behavior, exposed, CopyLens, FindCameraForNode, type Entity } from "@bjs/engine";
+  "camera-follow": (className) => `import { Behavior, exposed, CopyLens, FindCameraForNode, type Entity } from "b2bkit";
 import { Vector3, UniversalCamera, Tools } from "@babylonjs/core";
 
 /** Orbits a UniversalCamera around a target entity. */
@@ -1156,7 +1156,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "geospatial-camera-flyto": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "geospatial-camera-flyto": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 import { GeospatialCamera } from "@babylonjs/core/Cameras/geospatialCamera";
 
 /** Fly the authored GeospatialCamera toward a target (Camera component GEOSPATIAL in Blender). */
@@ -1218,7 +1218,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "message-state-handler": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "message-state-handler": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 
 /** Simple message-driven state machine — customize OnUpdate for each state. */
 export default class ${className} extends Behavior
@@ -1255,7 +1255,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "hover-bob": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "hover-bob": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 /** Bobs the node up and down, optionally facing a target. */
@@ -1292,7 +1292,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "reveal-on-message": (className) => `import { Behavior, exposed, SetEntityActive, type Entity } from "@bjs/engine";
+  "reveal-on-message": (className) => `import { Behavior, exposed, SetEntityActive, type Entity } from "b2bkit";
 
 /** Reveals this entity when a matching message arrives (trigger or SendMessage). */
 export default class ${className} extends Behavior
@@ -1319,8 +1319,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "toggle-entity-active": (className) => `import { Behavior, exposed, IsEntityInsideColliderVolume, SetEntityActive } from "@bjs/engine";
-import type { AttachmentOfType, Entity } from "@bjs/engine";
+  "toggle-entity-active": (className) => `import { Behavior, exposed, IsEntityInsideColliderVolume, SetEntityActive } from "b2bkit";
+import type { AttachmentOfType, Entity } from "b2bkit";
 
 /** Toggle target entities when a probe enters or exits a trigger volume. */
 export default class ${className} extends Behavior
@@ -1384,7 +1384,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "sound-on-message": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "sound-on-message": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 
 /** Plays an AUDIO component sound when a matching message arrives. */
 export default class ${className} extends Behavior
@@ -1407,7 +1407,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "msdf-label-update": (className) => `import { Behavior, exposed } from "@bjs/engine";
+  "msdf-label-update": (className) => `import { Behavior, exposed } from "b2bkit";
 
 /** Updates MSDF_TEXT label copy (MSDF_TEXT component must be authored in Blender). */
 export default class ${className} extends Behavior
@@ -1442,8 +1442,8 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "rover-wheel-drive": (className) => `import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
-import type { InputActionMap } from "@bjs/engine";
+  "rover-wheel-drive": (className) => `import { Behavior, exposed, inputMap, type Entity } from "b2bkit";
+import type { InputActionMap } from "b2bkit";
 import {
   Physics6DoFConstraint,
   PhysicsConstraintAxis,
@@ -1539,7 +1539,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "scatter-prefab-spawner": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "scatter-prefab-spawner": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 /**
@@ -1591,7 +1591,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "animator-driver": (className) => `import { Behavior, exposed, type AnimatorController } from "@bjs/engine";
+  "animator-driver": (className) => `import { Behavior, exposed, type AnimatorController } from "b2bkit";
 
 /**
  * Thin driver for an ANIMATOR component on the same entity (the armature).
@@ -1632,7 +1632,7 @@ export default class ${className} extends Behavior
 }
 `,
 
-  "pool-prefab-spawner": (className) => `import { Behavior, exposed, type Entity } from "@bjs/engine";
+  "pool-prefab-spawner": (className) => `import { Behavior, exposed, type Entity } from "b2bkit";
 import { Vector3 } from "@babylonjs/core";
 
 /**

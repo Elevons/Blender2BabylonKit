@@ -1,7 +1,7 @@
 import { Button } from "@babylonjs/gui";
 import type { Vector2WithInfo } from "@babylonjs/gui";
 import type { Observer } from "@babylonjs/core";
-import { Behavior, SetEntityActive } from "@bjs/engine";
+import { Behavior, SetEntityActive } from "b2bkit";
 
 /**
  * Start-screen controls overlay: wires the GOT IT button so the player can

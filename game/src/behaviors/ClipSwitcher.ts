@@ -1,4 +1,4 @@
-import { Behavior, exposed } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
 
 /**
  * TEST/demo for NLA animation. Cycles through this entity's animation clips,

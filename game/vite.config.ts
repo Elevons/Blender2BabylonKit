@@ -103,7 +103,7 @@ export default defineConfig(({ command }) => ({
     // The published package points at dist/. Inside the kit monorepo, use live
     // engine TypeScript so engine edits still hot-reload without a build step.
     alias: {
-      "@bjs/engine": path.resolve(GAME_DIR, "../packages/engine/src/index.ts"),
+      "b2bkit": path.resolve(GAME_DIR, "../packages/engine/src/index.ts"),
     },
   },
   optimizeDeps: { exclude: ["@babylonjs/havok"] },

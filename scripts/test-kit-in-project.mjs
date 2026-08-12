@@ -6,7 +6,7 @@
  *   node scripts/test-kit-in-project.mjs --stop       # stop the servers it started
  *   node scripts/test-kit-in-project.mjs --project /path/to/project --panel-port 3207
  *
- * Packs @bjs/engine (prepack rebuilds the docs site and the MCP vector index),
+ * Packs b2bkit (prepack rebuilds the docs site and the MCP vector index),
  * installs that tarball into the target project, verifies the bundled assets,
  * then starts the packaged control panel and the game dev server and probes
  * both. Prints the URLs to open.
@@ -163,10 +163,10 @@ function PackAndInstall(projectRoot)
     fs.readFileSync(path.join(ROOT, "packages", "engine", "package.json"), "utf8"),
   );
   const destination = os.tmpdir();
-  const tarball = path.join(destination, `bjs-engine-${enginePackage.version}.tgz`);
+  const tarball = path.join(destination, `${enginePackage.name}-${enginePackage.version}.tgz`);
 
   fs.rmSync(tarball, { force: true });
-  Run("npm", ["pack", "--workspace", "@bjs/engine", "--pack-destination", destination], ROOT);
+  Run("npm", ["pack", "--workspace", "b2bkit", "--pack-destination", destination], ROOT);
 
   if (!fs.existsSync(tarball))
   {
@@ -184,7 +184,7 @@ function PackAndInstall(projectRoot)
  */
 function VerifyInstalledAssets(projectRoot)
 {
-  const installed = path.join(projectRoot, "node_modules", "@bjs", "engine");
+  const installed = path.join(projectRoot, "node_modules", "b2bkit");
   console.log("\n[test-kit] Bundled assets");
 
   Check(fs.existsSync(path.join(installed, "docs", "index.html")), "docs site present");

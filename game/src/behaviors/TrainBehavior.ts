@@ -1,4 +1,4 @@
-import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Behavior, exposed, type Entity } from "b2bkit";
 import { Path3D, Quaternion, Vector3, PhysicsMotionType } from "@babylonjs/core";
 
 /**

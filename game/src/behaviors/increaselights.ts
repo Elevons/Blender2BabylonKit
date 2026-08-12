@@ -1,5 +1,5 @@
-import { Behavior, exposed, FindLightForNode } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+import { Behavior, exposed, FindLightForNode } from "b2bkit";
+import type { Entity } from "b2bkit";
 import type { Light } from "@babylonjs/core";
 
 /** A Babylon light resolved from an authored entity, with its load-time intensity. */

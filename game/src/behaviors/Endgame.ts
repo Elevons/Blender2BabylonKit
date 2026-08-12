@@ -3,8 +3,8 @@ import {
   exposed,
   IsEntityInsideColliderVolume,
   SetEntityActive,
-} from "@bjs/engine";
-import type { AttachmentOfType, Entity } from "@bjs/engine";
+} from "b2bkit";
+import type { AttachmentOfType, Entity } from "b2bkit";
 
 /**
  * Polls an end-game trigger volume for a target rigidbody. After the body

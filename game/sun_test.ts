@@ -9,7 +9,7 @@ import {
   FetchAndValidateManifest,
   CreateLevelEngine,
   ResolveHavokPhysicsOptions,
-} from "@bjs/engine";
+} from "b2bkit";
 
 declare global
 {

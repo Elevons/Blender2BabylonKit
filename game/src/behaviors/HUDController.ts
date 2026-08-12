@@ -9,8 +9,8 @@ import {
 import type { Vector2WithInfo } from "@babylonjs/gui";
 import { Vector3 } from "@babylonjs/core";
 import type { Observer } from "@babylonjs/core";
-import { Behavior, exposed, SetEntityActive } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+import { Behavior, exposed, SetEntityActive } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 /**
  * Drives the descent HUD from the Train Engine's world transform:

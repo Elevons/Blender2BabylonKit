@@ -1,4 +1,4 @@
-import { Behavior, exposed, type AnimatorController } from "@bjs/engine";
+import { Behavior, exposed, type AnimatorController } from "b2bkit";
 
 /**
  * Demo driver for an ANIMATOR component on the same entity (the armature).

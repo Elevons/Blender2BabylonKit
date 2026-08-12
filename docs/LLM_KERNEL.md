@@ -13,7 +13,7 @@ a SCRIPT component (ANIMATOR also mounts a built-in `AnimatorController`).
 - One class per file, `export default`, **class name === filename stem**
   (`Patrol.ts` → class `Patrol` → Blender registry key `"Patrol"`).
 - Path: `src/behaviors/`.
-- Import engine: `from "@bjs/engine"`; Babylon types: `from "@babylonjs/core"`.
+- Import engine: `from "b2bkit"`; Babylon types: `from "@babylonjs/core"`.
 - Auto-registered by filename stem via `import.meta.glob` + `BehaviorRegistry`.
 - After changing `@exposed` fields, press **Sync** on the Script component in Blender.
 - Locomotion FSMs (Idle/Walk/Jump): author an **ANIMATOR** component on the
@@ -21,7 +21,7 @@ a SCRIPT component (ANIMATOR also mounts a built-in `AnimatorController`).
   are **Action** names (glTF ACTIONS mode), not NLA strip labels.
 
 ```ts
-import { Behavior, exposed, type Entity } from "@bjs/engine";
+import { Behavior, exposed, type Entity } from "b2bkit";
 
 export default class MyBehavior extends Behavior
 {

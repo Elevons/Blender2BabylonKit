@@ -570,7 +570,7 @@ export const ENGINE_AREA_PAGES = {
           "w": 150,
           "h": 40,
           "label": "LevelLoader.Load",
-          "sub": "@bjs/engine",
+          "sub": "b2bkit",
           "desc": "Fetch manifest → InputManager.LoadAsset → right-handed glb append → entity pass → second pass → FinalizeLevel. Each manifest-only feature routes to a subsystem under packages/engine/src/.",
           "meta": [
             ["Diagram", "load-pipeline.html"],
@@ -599,7 +599,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Monorepo",
           "sub": "npm workspaces",
-          "desc": "packages/engine = @bjs/engine (symlinked into game/). Blender add-on versions lockstep with engine package.json / blender_manifest.toml. game/ owns behaviors/ + public/levels/.",
+          "desc": "packages/engine = b2bkit (symlinked into game/). Blender add-on versions lockstep with engine package.json / blender_manifest.toml. game/ owns behaviors/ + public/levels/.",
           "meta": [
             ["Game", "game"],
             ["Diagram", "workflow.html"]
@@ -2819,7 +2819,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "Monorepo",
           "sub": "npm workspaces",
-          "desc": "packages/engine = '@bjs/engine' shared via symlink; apps/* each a game. Edit the engine once, every app updates instantly (Vite hot-reloads across the link).",
+          "desc": "packages/engine = 'b2bkit' shared via symlink; apps/* each a game. Edit the engine once, every app updates instantly (Vite hot-reloads across the link).",
           "meta": [
             [
               "Install",

@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@bjs/engine": ["../packages/engine/src/index.ts"]
+      "b2bkit": ["../packages/engine/src/index.ts"]
     },
     "lib": ["ES2020", "DOM", "DOM.Iterable"]
   },

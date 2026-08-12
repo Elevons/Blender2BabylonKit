@@ -1,5 +1,5 @@
-import { Behavior, exposed } from "@bjs/engine";
-import type { Entity } from "@bjs/engine";
+import { Behavior, exposed } from "b2bkit";
+import type { Entity } from "b2bkit";
 
 /**
  * Dims scene IBL as a source object moves farther above a target's transform.

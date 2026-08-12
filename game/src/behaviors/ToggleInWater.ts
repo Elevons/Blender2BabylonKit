@@ -1,5 +1,5 @@
-import { Behavior, exposed, IsEntityInsideColliderVolume, SetEntityActive } from "@bjs/engine";
-import type { AttachmentOfType, Entity } from "@bjs/engine";
+import { Behavior, exposed, IsEntityInsideColliderVolume, SetEntityActive } from "b2bkit";
+import type { AttachmentOfType, Entity } from "b2bkit";
 
 /**
  * Lives on the moving probe host. Each frame, tests whether the assigned probe

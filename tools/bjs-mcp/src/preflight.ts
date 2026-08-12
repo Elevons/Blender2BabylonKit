@@ -15,7 +15,7 @@ export function FormatPreflight(intent: string, className: string): string
     `## Identity`,
     `- [ ] Filename will be \`src/behaviors/${className}.ts\``,
     `- [ ] \`export default class ${className} extends Behavior\` — exact name match`,
-    `- [ ] Import from \`@bjs/engine\` (and Babylon only when needed)`,
+    `- [ ] Import from \`b2bkit\` (and Babylon only when needed)`,
     ``,
     `## Route`,
     `- [ ] Called \`route_task(intent, className)\` OR read playbook \`${route.id}\``,

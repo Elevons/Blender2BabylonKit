@@ -6,7 +6,7 @@ import {
   FindCameraForNode,
   type Entity,
   type InputActionMap,
-} from "@bjs/engine";
+} from "b2bkit";
 import {
   ArcRotateCamera,
   PhysicsRaycastResult,

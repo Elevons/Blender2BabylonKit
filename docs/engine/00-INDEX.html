@@ -340,7 +340,7 @@
     <a href="../blender/00-INDEX.html">Blender</a></nav>
   <p class="chapter-nav"><a href="00-INDEX.html">← Index</a> <span class="dim">·</span> <a href="01-ARCHITECTURE.html">Next →</a></p>
   <article><h1>Babylon Level Kit — Engine (Runtime) Documentation</h1>
-<p>This documentation covers the runtime half of the kit. It is current as of <strong>engine v0.32.0 · Blender add-on v0.32.0</strong>. If you do not know where to start, use <strong>Choose your path</strong> below. You can also open <a href="index.html">subsystem diagrams</a> for interactive maps. You can use <a href="../index.html">Search</a> to jump to a topic.</p>
+<p>This documentation covers the runtime half of the kit. It is current as of <strong>engine v1.0.0 · Blender add-on v1.0.0</strong>. If you do not know where to start, use <strong>Choose your path</strong> below. You can also open <a href="index.html">subsystem diagrams</a> for interactive maps. You can use <a href="../index.html">Search</a> to jump to a topic.</p>
 
 <h2>Choose your path</h2>
 <p>Chapter numbers are for reference. You do not need to read 01 through 14 in order.</p>
@@ -362,7 +362,7 @@
 <p>Many topics exist in all three forms. The <strong>subsystem map</strong> table below links them. Contributors wire traces and diagrams from <code>PAGE_TOPICS</code>. See <a href="../BUILDING-DOCS.html">BUILDING-DOCS</a>.</p>
 
 <h2>What the runtime does</h2>
-<p><code>@bjs/engine</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports. These are <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything glTF cannot express). The loader turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb. It indexes nodes by GUID. It builds an <code>Entity</code> per manifest entry. It applies components through small subsystems (physics, lights, cameras, audio, …). Then it runs your <code>Behavior</code> scripts.</p>
+<p><code>b2bkit</code> (<code>packages/engine/</code>) loads the two artifacts Blender exports. These are <code>level.glb</code> (everything glTF can express) and <code>level.scene.json</code> (everything glTF cannot express). The loader turns them into a live <code>Level</code>. <code>LevelLoader.Load</code> appends the glb. It indexes nodes by GUID. It builds an <code>Entity</code> per manifest entry. It applies components through small subsystems (physics, lights, cameras, audio, …). Then it runs your <code>Behavior</code> scripts.</p>
 
 <h2>Subsystem map</h2>
 <table><thead><tr><th>Subsystem</th><th>Engine diagram</th><th>Blender diagram</th><th>Prose</th></tr></thead><tbody>

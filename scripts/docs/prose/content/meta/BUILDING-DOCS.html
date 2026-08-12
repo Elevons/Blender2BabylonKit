@@ -1,6 +1,6 @@
 <h1>Building the documentation</h1>
 <p>This file describes how the kit's documentation is produced, what to edit, and what is generated. For the product docs themselves, start at <strong><a href="index.html">index.html</a></strong> (searchable landing page) or the <strong><a href="engine/00-INDEX.html">engine</a></strong> / <strong><a href="blender/00-INDEX.html">Blender</a></strong> indexes. Kit version in prose hubs: <strong>__KIT_VERSION__</strong> (from <code>packages/engine/package.json</code> + <code>blender_addon/blender_manifest.toml</code> at build time).</p>
-<p>The generated <code>docs/</code> site ships inside the kit package. Day-to-day edits still go through the sources below; every <code>npm pack</code> / <code>npm run release</code> rebuilds the site and the MCP embedding index via <code>scripts/assemble-kit-package.mjs</code> before copying them into <code>@bjs/engine</code>. Installed projects and the Project Control Panel serve that packaged site — they never rebuild it.</p>
+<p>The generated <code>docs/</code> site ships inside the kit package. Day-to-day edits still go through the sources below; every <code>npm pack</code> / <code>npm run release</code> rebuilds the site and the MCP embedding index via <code>scripts/assemble-kit-package.mjs</code> before copying them into <code>b2bkit</code>. Installed projects and the Project Control Panel serve that packaged site — they never rebuild it.</p>
 <hr>
 <h2>Contributor quick start</h2>
 <p>Pick the row that matches what you want to change, edit the <strong>source</strong> file, then run the command. Never hand-edit generated HTML under <code>docs/</code> (except meta <code>.md</code> files).</p>
@@ -138,7 +138,7 @@
 <li><code>scripts/docs/validate-docs.mjs</code> → fragment registry + topic coverage</li>
 <li><code>scripts/check-doc-links.mjs</code> → internal link validation</li>
 </ol>
-<p><code>npm pack</code> / <code>npm run release</code> for <code>@bjs/engine</code> run <code>scripts/assemble-kit-package.mjs</code>, which always runs <code>npm run docs:build</code> (HTML site + <code>mcp:index</code> vector database) before copying <code>docs/</code>, the compiled <code>bjs-mcp</code> plus its <code>data/doc-embeddings.json</code> index and prose sources, and the control panel into the package. The Project Control Panel no longer builds docs — it only serves them.</p>
+<p><code>npm pack</code> / <code>npm run release</code> for <code>b2bkit</code> run <code>scripts/assemble-kit-package.mjs</code>, which always runs <code>npm run docs:build</code> (HTML site + <code>mcp:index</code> vector database) before copying <code>docs/</code>, the compiled <code>bjs-mcp</code> plus its <code>data/doc-embeddings.json</code> index and prose sources, and the control panel into the package. The Project Control Panel no longer builds docs — it only serves them.</p>
 <hr>
 <h2>Architecture</h2>
 <pre class="mermaid">flowchart LR
@@ -338,7 +338,7 @@
 <tr><td><strong>Ranking</strong></td><td>Hybrid score</td><td>75% vector similarity + 25% keyword boost (titles and exact API names like <code>disablePreStep</code>)</td></tr>
 </tbody>
 </table>
-<p>No Ollama, no HTTP embedding service, no API keys. In the kit checkout, Cursor config uses <code>node tools/bjs-mcp/dist/index.js</code>. In an installed project it uses the packaged copy under <code>node_modules/@bjs/engine/mcp/dist/index.js</code> (the Project Control Panel's Copy Cursor Config writes the correct path).</p>
+<p>No Ollama, no HTTP embedding service, no API keys. In the kit checkout, Cursor config uses <code>node tools/bjs-mcp/dist/index.js</code>. In an installed project it uses the packaged copy under <code>node_modules/b2bkit/mcp/dist/index.js</code> (the Project Control Panel's Copy Cursor Config writes the correct path).</p>
 <h3>What gets indexed</h3>
 <ul>
 <li>Prose fragments under <code>scripts/docs/prose/content/</code> (engine, blender, control-panel, meta) — split on <code>##</code> headings, same chunks <code>get_doc_chapter</code> returns</li>
