@@ -1,4 +1,10 @@
-import { Behavior, exposed, inputMap, type Entity } from "@bjs/engine";
+import {
+  Behavior,
+  exposed,
+  inputMap,
+  ReadSceneLevel,
+  type Entity,
+} from "@bjs/engine";
 import type { ConstraintAxisName, ConstraintComponent, InputActionMap } from "@bjs/engine";
 import {
   Color3,
@@ -30,6 +36,11 @@ interface CarGroundHit
   normal: Vector3;
 }
 
+/** Havok raycast surface; IPhysicsEngine omits raycastToRef at the type level. */
+type RaycastPhysicsEngine = {
+  raycastToRef: (from: Vector3, to: Vector3, result: PhysicsRaycastResult) => void;
+};
+
 const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
   LINEAR_X: PhysicsConstraintAxis.LINEAR_X,
   LINEAR_Y: PhysicsConstraintAxis.LINEAR_Y,
@@ -40,11 +51,8 @@ const CONSTRAINT_AXIS_MAP: Record<ConstraintAxisName, PhysicsConstraintAxis> = {
 };
 
 /**
- * CarController drives up to eight wheel motors on HINGE or CUSTOM 6DoF joints
- * (outer + inner per corner) from input, with optional velocity/angular assists
- * and per-wheel ground raycasts that gate motors when airborne. Reset freezes
- * the Body and Other Cars bodies, aligns each to its world-down ground normal,
- * lifts them along that normal, holds for Place Hold, then releases to DYNAMIC.
+ * Drives up to eight HINGE/CUSTOM wheel motors from Vehicle input, with optional
+ * velocity/angular assists and Reset placement (freeze, align to ground, lift, hold).
  */
 export default class CarController extends Behavior
 {
@@ -81,10 +89,7 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 5, label: "Place Hold (s)" })
   holdSeconds = 0.5;
 
-  /**
-   * How far to lift each car along its ground-hit normal during Reset, after
-   * aligning the body to that surface.
-   */
+  /** Lift along the ground-hit normal after Reset alignment. */
   @exposed({ min: 0, max: 20, label: "Reset Lift (m)" })
   resetLiftMeters = 3;
 
@@ -103,68 +108,33 @@ export default class CarController extends Behavior
   @exposed({ min: 0, max: 1, label: "Steer Zone Priority" })
   steerZonePriority = 0.9;
 
-  /**
-   * When > 0, directly set the body's forward/backward linear velocity each
-   * frame proportional to throttle.  Bypasses the slow wheel-friction → ground
-   * reaction chain so the car accelerates instantly.  Leave at 0 for pure
-   * physics; crank to 30+ for arcadey response.
-   */
+  /** Direct forward speed cheat; 0 keeps pure wheel physics. */
   @exposed({ min: 0, max: 100, label: "Velocity Assist (units/s)" })
   velocityAssist = 0;
 
-  /**
-   * Time (seconds) to ramp the velocity assist toward its target.  Smaller =
-   * snappier; larger = smoother but feels like gentle acceleration.  Zero
-   * snaps instantly (original behavior).
-   */
   @exposed({ min: 0, max: 2, label: "Velocity Ramp (s)" })
   velocityRampSeconds = 0.15;
 
-  /**
-   * When > 0, directly set the body's yaw angular velocity each frame
-   * proportional to steer input.  Makes the car point where the stick aims
-   * instead of waiting for wheels to push it around.
-   */
   @exposed({ min: 0, max: 180, label: "Angular Assist (deg/s)" })
   angularAssist = 0;
 
   @exposed({ label: "Body", type: "entity" })
   body: Entity | null = null;
 
-  /**
-   * Main body of each towed / companion car. Pick the rigid-body entities in
-   * Blender; their PhysicsBody is available at runtime via `entity.body`.
-   */
   @exposed({ type: "list", of: "entity", label: "Other Cars" })
   otherCars: (Entity | null)[] = [];
 
-  /**
-   * Player entity to exclude from the ground raycast.  Prevents the car's
-   * grounded check from treating the player's own collider as ground.
-   */
+  /** Excluded from ground rays so the player collider is never treated as ground. */
   @exposed({ label: "Player Entity", type: "entity" })
   playerEntity: Entity | null = null;
 
-  /**
-   * Distance (meters) below each wheel to raycast each frame.  When a wheel's
-   * ray misses (wheel is in the air) that wheel's motor is skipped and the
-   * body velocity/angular assists are withheld until at least one wheel hits
-   * ground again.
-   */
+  /** Wheel motors and assists are withheld when every wheel ray misses. */
   @exposed({ min: 0.05, max: 5, label: "Ground Raycast Distance (m)" })
   groundRaycastDistance = 0.5;
 
-  /**
-   * Draw each wheel's ground raycast as a colored line (green = grounded,
-   * red = airborne).  Leave off in shipping builds.
-   */
   @exposed({ label: "Debug Ground Ray" })
   debugGroundRay = false;
 
-  /**
-   * How far (meters) below each car body to search for ground with a
-   * world-down ray. Used for the Body + Other Cars probes, not the wheels.
-   */
   @exposed({ min: 1, max: 200, label: "Car Ground Probe Distance (m)" })
   carGroundProbeDistance = 50;
 
@@ -174,33 +144,31 @@ export default class CarController extends Behavior
   /** Steer is already deadzoned in bindings; keep a tiny epsilon only. */
   private static readonly steerEpsilon = 0.01;
   /** Max own-body / player / boundary hits the car ground probe steps through. */
-  private static readonly carGroundProbeMaxSkips = 8;
+  private static readonly carGroundProbeMaxSkips = 32;
+  /** How far to step along the probe after skipping an ignorable hit. */
+  private static readonly carGroundProbeSkipMeters = 0.25;
 
   private isPlacing = false;
   private placeTimer = 0;
-  private debounceTime = Date.now();
-  /** One entry per wheel slot (see CollectWheelEntities); undefined when unassigned or undrivable. */
+  /** One entry per wheel slot; undefined when unassigned or undrivable. */
   private wheelDrives: (WheelDriveBinding | undefined)[] = [];
-  /** Current ramped forward speed used by the velocity assist so it doesn't snap. */
   private rampedSpeed = 0;
   /** Per-wheel grounded state aligned with CollectWheelEntities() slot order. */
   private wheelGrounded: boolean[] = [];
-  /**
-   * Latest world-down ground hit per car (Body + Other Cars), same order as
-   * CollectCarEntities(). Undefined when that car's probe misses.
-   */
+  /** Latest world-down hit per car, same order as CollectCarEntities(). */
   private carGroundHits: (CarGroundHit | undefined)[] = [];
-  /** Reusable raycast result — must be pooled between calls (BJS V2 physics). */
+  /** Pooled — BJS V2 physics requires reuse between raycastToRef calls. */
   private raycastResult = new PhysicsRaycastResult();
-  /** Debug line per wheel slot; null entries when debug is off or unassigned. */
   private debugLines: (LinesMesh | null)[] = [];
-  /** Scratch vectors and matrix so the per-frame raycast doesn't allocate. */
   private rayStart = new Vector3();
   private rayEnd = new Vector3();
   private rayDirection = new Vector3();
   private rayWorldMatrix = Matrix.Identity();
-  /** Reused point array for the CreateLines instance update. */
   private debugPoints: Vector3[] = [new Vector3(), new Vector3()];
+  /** Frozen during Reset: car roots plus constraint-linked satellites. */
+  private placementBodies: Entity[] = [];
+  /** Per-car satellites; other car roots are excluded so each chassis aligns independently. */
+  private satellitesByCarId = new Map<string, Entity[]>();
 
   OnStart(): void
   {
@@ -220,53 +188,12 @@ export default class CarController extends Behavior
 
   OnUpdate(deltaSeconds: number): void
   {
-    this.UpdateCarGroundHits();
+    this.UpdatePlacementState(deltaSeconds);
 
-    const reset = this.vehicle.FindAction("Reset")?.IsPressed() === true;
-
-    // Reset starts the recover sequence (debounced, and ignored while already placing).
-    if (reset && !this.isPlacing && Date.now() - this.debounceTime >= 1000)
-    {
-      this.debounceTime = Date.now();
-      this.BeginPlacement();
-    }
-    // Hold for holdSeconds (always at least one physics step), then switch back to DYNAMIC.
-    else if (this.isPlacing)
-    {
-      this.placeTimer += deltaSeconds;
-      if (this.placeTimer >= this.holdSeconds)
-      {
-        this.EndPlacement();
-      }
-    }
-
-    const control = this.vehicle.FindAction("Main Control")?.ReadVector2() ?? { x: 0, y: 0 };
-    let throttle = control.y;
-    let steer = control.x;
-
-    if (this.swapMovement)
-    {
-      throttle = -throttle;
-    }
-
-    if (this.swapSteering)
-    {
-      steer = -steer;
-    }
-
-    // When reversing, steering is relative to the rear of the car — flip sign so
-    // the stick still steers toward the direction the front points.
-    if (throttle < 0)
-    {
-      steer = -steer;
-    }
-
-    const remapped = this.ApplySteerZone(throttle, steer);
-    throttle = remapped.throttle;
-    steer = remapped.steer;
-
+    const { throttle, steer } = this.ReadVehicleControls();
+    const wheelEntities = this.CollectWheelEntities();
     const speeds = this.isPlacing
-      ? this.CollectWheelEntities().map(() => 0)
+      ? wheelEntities.map(() => 0)
       : this.ComputeWheelSpeeds(throttle, steer);
 
     const anyWheelGrounded = this.UpdateWheelGroundStates();
@@ -281,9 +208,6 @@ export default class CarController extends Behavior
       }
     }
 
-    // Cheat: directly nudge the body so the car feels instant rather than
-    // waiting for wheel friction → ground reaction → body movement.
-    // Only apply assists when at least one wheel is grounded.
     if (!this.isPlacing && anyWheelGrounded)
     {
       this.ApplyVelocityAssist(throttle, steer, deltaSeconds);
@@ -297,6 +221,53 @@ export default class CarController extends Behavior
       debugLine?.dispose();
     }
     this.debugLines = [];
+  }
+
+  /** Edge-triggered Reset starts recover; after holdSeconds the cluster is released. */
+  private UpdatePlacementState(deltaSeconds: number): void
+  {
+    const resetPressed = this.vehicle.FindAction("Reset")?.WasPressedThisFrame() === true;
+
+    if (resetPressed && !this.isPlacing)
+    {
+      this.BeginPlacement();
+    }
+    else if (this.isPlacing)
+    {
+      this.placeTimer += deltaSeconds;
+      if (this.placeTimer >= this.holdSeconds)
+      {
+        this.EndPlacement();
+      }
+    }
+  }
+
+  /**
+   * Stick axes after swap flags, reverse-steer flip, and steer-zone remap.
+   */
+  private ReadVehicleControls(): { throttle: number; steer: number }
+  {
+    const control = this.vehicle.FindAction("Main Control")?.ReadVector2() ?? { x: 0, y: 0 };
+    let throttle = control.y;
+    let steer = control.x;
+
+    if (this.swapMovement)
+    {
+      throttle = -throttle;
+    }
+
+    if (this.swapSteering)
+    {
+      steer = -steer;
+    }
+
+    // Reverse: steering is relative to the rear — flip so the stick still aims the front.
+    if (throttle < 0)
+    {
+      steer = -steer;
+    }
+
+    return this.ApplySteerZone(throttle, steer);
   }
 
   /** Wheel entity slots in hinge order: four corners, outer then inner per corner. */
@@ -315,9 +286,8 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Car bodies to probe: the exposed Body (main chassis), then every non-null
-   * Other Cars pick. The script host is skipped — it is often the player, not
-   * a vehicle. Duplicates of Body are skipped.
+   * Exposed Body then Other Cars. The script host is skipped — it is often the
+   * player, not a vehicle. Duplicates of Body are skipped.
    */
   private CollectCarEntities(): Entity[]
   {
@@ -344,8 +314,9 @@ export default class CarController extends Behavior
   }
 
   /**
-   * World-down ground probe for every car in CollectCarEntities(). Writes
-   * carGroundHits in the same order — undefined when that car has no ground.
+   * World-down ground probe for every car. Writes carGroundHits in the same
+   * order — undefined when that car has no ground. Ignores the full placement
+   * cluster (chassis, wheels, arms) so flipped suspension cannot eat the ray.
    */
   private UpdateCarGroundHits(): void
   {
@@ -355,14 +326,7 @@ export default class CarController extends Behavior
       this.carGroundHits = carEntities.map(() => undefined);
     }
 
-    const ignoredBodies = new Set<PhysicsBody>();
-    for (const carEntity of carEntities)
-    {
-      if (carEntity.body !== undefined)
-      {
-        ignoredBodies.add(carEntity.body);
-      }
-    }
+    const ignoredBodies = this.CollectOwnPhysicsBodies();
 
     for (let carIndex = 0; carIndex < carEntities.length; carIndex++)
     {
@@ -374,24 +338,55 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Cast straight down in world space from the car's world position and return
-   * the first real ground hit. The physics ray API reports only the closest
-   * hit, so car bodies, the player, and level-boundary walls are stepped
-   * through by re-casting from just below each ignored hit.
+   * Physics bodies that belong to this controller's cars, wheels, or the
+   * current placement cluster — never treated as ground.
+   */
+  private CollectOwnPhysicsBodies(): Set<PhysicsBody>
+  {
+    const ignoredBodies = new Set<PhysicsBody>();
+
+    const AddEntityBody = (entity: Entity | null | undefined): void =>
+    {
+      if (entity === null || entity === undefined || entity.body === undefined)
+      {
+        return;
+      }
+
+      ignoredBodies.add(entity.body);
+    };
+
+    for (const carEntity of this.CollectCarEntities())
+    {
+      AddEntityBody(carEntity);
+    }
+
+    for (const wheelEntity of this.CollectWheelEntities())
+    {
+      AddEntityBody(wheelEntity);
+    }
+
+    for (const placementEntity of this.placementBodies)
+    {
+      AddEntityBody(placementEntity);
+    }
+
+    AddEntityBody(this.playerEntity);
+
+    return ignoredBodies;
+  }
+
+  /**
+   * Cast world-down from the car and return the first real ground hit. The
+   * physics ray reports only the closest hit, so own bodies, the player, and
+   * level-boundary walls are stepped through.
    */
   private ProbeCarGround(
     carEntity: Entity,
     ignoredBodies: Set<PhysicsBody>
   ): CarGroundHit | undefined
   {
-    // getPhysicsEngine() is typed as IPhysicsEngine, which omits raycastToRef
-    // even though the Havok-backed engine implements it at runtime.
-    const physicsEngine = this.scene.getPhysicsEngine() as
-      | { raycastToRef: (from: Vector3, to: Vector3, result: PhysicsRaycastResult) => void }
-      | null
-      | undefined;
-    // Babylon Nullable: can be undefined at runtime, so test truthiness.
-    if (!physicsEngine)
+    const physicsEngine = this.GetRaycastPhysicsEngine();
+    if (physicsEngine === undefined)
     {
       return undefined;
     }
@@ -402,7 +397,13 @@ export default class CarController extends Behavior
     const originZ = carWorld.m[14];
 
     this.rayStart.set(originX, originY, originZ);
-    this.rayEnd.set(originX, originY - this.carGroundProbeDistance, originZ);
+    // Probe at least past the authored reset hover so a car sitting on its
+    // post-reset lift still finds the same ground on the next press.
+    const probeDistance = Math.max(
+      this.carGroundProbeDistance,
+      this.resetLiftMeters + 10
+    );
+    this.rayEnd.set(originX, originY - probeDistance, originZ);
 
     for (let skipCount = 0; skipCount <= CarController.carGroundProbeMaxSkips; skipCount++)
     {
@@ -415,15 +416,10 @@ export default class CarController extends Behavior
       const hitBody = this.raycastResult.body;
       const hitPoint = this.raycastResult.hitPointWorld;
       const hitNormal = this.raycastResult.hitNormalWorld;
-
       const isOwnBody =
         hitBody !== null && hitBody !== undefined && ignoredBodies.has(hitBody);
-      const isPlayer =
-        this.playerEntity?.body !== undefined && hitBody === this.playerEntity.body;
-      const hitMetadata = hitBody?.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
-      const isBoundary = hitMetadata?.bjsEntity?.tag === "levelboundary";
 
-      if (!isOwnBody && !isPlayer && !isBoundary)
+      if (!isOwnBody && !this.IsIgnorableGroundHit(hitBody))
       {
         return {
           car: carEntity,
@@ -432,7 +428,11 @@ export default class CarController extends Behavior
         };
       }
 
-      this.rayStart.set(hitPoint.x, hitPoint.y - 0.05, hitPoint.z);
+      this.rayStart.set(
+        hitPoint.x,
+        hitPoint.y - CarController.carGroundProbeSkipMeters,
+        hitPoint.z
+      );
       if (this.rayStart.y <= this.rayEnd.y)
       {
         return undefined;
@@ -443,38 +443,320 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Begin recover: freeze car bodies, align each to its ground-hit normal, and
-   * lift them along that normal. Bodies stay kinematic until EndPlacement.
+   * Freeze the constraint cluster, probe ground (ignoring that cluster), then
+   * right each car — onto the ground hit when found, world-up in place otherwise.
    */
   private BeginPlacement(): void
   {
     this.isPlacing = true;
     this.placeTimer = 0;
-    this.DisableCarRigidBodies();
+    this.rampedSpeed = 0;
+    this.PreparePlacementClusters();
+    this.UpdateCarGroundHits();
+    this.DisablePlacementBodies();
     this.AlignAndLiftCarsAlongGroundNormals();
   }
 
   /**
-   * End the recover hold: hand every car body back to physics from rest.
-   * Order matters — re-enable disablePreStep first so the pre-step stops
-   * deriving velocity from any teleport, then DYNAMIC, then zero velocity.
+   * Hand every placement body back to physics from rest. disablePreStep first
+   * so a teleport cannot inject derived velocity, then DYNAMIC, then zero.
    */
   private EndPlacement(): void
   {
     this.isPlacing = false;
-    this.EnableCarRigidBodies();
+    this.EnablePlacementBodies();
+    this.placementBodies = [];
+    this.satellitesByCarId.clear();
   }
 
   /**
-   * Freeze each car body (Body + Other Cars) as ANIMATED with
-   * disablePreStep = false so later node teleports copy into Havok, and
-   * clear linear/angular velocity so nothing keeps drifting.
+   * Build per-car constraint clusters for freeze / teleport / restore.
+   * After the graph walk, every body/wheel CONSTRAINT partner is force-included
+   * so arms (target=body) and wheel hinges are never left DYNAMIC during Reset.
    */
-  private DisableCarRigidBodies(): void
+  private PreparePlacementClusters(): void
   {
-    for (const carEntity of this.CollectCarEntities())
+    const carEntities = this.CollectCarEntities();
+    const { adjacency, entitiesById } = this.BuildConstraintGraph();
+
+    // Seed car roots so a missed graph hit cannot drop the chassis.
+    for (const carEntity of carEntities)
     {
-      const physicsBody = carEntity.body;
+      entitiesById.set(carEntity.id, carEntity);
+    }
+
+    this.satellitesByCarId.clear();
+    this.placementBodies = [];
+    const seenIds = new Set<string>();
+
+    for (const carEntity of carEntities)
+    {
+      const cluster = this.WalkConstraintCluster(
+        carEntity.id,
+        carEntities,
+        adjacency,
+        entitiesById
+      );
+      const satellites: Entity[] = [];
+
+      for (const entity of cluster)
+      {
+        if (entity.id !== carEntity.id)
+        {
+          satellites.push(entity);
+        }
+
+        if (seenIds.has(entity.id))
+        {
+          continue;
+        }
+
+        seenIds.add(entity.id);
+        this.placementBodies.push(entity);
+      }
+
+      this.satellitesByCarId.set(carEntity.id, satellites);
+    }
+
+    // Guarantee every physics partner of the main body or any authored wheel is
+    // frozen/restored — arms constrain TO the body; wheels constrain TO arms.
+    if (this.body !== null)
+    {
+      this.EnqueueConstraintReferencedPartners(
+        this.body,
+        entitiesById
+      );
+    }
+  }
+
+  /**
+   * Disable/enable coverage for Reset: include every non-static physics entity
+   * that shares a CONSTRAINT with the body or any wheel (as owner or target).
+   */
+  private EnqueueConstraintReferencedPartners(
+    bodyEntity: Entity,
+    entitiesById: Map<string, Entity>
+  ): void
+  {
+    const anchorIds = new Set<string>([bodyEntity.id]);
+    for (const wheelEntity of this.CollectWheelEntities())
+    {
+      if (wheelEntity !== null)
+      {
+        anchorIds.add(wheelEntity.id);
+        entitiesById.set(wheelEntity.id, wheelEntity);
+      }
+    }
+
+    const mainSatellites = this.satellitesByCarId.get(bodyEntity.id) ?? [];
+    const mainSatelliteIds = new Set(mainSatellites.map((entity) => entity.id));
+    const placementIds = new Set(this.placementBodies.map((entity) => entity.id));
+
+    const EnqueueSatellite = (entity: Entity): void =>
+    {
+      if (
+        entity.id === bodyEntity.id
+        || entity.body === undefined
+        || entity.body.getMotionType() === PhysicsMotionType.STATIC
+      )
+      {
+        return;
+      }
+
+      if (!mainSatelliteIds.has(entity.id))
+      {
+        mainSatellites.push(entity);
+        mainSatelliteIds.add(entity.id);
+      }
+
+      if (!placementIds.has(entity.id))
+      {
+        this.placementBodies.push(entity);
+        placementIds.add(entity.id);
+      }
+    };
+
+    // Body and wheels themselves must always participate in freeze/restore.
+    if (
+      bodyEntity.body !== undefined
+      && bodyEntity.body.getMotionType() !== PhysicsMotionType.STATIC
+      && !placementIds.has(bodyEntity.id)
+    )
+    {
+      this.placementBodies.push(bodyEntity);
+      placementIds.add(bodyEntity.id);
+    }
+
+    for (const wheelEntity of this.CollectWheelEntities())
+    {
+      if (wheelEntity !== null)
+      {
+        EnqueueSatellite(wheelEntity);
+      }
+    }
+
+    for (const entity of entitiesById.values())
+    {
+      for (const constraintRow of entity.GetAttachmentsOfType("CONSTRAINT"))
+      {
+        const targetId = constraintRow.data.target;
+        if (targetId === null)
+        {
+          continue;
+        }
+
+        const ownerIsAnchor = anchorIds.has(entity.id);
+        const targetIsAnchor = anchorIds.has(targetId);
+        if (!ownerIsAnchor && !targetIsAnchor)
+        {
+          continue;
+        }
+
+        EnqueueSatellite(entity);
+
+        const targetEntity = entitiesById.get(targetId);
+        if (targetEntity !== undefined)
+        {
+          EnqueueSatellite(targetEntity);
+        }
+      }
+    }
+
+    this.satellitesByCarId.set(bodyEntity.id, mainSatellites);
+  }
+
+  /**
+   * Undirected CONSTRAINT adjacency over every level entity. ReadSceneLevel
+   * includes mesh entities that walking scene.transformNodes would miss.
+   */
+  private BuildConstraintGraph(): {
+    adjacency: Map<string, string[]>;
+    entitiesById: Map<string, Entity>;
+  }
+  {
+    const adjacency = new Map<string, string[]>();
+    const entitiesById = new Map<string, Entity>();
+
+    const AddLink = (leftId: string, rightId: string): void =>
+    {
+      let leftNeighbors = adjacency.get(leftId);
+      if (leftNeighbors === undefined)
+      {
+        leftNeighbors = [];
+        adjacency.set(leftId, leftNeighbors);
+      }
+      if (!leftNeighbors.includes(rightId))
+      {
+        leftNeighbors.push(rightId);
+      }
+
+      let rightNeighbors = adjacency.get(rightId);
+      if (rightNeighbors === undefined)
+      {
+        rightNeighbors = [];
+        adjacency.set(rightId, rightNeighbors);
+      }
+      if (!rightNeighbors.includes(leftId))
+      {
+        rightNeighbors.push(leftId);
+      }
+    };
+
+    const level = ReadSceneLevel(this.scene);
+    if (level === undefined)
+    {
+      return { adjacency, entitiesById };
+    }
+
+    for (const entity of level.entities.values())
+    {
+      entitiesById.set(entity.id, entity);
+
+      for (const constraintRow of entity.GetAttachmentsOfType("CONSTRAINT"))
+      {
+        const targetId = constraintRow.data.target;
+        if (targetId !== null)
+        {
+          AddLink(entity.id, targetId);
+        }
+      }
+    }
+
+    return { adjacency, entitiesById };
+  }
+
+  /**
+   * BFS from one car through CONSTRAINT links. Stops at other car roots so each
+   * authored car keeps an independent ground-aligned teleport.
+   */
+  private WalkConstraintCluster(
+    rootId: string,
+    carRoots: Entity[],
+    adjacency: Map<string, string[]>,
+    entitiesById: Map<string, Entity>
+  ): Entity[]
+  {
+    const otherCarIds = new Set<string>();
+    for (const carRoot of carRoots)
+    {
+      if (carRoot.id !== rootId)
+      {
+        otherCarIds.add(carRoot.id);
+      }
+    }
+
+    const cluster: Entity[] = [];
+    const seenIds = new Set<string>([rootId]);
+    const pendingIds = [rootId];
+
+    while (pendingIds.length > 0)
+    {
+      const currentId = pendingIds.shift();
+      if (currentId === undefined)
+      {
+        break;
+      }
+
+      const currentEntity = entitiesById.get(currentId);
+      if (
+        currentEntity !== undefined
+        && currentEntity.body !== undefined
+        && currentEntity.body.getMotionType() !== PhysicsMotionType.STATIC
+      )
+      {
+        cluster.push(currentEntity);
+      }
+
+      const neighborIds = adjacency.get(currentId);
+      if (neighborIds === undefined)
+      {
+        continue;
+      }
+
+      for (const neighborId of neighborIds)
+      {
+        if (seenIds.has(neighborId) || otherCarIds.has(neighborId))
+        {
+          continue;
+        }
+
+        seenIds.add(neighborId);
+        pendingIds.push(neighborId);
+      }
+    }
+
+    return cluster;
+  }
+
+  /**
+   * Freeze every placement body as ANIMATED with disablePreStep = false so
+   * later node teleports copy into Havok.
+   */
+  private DisablePlacementBodies(): void
+  {
+    for (const entity of this.placementBodies)
+    {
+      const physicsBody = entity.body;
       if (physicsBody === undefined)
       {
         continue;
@@ -489,14 +771,14 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Restore each car body to DYNAMIC from rest. disablePreStep is re-enabled
-   * first so a prior teleport cannot inject a derived velocity on the next step.
+   * Restore every placement body to DYNAMIC from rest. disablePreStep is
+   * re-enabled first so a prior teleport cannot inject a derived velocity.
    */
-  private EnableCarRigidBodies(): void
+  private EnablePlacementBodies(): void
   {
-    for (const carEntity of this.CollectCarEntities())
+    for (const entity of this.placementBodies)
     {
-      const physicsBody = carEntity.body;
+      const physicsBody = entity.body;
       if (physicsBody === undefined)
       {
         continue;
@@ -510,9 +792,9 @@ export default class CarController extends Behavior
   }
 
   /**
-   * For each car with a ground hit: align its up axis to the surface normal
-   * (heading preserved), then translate resetLiftMeters along that normal.
-   * Cars with no hit are left where they were when frozen.
+   * Right each car onto its ground hit (absolute height above the hit) or, when
+   * the probe misses, upright in place on world +Y. Satellites keep their
+   * chassis-relative pose across the teleport.
    */
   private AlignAndLiftCarsAlongGroundNormals(): void
   {
@@ -520,54 +802,128 @@ export default class CarController extends Behavior
 
     for (let carIndex = 0; carIndex < carEntities.length; carIndex++)
     {
+      const carEntity = carEntities[carIndex];
       const groundHit = this.carGroundHits[carIndex];
-      if (groundHit === undefined)
+      const oldCarWorld = carEntity.node.computeWorldMatrix(true).clone();
+      const oldCarInverse = Matrix.Identity();
+      oldCarWorld.invertToRef(oldCarInverse);
+
+      const carRootIds = new Set(carEntities.map((entity) => entity.id));
+      let satellites = this.satellitesByCarId.get(carEntity.id) ?? [];
+      if (satellites.length === 0)
       {
-        continue;
+        satellites = this.placementBodies.filter(
+          (entity) => !carRootIds.has(entity.id)
+        );
       }
 
-      const carEntity = carEntities[carIndex];
-      const carWorld = carEntity.node.computeWorldMatrix(true);
+      const relativePoseById = new Map<string, Matrix>();
+      for (const satellite of satellites)
+      {
+        const satelliteWorld = satellite.node.computeWorldMatrix(true).clone();
+        relativePoseById.set(
+          satellite.id,
+          satelliteWorld.multiply(oldCarInverse)
+        );
+      }
 
       const worldScale = new Vector3();
       const worldRotation = new Quaternion();
       const worldPosition = new Vector3();
-      carWorld.decompose(worldScale, worldRotation, worldPosition);
+      oldCarWorld.decompose(worldScale, worldRotation, worldPosition);
 
-      const surfaceNormal = groundHit.normal.normalizeToNew();
+      const uprightNormal = this.ResolveUprightNormal(groundHit);
       const alignedRotation = this.ComputeSurfaceAlignedRotation(
-        carWorld,
-        surfaceNormal,
+        oldCarWorld,
+        uprightNormal,
         worldRotation
       );
 
-      worldPosition.addInPlace(surfaceNormal.scale(this.resetLiftMeters));
-      this.SetCarWorldPose(carEntity, worldScale, alignedRotation, worldPosition);
+      // Absolute place above the hit so spam cannot stack altitude. Probe miss
+      // keeps XZ/Y and only rights the chassis.
+      if (groundHit !== undefined)
+      {
+        worldPosition.copyFrom(groundHit.point);
+        worldPosition.addInPlace(uprightNormal.scale(this.resetLiftMeters));
+      }
+
+      this.SetEntityWorldPose(carEntity, worldScale, alignedRotation, worldPosition);
+
+      const newCarWorld = carEntity.node.computeWorldMatrix(true).clone();
+      for (const satellite of satellites)
+      {
+        const relativePose = relativePoseById.get(satellite.id);
+        if (relativePose === undefined)
+        {
+          continue;
+        }
+
+        this.SetEntityWorldMatrix(
+          satellite,
+          relativePose.multiply(newCarWorld)
+        );
+      }
     }
   }
 
   /**
-   * Rotation whose up axis matches the ground normal while the car keeps its
-   * heading: forward is projected onto the surface plane and a right-handed
-   * basis is rebuilt around the normal. Falls back to the current rotation
-   * for walls/overhangs or when heading is parallel to the normal.
+   * Prefer a mostly-upward ground normal; fall back to world +Y so a missed or
+   * wall-like probe still rights the car.
+   */
+  private ResolveUprightNormal(groundHit: CarGroundHit | undefined): Vector3
+  {
+    if (groundHit === undefined)
+    {
+      return Vector3.Up();
+    }
+
+    const surfaceNormal = groundHit.normal.normalizeToNew();
+    if (surfaceNormal.y < 0.2)
+    {
+      return Vector3.Up();
+    }
+
+    return surfaceNormal;
+  }
+
+  /**
+   * Teleport one entity to an absolute world matrix and zero velocity so the
+   * joint stack does not inherit a snap impulse.
+   */
+  private SetEntityWorldMatrix(entity: Entity, worldMatrix: Matrix): void
+  {
+    const worldScale = new Vector3();
+    const worldRotation = new Quaternion();
+    const worldPosition = new Vector3();
+    worldMatrix.decompose(worldScale, worldRotation, worldPosition);
+    this.SetEntityWorldPose(entity, worldScale, worldRotation, worldPosition);
+
+    const physicsBody = entity.body;
+    if (physicsBody === undefined)
+    {
+      return;
+    }
+
+    physicsBody.setLinearVelocity(Vector3.Zero());
+    physicsBody.setAngularVelocity(Vector3.Zero());
+  }
+
+  /**
+   * Rotation whose up axis matches the upright normal while heading is kept.
+   * Falls back when heading is parallel to the normal.
    */
   private ComputeSurfaceAlignedRotation(
     carWorld: Matrix,
-    groundNormal: Vector3,
+    uprightNormal: Vector3,
     fallbackRotation: Quaternion
   ): Quaternion
   {
-    if (groundNormal.lengthSquared() < 1e-6)
+    if (uprightNormal.lengthSquared() < 1e-6)
     {
       return fallbackRotation;
     }
 
-    const upAxis = groundNormal.normalizeToNew();
-    if (upAxis.y < 0.2)
-    {
-      return fallbackRotation;
-    }
+    const upAxis = uprightNormal.normalizeToNew();
 
     // This car model uses +Z as forward (see ApplyVelocityAssist).
     const forwardHeading = Vector3.TransformNormal(new Vector3(0, 0, 1), carWorld);
@@ -587,20 +943,20 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Write a world pose onto a car node as a local transform, accounting for
-   * a parent when present so nested nodes are not double-transformed.
+   * Write a world pose as a local transform, accounting for a parent so nested
+   * nodes are not double-transformed.
    */
-  private SetCarWorldPose(
-    carEntity: Entity,
+  private SetEntityWorldPose(
+    entity: Entity,
     worldScale: Vector3,
     worldRotation: Quaternion,
     worldPosition: Vector3
   ): void
   {
-    const carNode = carEntity.node;
+    const sceneNode = entity.node;
     let localMatrix = Matrix.Compose(worldScale, worldRotation, worldPosition);
 
-    const parentNode = carNode.parent;
+    const parentNode = sceneNode.parent;
     if (parentNode !== null)
     {
       const parentInverse = new Matrix();
@@ -613,14 +969,14 @@ export default class CarController extends Behavior
     const localPosition = new Vector3();
     localMatrix.decompose(localScale, localRotation, localPosition);
 
-    carNode.position.copyFrom(localPosition);
+    sceneNode.position.copyFrom(localPosition);
     // rotationQuaternion overrides Euler rotation for both the renderer and physics.
-    carNode.rotationQuaternion = localRotation;
+    sceneNode.rotationQuaternion = localRotation;
   }
 
   /**
    * In wide left/right stick wedges, bleed throttle and ramp steer toward ±1 so
-   * input favors turning over forward/back (tank-style at full lateral).
+   * input favors turning over forward/back.
    */
   private ApplySteerZone(throttle: number, steer: number): { throttle: number; steer: number }
   {
@@ -649,8 +1005,8 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Per-wheel motor speeds [FL, FR, RL, RR, FLi, FRi, RLi, RRi]. Each inner/outer
-   * pair on a corner shares the same corner speed from ComputeCornerSpeeds().
+   * Per-wheel motor speeds [FL, FR, RL, RR, FLi, FRi, RLi, RRi]. Inner/outer
+   * pairs on a corner share the same corner speed.
    */
   private ComputeWheelSpeeds(throttle: number, steer: number): number[]
   {
@@ -668,30 +1024,17 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Differential speeds for the four corners [FL, FR, RL, RR]. The outside track
-   * spins at full speed; the inside track spins at turnRatio × speed (turnRatio =
-   * 1 → all equal, wide arc; 0 → inside locked, sharp pivot). Left/Right alone
-   * gives tank controls: inside track spins opposite.
+   * Differential speeds for the four corners [FL, FR, RL, RR]. Outside track at
+   * full speed; inside at turnRatio × speed. Steer alone is tank controls.
    */
   private ComputeCornerSpeeds(throttle: number, steer: number): number[]
   {
-    const throttleDeadzone = CarController.throttleDeadzone;
-    const steerEpsilon = CarController.steerEpsilon;
-    let direction = 0;
-    if (throttle > throttleDeadzone)
-    {
-      direction = 1;
-    }
-    else if (throttle < -throttleDeadzone)
-    {
-      direction = -1;
-    }
-
-    const throttleMagnitude = direction !== 0 ? Math.min(1, Math.abs(throttle)) : 0;
+    const direction = this.ResolveThrottleDirection(throttle);
     const steerMagnitude = Math.abs(steer);
-    const steerSign = steerMagnitude > steerEpsilon ? Math.sign(steer) : 0;
+    const steerSign = steerMagnitude > CarController.steerEpsilon ? Math.sign(steer) : 0;
     const turning = steerSign !== 0;
     const turnStrength = Math.min(1, steerMagnitude);
+    const throttleMagnitude = direction !== 0 ? Math.min(1, Math.abs(throttle)) : 0;
 
     // Outside track at full speed; direction defaults to +1 for tank-turning.
     const outsideSpeed = (direction !== 0 ? direction : 1)
@@ -708,8 +1051,7 @@ export default class CarController extends Behavior
       return [outsideSpeed, outsideSpeed, outsideSpeed, outsideSpeed];
     }
 
-    // Forward/back + turn → inside track same direction, slower (scaled by steer).
-    // Turn alone → tank controls: inside track spins opposite.
+    // Forward/back + turn → inside same direction, slower. Turn alone → tank (inside opposite).
     const innerScale = direction !== 0
       ? 1 - turnStrength * (1 - this.turnRatio)
       : this.turnRatio * turnStrength;
@@ -726,9 +1068,8 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Resolve the wheel joint: HINGE or CUSTOM 6DoF constraint on the wheel
-   * entity (built at load time). CUSTOM wheels must leave one angular axis free
-   * (or limited/spring) for the drive motor — typically ANGULAR_X (frame X).
+   * Resolve the wheel joint: HINGE or CUSTOM 6DoF. CUSTOM wheels must leave one
+   * angular axis free (typically ANGULAR_X) for the drive motor.
    */
   private ResolveWheelDrive(wheelEntity: Entity | null): WheelDriveBinding | undefined
   {
@@ -824,44 +1165,35 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Cheat layer: directly override the body's forward and yaw velocity so the
-   * car responds instantly to input instead of waiting for wheel friction to
-   * push it.  Only the forward/back component of linear velocity and the yaw
-   * (Y) component of angular velocity are overridden — other components
-   * (sideways drift, pitch/roll from terrain) are left alone.
+   * Override forward linear velocity and yaw so the car responds instantly;
+   * sideways drift and pitch/roll are left to physics.
    */
   private ApplyVelocityAssist(throttle: number, steer: number, deltaSeconds: number): void
   {
-    if (!this.body || this.velocityAssist === 0 && this.angularAssist === 0)
+    if (this.body === null || (this.velocityAssist === 0 && this.angularAssist === 0))
     {
       return;
     }
 
     const physicsBody = this.body.body;
-    if (!physicsBody)
+    if (physicsBody === undefined)
     {
       return;
     }
 
     const currentLinear = physicsBody.getLinearVelocity();
     const currentAngular = physicsBody.getAngularVelocity();
+    const direction = this.ResolveThrottleDirection(throttle);
 
-    // Forward direction in world space — this car model uses +Z as forward.
+    // This car model uses +Z as forward.
     const forward = new Vector3(0, 0, 1);
     Vector3.TransformNormalToRef(forward, this.body.node.getWorldMatrix(), forward);
-
-    // Throttle direction respects swapMovement (already flipped in caller).
-    const throttleDeadzone = CarController.throttleDeadzone;
-    let direction = 0;
-    if (throttle > throttleDeadzone) direction = 1;
-    else if (throttle < -throttleDeadzone) direction = -1;
 
     if (this.velocityAssist > 0)
     {
       const magnitude = direction !== 0 ? Math.min(1, Math.abs(throttle)) : 0;
       const targetSpeed = direction * this.velocityAssist * magnitude;
 
-      // Ramp the desired forward speed smoothly toward the target.
       if (this.velocityRampSeconds > 0)
       {
         const blendFactor = 1 - Math.exp(-deltaSeconds / this.velocityRampSeconds);
@@ -872,7 +1204,6 @@ export default class CarController extends Behavior
         this.rampedSpeed = targetSpeed;
       }
 
-      // Strip the existing forward component, then add the ramped one.
       const currentForward = Vector3.Dot(currentLinear, forward);
       const assistDelta = this.rampedSpeed - currentForward;
       currentLinear.x += assistDelta * forward.x;
@@ -882,22 +1213,15 @@ export default class CarController extends Behavior
       physicsBody.setLinearVelocity(currentLinear);
     }
 
-    if (this.angularAssist > 0)
+    if (this.angularAssist > 0 && Math.abs(steer) > CarController.steerEpsilon)
     {
-      const steerEpsilon = CarController.steerEpsilon;
-      if (Math.abs(steer) > steerEpsilon)
-      {
-        // Override yaw (Y) angular velocity; keep pitch/roll untouched.
-        const targetYawRad = steer * this.angularAssist * (Math.PI / 180);
-        currentAngular.y = targetYawRad;
-        physicsBody.setAngularVelocity(currentAngular);
-      }
+      currentAngular.y = steer * this.angularAssist * (Math.PI / 180);
+      physicsBody.setAngularVelocity(currentAngular);
     }
   }
 
   /**
-   * Raycast each assigned wheel from its world position along the body mesh's
-   * local down axis and refresh wheelGrounded[]. Returns true when at least
+   * Refresh wheelGrounded[] from each wheel ray. Returns true when at least
    * one wheel hits ground.
    */
   private UpdateWheelGroundStates(): boolean
@@ -931,9 +1255,8 @@ export default class CarController extends Behavior
   }
 
   /**
-   * Cast a ray from the wheel's world position along the body mesh's local down
-   * axis so spinning wheels don't skew the direction. Returns true when the
-   * ray intersects any collider within groundRaycastDistance.
+   * Cast from the wheel along the body mesh's local down so spinning wheels
+   * do not skew the direction.
    */
   private RaycastWheelGround(wheelEntity: Entity): boolean
   {
@@ -944,63 +1267,37 @@ export default class CarController extends Behavior
       wheelMatrix.m[14]
     );
 
-    const orientationNode = this.body?.node ?? this.node;
+    const orientationNode = this.body !== null ? this.body.node : this.node;
     this.rayWorldMatrix.copyFrom(orientationNode.getWorldMatrix());
     this.rayDirection.set(0, -1, 0);
     Vector3.TransformNormalToRef(this.rayDirection, this.rayWorldMatrix, this.rayDirection);
     this.rayEnd.copyFrom(this.rayStart);
     this.rayEnd.addInPlace(this.rayDirection.scale(this.groundRaycastDistance));
 
-    // getPhysicsEngine() is typed as IPhysicsEngine, which omits raycastToRef
-    // even though the Havok-backed engine implements it at runtime.
-    const physicsEngine = this.scene.getPhysicsEngine() as
-      | { raycastToRef: (from: Vector3, to: Vector3, result: PhysicsRaycastResult) => void }
-      | null
-      | undefined;
-    physicsEngine?.raycastToRef(
+    const physicsEngine = this.GetRaycastPhysicsEngine();
+    if (physicsEngine === undefined)
+    {
+      return false;
+    }
+
+    physicsEngine.raycastToRef(
       this.rayStart,
       this.rayEnd,
       this.raycastResult
     );
 
-    let grounded = this.raycastResult.hasHit;
-
-    if (grounded)
+    if (!this.raycastResult.hasHit)
     {
-      const hitBody = this.raycastResult.body;
-
-      // The player can't count as ground.  Note this is a post-hit rejection, not a
-      // true exclusion: raycastToRef's 4th argument is an IRaycastQuery of collision
-      // bitmasks, not a body list, so there's no way to skip a specific body without
-      // putting the player in its own filter group.  If the player is standing
-      // between the car and the ground this will read as airborne for a frame.
-      if (this.playerEntity?.body && hitBody === this.playerEntity.body)
-      {
-        grounded = false;
-      }
-
-      // Level boundary colliders are invisible walls — treat them as a miss.
-      if (grounded && hitBody !== null && hitBody !== undefined)
-      {
-        const metadata = hitBody.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
-        const hitEntity = metadata?.bjsEntity;
-        if (hitEntity !== null && hitEntity !== undefined && hitEntity.tag === "levelboundary")
-        {
-          grounded = false;
-        }
-      }
+      return false;
     }
 
-    return grounded;
+    // Post-hit rejection only: raycastToRef filters by collision bitmask, not body list.
+    return !this.IsIgnorableGroundHit(this.raycastResult.body);
   }
 
   /**
-   * Create one debug line per wheel slot.  Two details matter here:
-   *  - `updatable: true` is required for the CreateLines instance update below.
-   *  - `alwaysSelectAsActiveMesh` skips frustum culling.  The mesh's bounding
-   *    info is computed at creation and never refreshed when we move the
-   *    vertices, so without this it gets culled the moment the car leaves the
-   *    area the bounding box was built around.
+   * One updatable line per wheel. alwaysSelectAsActiveMesh skips frustum culling
+   * because CreateLines never refreshes bounds after vertex updates.
    */
   private CreateDebugLines(): void
   {
@@ -1024,22 +1321,13 @@ export default class CarController extends Behavior
 
       debugLine.alwaysSelectAsActiveMesh = true;
       debugLine.isPickable = false;
-      // NOTE: isEnabled is a *method* on Node — `mesh.isEnabled = true` shadows it
-      // with a boolean and Babylon throws when it later calls mesh.isEnabled().
-      // Use setEnabled() if you ever need to toggle it.
+      // isEnabled is a method — assigning `mesh.isEnabled = true` shadows it and Babylon throws.
       debugLine.setEnabled(true);
       this.debugLines[slotIndex] = debugLine;
     }
   }
 
-  /**
-   * Move one wheel's debug line onto the current ray and recolor it.  Uses the
-   * CreateLines `instance` overload rather than setVerticesData so Babylon
-   * updates the vertex buffer through its own path.  Color comes from
-   * LinesMesh.color, not a vertex-color buffer — LinesMesh bakes its
-   * useVertexColor define at construction, so a colors buffer added afterwards
-   * is ignored by the shader.
-   */
+  /** Move a debug line onto the current ray via MeshBuilder.CreateLines. */
   private UpdateDebugLine(slotIndex: number, grounded: boolean): void
   {
     if (this.debugLines[slotIndex] === null)
@@ -1068,5 +1356,61 @@ export default class CarController extends Behavior
 
     debugLine.color = grounded ? Color3.Green() : Color3.Red();
     this.debugLines[slotIndex] = debugLine;
+  }
+
+  /**
+   * Havok raycast engine. IPhysicsEngine omits raycastToRef even though the
+   * Havok-backed engine implements it at runtime.
+   */
+  private GetRaycastPhysicsEngine(): RaycastPhysicsEngine | undefined
+  {
+    const physicsEngine = this.scene.getPhysicsEngine() as
+      | RaycastPhysicsEngine
+      | null
+      | undefined;
+    // Babylon Nullable: can be undefined at runtime, so test truthiness.
+    if (!physicsEngine)
+    {
+      return undefined;
+    }
+
+    return physicsEngine;
+  }
+
+  /** Player collider and level-boundary walls must not count as ground. */
+  private IsIgnorableGroundHit(hitBody: PhysicsBody | null | undefined): boolean
+  {
+    if (hitBody === null || hitBody === undefined)
+    {
+      return false;
+    }
+
+    if (
+      this.playerEntity !== null
+      && this.playerEntity.body !== undefined
+      && hitBody === this.playerEntity.body
+    )
+    {
+      return true;
+    }
+
+    const hitMetadata = hitBody.transformNode?.metadata as { bjsEntity?: Entity } | undefined;
+    return hitMetadata?.bjsEntity?.tag === "levelboundary";
+  }
+
+  /** Throttle stick deadzone to -1 / 0 / +1. */
+  private ResolveThrottleDirection(throttle: number): number
+  {
+    if (throttle > CarController.throttleDeadzone)
+    {
+      return 1;
+    }
+
+    if (throttle < -CarController.throttleDeadzone)
+    {
+      return -1;
+    }
+
+    return 0;
   }
 }
