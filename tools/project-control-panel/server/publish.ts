@@ -1493,10 +1493,12 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
 
   /**
    * Download assets.pak on the page in ranged chunks with retries.
-   * One long stream often stalls mid-file; short Range requests recover cleanly.
+   * Larger chunks + a few parallel Range fetches keep CDN throughput up without
+   * going back to one fragile long stream.
    */
   function DownloadPakOnPage(onProgress) {
-    var PAGE_CHUNK = 8 * 1024 * 1024;
+    var PAGE_CHUNK = 32 * 1024 * 1024;
+    var PARALLEL = 3;
     var MAX_ATTEMPTS = 4;
 
     function ReportFactory() {
@@ -1556,7 +1558,7 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       return PumpUnknown();
     }
 
-    function FetchRangeBuffer(start, end, attempt, totalBytes, Report) {
+    function FetchRangeBuffer(start, end, attempt, onChunkBytes) {
       return fetch(PAK_URL, {
         headers: { Range: "bytes=" + start + "-" + end },
         cache: "no-store",
@@ -1577,7 +1579,9 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
                 }
                 chunkView.set(result.value, offset);
                 offset += result.value.byteLength;
-                Report(start + offset, totalBytes);
+                if (onChunkBytes) {
+                  onChunkBytes(offset);
+                }
                 return PumpRange();
               });
             }
@@ -1586,6 +1590,9 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
           return response.arrayBuffer().then(function (buffer) {
             if (buffer.byteLength !== (end - start + 1)) {
               throw new Error("assets.pak range size mismatch at " + start);
+            }
+            if (onChunkBytes) {
+              onChunkBytes(buffer.byteLength);
             }
             return { kind: "range", buffer: buffer };
           });
@@ -1596,7 +1603,7 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
         throw new Error("Failed to fetch assets.pak range: " + response.status);
       }).catch(function (error) {
         if (attempt + 1 < MAX_ATTEMPTS) {
-          return FetchRangeBuffer(start, end, attempt + 1, totalBytes, Report);
+          return FetchRangeBuffer(start, end, attempt + 1, onChunkBytes);
         }
         throw error;
       });
@@ -1604,28 +1611,90 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
 
     function DownloadViaRanges(total, Report) {
       var view = new Uint8Array(total);
-      var start = 0;
-
-      function NextChunk() {
-        if (start >= total) {
-          Report(total, total);
-          return StorePakInCache(view.buffer);
-        }
-        var end = Math.min(start + PAGE_CHUNK - 1, total - 1);
-        Report(start, total);
-        return FetchRangeBuffer(start, end, 0, total, Report).then(function (result) {
-          if (result.kind === "full") {
-            var totalHeader = Number(result.response.headers.get("content-length") || "0");
-            return StreamFullResponse(result.response, totalHeader > 0 ? totalHeader : total, Report);
-          }
-          view.set(new Uint8Array(result.buffer), start);
-          start = end + 1;
-          Report(start, total);
-          return NextChunk();
+      var ranges = [];
+      for (var offset = 0; offset < total; offset += PAGE_CHUNK) {
+        ranges.push({
+          index: ranges.length,
+          start: offset,
+          end: Math.min(offset + PAGE_CHUNK - 1, total - 1),
         });
       }
+      var received = ranges.map(function () { return 0; });
+      function SumReceived() {
+        var sum = 0;
+        for (var index = 0; index < received.length; index++) {
+          sum += received[index];
+        }
+        return sum;
+      }
 
-      return NextChunk();
+      return new Promise(function (resolve, reject) {
+        var cursor = 0;
+        var active = 0;
+        var settled = false;
+
+        function Fail(error) {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          reject(error);
+        }
+
+        function Succeed(result) {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          resolve(result);
+        }
+
+        function Kick() {
+          if (settled) {
+            return;
+          }
+          while (active < PARALLEL && cursor < ranges.length) {
+            Launch(ranges[cursor]);
+            cursor += 1;
+          }
+          if (active === 0 && cursor >= ranges.length) {
+            Report(total, total);
+            StorePakInCache(view.buffer).then(Succeed, Fail);
+          }
+        }
+
+        function Launch(range) {
+          active += 1;
+          FetchRangeBuffer(range.start, range.end, 0, function (offsetInChunk) {
+            received[range.index] = offsetInChunk;
+            Report(SumReceived(), total);
+          }).then(function (result) {
+            active -= 1;
+            if (settled) {
+              return;
+            }
+            if (result.kind === "full") {
+              if (range.start !== 0) {
+                Fail(new Error("assets.pak server ignored Range mid-download"));
+                return;
+              }
+              var totalHeader = Number(result.response.headers.get("content-length") || "0");
+              StreamFullResponse(result.response, totalHeader > 0 ? totalHeader : total, Report)
+                .then(Succeed, Fail);
+              return;
+            }
+            view.set(new Uint8Array(result.buffer), range.start);
+            received[range.index] = range.end - range.start + 1;
+            Report(SumReceived(), total);
+            Kick();
+          }, function (error) {
+            active -= 1;
+            Fail(error);
+          });
+        }
+
+        Kick();
+      });
     }
 
     var Report = ReportFactory();
