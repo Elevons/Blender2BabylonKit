@@ -1397,6 +1397,13 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     return (byteCount / 1048576).toFixed(1) + " MB";
   }
 
+  function FormatSpeed(bytesPerSecond) {
+    if (!(bytesPerSecond > 0) || !isFinite(bytesPerSecond)) { return ""; }
+    if (bytesPerSecond < 1024) { return Math.round(bytesPerSecond) + " B/s"; }
+    if (bytesPerSecond < 1048576) { return Math.round(bytesPerSecond / 1024) + " KB/s"; }
+    return (bytesPerSecond / 1048576).toFixed(1) + " MB/s";
+  }
+
   function SetOverlay(status, ratio, detail) {
     var root = document.getElementById("bjs-loading");
     var statusElement = document.getElementById("bjs-loading-status");
@@ -1421,9 +1428,13 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     bar.dataset.indeterminate = "false";
     bar.style.width = (clamped * 100).toFixed(1) + "%";
     if (pct) {
-      pct.textContent = detail && detail.total > 0
+      var label = detail && detail.total > 0
         ? Math.round(clamped * 100) + "% · " + FormatBytes(detail.loaded) + " / " + FormatBytes(detail.total)
         : Math.round(clamped * 100) + "%";
+      if (detail && detail.speed > 0) {
+        label += " · " + FormatSpeed(detail.speed);
+      }
+      pct.textContent = label;
     }
   }
 
@@ -1492,8 +1503,9 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   }
 
   /**
-   * Download assets.pak on the page. Prefer one full stream (best throughput on
-   * HTTP/2 CDNs). Fall back to parallel Range requests only if that fails.
+   * Download assets.pak on the page in ranged chunks with retries.
+   * Larger chunks + a few parallel Range fetches keep CDN throughput up without
+   * going back to one fragile long stream.
    */
   function DownloadPakOnPage(onProgress) {
     var PAGE_CHUNK = 32 * 1024 * 1024;
@@ -1531,9 +1543,6 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
               }
               Report(loaded, total);
               return StorePakInCache(view.buffer);
-            }
-            if (loaded + result.value.byteLength > total) {
-              throw new Error("assets.pak larger than Content-Length");
             }
             view.set(result.value, loaded);
             loaded += result.value.byteLength;
@@ -1699,16 +1708,6 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       });
     }
 
-    function DownloadFullStream(Report) {
-      return fetch(PAK_URL, { cache: "no-store" }).then(function (response) {
-        if (!response.ok) {
-          throw new Error("Failed to fetch assets.pak: " + response.status);
-        }
-        var totalHeader = Number(response.headers.get("content-length") || "0");
-        return StreamFullResponse(response, totalHeader, Report);
-      });
-    }
-
     var Report = ReportFactory();
     return caches.open(CACHE_NAME).then(function (cache) {
       return cache.match(PAK_URL).then(function (cached) {
@@ -1719,27 +1718,27 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
           });
         }
 
-        // One stream uses the full CDN pipe on HTTP/2. Parallel ranges often
-        // share that pipe and feel slower; keep them only as a fallback.
-        return DownloadFullStream(Report).catch(function (streamError) {
-          console.warn("[bjs] Full assets.pak stream failed; trying ranged download", streamError);
-          return fetch(PAK_URL, {
-            headers: { Range: "bytes=0-0" },
-            cache: "no-store",
-          }).then(function (probe) {
-            if (probe.status === 206) {
-              var contentRange = probe.headers.get("content-range") || "";
-              var slash = contentRange.lastIndexOf("/");
-              var total = slash >= 0 ? Number(contentRange.slice(slash + 1)) : 0;
-              return probe.arrayBuffer().then(function () {
-                if (!(total > 0)) {
-                  throw streamError;
-                }
-                return DownloadViaRanges(total, Report);
-              });
-            }
-            throw streamError;
-          });
+        // Probe size + Range support with a 1-byte request.
+        return fetch(PAK_URL, {
+          headers: { Range: "bytes=0-0" },
+          cache: "no-store",
+        }).then(function (probe) {
+          if (probe.status === 206) {
+            var contentRange = probe.headers.get("content-range") || "";
+            var slash = contentRange.lastIndexOf("/");
+            var total = slash >= 0 ? Number(contentRange.slice(slash + 1)) : 0;
+            return probe.arrayBuffer().then(function () {
+              if (!(total > 0)) {
+                throw new Error("assets.pak Content-Range missing total size");
+              }
+              return DownloadViaRanges(total, Report);
+            });
+          }
+          if (!probe.ok) {
+            throw new Error("Failed to fetch assets.pak: " + probe.status);
+          }
+          var totalHeader = Number(probe.headers.get("content-length") || "0");
+          return StreamFullResponse(probe, totalHeader, Report);
         });
       });
     });
@@ -1853,6 +1852,10 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   // stall the stream; Cache Storage keeps the bytes across the one-time reload.
   SetOverlay("Downloading assets…", null);
   var lastProgressAt = Date.now();
+  var downloadStartedAt = Date.now();
+  var speedSampleAt = Date.now();
+  var speedSampleLoaded = 0;
+  var smoothedBytesPerSecond = 0;
   var stallError = null;
   var stallTimer = setInterval(function () {
     if (Date.now() - lastProgressAt > 120000) {
@@ -1864,9 +1867,27 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     if (stallError) {
       throw stallError;
     }
-    lastProgressAt = Date.now();
+    var now = Date.now();
+    lastProgressAt = now;
+    // Aggregate rate across all parallel Range fetches (total bytes / wall time),
+    // with a short smoothed window so the label tracks current throughput.
+    var elapsedSeconds = (now - downloadStartedAt) / 1000;
+    var averageBytesPerSecond = elapsedSeconds > 0.25 ? loaded / elapsedSeconds : 0;
+    var sampleSeconds = (now - speedSampleAt) / 1000;
+    if (sampleSeconds >= 0.5) {
+      var windowBytesPerSecond = (loaded - speedSampleLoaded) / sampleSeconds;
+      smoothedBytesPerSecond = smoothedBytesPerSecond > 0
+        ? (smoothedBytesPerSecond * 0.7 + windowBytesPerSecond * 0.3)
+        : windowBytesPerSecond;
+      speedSampleAt = now;
+      speedSampleLoaded = loaded;
+    }
     var ratio = total > 0 ? loaded / total : null;
-    SetOverlay("Downloading assets…", ratio, { loaded: loaded, total: total });
+    SetOverlay("Downloading assets…", ratio, {
+      loaded: loaded,
+      total: total,
+      speed: smoothedBytesPerSecond > 0 ? smoothedBytesPerSecond : averageBytesPerSecond,
+    });
   }).then(function (downloadResult) {
     clearInterval(stallTimer);
     if (stallError) {
