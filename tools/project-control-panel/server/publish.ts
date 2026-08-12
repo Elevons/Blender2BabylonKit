@@ -859,10 +859,8 @@ function BuildServiceWorkerSource(keyBase64: string): string
 const KEY_B64 = ${JSON.stringify(keyBase64)};
 const PAK_URL = "./assets.pak";
 const CACHE_NAME = "bjs-pak-" + KEY_B64.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
-const CHUNK_SIZE = 16 * 1024 * 1024;
 
 let pakPromise = null;
-let lastProgressSentAt = 0;
 
 async function LoadKey()
 {
@@ -879,30 +877,6 @@ async function Broadcast(message)
   }
 }
 
-async function BroadcastProgress(loaded, total)
-{
-  const now = Date.now();
-  if (now - lastProgressSentAt < 100 && loaded !== total)
-  {
-    return;
-  }
-  lastProgressSentAt = now;
-  await Broadcast({ type: "bjs-pak-progress", loaded, total });
-}
-
-function ConcatChunks(chunks, totalLength)
-{
-  const buffer = new ArrayBuffer(totalLength);
-  const view = new Uint8Array(buffer);
-  let offset = 0;
-  for (const chunk of chunks)
-  {
-    view.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return buffer;
-}
-
 async function ClearStalePakCaches()
 {
   const keys = await caches.keys();
@@ -916,212 +890,19 @@ async function ClearStalePakCaches()
   }));
 }
 
-async function ReadPakFromCache()
+/**
+ * Open the cached pak as a Blob handle. Cache Storage keeps the bytes on disk;
+ * we only pull small slices into memory when decrypting an entry.
+ */
+async function OpenPakBlob()
 {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(PAK_URL);
   if (!cached)
   {
-    return null;
+    throw new Error("assets.pak missing from Cache Storage — reload to download again");
   }
-  return cached.arrayBuffer();
-}
-
-async function WritePakToCache(buffer)
-{
-  try
-  {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(PAK_URL, new Response(buffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Length": String(buffer.byteLength),
-      },
-    }));
-  }
-  catch (_error)
-  {
-    // Quota exceeded or Cache API unavailable — in-memory pak still works this session.
-  }
-}
-
-async function StreamResponseToBuffer(response, totalHeader)
-{
-  if (response.body && typeof response.body.getReader === "function")
-  {
-    const reader = response.body.getReader();
-    if (totalHeader > 0)
-    {
-      const buffer = new ArrayBuffer(totalHeader);
-      const view = new Uint8Array(buffer);
-      let loaded = 0;
-      while (true)
-      {
-        const result = await reader.read();
-        if (result.done)
-        {
-          break;
-        }
-        if (loaded + result.value.byteLength > totalHeader)
-        {
-          throw new Error("assets.pak larger than Content-Length");
-        }
-        view.set(result.value, loaded);
-        loaded += result.value.byteLength;
-        await BroadcastProgress(loaded, totalHeader);
-      }
-      if (loaded !== totalHeader)
-      {
-        throw new Error("assets.pak truncated: got " + loaded + " of " + totalHeader + " bytes");
-      }
-      await BroadcastProgress(loaded, totalHeader);
-      return buffer;
-    }
-
-    const chunks = [];
-    let loaded = 0;
-    while (true)
-    {
-      const result = await reader.read();
-      if (result.done)
-      {
-        break;
-      }
-      chunks.push(result.value);
-      loaded += result.value.byteLength;
-      await BroadcastProgress(loaded, 0);
-    }
-    const buffer = ConcatChunks(chunks, loaded);
-    await BroadcastProgress(loaded, loaded);
-    return buffer;
-  }
-
-  const buffer = await response.arrayBuffer();
-  await BroadcastProgress(buffer.byteLength, buffer.byteLength);
-  return buffer;
-}
-
-async function ReadRangeIntoView(view, start, end, total)
-{
-  const response = await fetch(PAK_URL, {
-    headers: { Range: "bytes=" + start + "-" + end },
-    cache: "no-store",
-  });
-  if (response.status !== 206 && !(response.status === 200 && start === 0))
-  {
-    throw new Error("Failed to fetch assets.pak range: " + response.status);
-  }
-  if (response.status === 200)
-  {
-    // Server ignored Range and returned the whole file.
-    const full = await StreamResponseToBuffer(response, total);
-    view.set(new Uint8Array(full), 0);
-    return total;
-  }
-
-  const expected = end - start + 1;
-  if (response.body && typeof response.body.getReader === "function")
-  {
-    const reader = response.body.getReader();
-    let offset = start;
-    while (true)
-    {
-      const result = await reader.read();
-      if (result.done)
-      {
-        break;
-      }
-      view.set(result.value, offset);
-      offset += result.value.byteLength;
-      await BroadcastProgress(offset, total);
-    }
-    if (offset - start !== expected)
-    {
-      throw new Error("assets.pak range size mismatch at " + start);
-    }
-    return offset;
-  }
-
-  const chunk = new Uint8Array(await response.arrayBuffer());
-  if (chunk.byteLength !== expected)
-  {
-    throw new Error("assets.pak range size mismatch at " + start);
-  }
-  view.set(chunk, start);
-  await BroadcastProgress(end + 1, total);
-  return end + 1;
-}
-
-async function FetchPakViaRanges(total)
-{
-  const buffer = new ArrayBuffer(total);
-  const view = new Uint8Array(buffer);
-  for (let start = 0; start < total; start += CHUNK_SIZE)
-  {
-    const end = Math.min(start + CHUNK_SIZE - 1, total - 1);
-    const loaded = await ReadRangeIntoView(view, start, end, total);
-    if (loaded >= total && start === 0 && end < total - 1)
-    {
-      // Full-file 200 response already filled the buffer.
-      return buffer;
-    }
-  }
-  return buffer;
-}
-
-async function IngestPakBuffer(buffer)
-{
-  const view = new DataView(buffer);
-  const indexLength = view.getUint32(0, true);
-  const indexBytes = new Uint8Array(buffer, 4, indexLength);
-  const index = JSON.parse(new TextDecoder().decode(indexBytes));
-  const payloadOffset = 4 + indexLength;
-  const packed = { buffer, index, payloadOffset, key: await LoadKey() };
-  await Broadcast({ type: "bjs-pak-ready" });
-  return packed;
-}
-
-async function FetchPakBuffer()
-{
-  const cached = await ReadPakFromCache();
-  if (cached)
-  {
-    await BroadcastProgress(cached.byteLength, cached.byteLength);
-    return cached;
-  }
-
-  const probe = await fetch(PAK_URL, {
-    headers: { Range: "bytes=0-0" },
-    cache: "no-store",
-  });
-
-  if (probe.status === 206)
-  {
-    const contentRange = probe.headers.get("content-range") || "";
-    const slash = contentRange.lastIndexOf("/");
-    const total = slash >= 0 ? Number(contentRange.slice(slash + 1)) : 0;
-    // Drain the 1-byte probe body so the connection can close cleanly.
-    await probe.arrayBuffer();
-    if (!(total > 0))
-    {
-      throw new Error("assets.pak Content-Range missing total size");
-    }
-    const buffer = await FetchPakViaRanges(total);
-    await WritePakToCache(buffer);
-    return buffer;
-  }
-
-  if (!probe.ok)
-  {
-    throw new Error("Failed to fetch assets.pak: " + probe.status);
-  }
-
-  // Range unsupported — stream the 200 response (may already be the full body).
-  const totalHeader = Number(probe.headers.get("content-length") || "0");
-  const buffer = await StreamResponseToBuffer(probe, totalHeader);
-  await WritePakToCache(buffer);
-  return buffer;
+  return cached.blob();
 }
 
 async function LoadPak()
@@ -1134,38 +915,25 @@ async function LoadPak()
       return packed;
     });
   }
-  pakPromise = (async () =>
-  {
-    const buffer = await FetchPakBuffer();
-    return IngestPakBuffer(buffer);
-  })().catch((error) =>
-  {
-    pakPromise = null;
-    void Broadcast({ type: "bjs-pak-error", message: String(error && error.message ? error.message : error) });
-    throw error;
-  });
-  return pakPromise;
-}
 
-async function LoadPakFromBuffer(buffer, options)
-{
-  const skipCacheWrite = !!(options && options.skipCacheWrite);
-  if (pakPromise)
-  {
-    return pakPromise.then(async (packed) =>
-    {
-      await Broadcast({ type: "bjs-pak-ready" });
-      return packed;
-    });
-  }
   pakPromise = (async () =>
   {
-    // Ingest first and acknowledge — do not block ready on another 302MB cache write.
-    const packed = await IngestPakBuffer(buffer);
-    if (!skipCacheWrite)
+    const blob = await OpenPakBlob();
+    const header = new DataView(await blob.slice(0, 4).arrayBuffer());
+    const indexLength = header.getUint32(0, true);
+    if (indexLength <= 0 || indexLength > blob.size - 4)
     {
-      void WritePakToCache(buffer);
+      throw new Error("Corrupt assets.pak index length");
     }
+    const indexBytes = new Uint8Array(await blob.slice(4, 4 + indexLength).arrayBuffer());
+    const index = JSON.parse(new TextDecoder().decode(indexBytes));
+    const packed = {
+      blob,
+      index,
+      payloadOffset: 4 + indexLength,
+      key: await LoadKey(),
+    };
+    await Broadcast({ type: "bjs-pak-ready" });
     return packed;
   })().catch((error) =>
   {
@@ -1173,6 +941,7 @@ async function LoadPakFromBuffer(buffer, options)
     void Broadcast({ type: "bjs-pak-error", message: String(error && error.message ? error.message : error) });
     throw error;
   });
+
   return pakPromise;
 }
 
@@ -1196,8 +965,6 @@ function MimeFor(pathName)
 
 function NormalizeRequestPath(url)
 {
-  // URL.pathname stays percent-encoded (Train%20Scene); the pak index stores
-  // decoded filesystem paths (Train Scene). Decode before lookup.
   let pathname = new URL(url).pathname;
   try
   {
@@ -1208,7 +975,6 @@ function NormalizeRequestPath(url)
     // Keep the raw pathname if the request URI is malformed.
   }
   pathname = pathname.replace(/^\\/+/, "");
-  // Strip a single leading base segment if present (subdirectory deploys).
   if (pathname.startsWith("levels/"))
   {
     return pathname;
@@ -1224,7 +990,9 @@ function NormalizeRequestPath(url)
 async function DecryptEntry(pak, entry)
 {
   const cipherStart = pak.payloadOffset + entry.offset;
-  const cipherBytes = new Uint8Array(pak.buffer, cipherStart, entry.length);
+  const cipherBytes = new Uint8Array(
+    await pak.blob.slice(cipherStart, cipherStart + entry.length).arrayBuffer()
+  );
   if (cipherBytes.length < 16)
   {
     throw new Error("Corrupt pak entry: " + entry.path);
@@ -1265,18 +1033,12 @@ self.addEventListener("message", (event) =>
   }
   if (event.data.type === "bjs-pak-prefetch")
   {
-    // Fallback only (e.g. a levels/ fetch before bootstrap finished). Prefer bjs-pak-buffer.
-    event.waitUntil(LoadPak());
-    return;
-  }
-  if (event.data.type === "bjs-pak-buffer" && event.data.buffer)
-  {
     const replyPort = event.ports && event.ports[0] ? event.ports[0] : null;
     event.waitUntil((async () =>
     {
       try
       {
-        await LoadPakFromBuffer(event.data.buffer, { skipCacheWrite: !!event.data.cached });
+        await LoadPak();
         if (replyPort)
         {
           replyPort.postMessage({ type: "bjs-pak-ready" });
@@ -1299,8 +1061,7 @@ self.addEventListener("message", (event) =>
 
 self.addEventListener("fetch", (event) =>
 {
-  const requestUrl = event.request.url;
-  const relative = NormalizeRequestPath(requestUrl);
+  const relative = NormalizeRequestPath(event.request.url);
   if (!relative.startsWith("levels/"))
   {
     return;
@@ -1444,45 +1205,16 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
     });
   }
 
-  function ConcatChunks(chunks, totalLength) {
-    var buffer = new ArrayBuffer(totalLength);
-    var view = new Uint8Array(buffer);
-    var offset = 0;
-    for (var index = 0; index < chunks.length; index++) {
-      view.set(chunks[index], offset);
-      offset += chunks[index].byteLength;
-    }
-    return buffer;
-  }
-
-  function StorePakInCache(buffer) {
-    return caches.open(CACHE_NAME).then(function (cache) {
-      return cache.put(PAK_URL, new Response(buffer, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/octet-stream",
-          "Content-Length": String(buffer.byteLength),
-        },
-      })).then(function () {
-        return { cached: true, buffer: buffer };
-      });
-    }).catch(function (error) {
-      console.warn("[bjs] Could not cache assets.pak; transferring to service worker", error);
-      return { cached: false, buffer: buffer };
-    });
-  }
-
   /**
-   * Download assets.pak on the page thread. Chrome can still kill a service
-   * worker mid-fetch even with waitUntil; the window is not subject to that.
+   * Stream assets.pak into Cache Storage on the page. Progress comes from a
+   * tee'd read of the same body — no 300MB ArrayBuffer, no postMessage transfer.
    */
-  function DownloadPakOnPage(onProgress) {
+  function DownloadPakToCache(onProgress) {
     return caches.open(CACHE_NAME).then(function (cache) {
       return cache.match(PAK_URL).then(function (cached) {
         if (cached) {
-          return cached.arrayBuffer().then(function (buffer) {
-            onProgress(buffer.byteLength, buffer.byteLength);
-            return { cached: true, buffer: buffer };
+          return cached.blob().then(function (blob) {
+            onProgress(blob.size, blob.size);
           });
         }
 
@@ -1502,66 +1234,53 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
             onProgress(loaded, totalBytes);
           }
 
-          if (!response.body || typeof response.body.getReader !== "function") {
+          if (!response.body || typeof response.body.tee !== "function") {
             return response.arrayBuffer().then(function (buffer) {
               Report(buffer.byteLength, buffer.byteLength);
-              return StorePakInCache(buffer);
+              var headers = { "Content-Type": "application/octet-stream" };
+              headers["Content-Length"] = String(buffer.byteLength);
+              return cache.put(PAK_URL, new Response(buffer, { status: 200, headers: headers }));
             });
           }
 
-          var reader = response.body.getReader();
-          var loaded = 0;
-
+          var branches = response.body.tee();
+          var progressBody = branches[0];
+          var cacheBody = branches[1];
+          var headers = { "Content-Type": "application/octet-stream" };
           if (total > 0) {
-            var view = new Uint8Array(total);
-            function PumpKnown() {
-              return reader.read().then(function (result) {
-                if (result.done) {
-                  if (loaded !== total) {
-                    throw new Error("assets.pak truncated: got " + loaded + " of " + total + " bytes");
-                  }
-                  Report(loaded, total);
-                  return StorePakInCache(view.buffer);
-                }
-                if (loaded + result.value.byteLength > total) {
-                  throw new Error("assets.pak larger than Content-Length");
-                }
-                view.set(result.value, loaded);
-                loaded += result.value.byteLength;
-                Report(loaded, total);
-                return PumpKnown();
-              });
-            }
-            return PumpKnown();
+            headers["Content-Length"] = String(total);
           }
+          var cachePut = cache.put(PAK_URL, new Response(cacheBody, {
+            status: 200,
+            headers: headers,
+          }));
 
-          var chunks = [];
-          function PumpUnknown() {
+          var reader = progressBody.getReader();
+          var loaded = 0;
+          function Pump() {
             return reader.read().then(function (result) {
               if (result.done) {
-                var buffer = ConcatChunks(chunks, loaded);
-                Report(loaded, loaded);
-                return StorePakInCache(buffer);
+                Report(total > 0 ? total : loaded, total > 0 ? total : loaded);
+                return cachePut;
               }
-              chunks.push(result.value);
               loaded += result.value.byteLength;
-              Report(loaded, 0);
-              return PumpUnknown();
+              Report(loaded, total);
+              return Pump();
             });
           }
-          return PumpUnknown();
+          return Pump();
         });
       });
     });
   }
 
-  function AskSwToLoadPak(downloadResult) {
+  function AskSwToOpenPak() {
     return new Promise(function (resolve, reject) {
       var settled = false;
       var channel = new MessageChannel();
       var timeout = setTimeout(function () {
         Finish(new Error("Service worker did not acknowledge assets.pak"));
-      }, 120000);
+      }, 30000);
       function Finish(error) {
         if (settled) { return; }
         settled = true;
@@ -1598,23 +1317,7 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
         Finish(new Error("No service worker controller for pak prefetch"));
         return;
       }
-      if (!downloadResult || !downloadResult.buffer) {
-        Finish(new Error("assets.pak buffer missing after download"));
-        return;
-      }
-      // Always transfer the buffer — never ask the SW to re-read 302MB from Cache Storage.
-      try {
-        controller.postMessage(
-          {
-            type: "bjs-pak-buffer",
-            buffer: downloadResult.buffer,
-            cached: !!downloadResult.cached,
-          },
-          [downloadResult.buffer, channel.port2]
-        );
-      } catch (error) {
-        Finish(error instanceof Error ? error : new Error(String(error)));
-      }
+      controller.postMessage({ type: "bjs-pak-prefetch" }, [channel.port2]);
     });
   }
 
@@ -1628,20 +1331,20 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       }
     }, 1000);
 
-    return DownloadPakOnPage(function (loaded, total) {
+    return DownloadPakToCache(function (loaded, total) {
       if (stallError) {
         throw stallError;
       }
       lastProgressAt = Date.now();
       var ratio = total > 0 ? loaded / total : null;
       SetOverlay("Downloading assets…", ratio, { loaded: loaded, total: total });
-    }).then(function (downloadResult) {
+    }).then(function () {
       clearInterval(stallTimer);
       if (stallError) {
         throw stallError;
       }
       SetOverlay("Preparing assets…", 1);
-      return AskSwToLoadPak(downloadResult);
+      return AskSwToOpenPak();
     }).catch(function (error) {
       clearInterval(stallTimer);
       console.error("[bjs] Pak prefetch failed", error);

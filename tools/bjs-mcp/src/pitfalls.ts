@@ -234,7 +234,7 @@ export const PITFALLS: PitfallEntry[] = [
   {
     mistake: "Expecting loose /levels/*.scene.json files after Publish with Encrypt / obfuscate",
     symptom: "HTTP 404 on manifest (e.g. Train Scene); engine throws could not fetch manifest",
-    fix: "Encrypted builds pack levels into assets.pak and remove loose files. Serve over http/https (not file://); index bootstrap must register pak-sw.js, prefetch the pak (progress on #bjs-loading), and control the page before the app loads. Republish after kit fixes — bootstrap uses pak-sw.js?v=… + update() so a stale worker is not kept. Large paks must download on the page into Cache Storage (not inside the SW); Chrome can kill a worker mid-fetch even with waitUntil. Spaces in level names are decoded in the worker. Production uses base './' so level URLs are ./levels/… under the uploaded folder.",
+    fix: "Encrypted builds pack levels into assets.pak and remove loose files. Serve over http/https (not file://); index bootstrap must register pak-sw.js, stream the pak into Cache Storage on the page (progress on #bjs-loading), and control the page before the app loads. The SW reads only the pak index and per-entry blob slices — do not load the full pak into the worker. Republish after kit fixes — bootstrap uses pak-sw.js?v=… + update() so a stale worker is not kept. Spaces in level names are decoded in the worker. Production uses base './' so level URLs are ./levels/… under the uploaded folder.",
     mcpTool: "get_scripting_context(section=\"published-encrypted-builds\")",
   },
   {
