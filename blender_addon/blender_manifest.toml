@@ -5,8 +5,12 @@ id = "babylon_level_kit"
 version = "0.32.0"
 name = "Babylon Level Kit"
 tagline = "Component system and Babylon.js level exporter"
-maintainer = "You"
+maintainer = "Jordan Elevons"
 type = "add-on"
+website = "https://elevons.design"
+copyright = [
+  "2024-2026 Elevons LLC",
+]
 
 # Extensions were introduced in Blender 4.2; this also covers Blender 5.x.
 blender_version_min = "4.2.0"

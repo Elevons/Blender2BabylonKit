@@ -2,6 +2,8 @@
 
 Babylon Level Kit runtime — loads Blender-exported `.scene.json` + `.glb` levels.
 
+**Elevons LLC** · [elevons.design](https://elevons.design)
+
 This package is the publishable kit surface:
 
 - **Runtime** — `import { LevelLoader, Behavior, … } from "@bjs/engine"`

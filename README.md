@@ -1,5 +1,7 @@
 # Babylon Level Kit
 
+**Elevons LLC** · [elevons.design](https://elevons.design)
+
 A small **Unity-style component/level-editor layer for Blender** that exports
 scenes to **Babylon.js**. You author your level in Blender, attach components
 (colliders, rigid bodies, tags, scripts) to objects, hit Export, and a tiny

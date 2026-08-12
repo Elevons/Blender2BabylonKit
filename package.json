@@ -2,6 +2,8 @@
   "name": "bjs-level-kit",
   "private": true,
   "version": "0.32.0",
+  "author": "Jordan Elevons (Elevons LLC)",
+  "homepage": "https://elevons.design",
   "type": "module",
   "workspaces": [
     "packages/*",

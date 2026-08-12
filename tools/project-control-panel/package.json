@@ -2,6 +2,8 @@
   "name": "@bjs/project-control-panel",
   "private": true,
   "version": "0.32.0",
+  "author": "Jordan Elevons (Elevons LLC)",
+  "homepage": "https://elevons.design",
   "type": "module",
   "description": "Project Control Panel for Blender2BabylonKit apps",
   "scripts": {

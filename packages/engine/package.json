@@ -2,6 +2,8 @@
   "name": "@bjs/engine",
   "private": true,
   "version": "0.32.0",
+  "author": "Jordan Elevons (Elevons LLC)",
+  "homepage": "https://elevons.design",
   "type": "module",
   "description": "Babylon Level Kit — runtime engine, Project Control Panel CLI, and matching Blender add-on zip",
   "main": "./dist/index.js",
