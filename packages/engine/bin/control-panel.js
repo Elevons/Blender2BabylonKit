@@ -15,14 +15,16 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const embeddedEntry = path.join(packageRoot, "control-panel", "server", "index.js");
 const monorepoEntry = path.resolve(packageRoot, "../../tools/project-control-panel/dist/server/index.js");
 
+// Prefer the monorepo control-panel build when present so local publish.ts
+// fixes are used instead of a stale embedded copy under packages/engine.
 let entry = null;
-if (fs.existsSync(embeddedEntry))
-{
-  entry = embeddedEntry;
-}
-else if (fs.existsSync(monorepoEntry))
+if (fs.existsSync(monorepoEntry))
 {
   entry = monorepoEntry;
+}
+else if (fs.existsSync(embeddedEntry))
+{
+  entry = embeddedEntry;
 }
 
 if (entry === null)
