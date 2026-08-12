@@ -1556,12 +1556,33 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
       return PumpUnknown();
     }
 
-    function FetchRangeBuffer(start, end, attempt) {
+    function FetchRangeBuffer(start, end, attempt, totalBytes, Report) {
       return fetch(PAK_URL, {
         headers: { Range: "bytes=" + start + "-" + end },
         cache: "no-store",
       }).then(function (response) {
         if (response.status === 206) {
+          if (response.body && typeof response.body.getReader === "function") {
+            var reader = response.body.getReader();
+            var expected = end - start + 1;
+            var chunkView = new Uint8Array(expected);
+            var offset = 0;
+            function PumpRange() {
+              return reader.read().then(function (result) {
+                if (result.done) {
+                  if (offset !== expected) {
+                    throw new Error("assets.pak range size mismatch at " + start);
+                  }
+                  return { kind: "range", buffer: chunkView.buffer };
+                }
+                chunkView.set(result.value, offset);
+                offset += result.value.byteLength;
+                Report(start + offset, totalBytes);
+                return PumpRange();
+              });
+            }
+            return PumpRange();
+          }
           return response.arrayBuffer().then(function (buffer) {
             if (buffer.byteLength !== (end - start + 1)) {
               throw new Error("assets.pak range size mismatch at " + start);
@@ -1575,7 +1596,7 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
         throw new Error("Failed to fetch assets.pak range: " + response.status);
       }).catch(function (error) {
         if (attempt + 1 < MAX_ATTEMPTS) {
-          return FetchRangeBuffer(start, end, attempt + 1);
+          return FetchRangeBuffer(start, end, attempt + 1, totalBytes, Report);
         }
         throw error;
       });
@@ -1591,7 +1612,8 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
           return StorePakInCache(view.buffer);
         }
         var end = Math.min(start + PAGE_CHUNK - 1, total - 1);
-        return FetchRangeBuffer(start, end, 0).then(function (result) {
+        Report(start, total);
+        return FetchRangeBuffer(start, end, 0, total, Report).then(function (result) {
           if (result.kind === "full") {
             var totalHeader = Number(result.response.headers.get("content-length") || "0");
             return StreamFullResponse(result.response, totalHeader > 0 ? totalHeader : total, Report);
@@ -1752,8 +1774,8 @@ function RewriteIndexForPak(destination: string, keyBase64: string): void
   var lastProgressAt = Date.now();
   var stallError = null;
   var stallTimer = setInterval(function () {
-    if (Date.now() - lastProgressAt > 30000) {
-      stallError = new Error("assets.pak download stalled (no progress for 30s)");
+    if (Date.now() - lastProgressAt > 120000) {
+      stallError = new Error("assets.pak download stalled (no progress for 120s)");
     }
   }, 1000);
 
