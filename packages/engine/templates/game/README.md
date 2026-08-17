@@ -8,11 +8,13 @@ From the project root (the folder that contains this `game/` directory):
 
 ```bash
 npm install
-npx b2bkit-control-panel
+npm start                 # opens the Project Control Panel
+# or: npx b2bkit-control-panel
 ```
 
-In the hub, start the Vite game server. Export a level from Blender into
-`public/levels/{{LEVEL}}/` (Live Link recommended).
+In the hub, start the Vite game server (or run `npm start` / `npm run dev` inside
+`game/`). Export a level from Blender into `public/levels/{{LEVEL}}/` (Live Link
+recommended).
 
 ## Blender add-on
 

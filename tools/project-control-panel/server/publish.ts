@@ -441,7 +441,7 @@ function RunNpmBuild(
   {
     const child = spawn(
       "npm",
-      ["run", "build", "--workspace", "game"],
+      ["run", "build", "--prefix", "game"],
       {
         cwd: ResolveProjectRoot(),
         env: {

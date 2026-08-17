@@ -492,7 +492,7 @@ export async function StartDevServer(appName: string): Promise<DevServerStatus>
 
   const child = spawn(
     "npm",
-    ["run", "dev", "--workspace", "game"],
+    ["run", "dev", "--prefix", "game"],
     {
       cwd: ResolveProjectRoot(),
       stdio: ["ignore", "pipe", "pipe"],

@@ -184,22 +184,97 @@ export function ScaffoldGame(projectRoot, options = {})
 }
 
 /**
- * Ensure a thin root package.json exists so `npx b2bkit-*` works from the project root.
+ * Root scripts so `npm start` opens the Project Control Panel.
+ * @returns {Record<string, string>}
+ */
+function RootScripts()
+{
+  return {
+    start: "b2bkit-control-panel",
+    "control-panel": "b2bkit-control-panel",
+    create: "b2bkit-create",
+  };
+}
+
+/**
+ * Ensure a thin root package.json exists so `npx b2bkit-*` / `npm start` work
+ * from the project root. Merges scripts/workspaces into an existing package.json
+ * when needed. The control panel starts Vite via `npm run … --prefix game`, so
+ * npm workspaces are optional — still declared so root `npm install` covers game/.
  * @param {string} projectRoot
  * @param {string} b2bkitVersion
- * @returns {boolean} true when a new file was written
+ * @returns {boolean} true when the file was created or updated
  */
 export function EnsureRootPackageJson(projectRoot, b2bkitVersion)
 {
   const packageJsonPath = path.join(projectRoot, "package.json");
+  const rootScripts = RootScripts();
+
   if (fs.existsSync(packageJsonPath))
   {
-    return false;
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+    let changed = false;
+
+    if (packageJson.private !== true)
+    {
+      packageJson.private = true;
+      changed = true;
+    }
+
+    if (!Array.isArray(packageJson.workspaces))
+    {
+      packageJson.workspaces = ["game"];
+      changed = true;
+    }
+    else if (!packageJson.workspaces.includes("game"))
+    {
+      packageJson.workspaces.push("game");
+      changed = true;
+    }
+
+    if (packageJson.scripts === undefined || typeof packageJson.scripts !== "object")
+    {
+      packageJson.scripts = {};
+      changed = true;
+    }
+
+    for (const [scriptName, command] of Object.entries(rootScripts))
+    {
+      if (packageJson.scripts[scriptName] === undefined)
+      {
+        packageJson.scripts[scriptName] = command;
+        changed = true;
+      }
+    }
+
+    if (
+      packageJson.dependencies === undefined
+      || typeof packageJson.dependencies !== "object"
+    )
+    {
+      packageJson.dependencies = {};
+      changed = true;
+    }
+
+    if (packageJson.dependencies.b2bkit === undefined)
+    {
+      packageJson.dependencies.b2bkit = b2bkitVersion;
+      changed = true;
+    }
+
+    if (changed)
+    {
+      fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n", "utf8");
+    }
+
+    return changed;
   }
 
   const packageJson = {
     private: true,
     name: path.basename(projectRoot),
+    workspaces: ["game"],
+    scripts: rootScripts,
     dependencies: {
       b2bkit: b2bkitVersion,
     },
