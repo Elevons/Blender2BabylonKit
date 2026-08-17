@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_TEMPLATE_DIR = path.resolve(THIS_DIR, "../templates/game");
+const DEFAULT_STARTER_LEVEL_DIR = path.resolve(THIS_DIR, "../templates/starter-level");
 
 /**
  * @typedef {object} ScaffoldGameOptions
@@ -173,6 +174,14 @@ export function ScaffoldGame(projectRoot, options = {})
   }
 
   fs.mkdirSync(path.join(gameDir, "public", "levels", level), { recursive: true });
+  InstallStarterLevel(gameDir, level, options.starterLevelDir ?? DEFAULT_STARTER_LEVEL_DIR);
+
+  // Drop the empty levels/.gitkeep once a real level folder exists.
+  const levelsGitkeep = path.join(gameDir, "public", "levels", ".gitkeep");
+  if (fs.existsSync(levelsGitkeep))
+  {
+    fs.unlinkSync(levelsGitkeep);
+  }
 
   return {
     projectRoot: resolvedRoot,
@@ -181,6 +190,31 @@ export function ScaffoldGame(projectRoot, options = {})
     title,
     level,
   };
+}
+
+/**
+ * Write the spinning-cube starter level so Start works before any Blender export.
+ * @param {string} gameDir
+ * @param {string} level
+ * @param {string} starterLevelDir
+ * @returns {void}
+ */
+function InstallStarterLevel(gameDir, level, starterLevelDir)
+{
+  const glbSource = path.join(starterLevelDir, "cube.glb");
+  const sceneSource = path.join(starterLevelDir, "level.scene.json");
+  if (!fs.existsSync(glbSource) || !fs.existsSync(sceneSource))
+  {
+    throw new Error(`Starter level assets missing under ${starterLevelDir}`);
+  }
+
+  const levelDir = path.join(gameDir, "public", "levels", level);
+  fs.mkdirSync(levelDir, { recursive: true });
+  fs.copyFileSync(glbSource, path.join(levelDir, `${level}.glb`));
+
+  const sceneDestination = path.join(levelDir, `${level}.scene.json`);
+  fs.copyFileSync(sceneSource, sceneDestination);
+  ApplyPlaceholders(sceneDestination, { LEVEL: level });
 }
 
 /**

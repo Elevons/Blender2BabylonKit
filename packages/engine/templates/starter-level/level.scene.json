@@ -1,0 +1,28 @@
+{
+  "version": 5,
+  "exporterVersion": "starter",
+  "glb": "{{LEVEL}}.glb",
+  "debug": true,
+  "scene": {
+    "clearColor": [0.08, 0.09, 0.12, 1],
+    "ambientColor": [0.35, 0.35, 0.38]
+  },
+  "entities": [
+    {
+      "id": "b2bkit00000000000000000000000001",
+      "name": "Cube",
+      "parent": null,
+      "components": [
+        {
+          "type": "SCRIPT",
+          "script": "Rotator",
+          "path": "//../src/behaviors/Rotator.ts",
+          "vars": {
+            "speed": 45,
+            "axis": [0, 1, 0]
+          }
+        }
+      ]
+    }
+  ]
+}

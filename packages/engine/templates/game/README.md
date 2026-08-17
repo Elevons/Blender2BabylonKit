@@ -13,7 +13,8 @@ npm start                 # opens the Project Control Panel
 ```
 
 In the hub, start the Vite game server (or run `npm start` / `npm run dev` inside
-`game/`). Export a level from Blender into `public/levels/{{LEVEL}}/` (Live Link
+`game/`). A spinning cube loads from `public/levels/{{LEVEL}}/` so Start works
+immediately — replace that export from Blender when you are ready (Live Link
 recommended).
 
 ## Blender add-on

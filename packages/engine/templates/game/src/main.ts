@@ -1,6 +1,7 @@
 import {
   Scene,
   ArcRotateCamera,
+  HemisphericLight,
   Vector3,
 } from "@babylonjs/core";
 
@@ -67,13 +68,27 @@ function RegisterBehaviors(): BehaviorRegistry
   return registry;
 }
 
-/** Add an orbit camera only when the Blender scene shipped no camera at all. */
-function CreateFallbackCameraIfNeeded(scene: Scene, canvas: HTMLCanvasElement): void
+/** Add an orbit camera / key light when the Blender scene shipped none. */
+function EnsureFallbackCameraAndLight(scene: Scene, canvas: HTMLCanvasElement): void
 {
   if (!scene.activeCamera)
   {
-    const fallbackCamera = new ArcRotateCamera("fallback", -Math.PI / 2, 1.1, 18, Vector3.Zero(), scene);
+    const fallbackCamera = new ArcRotateCamera(
+      "fallback",
+      -Math.PI / 2,
+      1.1,
+      6,
+      Vector3.Zero(),
+      scene,
+    );
     fallbackCamera.attachControl(canvas, true);
+    scene.activeCamera = fallbackCamera;
+  }
+
+  if (scene.lights.length === 0)
+  {
+    const keyLight = new HemisphericLight("fallbackLight", new Vector3(0.3, 1, 0.2), scene);
+    keyLight.intensity = 1.1;
   }
 }
 
@@ -125,21 +140,21 @@ function BindDebugKeys(
   });
 }
 
-/** Show a clear message when no Blender export exists yet. */
+/** Show a clear message when the start level cannot be loaded. */
 function ShowMissingLevel(manifestUrl: string, error: unknown): void
 {
   const status = document.getElementById("bjs-loading-status");
   const pct = document.getElementById("bjs-loading-pct");
   if (status !== null)
   {
-    status.textContent = "No level exported yet";
+    status.textContent = "Could not load level";
   }
   if (pct !== null)
   {
     const message = error instanceof Error ? error.message : String(error);
     pct.textContent =
-      `Export from Blender to game/public/levels/{{LEVEL}}/ ` +
-      `(looking for ${manifestUrl}). ${message}`;
+      `Expected ${manifestUrl} under game/public/levels/{{LEVEL}}/. ` +
+      `Re-run npx b2bkit-create or export from Blender. ${message}`;
   }
   console.error("[b2bkit] Failed to load level", manifestUrl, error);
 }
@@ -154,7 +169,7 @@ async function Main(): Promise<void>
     registry,
     onLoaded: ({ scene }) =>
     {
-      CreateFallbackCameraIfNeeded(scene, canvas);
+      EnsureFallbackCameraAndLight(scene, canvas);
     },
   });
 

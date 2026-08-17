@@ -77,7 +77,8 @@ function PrintHelp()
   console.log(`Usage:
   npx b2bkit-create [project-name] [--title "My Game"] [--level Main] [--no-install]
 
-Creates a game/ app (Vite + b2bkit) you can open with npx b2bkit-control-panel.
+Creates a game/ app (Vite + b2bkit) with a spinning-cube starter level
+you can open immediately via npx b2bkit-control-panel / npm start.
 
 Examples:
   npx b2bkit-create
