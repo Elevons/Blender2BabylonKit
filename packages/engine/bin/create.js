@@ -152,8 +152,8 @@ function Main()
   console.log(`
 Next:
   cd ${path.relative(cwd, projectRoot) || "."}
-  npx b2bkit-addon-path      # install that zip in Blender
-  npx b2bkit-control-panel   # Start All / Vite, then export a level
+  npm start                  # control panel — Start shows a spinning cube
+  npx b2bkit-addon-path      # install that zip in Blender when ready to author
 `);
 }
 
