@@ -22,12 +22,14 @@
     "docs",
     "mcp",
     "bin",
+    "templates",
     "README.md"
   ],
   "bin": {
     "b2bkit-addon-path": "bin/addon-path.js",
     "b2bkit-control-panel": "bin/control-panel.js",
-    "b2bkit-mcp": "bin/mcp.js"
+    "b2bkit-mcp": "bin/mcp.js",
+    "b2bkit-create": "bin/create.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -1,7 +1,13 @@
+import fs from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-import { GAME_DIR, REPO_ROOT } from "./paths.js";
+import {
+  CONTROL_PANEL_DIR,
+  GameDir,
+  ResolveKitRepoRoot,
+  ResolveProjectRoot,
+} from "./paths.js";
 
 export interface CreateProjectOptions
 {
@@ -17,10 +23,32 @@ export interface CreateProjectResult
 }
 
 /**
- * Run the retiring create-app script to initialize game/ and its
- * b2bkit-project.json manifest.
+ * Locate packages/engine/bin/scaffold-game.js for the running panel.
  */
-export function CreateProject(options: CreateProjectOptions): Promise<CreateProjectResult>
+function ResolveScaffoldModulePath(): string
+{
+  const kitRoot = ResolveKitRepoRoot();
+  if (kitRoot !== null)
+  {
+    return path.join(kitRoot, "packages", "engine", "bin", "scaffold-game.js");
+  }
+
+  // Installed kit: control-panel/ sits next to bin/ and templates/.
+  const installed = path.resolve(CONTROL_PANEL_DIR, "../bin/scaffold-game.js");
+  if (fs.existsSync(installed))
+  {
+    return installed;
+  }
+
+  throw new Error(
+    "Could not find b2bkit game scaffold. Reinstall b2bkit or run from the kit monorepo.",
+  );
+}
+
+/**
+ * Create game/ under the current project root (cwd when no game exists yet).
+ */
+export async function CreateProject(options: CreateProjectOptions): Promise<CreateProjectResult>
 {
   const name = options.name.trim();
   if (name.length === 0)
@@ -28,46 +56,45 @@ export function CreateProject(options: CreateProjectOptions): Promise<CreateProj
     throw new Error("Project name is required");
   }
 
-  const argumentsList = [
-    path.join(REPO_ROOT, "scripts", "create-app.mjs"),
-    "--name",
+  const projectRoot = ResolveProjectRoot();
+  const existingGamePackage = path.join(GameDir(), "package.json");
+  if (fs.existsSync(existingGamePackage))
+  {
+    throw new Error(
+      `A game app already exists at ${GameDir()}. Use a new folder or remove game/ first.`,
+    );
+  }
+
+  const scaffoldPath = ResolveScaffoldModulePath();
+  const scaffold = await import(pathToFileURL(scaffoldPath).href) as {
+    ScaffoldGame: (
+      projectRoot: string,
+      options: {
+        name?: string;
+        title?: string;
+        level?: string;
+        b2bkitVersion?: string;
+      },
+    ) => {
+      name: string;
+      gameDir: string;
+    };
+    EnsureRootPackageJson: (projectRoot: string, b2bkitVersion: string) => boolean;
+    ReadB2bkitVersion: () => string;
+  };
+
+  const b2bkitVersion = scaffold.ReadB2bkitVersion();
+  scaffold.EnsureRootPackageJson(projectRoot, b2bkitVersion);
+
+  const result = scaffold.ScaffoldGame(projectRoot, {
     name,
-  ];
-  if (options.title !== undefined && options.title.trim().length > 0)
-  {
-    argumentsList.push("--title", options.title.trim());
-  }
-  if (options.level !== undefined && options.level.trim().length > 0)
-  {
-    argumentsList.push("--level", options.level.trim());
-  }
-
-  return new Promise((resolve, reject) =>
-  {
-    const child = spawn(process.execPath, argumentsList, {
-      cwd: REPO_ROOT,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let standardError = "";
-
-    child.stderr?.on("data", (chunk: Buffer) =>
-    {
-      standardError += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) =>
-    {
-      if (code !== 0)
-      {
-        reject(new Error(standardError.trim() || `Project creation exited with code ${code}`));
-        return;
-      }
-
-      const safeName = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
-      resolve({
-        name: safeName,
-        path: GAME_DIR,
-      });
-    });
+    title: options.title,
+    level: options.level,
+    b2bkitVersion,
   });
+
+  return {
+    name: result.name,
+    path: result.gameDir,
+  };
 }

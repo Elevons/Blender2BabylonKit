@@ -9,9 +9,15 @@
 </ul>
 
 <h2>2. Create the project layout</h2>
-<p>Use one install of the kit package. Scaffolding sits at the project root; the playable app is a self-contained <code>game/</code> folder (same shape as this monorepo's <code>game/</code> example).</p>
+<p>From an empty folder (or one that already has a root <code>package.json</code>):</p>
+<pre><code>npm install b2bkit
+npx b2bkit-create --title "My Game"
+</code></pre>
+<p>That writes a self-contained <code>game/</code> app and runs <code>npm install</code>. Or create a new folder in one step:</p>
+<pre><code>npx b2bkit-create my-game --title "My Game" --level Main
+</code></pre>
 <pre><code>my-project/
-  package.json              # workspaces: ["game"] (optional thin root)
+  package.json              # depends on b2bkit (CLI entry points)
   game/
     package.json            # depends on b2bkit, @babylonjs/*, vite
     vite.config.ts          # Live Link reload of public/levels/
@@ -23,7 +29,7 @@
     public/levels/          # Blender exports
     Blender/                # your .blend files
 </code></pre>
-<p><code>npm install</code> pulls the kit (runtime, panel CLI, prebuilt MCP server, docs site, add-on zip) and Babylon peers. The kit exposes three commands: <code>b2bkit-control-panel</code>, <code>b2bkit-addon-path</code>, and <code>b2bkit-mcp</code>.</p>
+<p>The kit exposes four commands: <code>b2bkit-create</code>, <code>b2bkit-control-panel</code>, <code>b2bkit-addon-path</code>, and <code>b2bkit-mcp</code>. You can also create <code>game/</code> from the Project Control Panel when it opens with no project.</p>
 
 <h2>3. Install the Blender add-on</h2>
 <ol>

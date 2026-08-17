@@ -1,0 +1,24 @@
+{
+  "name": "{{PACKAGE_NAME}}",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@babylonjs/addons": "^9.0.0",
+    "@babylonjs/core": "^9.0.0",
+    "@babylonjs/gui": "^9.0.0",
+    "@babylonjs/havok": "^1.3.0",
+    "@babylonjs/loaders": "^9.0.0",
+    "b2bkit": "{{B2BKIT_VERSION}}"
+  },
+  "devDependencies": {
+    "@babylonjs/inspector": "^9.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0"
+  }
+}

@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const CONTROL_PANEL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+/** Directory that contains this panel's package.json (tools/… or b2bkit/control-panel). */
+export { CONTROL_PANEL_DIR };
+
 /**
  * Kit monorepo root when developing inside Blender2BabylonKit.
  * Two levels up from tools/project-control-panel.

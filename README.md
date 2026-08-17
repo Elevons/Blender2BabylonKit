@@ -154,22 +154,18 @@ instance, and export from the level file. Full workflow:
 
 ## Creating a new project
 
-This kit monorepo has a **single** playable app at `game/`. To start another
-game outside the monorepo, copy that folder (or follow
-[Create a game with the published kit](docs/CREATE-A-GAME.html) once published):
-
 ```bash
-# After publishing b2bkit:
-mkdir my-project && cd my-project
-# scaffold root + game/ (see docs/CREATE-A-GAME.html)
-npm install
-npx b2bkit-control-panel
-npx b2bkit-addon-path   # Install from Disk in Blender
+mkdir my-game && cd my-game
+npm install b2bkit
+npx b2bkit-create --title "My Game"
+npx b2bkit-addon-path    # Install from Disk in Blender
+npx b2bkit-control-panel # Start All / Vite, export a level from Blender
 ```
 
-Assets (GUI / particles / materials) live under `game/workspace/` while
-iterating, and under `game/public/levels/<Level>/` when they ship with a level.
-Do not put those JSONs under `src/`.
+`b2bkit-create` writes `game/` (Vite app + `b2bkit-project.json`). Or pass a
+folder name: `npx b2bkit-create my-game --title "My Game"`.
+
+Also see [Create a game with the published kit](docs/CREATE-A-GAME.html).
 
 ## Adding a new component (contributors)
 
