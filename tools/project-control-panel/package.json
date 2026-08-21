@@ -1,7 +1,7 @@
 {
   "name": "@bjs/project-control-panel",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "Jordan Elevons (Elevons LLC)",
   "homepage": "https://elevons.design",
   "type": "module",
