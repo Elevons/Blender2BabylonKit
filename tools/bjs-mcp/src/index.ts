@@ -13,6 +13,7 @@ import {
   ListBehaviorFiles,
   ListInputActions,
   ReadBehaviorFile,
+  ResolveBehaviorRelativePath,
 } from "./io.js";
 import { FormatBehaviorPlan, PlanBehavior } from "./plan.js";
 import { DOCS } from "./paths.js";
@@ -125,14 +126,16 @@ server.resource(
   })
 );
 
-for (const behaviorName of ListBehaviorFiles().map((file) => file.replace(/\.ts$/, "")))
+for (const relativeFile of ListBehaviorFiles())
 {
-  const uri = `bjs://behaviors/${behaviorName}`;
+  const relativeStem = relativeFile.replace(/\.ts$/, "");
+  const resourceName = `behavior-${relativeStem.replace(/\//g, "-")}`;
+  const uri = `bjs://behaviors/${relativeStem}`;
   server.resource(
-    `behavior-${behaviorName}`,
+    resourceName,
     uri,
     {
-      description: `Example behavior: ${behaviorName}.ts`,
+      description: `Example behavior: ${relativeFile}`,
       mimeType: "text/typescript",
     },
     async () => ({
@@ -140,7 +143,7 @@ for (const behaviorName of ListBehaviorFiles().map((file) => file.replace(/\.ts$
         {
           uri,
           mimeType: "text/typescript",
-          text: ReadBehaviorFile(behaviorName) ?? "",
+          text: ReadBehaviorFile(relativeStem) ?? "",
         },
       ],
     })
@@ -304,31 +307,32 @@ server.tool(
 
 server.tool(
   "get_behavior",
-  "Return the full source of a playground example behavior by class/filename stem.",
+  "Return the full source of a playground example behavior by class/filename stem or nested path (e.g. CarController or player/CarController).",
   {
-    name: z.string().describe("Behavior stem, e.g. CarController or CarController.ts"),
+    name: z.string().describe("Behavior stem or nested path, e.g. CarController, CarController.ts, or player/CarController"),
   },
   async ({ name }) =>
   {
-    const stem = name.replace(/\.tsx?$/i, "");
-    const source = ReadBehaviorFile(stem);
+    const relativePath = ResolveBehaviorRelativePath(name);
 
-    if (source === undefined)
+    if (relativePath === undefined)
     {
       const available = ListBehaviorFiles().map((file) => file.replace(/\.ts$/, "")).join(", ");
       return {
         content: [
           {
             type: "text",
-            text: `Behavior "${stem}" not found. Available: ${available}`,
+            text: `Behavior "${name.replace(/\.tsx?$/i, "")}" not found. Available: ${available}`,
           },
         ],
         isError: true,
       };
     }
 
+    const source = ReadBehaviorFile(relativePath) ?? "";
+
     return {
-      content: [{ type: "text", text: `// ${stem}.ts\n\n${source}` }],
+      content: [{ type: "text", text: `// ${relativePath}\n\n${source}` }],
     };
   }
 );
@@ -356,7 +360,7 @@ server.tool(
 
 server.tool(
   "list_behaviors",
-  "List all playground example behaviors with a one-line summary and lifecycle hooks.",
+  "List all playground example behaviors under game/src/behaviors/ (including subfolders), with a one-line summary and lifecycle hooks.",
   {},
   async () => ({
     content: [{ type: "text", text: FormatBehaviorCatalog(ListBehaviorCatalog()) }],

@@ -59,11 +59,11 @@ function ResolveManifestUrl(): string
   return DEFAULT_MANIFEST_URL;
 }
 
-/** Register every behavior in ./behaviors by filename stem (the Blender key). */
+/** Register every behavior under ./behaviors (including subfolders) by filename stem. */
 function RegisterBehaviors(): BehaviorRegistry
 {
   const registry = new BehaviorRegistry();
-  const behaviorModules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
+  const behaviorModules = import.meta.glob("./behaviors/**/*.{ts,js}", { eager: true });
   AutoRegisterBehaviors(registry, behaviorModules);
   return registry;
 }

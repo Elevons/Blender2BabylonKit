@@ -50,12 +50,12 @@ export class BehaviorRegistry
 }
 
 /**
- * Auto-register behaviors from a folder, keyed by filename stem, so the Blender
- * "Open Script..." picker (which stores the stem) resolves to the matching class.
+ * Auto-register behaviors from a folder (recursively), keyed by filename stem,
+ * so the Blender "Open Script..." picker (which stores the stem) resolves to
+ * the matching class.
  *
- * Usage (Vite):
- *   const modules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
- *   AutoRegisterBehaviors(registry, modules);
+ * Usage (Vite): eager-glob every .ts/.js file under ./behaviors, including
+ * nested folders, then pass the result to AutoRegisterBehaviors.
  *
  * Convention: one behavior class per file, file named after the class, exported
  * as `export default class Foo` (or `export class Foo`).

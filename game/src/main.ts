@@ -60,13 +60,14 @@ function ResolveManifestUrl(): string
   return DEFAULT_MANIFEST_URL;
 }
 
-/** Register every behavior in ./behaviors by filename stem (the Blender key). */
+/** Register every behavior under ./behaviors (including subfolders) by filename stem. */
 function RegisterBehaviors(): BehaviorRegistry
 {
   // This matches the Blender "Open Script..." picker: selecting Rotator.ts
-  // stores the key "Rotator", which maps to behaviors/Rotator.ts here.
+  // stores the key "Rotator", which maps to behaviors/Rotator.ts (or any nested
+  // path that ends in Rotator.ts) here.
   const registry = new BehaviorRegistry();
-  const behaviorModules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
+  const behaviorModules = import.meta.glob("./behaviors/**/*.{ts,js}", { eager: true });
   AutoRegisterBehaviors(registry, behaviorModules);
   return registry;
 }

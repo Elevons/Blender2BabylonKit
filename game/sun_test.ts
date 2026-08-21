@@ -34,7 +34,7 @@ async function Main(): Promise<void>
   await EnableHavokPhysics(scene, ResolveHavokPhysicsOptions(manifest));
 
   const registry = new BehaviorRegistry();
-  const behaviorModules = import.meta.glob("./src/behaviors/*.{ts,js}", { eager: true });
+  const behaviorModules = import.meta.glob("./src/behaviors/**/*.{ts,js}", { eager: true });
   AutoRegisterBehaviors(registry, behaviorModules);
 
   const loader = new LevelLoader(scene, registry);

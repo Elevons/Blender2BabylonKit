@@ -1471,7 +1471,7 @@ export const ENGINE_AREA_PAGES = {
           "h": 40,
           "label": "AutoRegisterBehaviors",
           "sub": "main.ts wiring",
-          "desc": "import.meta.glob('./behaviors/*') eagerly loads every file; each registers by stem in the BehaviorRegistry.",
+          "desc": "import.meta.glob('./behaviors/**/*') eagerly loads every file including subfolders; each registers by stem in the BehaviorRegistry.",
           "meta": [
             [
               "File",

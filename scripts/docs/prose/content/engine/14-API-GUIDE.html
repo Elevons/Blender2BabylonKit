@@ -241,7 +241,7 @@ const steer = control.x;</code></pre>
 <h2 id="registry">BehaviorRegistry</h2>
 <p>This registry maps script name to class. Apps register before load:</p>
 <pre><code class="language-typescript">const registry = new BehaviorRegistry();
-const modules = import.meta.glob("./behaviors/*.{ts,js}", { eager: true });
+const modules = import.meta.glob("./behaviors/**/*.{ts,js}", { eager: true });
 AutoRegisterBehaviors(registry, modules);
 const level = await new LevelLoader(scene, registry).Load(manifestUrl);</code></pre>
 <p>The loader calls <code>registry.Create("Patrol")</code> internally for each SCRIPT row.</p>

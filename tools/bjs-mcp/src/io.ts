@@ -116,6 +116,50 @@ export function FormatInputActions(catalog: InputActionsCatalog): string
   return lines.join("\n");
 }
 
+/**
+ * Walk behaviors/ recursively and return posix-relative .ts paths
+ * (e.g. "Rotator.ts", "player/Rotator.ts").
+ */
+function CollectBehaviorFiles(directory: string, relativePrefix: string): string[]
+{
+  const files: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true }))
+  {
+    const relativePath = relativePrefix === "" ? entry.name : `${relativePrefix}/${entry.name}`;
+
+    if (entry.isDirectory())
+    {
+      files.push(...CollectBehaviorFiles(join(directory, entry.name), relativePath));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.endsWith(".ts"))
+    {
+      files.push(relativePath);
+    }
+  }
+
+  return files;
+}
+
+/** Filename stem used as the BehaviorRegistry / Blender SCRIPT key. */
+function BehaviorStem(relativePath: string): string
+{
+  const fileName = relativePath.replace(/\\/g, "/").split("/").pop() ?? relativePath;
+  return fileName.replace(/\.tsx?$/i, "");
+}
+
+/** Relative path from game/src/behaviors without extension. */
+function BehaviorRelativeStem(relativePath: string): string
+{
+  return relativePath.replace(/\\/g, "/").replace(/\.tsx?$/i, "");
+}
+
+/**
+ * List every behavior .ts file under game/src/behaviors/, including subfolders.
+ * Paths are posix-relative to that folder.
+ */
 export function ListBehaviorFiles(): string[]
 {
   if (!existsSync(GAME_BEHAVIORS))
@@ -123,9 +167,7 @@ export function ListBehaviorFiles(): string[]
     return [];
   }
 
-  return readdirSync(GAME_BEHAVIORS)
-    .filter((file) => file.endsWith(".ts"))
-    .sort();
+  return CollectBehaviorFiles(GAME_BEHAVIORS, "").sort();
 }
 
 export interface BehaviorCatalogEntry
@@ -142,7 +184,7 @@ export function ListBehaviorCatalog(): BehaviorCatalogEntry[]
 
   for (const file of ListBehaviorFiles())
   {
-    const name = file.replace(/\.ts$/, "");
+    const name = BehaviorRelativeStem(file);
     const source = ReadBehaviorFile(name) ?? "";
     const docMatch = source.match(/\/\*\*\s*([^*]+?)\s*\*\//);
     const summary = docMatch?.[1]?.replace(/\s+/g, " ").trim() ?? `${name} behavior`;
@@ -191,17 +233,43 @@ export function FormatBehaviorCatalog(entries: BehaviorCatalogEntry[]): string
     .join("\n");
 }
 
+/**
+ * Resolve a relative path under behaviors/ from a stem ("Rotator") or a nested
+ * path ("player/Rotator" / "player/Rotator.ts"). Stem lookup matches the
+ * filename so nested files stay addressable by the Blender SCRIPT key.
+ */
+export function ResolveBehaviorRelativePath(name: string): string | undefined
+{
+  const normalized = name.replace(/\\/g, "/").replace(/\.tsx?$/i, "");
+  const directRelativePath = `${normalized}.ts`;
+  const directPath = join(GAME_BEHAVIORS, ...directRelativePath.split("/"));
+
+  if (existsSync(directPath))
+  {
+    return directRelativePath;
+  }
+
+  const requestedStem = BehaviorStem(normalized);
+  for (const relativePath of ListBehaviorFiles())
+  {
+    if (BehaviorStem(relativePath) === requestedStem)
+    {
+      return relativePath;
+    }
+  }
+
+  return undefined;
+}
+
 export function ReadBehaviorFile(name: string): string | undefined
 {
-  const stem = name.replace(/\.tsx?$/i, "");
-  const filePath = join(GAME_BEHAVIORS, `${stem}.ts`);
-
-  if (!existsSync(filePath))
+  const relativePath = ResolveBehaviorRelativePath(name);
+  if (relativePath === undefined)
   {
     return undefined;
   }
 
-  return readFileSync(filePath, "utf-8");
+  return readFileSync(join(GAME_BEHAVIORS, ...relativePath.split("/")), "utf-8");
 }
 
 export function FindSimilarBehavior(query: string): { name: string; score: number }[]
@@ -213,28 +281,29 @@ export function FindSimilarBehavior(query: string): { name: string; score: numbe
   return files
     .map((file) =>
     {
-      const stem = file.replace(/\.ts$/, "");
+      const relativeStem = BehaviorRelativeStem(file);
+      const stem = BehaviorStem(file);
       let score = 0;
 
-      if (normalized === stem.toLowerCase())
+      if (normalized === stem.toLowerCase() || normalized === relativeStem.toLowerCase())
       {
         score += 20;
       }
 
-      if (stem.toLowerCase().includes(normalized))
+      if (stem.toLowerCase().includes(normalized) || relativeStem.toLowerCase().includes(normalized))
       {
         score += 10;
       }
 
       for (const token of tokens)
       {
-        if (stem.toLowerCase().includes(token))
+        if (stem.toLowerCase().includes(token) || relativeStem.toLowerCase().includes(token))
         {
           score += 3;
         }
       }
 
-      const content = ReadBehaviorFile(stem)?.toLowerCase() ?? "";
+      const content = ReadBehaviorFile(relativeStem)?.toLowerCase() ?? "";
       for (const token of tokens)
       {
         if (content.includes(token))
@@ -243,7 +312,7 @@ export function FindSimilarBehavior(query: string): { name: string; score: numbe
         }
       }
 
-      return { name: stem, score };
+      return { name: relativeStem, score };
     })
     .filter((entry) => entry.score > 0)
     .sort((left, right) => right.score - left.score);
